@@ -1,9 +1,9 @@
 ---
-name: bootstrap-design-harness
+name: aesthetic
 description: Create or extend a portable, evidence-backed design harness for a new project. Use when a project needs configurable read-only inspiration intake, deterministic image/PDF or web evidence, bounded AI design loops, proactive art-detail sourcing, iterative critique, or frontend, product, physical-space, copywriting, motion, composition, and mockup-layering workflows.
 ---
 
-# Bootstrap Design Harness
+# Aesthetic
 
 Create the least-agentic workflow that can move a project from evidence to an approved design output without inventing context.
 
@@ -87,7 +87,7 @@ For skill changes, also run:
 
 ```bash
 python3 scripts/bootstrap_harness.py self-test
-python3 /path/to/skill-creator/scripts/quick_validate.py /path/to/bootstrap-design-harness
+python3 /path/to/skill-creator/scripts/quick_validate.py /path/to/aesthetic
 ```
 
 The self-test uses a nonstandard source directory name, bootstraps a disposable fixture, verifies generated contracts and recommendations, and proves every source hash remains unchanged.
@@ -98,4 +98,3 @@ The self-test uses a nonstandard source directory name, bootstraps a disposable 
 - [sourcing-policy.md](references/sourcing-policy.md): proactive but approval-gated deterministic sourcing.
 - [implementation-spec.md](references/implementation-spec.md): architecture specification and acceptance seam.
 - `assets/spec/`: boilerplate copied into each project.
-

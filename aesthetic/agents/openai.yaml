@@ -1,0 +1,4 @@
+interface:
+  display_name: "Aesthetic"
+  short_description: "Create bounded, evidence-backed design workflows"
+  default_prompt: "Use $aesthetic to create a portable design harness for this project using a caller-selected read-only inspiration source."
