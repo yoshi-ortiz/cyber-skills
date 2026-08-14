@@ -1,0 +1,30 @@
+# Design Harness Contracts
+
+## Source-root invariant
+
+- The inspiration root is the resolved path in `project.json`, not a fixed directory name.
+- It is read-only. Never create, edit, rename, move, delete, optimize, normalize, or attach metadata inside it.
+- Reject symlinks during manifest capture.
+- Verify `source-manifest.json` before and after a session. Any mismatch blocks inference and promotion.
+- Any potentially mutating operation requires explicit user approval naming the resolved path and exact action.
+
+## Evidence invariant
+
+Every external fact and asset has provenance, rights, capture time, media type, and SHA-256. Visible observation is separate from interpretation. Raw bodies stay out of committed context.
+
+## Compute invariant
+
+Use typed state, named transitions, permissioned tools, bounded context, explicit budgets, termination, recovery, and request fingerprints. Use the least-agentic pattern that handles the task. Never silently expand a shot.
+
+## Sourcing invariant
+
+Recommend likely art and domain sources proactively in `QUESTIONNAIRE.md`. Fetch only after confirmation. Pin source, license, version, retrieval method, and hash. Generated imitation is not a substitute for primary evidence.
+
+## Critique invariant
+
+Every user response is critique evidence. Positive and negative findings are exact excerpts. Mixed or negative feedback requests revision. Only positive-only feedback can approve. Automated checks never create approval.
+
+## Promotion invariant
+
+Promotion requires user approval, current lineage, unchanged source hashes, and passing required conformance checks.
+
