@@ -6,6 +6,7 @@
 - It is read-only. Never create, edit, rename, move, delete, optimize, normalize, or attach metadata inside it.
 - Reject symlinks during manifest capture.
 - Verify `source-manifest.json` before and after a session. Any mismatch blocks inference and promotion.
+- Only material files are hashed. OS sidecars (`.DS_Store`, `Thumbs.db`, `desktop.ini`) are excluded: hashing them wires the integrity gate to noise, so merely browsing the corpus turns validation red while nothing about the evidence changed.
 - Any potentially mutating operation requires explicit user approval naming the resolved path and exact action.
 
 ## Evidence invariant
@@ -24,7 +25,23 @@ Recommend likely art and domain sources proactively in `QUESTIONNAIRE.md`. Fetch
 
 Every user response is critique evidence. Positive and negative findings are exact excerpts. Mixed or negative feedback requests revision. Only positive-only feedback can approve. Automated checks never create approval.
 
+## Decision invariant
+
+A decision binds one design element, named by a stable dotted id such as `cover.layout.two-column`. It exists only once written to `decisions.json` by `bootstrap_harness.py decide`. Conversation history is not a record and does not survive the session.
+
+Every decision carries a verdict, a 1–5 star rank, and a verbatim user excerpt. Paraphrase is not evidence.
+
+Elements in standing — verdict `approved` or `proposed` — bind every later shot. An element in standing may not be replaced, restyled, or dropped without a `decide --supersedes` naming its replacement first. Rebuilding a surface silently drops every element that surface carried; treat that as the destructive act it is.
+
+Star rank is set by the user, never by the agent. Agent inference is recorded at one star, labelled as inference, and never outranks a user decision.
+
+## Feedback-adoption invariant
+
+Companion feedback is adopted with `bootstrap_harness.py adopt`, not retyped. An interaction carrying no design-element id cannot bind: report it and ask for the id rather than inventing one. Screen-local slugs are labels, not element ids.
+
+The companion writes to a session-independent ledger. Anything scoped to a single companion session is orphaned when the server restarts and must not be treated as a record.
+
 ## Promotion invariant
 
-Promotion requires user approval, current lineage, unchanged source hashes, and passing required conformance checks.
+Promotion requires user approval, current lineage, unchanged source hashes, a ledger that validates, and passing required conformance checks.
 

@@ -19,13 +19,27 @@
 
 Default ceiling: four external tool calls, two URLs, four new visuals, 24,000 extracted characters, and 1,200 model output tokens.
 
+## Iteration
+
+One iteration changes as little as the critique demands. Each begins and ends at the ledger.
+
+1. **Read standing first.** `DECISIONS.md` before any proposal. Elements in standing are inputs, not open questions.
+2. **Name the design elements this iteration touches**, reusing existing ids. A new id means a genuinely new element, never a rename of one in standing.
+3. **Propose only those elements.** Carry the rest through untouched. If a proposal would drop an element in standing, stop and ask — that is a supersede and needs its own decision.
+4. **Show provenance per element**: the cluster or verbatim excerpt it came from. Unsourced elements are inference and are labelled as such.
+5. **Capture the response**: `adopt` for companion star ranks, `decide` for anything stated in conversation. Quote the user.
+6. **Re-validate.** A ledger that fails validation blocks the next iteration.
+
+Prefer many small iterations to one large proposal. A large proposal makes every element look equally settled, which is how standing gets overwritten by accident.
+
 ## Proposal and critique
 
 1. Assemble semantic decisions from validated evidence and inference.
 2. Include rejected directions and conformance coverage.
-3. Ask the user for approval.
-4. Capture the response as hashed critique evidence.
+3. Ask the user for approval and for a star rank per design element.
+4. Capture the response as hashed critique evidence, then write it to the ledger.
 5. Revise on mixed or negative findings; approve only positive-only critique.
+6. Rank drives ordering: where two elements conflict the higher star rank wins, and a tie is a question for the user, not a judgement call for the agent.
 
 ## Promotion
 
