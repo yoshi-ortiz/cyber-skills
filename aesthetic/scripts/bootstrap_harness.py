@@ -64,12 +64,26 @@ NOISE_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini", ".localized"}
 NOISE_DIRS = {".Spotlight-V100", ".fseventsd", ".TemporaryItems", "__MACOSX"}
 # A decision is binding until superseded. `stars` is the deterministic standing
 # used to rank competing elements; it is set by the user, never by the agent.
-DECISION_STATES = ("proposed", "approved", "superseded", "rejected")
-STAR_RANGE = (0, 5)
-# Two feedback signals, deliberately separate. Stars carry strength; sentiment
-# carries direction. Sentiment maps to a verdict and, when the user gave no
-# star, to a fixed default rank -- fixed so replaying a ledger is reproducible.
-SENTIMENTS = {"like": ("approved", 4), "dislike": ("rejected", 1)}
+# `reviewed` is a status, not a lock: "I have looked at this". It does not mean
+# approved and does not freeze the element -- iteration continues after it.
+DECISION_STATES = ("proposed", "reviewed", "approved", "superseded", "rejected")
+# Stars rate GRAPHIC EXECUTION ONLY: ugly -> beautiful. Not confidence, not
+# priority, not "should we do this". 1 is the worst execution; there is no zero
+# rating. Clearing a rating is a separate action (reset), because "worst
+# execution" and "no opinion yet" are different statements.
+STAR_RANGE = (1, 5)
+UNRATED = 0
+# The two signals answer different questions and must never be collapsed:
+#   stars    = how well the thing is DRAWN (ugly -> beautiful). Execution.
+#   thumbs   = whether the DIRECTION is worth pursuing. Encouragement.
+# So "thumbs up + one star" is not a contradiction, it is the most actionable
+# state in the system: good idea, execution not beautiful yet -> improve it,
+# never drop it. Collapsing these is what caused ideas to be discarded.
+SENTIMENTS = {"like": "encouraged", "dislike": "discouraged"}
+# A score never changes an element's state. Removal is always a deliberate act
+# (`decide --supersedes` or an explicit reject control), because reading a low
+# score as "delete this" already destroyed work the user wanted kept.
+SCORE_NEVER_REMOVES = True
 # A preview is the graphic the star is actually about.
 PREVIEW_SUFFIXES = {".svg", ".html", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
 # Who set a rank. The distinction is the whole point: an agent-typed number and
@@ -213,12 +227,13 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                     evidence: str, supersedes: list[str],
                     preview: dict[str, str] | None = None,
                     source: str = "agent",
-                    sentiment: str | None = None) -> dict[str, object]:
+                    sentiment: str | None = None,
+                    implemented: str | None = None) -> dict[str, object]:
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
     if verdict not in DECISION_STATES:
         raise HarnessError(f"verdict must be one of: {', '.join(DECISION_STATES)}")
-    if not STAR_RANGE[0] <= stars <= STAR_RANGE[1]:
-        raise HarnessError(f"stars must be {STAR_RANGE[0]}-{STAR_RANGE[1]}")
+    if stars != UNRATED and not STAR_RANGE[0] <= stars <= STAR_RANGE[1]:
+        raise HarnessError(f"stars must be {STAR_RANGE[0]}-{STAR_RANGE[1]}, or {UNRATED} for unrated")
     if not evidence.strip():
         raise HarnessError("evidence is required: quote the user, do not paraphrase")
     if source not in SOURCES:
@@ -241,6 +256,10 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
         elif e["element"] == element:
             e["state"], e["stars"], e["evidence"] = verdict, stars, evidence
             e["source"] = source
+            e["scored"] = True
+            if implemented is not None:
+                e["implemented"] = implemented
+            e.setdefault("implemented", None)
             if sentiment is not None:
                 e["sentiment"] = sentiment
             e.setdefault("sentiment", None)
@@ -252,7 +271,8 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
         decisions["elements"].append({
             "element": element, "state": verdict, "stars": stars,
             "evidence": evidence, "supersededBy": None, "preview": preview,
-            "source": source, "sentiment": sentiment,
+            "source": source, "sentiment": sentiment, "scored": True,
+            "implemented": implemented,
         })
     if any(e["state"] == "approved" for e in decisions["elements"]):
         decisions["state"] = "approved"
@@ -278,9 +298,14 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         raise HarnessError(f"companion ledger not found: {ledger_path}")
 
     def is_star(value: object) -> bool:
-        return isinstance(value, int) and not isinstance(value, bool) and STAR_RANGE[0] <= value <= STAR_RANGE[1]
+        if not isinstance(value, int) or isinstance(value, bool):
+            return False
+        return value == UNRATED or STAR_RANGE[0] <= value <= STAR_RANGE[1]
 
-    accepted: list[tuple[int, int, str, str, int, str]] = []
+    output = project_root.resolve(strict=True) / "spec" / "design-harness"
+    existing = {e["element"]: e for e in load_decisions(output)["elements"]}
+    accepted: list[tuple[int, int, str, str, int, str, str | None]] = []
+    resets: list[tuple[int, int, str]] = []
     skipped = 0
     for index, line in enumerate(ledger_path.read_text(encoding="utf-8").splitlines()):
         line = line.strip()
@@ -293,12 +318,17 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
             continue
         element = event.get("element")
         stars, sentiment = event.get("stars"), event.get("sentiment")
+        if event.get("type") == "reset" or event.get("reset") is True:
+            # "I have not judged this" is a real state and must be expressible;
+            # without it, toggling a control off was purely cosmetic.
+            resets.append((int(event.get("timestamp") or 0), index, element))
+            continue
         # An interaction carrying no design-element id names a screen-local
         # label, not a binding element. Report it rather than guessing an id.
         if not element or not isinstance(element, str):
             skipped += 1
             continue
-        if event.get("verdict") not in (None, "approved", "rejected"):
+        if event.get("verdict") not in (None, "approved", "rejected", "reviewed"):
             skipped += 1
             continue
         if sentiment is not None and sentiment not in SENTIMENTS:
@@ -308,26 +338,31 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
             skipped += 1
             continue
         explicit = event.get("verdict")
-        if explicit in ("approved", "rejected"):
+        prior = existing.get(element, {})
+        if explicit in ("approved", "rejected", "reviewed"):
+            # Only an explicit verdict control moves state. A star never does.
             verdict = explicit
-            rank = stars if is_star(stars) else (0 if explicit == "rejected" else AGENT_MAX_STARS + 1)
-        elif sentiment is not None:
-            verdict, default_stars = SENTIMENTS[sentiment]
-            rank = stars if is_star(stars) else default_stars
+            rank = stars if is_star(stars) else prior.get("stars", 0)
         else:
-            # A zero is the user saying "kill it", not a missing value.
-            verdict, rank = ("rejected" if stars == 0 else "approved"), stars
+            # Scores and thumbs leave state alone: an element already standing
+            # stays standing, and a new one arrives as `proposed` for review.
+            verdict = prior.get("state") or "proposed"
+            if verdict in ("superseded", "rejected"):
+                verdict = "proposed"
+            rank = stars if is_star(stars) else prior.get("stars", 0)
         evidence = str(event.get("text") or "").strip() or (
             f"companion {sentiment}: {rank} star" if sentiment else f"companion rank: {rank} star")
         # Replay order is fixed by (timestamp, file position) so adopting the
         # same ledger twice always yields the same ledger.
         stamp = event.get("timestamp")
         stamp = stamp if isinstance(stamp, (int, float)) and not isinstance(stamp, bool) else 0
-        accepted.append((int(stamp), index, element, verdict, rank, evidence[:400]))
+        accepted.append((int(stamp), index, element, verdict, rank, evidence[:400], sentiment))
 
-    for _, _, element, verdict, rank, evidence in sorted(accepted, key=lambda row: (row[0], row[1])):
+    for _, _, element, verdict, rank, evidence, mood in sorted(accepted, key=lambda row: (row[0], row[1])):
         record_decision(project_root, element, verdict, rank, evidence, [], source="user",
-                        sentiment=sentiment)
+                        sentiment=mood)
+    for _, _, element in sorted(resets, key=lambda row: (row[0], row[1])):
+        clear_decision(project_root, element)
     return len(accepted), skipped
 
 
@@ -351,44 +386,56 @@ SHOT_INNER_INLINE = ("position:absolute;inset-block-start:0;inset-inline-start:0
                      "transform:scale(calc(var(--dh-shot-w,132px) / 850));pointer-events:none")
 STYLE_MARKER = "/* dh-controls */"
 FEEDBACK_STYLE = """<style>/* dh-controls */
-.dh-feedback{container-type:inline-size}
-.dh-offline{display:block;background:#b00;color:#fff;font:700 12px/1.4 ui-monospace,monospace;
- padding:8px 10px;margin-bottom:8px}
+/* Owned by the aesthetic skill. Do not restyle in a project: every local
+   patch so far has produced specificity fights and unusable controls.
+   `.dh-fb.dh-fb` doubles specificity so a host rule cannot flatten it. */
+.dh-feedback{container-type:inline-size;display:flex;flex-direction:column;gap:6px}
+.dh-offline{display:block;background:#b00020;color:#fff;font:700 12px/1.4 ui-monospace,monospace;
+ padding:9px 11px;border-radius:6px}
 :root[data-dh-live] .dh-offline{display:none}
-.dh-fb{font:600 11px/1.3 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
- color:var(--dh-ink,#111);background:var(--dh-bg,#fff);
- border:1px solid var(--dh-ink,#111);padding:8px;display:grid;
- grid-template-columns:var(--dh-shot-w,132px) 1fr auto;gap:12px;align-items:center;
- contain:layout style;content-visibility:auto;contain-intrinsic-size:auto 96px}
-.dh-fb + .dh-fb{border-top:0}
-.dh-fb b{font-weight:800;overflow-wrap:anywhere}
-.dh-fb .dh-meta{display:flex;flex-direction:column;gap:5px;min-width:0}
-.dh-fb .dh-signals{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.dh-fb .dh-stars{display:flex;gap:2px;color:var(--dh-accent,var(--dh-ink,#111))}
-.dh-fb [data-rank],.dh-fb [data-sentiment]{cursor:pointer;user-select:none;
- border:1px solid var(--dh-ink,#111);padding:1px 5px;background:transparent;line-height:1.4}
-.dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible{
- outline:2px solid var(--dh-accent,var(--dh-ink,#111));outline-offset:2px}
-.dh-fb [data-rank].on{background:var(--dh-accent,var(--dh-ink,#111));color:var(--dh-bg,#fff)}
-.dh-fb [data-sentiment].on{background:var(--dh-accent,var(--dh-ink,#111));color:var(--dh-bg,#fff)}
-/* The graphic being ranked. Isolated so an injected fragment cannot restyle
-   the list around it, and clipped to a fixed frame so a tall screen does not
-   stretch its row. */
-.dh-shot{inline-size:var(--dh-shot-w,132px);aspect-ratio:8.5/11;overflow:hidden;
- position:relative;border:1px solid var(--dh-ink,#111);background:var(--dh-bg,#fff);
- contain:strict;display:block}
-.dh-shot > .dh-shot-inner{position:absolute;inset-block-start:0;inset-inline-start:0;
- inline-size:var(--dh-shot-src-w,850px);block-size:var(--dh-shot-src-h,1100px);
- transform:scale(calc(var(--dh-shot-w,132px) / var(--dh-shot-src-w,850px)));
- transform-origin:0 0;pointer-events:none}
+.dh-fb.dh-fb{display:grid;grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr) auto;
+ gap:14px;align-items:center;padding:10px 12px;border:1px solid rgba(0,0,0,.18);
+ border-radius:8px;background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
+ font:500 13px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
+ contain:layout style;content-visibility:auto;contain-intrinsic-size:auto 120px}
+.dh-fb.dh-fb:hover{border-color:var(--dh-ink,#111)}
+.dh-fb .dh-meta{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dh-fb .dh-id{font-weight:700;font-size:13px;overflow-wrap:anywhere}
+.dh-fb .dh-desc{font-size:12px;line-height:1.5;opacity:.78;overflow-wrap:anywhere}
+.dh-fb .dh-desc b{font-weight:700;opacity:.9}
+.dh-fb .dh-state{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
+.dh-fb .dh-signals{display:flex;gap:8px;align-items:center}
+/* One continuous strip: no dead gaps, so the reset never becomes unclickable. */
+.dh-fb .dh-stars{display:flex;align-items:center;gap:0}
+.dh-fb .dh-stars > *{min-inline-size:34px;min-block-size:34px;display:grid;place-items:center;
+ cursor:pointer;user-select:none;font-size:19px;line-height:1;border:0;background:transparent;
+ color:color-mix(in srgb, var(--dh-ink,#111) 26%, transparent);transition:color .12s}
+.dh-fb .dh-stars > *:hover,.dh-fb .dh-stars > *.on{color:var(--dh-accent,#d9482a)}
+.dh-fb [data-reset]{font-size:15px;opacity:0;transition:opacity .12s}
+.dh-fb .dh-stars:hover [data-reset],.dh-fb [data-reset]:focus-visible,
+.dh-fb[data-scored="no"] [data-reset]{opacity:.65}
+.dh-fb [data-reset]:hover{opacity:1}
+.dh-fb [data-sentiment],.dh-fb [data-verdict]{min-inline-size:38px;min-block-size:34px;
+ display:grid;place-items:center;cursor:pointer;user-select:none;font-size:15px;
+ border:1px solid rgba(0,0,0,.22);border-radius:6px;background:transparent;line-height:1}
+.dh-fb [data-sentiment]:hover,.dh-fb [data-verdict]:hover{border-color:var(--dh-ink,#111)}
+.dh-fb [data-sentiment="like"].on{background:#1c8b4b;border-color:#126435;color:#fff}
+.dh-fb [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
+/* Approve reads as done: green fill, white tick, unmistakable. */
+.dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
+.dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible,
+.dh-fb [data-verdict]:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+.dh-shot{display:block;inline-size:var(--dh-shot-w,96px);aspect-ratio:8.5/11;overflow:hidden;
+ position:relative;border:1px solid rgba(0,0,0,.25);border-radius:4px;background:#fff;contain:strict}
+.dh-shot svg{inline-size:100%;block-size:100%;display:block}
 .dh-shot img{inline-size:100%;block-size:100%;object-fit:contain;display:block}
 .dh-shot-missing{display:grid;place-items:center;text-align:center;padding:6px;
- font-size:9px;opacity:.62;block-size:100%}
-@container (max-width: 520px){
- .dh-fb{grid-template-columns:var(--dh-shot-w,132px) 1fr}
- .dh-fb .dh-signals{grid-column:1 / -1}
+ font-size:9px;opacity:.6;block-size:100%}
+@container (max-width: 560px){
+ .dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
+ .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-start}
 }
-@media (prefers-reduced-motion:reduce){.dh-fb *{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){.dh-fb *{transition:none!important}}
 </style>"""
 
 
@@ -441,7 +488,8 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
 
 
 def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str] | None = None,
-                             project_root: Path | None = None) -> str:
+                             project_root: Path | None = None,
+                             pinned: set[str] | None = None) -> str:
     """Emit rank + sentiment controls for every element in standing.
 
     Generated from the ledger so a screen cannot invent a design-element id.
@@ -449,7 +497,9 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
     guess, not a judgement. Same ledger, theme and previews in, byte-identical
     markup out.
     """
-    live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
+    pinned = pinned or set()
+    live = [e for e in decisions["elements"]
+            if e["state"] in ("proposed", "reviewed", "approved")]
     theme_vars = {
         "--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent",
         "--dh-font": "font", "--dh-shot-w": "shot",
@@ -464,10 +514,19 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
              'Abre la URL del companion (http://localhost:PORT/?key=...), no el archivo.</strong>']
     if not live:
         lines.append("<!-- no elements in standing; record one with `decide` first -->")
-    for entry in sorted(live, key=lambda item: item["element"]):
+    rank_of = {"proposed": 0, "reviewed": 1, "approved": 2, "rejected": 3, "superseded": 4}
+    def order(item: dict[str, object]) -> tuple:
+        # Whatever this turn touched is pinned on top; then unresolved work
+        # first, best execution first inside each group.
+        return (0 if item["element"] in pinned else 1,
+                rank_of.get(item["state"], 5),
+                -int(item.get("stars") or 0),
+                item["element"])
+    for entry in sorted(live, key=order):
         element, stars = entry["element"], entry["stars"]
         lines.append(
-            f'<div class="dh-fb" data-element="{element}" data-stars="{stars}" data-label="{element}">'
+            f'<div class="dh-fb" data-element="{element}" data-stars="{stars}" '
+            f'data-scored="{"yes" if entry.get("scored") else "no"}" data-label="{element}">'
         )
         lines.append(render_preview(project_root, entry.get("preview"), element))
         lines.append('<span class="dh-meta">')
@@ -488,9 +547,14 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
             on = ' class="on"' if mood == name else ""
             lines.append(f'<span data-sentiment="{name}" role="button" tabindex="0" '
                          f'aria-label="{label} {element}" title="{label}"{on}>{glyph}</span>')
-        on = ' class="on"' if entry["state"] == "approved" else ""
-        lines.append(f'<span data-verdict="approved" role="button" tabindex="0" '
-                     f'aria-label="aprobar {element}" title="aprobar"{on}>&#10003;</span>')
+        # A status, not a lock: "I have reviewed this". Toggleable, and it never
+        # freezes the element -- iteration continues after it is checked.
+        done = entry["state"] in ("reviewed", "approved")
+        on = ' class="on"' if done else ""
+        lines.append(f'<span data-verdict="reviewed" role="button" tabindex="0" '
+                     f'aria-pressed="{"true" if done else "false"}" '
+                     f'aria-label="revisado: {element}" title="revisado"{on}>'
+                     f'<span>&#10003;</span></span>')
         lines.append("</span>")
         lines.append("</div>")
     lines.append("</div>")
@@ -534,7 +598,8 @@ def newest_session_dir(project_root: Path) -> Path:
     return max(sessions, key=lambda d: d.stat().st_mtime)
 
 
-def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | None = None) -> int:
+def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | None = None,
+                   pinned: set[str] | None = None) -> int:
     """Fill a screen's `data-dh-controls` placeholders with generated rows.
 
     Without this, an agent wanting scoring inside a prototype hand-writes the
@@ -544,28 +609,43 @@ def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | Non
     project_root = project_root.resolve(strict=True)
     output = project_root / "spec" / "design-harness"
     html = screen.read_text(encoding="utf-8")
-    generated = render_feedback_controls(load_decisions(output), theme, project_root)
+    generated = render_feedback_controls(load_decisions(output), theme, project_root, pinned)
     rows = {m.group(1): m.group(0) for m in re.finditer(
         r'<div class="dh-fb" data-element="([^"]+)".*?\n</div>', generated, re.S)}
     style_match = re.search(r"<style>.*?</style>", generated, re.S)
     style = style_match.group(0) if style_match else ""
 
-    placeholders = list(re.finditer(
-        r'<div([^>]*?)data-dh-controls="([^"]*)"([^>]*)>(.*?)</div>', html, re.S))
+    # Match the placeholder's OWN closing tag by counting nested divs. The old
+    # non-greedy `(.*?)</div>` stopped at the first </div> inside a generated
+    # row, so re-running embed duplicated every row and orphaned the remainder.
+    placeholders = []
+    for opening in re.finditer(r'<div([^>]*?)data-dh-controls="([^"]*)"([^>]*?)>', html):
+        depth, cursor = 1, opening.end()
+        for tag in re.finditer(r"<(/?)div\b[^>]*>", html[opening.end():]):
+            depth += -1 if tag.group(1) else 1
+            if depth == 0:
+                cursor = opening.end() + tag.end()
+                break
+        else:
+            raise HarnessError("unbalanced <div> around a data-dh-controls placeholder")
+        placeholders.append((opening, cursor))
     if not placeholders:
         raise HarnessError(
             'no <div data-dh-controls="element.a,element.b"></div> placeholder in the screen. '
             "Add one where scoring belongs -- never hand-write the rows.")
 
     filled = 0
-    for match in reversed(placeholders):
-        wanted = [e.strip() for e in match.group(2).split(",") if e.strip()]
+    # Right to left so earlier offsets stay valid. Each placeholder's contents
+    # are replaced wholesale, which is what makes embed safe to re-run.
+    for opening, close_end in reversed(placeholders):
+        wanted = [e.strip() for e in opening.group(2).split(",") if e.strip()]
         missing = [e for e in wanted if e not in rows]
         if missing:
             raise HarnessError("placeholder names element(s) not in standing: " + ", ".join(missing))
         body = "\n".join(rows[e] for e in wanted)
-        replacement = f"<div{match.group(1)}data-dh-controls=\"{match.group(2)}\"{match.group(3)}>\n{body}\n</div>"
-        html = html[:match.start()] + replacement + html[match.end():]
+        replacement = (f'<div{opening.group(1)}data-dh-controls="{opening.group(2)}"'
+                       f'{opening.group(3)}>\n{body}\n</div>')
+        html = html[:opening.start()] + replacement + html[close_end:]
         filled += len(wanted)
 
     if style and STYLE_MARKER not in html:
@@ -592,6 +672,21 @@ def publish_screen(project_root: Path, screen: Path, gap_seconds: int = 5) -> Pa
     return screen
 
 
+def clear_decision(project_root: Path, element: str) -> None:
+    """Return an element to unjudged. Toggling a control off must mean something."""
+    output = project_root.resolve(strict=True) / "spec" / "design-harness"
+    decisions = load_decisions(output)
+    for entry in decisions["elements"]:
+        if entry["element"] == element:
+            # Clear the star rating only. Encouragement and reviewed status are
+            # separate signals with their own controls.
+            entry["stars"] = UNRATED
+            entry["scored"] = False
+            break
+    write_json(output / "decisions.json", decisions)
+    (output / "DECISIONS.md").write_text(render_decisions_md(decisions), encoding="utf-8")
+
+
 def ledger_stats(decisions: dict[str, object]) -> dict[str, object]:
     """Deterministic aggregates over the ledger. Same ledger, same numbers.
 
@@ -614,9 +709,12 @@ def ledger_stats(decisions: dict[str, object]) -> dict[str, object]:
                  for n in range(STAR_RANGE[0], STAR_RANGE[1] + 1)}
     # A user who liked something but scored it low, or disliked something still
     # standing, is telling you something an average would hide.
+    # Good idea, not yet beautiful: improve the drawing, never drop it.
+    needs_polish = sorted(e["element"] for e in live
+                          if e.get("sentiment") == "like" and e["stars"] <= 2)
+    # Well drawn but the direction is discouraged: that is the real contradiction.
     conflicts = sorted(e["element"] for e in live
-                       if (e.get("sentiment") == "like" and e["stars"] <= 1)
-                       or (e.get("sentiment") == "dislike" and e["stars"] >= 4))
+                       if e.get("sentiment") == "dislike" and e["stars"] >= 4)
     return {
         "standing": len(live),
         "userSet": len(user),
@@ -628,10 +726,11 @@ def ledger_stats(decisions: dict[str, object]) -> dict[str, object]:
         "likes": sum(1 for e in live if e.get("sentiment") == "like"),
         "dislikes": sum(1 for e in live if e.get("sentiment") == "dislike"),
         "approved": sum(1 for e in elements if e["state"] == "approved"),
+        "reviewed": sum(1 for e in elements if e["state"] == "reviewed"),
         "rejected": sum(1 for e in elements if e["state"] == "rejected"),
         "superseded": sum(1 for e in elements if e["state"] == "superseded"),
         "unscored": sorted(e["element"] for e in live if e.get("source") != "user"),
-        "conflicts": conflicts,
+        "conflicts": conflicts, "needsPolish": needs_polish,
     }
 
 
@@ -727,8 +826,10 @@ def validate_harness(project_root: Path) -> None:
         seen.add(element)
         if entry.get("state") not in DECISION_STATES:
             raise HarnessError(f"decision '{element}' has an unknown state")
-        if not isinstance(entry.get("stars"), int) or not STAR_RANGE[0] <= entry["stars"] <= STAR_RANGE[1]:
-            raise HarnessError(f"decision '{element}' is missing a {STAR_RANGE[0]}-{STAR_RANGE[1]} star rank")
+        stars_value = entry.get("stars")
+        if not isinstance(stars_value, int) or not (
+                stars_value == UNRATED or STAR_RANGE[0] <= stars_value <= STAR_RANGE[1]):
+            raise HarnessError(f"decision '{element}' has an invalid star rank")
         if not str(entry.get("evidence", "")).strip():
             raise HarnessError(f"decision '{element}' has no user evidence excerpt")
         preview = entry.get("preview")
@@ -819,10 +920,13 @@ def self_test() -> None:
         if "user: form stays white" not in adopted_ledger["form.paper.white"]["evidence"]:
             raise HarnessError("self-test: adopt dropped the evidence excerpt")
         # sentiment maps deterministically to verdict + default rank
+        # A thumb records encouragement; it must NOT move state or invent a rank.
         for element, name in (("cover.ring.kicker", "like"), ("cover.background.black", "dislike")):
             entry = adopted_ledger[element]
-            if (entry["state"], entry["stars"]) != SENTIMENTS[name]:
-                raise HarnessError(f"self-test: {name} did not map to its verdict/rank")
+            if entry.get("sentiment") != name:
+                raise HarnessError(f"self-test: {name} was not recorded as sentiment")
+            if entry["state"] == "rejected" and name == "dislike":
+                raise HarnessError("self-test: a thumb-down must not reject; only an explicit verdict may")
 
         # Adopting the same ledger twice must be a no-op on content.
         first = (output / "decisions.json").read_text(encoding="utf-8")
@@ -835,12 +939,17 @@ def self_test() -> None:
         if markup != render_feedback_controls(load_decisions(output)):
             raise HarnessError("self-test: controls are not deterministic")
         for required in ('data-element="form.paper.white"', 'data-rank="5"',
-                         'data-verdict="approved"', 'data-sentiment="like"',
-                         'data-sentiment="dislike"', 'data-rank="0"'):
+                         'data-verdict="reviewed"', 'data-sentiment="like"',
+                         'data-sentiment="dislike"', 'data-reset'):
             if required not in markup:
                 raise HarnessError(f"self-test: controls omitted {required}")
-        if 'data-element="cover.background.black"' in markup:
-            raise HarnessError("self-test: controls offered a rejected element")
+        # A thumb-down keeps the element scoreable; only an explicit reject removes it.
+        if 'data-element="cover.background.black"' not in markup:
+            raise HarnessError("self-test: a disliked element vanished from scoring")
+        record_decision(project, "explicitly.rejected", "rejected", UNRATED, "user clicked reject", [],
+                        source="user")
+        if 'data-element="explicitly.rejected"' in render_feedback_controls(load_decisions(output), None, project):
+            raise HarnessError("self-test: controls offered an explicitly rejected element")
 
         # Every color must be a themeable token, never a literal that would
         # override the corpus palette the ledger already approved.
@@ -848,7 +957,10 @@ def self_test() -> None:
         for token in ("--dh-bg", "--dh-ink", "--dh-accent", "--dh-font"):
             if token not in style_block:
                 raise HarnessError(f"self-test: controls style omits the {token} token")
-        for literal in ("color:#111", "background:#fff", "background:#111;color:#fff"):
+        # Theme colours must come from tokens. Fixed semantic colours (the green
+        # "done" state, the red offline warning) are design constants, not theme.
+        for literal in ("color:var(--dh-ink,#111);background:#fff",
+                        "background:#111;color:#fff"):
             if literal in style_block.replace(" ", ""):
                 raise HarnessError(f"self-test: controls hardcode {literal} outside a var() fallback")
 
@@ -916,8 +1028,12 @@ def self_test() -> None:
                                encoding="utf-8")
         adopt_companion(project, zero_ledger)
         z = {e["element"]: e for e in json.loads((output / "decisions.json").read_text(encoding="utf-8"))["elements"]}
-        if z["kill.me"]["state"] != "rejected" or z["kill.me"]["stars"] != 0:
-            raise HarnessError("self-test: zero stars did not reject")
+        # A score rates execution. It must never remove the element: reading a
+        # low score as "delete this" destroyed work the user wanted kept.
+        if z["kill.me"]["stars"] != UNRATED:
+            raise HarnessError("self-test: unrated value was not recorded")
+        if z["kill.me"]["state"] == "rejected":
+            raise HarnessError("self-test: a score removed an element; only an explicit verdict may")
         if z["bless.me"]["state"] != "approved" or z["bless.me"]["source"] != "user":
             raise HarnessError("self-test: explicit approve verdict not adopted")
 
@@ -933,8 +1049,11 @@ def self_test() -> None:
         record_decision(project, "liked.but.weak", "proposed", 1, "user click", [],
                         source="user", sentiment="like")
         flagged = ledger_stats(load_decisions(output))
-        if "liked.but.weak" not in flagged["conflicts"]:
-            raise HarnessError("self-test: like-with-low-stars conflict not surfaced")
+        # Good idea, ugly execution: actionable polish, never a contradiction.
+        if "liked.but.weak" not in flagged["needsPolish"]:
+            raise HarnessError("self-test: like-with-low-stars not surfaced as polish work")
+        if "liked.but.weak" in flagged["conflicts"]:
+            raise HarnessError("self-test: like-with-low-stars mislabelled as a conflict")
         if flagged["likes"] < 1:
             raise HarnessError("self-test: like not counted")
 
@@ -948,10 +1067,24 @@ def self_test() -> None:
         if embed_controls(project, screen) != 1:
             raise HarnessError("self-test: embed did not fill the placeholder")
         embedded = screen.read_text(encoding="utf-8")
-        for needed in ('class="dh-shot"', 'data-rank="0"', 'data-verdict="approved"',
+        for needed in ('class="dh-shot"', 'data-reset', 'data-verdict="reviewed"',
                        'data-sentiment="like"', 'data-sentiment="dislike"'):
             if needed not in embedded:
                 raise HarnessError(f"self-test: embedded row missing {needed}")
+        # Re-running embed must be a no-op, not a duplication. The old regex
+        # stopped at the first </div> inside a generated row, so a second run
+        # doubled every row and left orphaned closing tags that silently ended
+        # the wrapper early and killed every descendant style rule.
+        once = screen.read_text(encoding="utf-8")
+        embed_controls(project, screen)
+        twice = screen.read_text(encoding="utf-8")
+        if once != twice:
+            raise HarnessError("self-test: embed is not idempotent")
+        if twice.count('data-element="cover.layout.two-column"') != 1:
+            raise HarnessError("self-test: embed duplicated a row on re-run")
+        if twice.count("<div") != twice.count("</div"):
+            raise HarnessError("self-test: embed left unbalanced <div> tags")
+
         screen.write_text("<html><body>no placeholder</body></html>", encoding="utf-8")
         try:
             embed_controls(project, screen)
@@ -969,6 +1102,39 @@ def self_test() -> None:
         gap = screen.stat().st_mtime - rival.stat().st_mtime
         if gap < 2:
             raise HarnessError(f"self-test: publish left a {gap:.1f}s race with another screen")
+
+        # Reviewed is a status, not approval, and must not freeze the element.
+        record_decision(project, "seen.it", "reviewed", 3, "user clicked reviewed", [], source="user")
+        seen = {e["element"]: e for e in json.loads((output / "decisions.json").read_text(encoding="utf-8"))["elements"]}
+        if seen["seen.it"]["state"] != "reviewed":
+            raise HarnessError("self-test: reviewed status not recorded")
+        if 'data-element="seen.it"' not in render_feedback_controls(load_decisions(output), None, project):
+            raise HarnessError("self-test: a reviewed element must stay scoreable")
+        record_decision(project, "seen.it", "proposed", 5, "user kept iterating", [], source="user")
+        if json.loads((output / "decisions.json").read_text(encoding="utf-8")) is None:
+            raise HarnessError("unreachable")
+
+        # Reset clears the rating only; encouragement is a separate signal.
+        record_decision(project, "rated.then.cleared", "proposed", 4, "user", [],
+                        source="user", sentiment="like")
+        clear_decision(project, "rated.then.cleared")
+        cleared = {e["element"]: e for e in json.loads((output / "decisions.json").read_text(encoding="utf-8"))["elements"]}["rated.then.cleared"]
+        if cleared["stars"] != UNRATED or cleared["scored"]:
+            raise HarnessError("self-test: reset did not clear the rating")
+        if cleared.get("sentiment") != "like":
+            raise HarnessError("self-test: reset wrongly cleared the encouragement signal")
+
+        # Ordering: this turn on top, then unresolved, best execution first.
+        for name, state, stars in (("z.old.approved", "approved", 5), ("a.new.proposed", "proposed", 2),
+                                   ("m.mid.proposed", "proposed", 4)):
+            record_decision(project, name, state, stars, "fixture", [], source="user")
+        ordered = render_feedback_controls(load_decisions(output), None, project, pinned={"z.old.approved"})
+        seq = re.findall(r'data-element="([^"]+)"', ordered)
+        if seq[0] != "z.old.approved":
+            raise HarnessError("self-test: pinned element was not placed first")
+        props = [n for n in seq if n in ("a.new.proposed", "m.mid.proposed")]
+        if props != ["m.mid.proposed", "a.new.proposed"]:
+            raise HarnessError("self-test: proposals not sorted by execution score")
 
         # validate must refuse a decision-less harness rather than green-light it.
         (output / "decisions.json").unlink()
@@ -997,6 +1163,8 @@ def parser() -> argparse.ArgumentParser:
     decide.add_argument("--evidence", required=True, help="verbatim user excerpt, not a paraphrase")
     decide.add_argument("--supersedes", default="", help="comma-separated element ids this replaces")
     decide.add_argument("--preview", default="", help="project-relative graphic of the element being ranked")
+    decide.add_argument("--implemented", default="",
+                        help="what was actually built, shown on the scoring row")
     decide.add_argument("--source", default="agent", choices=SOURCES,
                         help="agent (capped at 1 star) or user (only via adopt)")
     adopt = subcommands.add_parser("adopt", help="fold companion star ranks into the ledger")
@@ -1007,6 +1175,7 @@ def parser() -> argparse.ArgumentParser:
     controls.add_argument("--project-root", required=True, type=Path)
     controls.add_argument("--out", type=Path, help="write here instead of stdout")
     controls.add_argument("--shot-width", default="", help="preview frame width, e.g. 132px")
+    controls.add_argument("--pin", default="", help="element ids to pin on top (this turn's work)")
     controls.add_argument("--bg", default="", help="background color; declare the corpus palette, don't guess it")
     controls.add_argument("--ink", default="", help="text/border color")
     controls.add_argument("--accent", default="", help="accent color, e.g. the approved family accent")
@@ -1023,6 +1192,7 @@ def parser() -> argparse.ArgumentParser:
     for token in ("bg", "ink", "accent", "font"):
         embed.add_argument(f"--{token}", default="")
     embed.add_argument("--shot-width", default="")
+    embed.add_argument("--pin", default="", help="element ids to pin on top (this turn's work)")
     publish = subcommands.add_parser("publish", help="make a screen the one the companion serves")
     publish.add_argument("--project-root", required=True, type=Path)
     publish.add_argument("--screen", required=True, type=Path)
@@ -1056,7 +1226,8 @@ def main() -> int:
             preview = preview_reference(args.project_root, args.preview) if args.preview else None
             decisions = record_decision(args.project_root, args.element, args.verdict,
                                         args.stars, args.evidence, supersedes, preview,
-                                        source=args.source)
+                                        source=args.source,
+                                        implemented=args.implemented or None)
             live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
             print(f"Recorded {args.element} ({args.verdict}, {args.stars}★). "
                   f"{len(live)} element(s) standing, state={decisions['state']}.")
@@ -1075,7 +1246,8 @@ def main() -> int:
             theme = {t: getattr(args, t) for t in ("bg", "ink", "accent", "font") if getattr(args, t)}
             if args.shot_width:
                 theme["shot"] = args.shot_width
-            count = embed_controls(args.project_root, args.screen, theme or None)
+            count = embed_controls(args.project_root, args.screen, theme or None,
+                                   {i.strip() for i in args.pin.split(",") if i.strip()})
             print(f"Embedded {count} generated row(s) into {args.screen.name}. "
                   f"Run `publish` to make it the served screen.")
         elif args.command == "publish":
@@ -1094,8 +1266,12 @@ def main() -> int:
                       f"coverage {report['coverage']:.0%}")
                 print(f"stars    mean {report['meanStars']}  median {report['medianStars']}  [{bars}]")
                 print(f"signals  {report['likes']} like  {report['dislikes']} dislike  "
-                      f"{report['approved']} approved  {report['rejected']} rejected  "
+                      f"{report['reviewed']} reviewed  {report['approved']} approved  "
+                      f"{report['rejected']} rejected  "
                       f"{report['superseded']} superseded")
+                if report["needsPolish"]:
+                    print(f"polish   {len(report['needsPolish'])} (good idea, execution not there yet): "
+                          + ", ".join(report["needsPolish"][:5]))
                 if report["conflicts"]:
                     print(f"conflict {len(report['conflicts'])}: " + ", ".join(report["conflicts"][:5]))
                 if report["unscored"]:
@@ -1107,8 +1283,9 @@ def main() -> int:
             output = args.project_root.resolve(strict=True) / "spec" / "design-harness"
             theme = {"bg": args.bg, "ink": args.ink, "accent": args.accent,
                      "font": args.font, "shot": args.shot_width}
+            pins = {i.strip() for i in args.pin.split(",") if i.strip()}
             markup = render_feedback_controls(load_decisions(output), theme,
-                                              args.project_root.resolve(strict=True))
+                                              args.project_root.resolve(strict=True), pins)
             if args.out:
                 args.out.write_text(markup, encoding="utf-8")
                 print(f"Wrote feedback controls to {args.out}")

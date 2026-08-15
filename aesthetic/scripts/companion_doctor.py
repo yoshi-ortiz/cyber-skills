@@ -169,6 +169,29 @@ def main() -> int:
     if rows and art < rows:
         fail(f"{rows - art} row(s) have a frame but no artwork inside it")
         bad += 1
+    # Usable, not merely present. doctor was green five times on a UI the user
+    # then rejected, because it only ever asked "does the markup exist".
+    if 'min-inline-size:34px' not in html and "min-inline-size:38px" not in html:
+        fail("controls declare no minimum hit target -- they will be hard to click")
+        bad += 1
+    else:
+        ok("controls declare a usable hit target")
+    if "data-reset" not in html:
+        fail("no reset control -- a rating cannot be cleared, so toggling off is cosmetic")
+        bad += 1
+    if 'data-verdict="approved"' in html and 'data-verdict="reviewed"' not in html:
+        fail("verdict control still says approved -- it is a reviewed status, not approval")
+        bad += 1
+    stale = [c for c in ('data-rank="0"',) if c in html]
+    if stale:
+        fail(f"screen carries retired controls ({', '.join(stale)}) -- re-run `embed`")
+        bad += 1
+    if 'class="dh-desc"' not in html and rows:
+        fail("rows show ids with no description of what is being scored -- "
+             "record --evidence and --implemented, then re-run `embed`")
+        bad += 1
+    else:
+        ok("rows describe what is being scored")
     if "sin gr" in html:
         fail(f"{html.count('sin gr')} element(s) render with no graphic to judge")
         bad += 1

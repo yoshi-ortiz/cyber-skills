@@ -32,6 +32,22 @@ This sends a real click through a real socket and confirms it lands. It is the o
 
 Then read `spec/design-harness/DECISIONS.md` before proposing anything.
 
+## What the signals mean
+
+Read this before touching anything. Getting it wrong has cost whole sessions and destroyed approved work.
+
+| Signal | Means | Does **not** mean |
+| --- | --- | --- |
+| **★ 1–5** | **Graphic execution quality** — how well the thing is drawn, ugly → beautiful. 1 is the worst execution. | Confidence, priority, or whether to do it at all |
+| **↺ reset** | Clear the rating: "I have not judged this yet" | A score of zero. Clearing and "worst execution" are different statements |
+| **👍 green** | This direction is right, keep going | That the drawing is good |
+| **👎 red** | Not this direction | That the drawing is bad |
+| **☑ reviewed** | "I have looked at this." A toggleable **status** | Approval, and it does **not** freeze the element — iteration continues after it |
+
+**👍 with 2 stars is the most useful state in the system**, not a contradiction: *good idea, badly drawn yet*. The response is to **improve the drawing**. Never drop, supersede, or reject an element because its execution score is low — `stats` reports these under `polish`, not `conflicts`.
+
+**A score never changes state.** Only an explicit verdict does. Reading a low score as "delete this" already destroyed work the user wanted kept.
+
 ## Feedback is captured, never inferred
 
 Ranks come from user clicks, adopted:
@@ -43,23 +59,13 @@ python3 scripts/bootstrap_harness.py adopt --project-root . \
 
 `adopt` reporting `0 adopted` means **no feedback was captured** — say so plainly rather than moving on.
 
-Four signals, all user-set, each meaning one thing:
-
-| Control | Meaning |
-| --- | --- |
-| **0 stars** | kill it — a real score, not a missing value |
-| **1–5 stars** | strength |
-| **👍 / 👎** | affinity, recorded independently of the verdict |
-| **✓ check** | approve — locks the element into Standing |
-
-Affinity is kept separate from verdict so "I like it but it is not settled" stays expressible. Never derive any of the four from prose.
-
-`decide` is for agent inference only and is **capped at 1 star** by the tool. A higher rank must come from a click. If you catch yourself typing `--stars 4` from something the user said in chat, that is the bug this cap exists to prevent — ask them to click it instead.
+`decide` is for agent inference only and is **capped at 1 star** by the tool. A higher rank must come from a click. Record what you built so the row can say it:
 
 ```bash
 python3 scripts/bootstrap_harness.py decide --project-root . \
   --element cover.ring.kicker --verdict proposed --stars 1 \
-  --evidence "agent inference: corpus suggests a ring" --source agent
+  --evidence "agent inference: corpus suggests a ring" \
+  --implemented "ring at 96px with the kicker on the arc" --source agent
 ```
 
 ## Statistics
@@ -72,27 +78,27 @@ Deterministic — same ledger, same numbers. Lead with **coverage**: the fractio
 
 ## Scoring lives inside the prototype
 
-Score the design where the user can see it, not on a separate list. Put a placeholder in the prototype screen naming the elements that section scores:
+Score the design where the user can see it. Put a placeholder naming the elements a section scores:
 
 ```html
 <div data-dh-controls="cover.layout.two-column,cover.spine.right"></div>
 ```
 
-Then fill it and serve it — two commands, never by hand:
+Fill it and serve it — two commands, never by hand. `--pin` puts this turn's work on top:
 
 ```bash
 python3 scripts/bootstrap_harness.py embed --project-root . --screen <screen>.html \
-  --bg "#ffebb8" --ink "#111" --accent "#d9482a"
+  --bg "#ffebb8" --ink "#111" --accent "#d9482a" --pin cover.spine.right
 python3 scripts/bootstrap_harness.py publish --project-root . --screen <screen>.html
 ```
 
-`embed` refuses a screen with no placeholder and refuses element ids not in Standing. `publish` stamps the screen a clear margin ahead of every other screen, because the companion serves **only the newest-mtime file** and a hand `touch` leaves a race.
+`embed` is **idempotent** — safe to re-run on a filled screen. It refuses a screen with no placeholder and refuses ids not in Standing. `publish` stamps the screen a clear margin ahead of every other, because the companion serves **only the newest-mtime file**.
 
-**Never hand-write scoring markup.** Every hand-rolled variant has silently dropped the component graphic — that is what `embed` exists to make unnecessary. `controls --out` is for a standalone list only.
+**The skill owns the scoring UI. Never write scoring CSS in a project.** Every local patch has produced specificity fights and unusable controls. If a control looks wrong, fix `FEEDBACK_STYLE` in the generator so every project gets the fix — do not patch the screen.
 
-Each row carries the graphic being judged (`decide --preview`), 0–5 stars, 👍/👎, ✓, and a red banner that appears when the page is not wired — so a `file://` tab announces itself instead of eating clicks.
+Rows sort automatically: pinned first, then unresolved → reviewed → approved, best execution first inside each group. Each row shows the graphic, the proposal (`--evidence`) and what was built (`--implemented`).
 
-**Write the scoring screen last, or re-run `publish`.** Anything written afterwards steals the route.
+**Write the scoring screen last, or re-run `publish`.**
 
 ## After editing the companion's own code
 
@@ -107,6 +113,14 @@ sips -s format png --resampleWidth 1400 file.pdf --out /tmp/p.png   # then read 
 ```
 
 Byte-level extraction — parsing content streams, installing packages, hashing every page — is an **escalation the user opts into**, not the default. It is infeasible on small models and usually answers a question nobody asked. Corpus files are hashed once at `init`; that is the only automatic hashing.
+
+## "continue prototype" means the /prototype skill
+
+When the user says **continue prototype**, they mean the `/prototype` skill driving the brainstorming companion — not "keep editing harness screens". Invoke it. This skill supplies the ledger, the scoring rows and `publish`; `/prototype` drives what gets built. They compose; they do not compete.
+
+## Every turn must produce a design improvement
+
+The user's measure: *sessions should be short and produce great design output on each input.* A turn spent fixing the scoring UI is a failed turn. If a control is broken, fix it **in this skill**, once, and move on — do not ask the user to re-specify what a star means.
 
 ## Working rules
 
