@@ -108,8 +108,28 @@ def main() -> int:
             fail(f"{runner_up.name} is within {gap:.1f}s of the served screen -- which one loads is a race")
             bad += 1
 
-    # 3..5 — the served screen must actually be scoreable, with the graphic
-    html = served.read_text(errors="replace")
+    # 3..5 — the served screen must actually be scoreable, with the graphic.
+    # Fetch it over HTTP: the file on disk is not what the user gets. The server
+    # injects helper.js and caches it at boot, so a correct file can still be
+    # served with a stale helper that swallows every click.
+    try:
+        conn = http.client.HTTPConnection(host, port, timeout=4)
+        conn.request("GET", "/", headers={"Cookie": cookie} if cookie else {})
+        response = conn.getresponse()
+        html = response.read().decode("utf-8", "replace")
+        conn.close()
+    except OSError as err:
+        fail(f"could not fetch the served page ({err.__class__.__name__})")
+        return 1
+    if "data-dh-live" not in html:
+        fail("served page carries a stale helper (no live flag) -- restart the companion "
+             "so it re-reads helper.js, or clicks will be silently dropped")
+        bad += 1
+    else:
+        ok("served page is wired (live flag injected)")
+    if served.read_text(errors="replace").count("data-element=") > html.count("data-element="):
+        fail(f"{served.name} on disk has more scoring rows than the served page -- stale route")
+        bad += 1
     checks = {
         "scoring rows present (data-element)": "data-element=" in html,
         "star controls present (data-rank)": "data-rank=" in html,

@@ -8,6 +8,9 @@ import base64
 import hashlib
 import json
 import mimetypes
+import os
+import re
+import time
 import shutil
 import subprocess
 import sys
@@ -508,6 +511,72 @@ def record_preflight(project_root: Path, available: list[str], missing: list[str
     return matrix
 
 
+def newest_session_dir(project_root: Path) -> Path:
+    root = project_root / ".superpowers" / "brainstorm"
+    sessions = [d for d in root.glob("*/") if (d / "content").is_dir()] if root.is_dir() else []
+    if not sessions:
+        raise HarnessError("no companion session found; start the companion first")
+    return max(sessions, key=lambda d: d.stat().st_mtime)
+
+
+def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | None = None) -> int:
+    """Fill a screen's `data-dh-controls` placeholders with generated rows.
+
+    Without this, an agent wanting scoring inside a prototype hand-writes the
+    markup and silently drops the component graphic -- which is exactly what
+    happened. The placeholder names the elements; the harness supplies the row.
+    """
+    project_root = project_root.resolve(strict=True)
+    output = project_root / "spec" / "design-harness"
+    html = screen.read_text(encoding="utf-8")
+    generated = render_feedback_controls(load_decisions(output), theme, project_root)
+    rows = {m.group(1): m.group(0) for m in re.finditer(
+        r'<div class="dh-fb" data-element="([^"]+)".*?\n</div>', generated, re.S)}
+    style_match = re.search(r"<style>.*?</style>", generated, re.S)
+    style = style_match.group(0) if style_match else ""
+
+    placeholders = list(re.finditer(
+        r'<div([^>]*?)data-dh-controls="([^"]*)"([^>]*)>(.*?)</div>', html, re.S))
+    if not placeholders:
+        raise HarnessError(
+            'no <div data-dh-controls="element.a,element.b"></div> placeholder in the screen. '
+            "Add one where scoring belongs -- never hand-write the rows.")
+
+    filled = 0
+    for match in reversed(placeholders):
+        wanted = [e.strip() for e in match.group(2).split(",") if e.strip()]
+        missing = [e for e in wanted if e not in rows]
+        if missing:
+            raise HarnessError("placeholder names element(s) not in standing: " + ", ".join(missing))
+        body = "\n".join(rows[e] for e in wanted)
+        replacement = f"<div{match.group(1)}data-dh-controls=\"{match.group(2)}\"{match.group(3)}>\n{body}\n</div>"
+        html = html[:match.start()] + replacement + html[match.end():]
+        filled += len(wanted)
+
+    if style and "dh-fb{" not in html:
+        html = html.replace("</head>", style + "\n</head>", 1) if "</head>" in html else style + "\n" + html
+    screen.write_text(html, encoding="utf-8")
+    return filled
+
+
+def publish_screen(project_root: Path, screen: Path, gap_seconds: int = 5) -> Path:
+    """Make one screen the served one, deterministically.
+
+    The companion serves only the newest-mtime file. Doing that by hand invites
+    both a silent redirect and an mtime race, so the harness does it: the chosen
+    screen is stamped a clear margin ahead of every other screen.
+    """
+    session = newest_session_dir(project_root.resolve(strict=True))
+    content = session / "content"
+    if screen.resolve().parent != content.resolve():
+        raise HarnessError(f"screen must live in the served session: {content}")
+    others = [p for p in content.glob("*.html") if p.resolve() != screen.resolve()]
+    newest_other = max((p.stat().st_mtime for p in others), default=0.0)
+    stamp = max(time.time(), newest_other + gap_seconds)
+    os.utime(screen, (stamp, stamp))
+    return screen
+
+
 def ledger_stats(decisions: dict[str, object]) -> dict[str, object]:
     """Deterministic aggregates over the ledger. Same ledger, same numbers.
 
@@ -854,6 +923,38 @@ def self_test() -> None:
         if flagged["likes"] < 1:
             raise HarnessError("self-test: like not counted")
 
+        # embed must supply the graphic, and must refuse to guess a placement.
+        session = project / ".superpowers" / "brainstorm" / "s1" / "content"
+        session.mkdir(parents=True)
+        screen = session / "proto.html"
+        screen.write_text('<html><head></head><body><h1>fichas</h1>'
+                          '<div data-dh-controls="cover.layout.two-column"></div>'
+                          '</body></html>', encoding="utf-8")
+        if embed_controls(project, screen) != 1:
+            raise HarnessError("self-test: embed did not fill the placeholder")
+        embedded = screen.read_text(encoding="utf-8")
+        for needed in ('class="dh-shot"', 'data-rank="0"', 'data-verdict="approved"',
+                       'data-sentiment="like"', 'data-sentiment="dislike"'):
+            if needed not in embedded:
+                raise HarnessError(f"self-test: embedded row missing {needed}")
+        screen.write_text("<html><body>no placeholder</body></html>", encoding="utf-8")
+        try:
+            embed_controls(project, screen)
+        except HarnessError:
+            pass
+        else:
+            raise HarnessError("self-test: embed accepted a screen with no placeholder")
+
+        # publish must win the newest-mtime race by a clear margin, not a tie.
+        screen.write_text('<html><body><div data-dh-controls="cover.layout.two-column"></div></body></html>',
+                          encoding="utf-8")
+        rival = session / "rival.html"
+        rival.write_text("<html><body>rival</body></html>", encoding="utf-8")
+        publish_screen(project, screen)
+        gap = screen.stat().st_mtime - rival.stat().st_mtime
+        if gap < 2:
+            raise HarnessError(f"self-test: publish left a {gap:.1f}s race with another screen")
+
         # validate must refuse a decision-less harness rather than green-light it.
         (output / "decisions.json").unlink()
         try:
@@ -901,6 +1002,15 @@ def parser() -> argparse.ArgumentParser:
     preflight.add_argument("--missing", default="", help="comma-separated capabilities you confirmed absent")
     doctor = subcommands.add_parser("doctor", help="health-check the whole feedback path end to end")
     doctor.add_argument("--project-root", required=True, type=Path)
+    embed = subcommands.add_parser("embed", help="fill data-dh-controls placeholders with generated rows")
+    embed.add_argument("--project-root", required=True, type=Path)
+    embed.add_argument("--screen", required=True, type=Path)
+    for token in ("bg", "ink", "accent", "font"):
+        embed.add_argument(f"--{token}", default="")
+    embed.add_argument("--shot-width", default="")
+    publish = subcommands.add_parser("publish", help="make a screen the one the companion serves")
+    publish.add_argument("--project-root", required=True, type=Path)
+    publish.add_argument("--screen", required=True, type=Path)
     stats = subcommands.add_parser("stats", help="deterministic statistics over the ledger")
     stats.add_argument("--project-root", required=True, type=Path)
     stats.add_argument("--json", action="store_true", help="machine-readable output")
@@ -946,6 +1056,17 @@ def main() -> int:
             blocked = [i["category"] for i in matrix["requiredCapabilities"] if not i["available"]]
             print(f"Available: {', '.join(ready) or 'none'}")
             print(f"Not preflighted or missing: {', '.join(blocked) or 'none'}")
+        elif args.command == "embed":
+            theme = {t: getattr(args, t) for t in ("bg", "ink", "accent", "font") if getattr(args, t)}
+            if args.shot_width:
+                theme["shot"] = args.shot_width
+            count = embed_controls(args.project_root, args.screen, theme or None)
+            print(f"Embedded {count} generated row(s) into {args.screen.name}. "
+                  f"Run `publish` to make it the served screen.")
+        elif args.command == "publish":
+            published = publish_screen(args.project_root, args.screen)
+            print(f"Serving {published.name}. Any screen written after this steals the route -- "
+                  f"re-run `publish` if you write another.")
         elif args.command == "stats":
             output = args.project_root.resolve(strict=True) / "spec" / "design-harness"
             report = ledger_stats(load_decisions(output))

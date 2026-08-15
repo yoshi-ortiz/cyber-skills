@@ -23,6 +23,7 @@ This sends a real click through a real socket and confirms it lands. It is the o
 | Served screen | `/` serves **only the newest-mtime file** — write any screen after the scoring one and you have silently redirected the user |
 | Scoring rows | screen has no `data-element` |
 | Star + verdict controls | no `data-rank` / `data-verdict` |
+| Stale injected helper | served page looks right, clicks dropped — restart after editing `helper.js` |
 | Component graphic | rows show ids, not the thing being judged |
 | Socket round trip | clicks land nowhere — a `file://` tab does this, silently |
 
@@ -68,18 +69,33 @@ python3 scripts/bootstrap_harness.py stats --project-root .
 
 Deterministic — same ledger, same numbers. Lead with **coverage**: the fraction of standing elements carrying a signal the user actually set. A high star average means nothing at 20% coverage, because the rest is agent inference. `conflicts` surfaces what an average hides (liked but scored low, disliked but still standing); `unscored` names exactly what still needs clicks.
 
-## The scoring screen
+## Scoring lives inside the prototype
 
-Generate it. Never hand-write scoring markup — every hand-rolled variant so far has silently dropped the component graphic:
+Score the design where the user can see it, not on a separate list. Put a placeholder in the prototype screen naming the elements that section scores:
 
-```bash
-python3 scripts/bootstrap_harness.py controls --project-root . \
-  --bg "#ffebb8" --ink "#111" --accent "#d9482a" --out controls.html
+```html
+<div data-dh-controls="cover.layout.two-column,cover.spine.right"></div>
 ```
 
-Every row carries the graphic being judged (`decide --preview`), zero-through-five, approve/reject, and a red banner that appears when the page is not wired to the companion — so a `file://` tab announces itself instead of eating clicks.
+Then fill it and serve it — two commands, never by hand:
 
-**Write the scoring screen last.** Anything written after it steals the `/` route.
+```bash
+python3 scripts/bootstrap_harness.py embed --project-root . --screen <screen>.html \
+  --bg "#ffebb8" --ink "#111" --accent "#d9482a"
+python3 scripts/bootstrap_harness.py publish --project-root . --screen <screen>.html
+```
+
+`embed` refuses a screen with no placeholder and refuses element ids not in Standing. `publish` stamps the screen a clear margin ahead of every other screen, because the companion serves **only the newest-mtime file** and a hand `touch` leaves a race.
+
+**Never hand-write scoring markup.** Every hand-rolled variant has silently dropped the component graphic — that is what `embed` exists to make unnecessary. `controls --out` is for a standalone list only.
+
+Each row carries the graphic being judged (`decide --preview`), 0–5 stars, 👍/👎, ✓, and a red banner that appears when the page is not wired — so a `file://` tab announces itself instead of eating clicks.
+
+**Write the scoring screen last, or re-run `publish`.** Anything written afterwards steals the route.
+
+## After editing the companion's own code
+
+The companion caches `helper.js` at boot. If you change it, **restart the companion** — otherwise the served page carries a stale helper and every click is dropped while the page looks fine. `doctor` fetches the served page over HTTP and fails when the live flag is missing, so it catches this; the file on disk cannot tell you.
 
 ## Evidence: cheap first
 
