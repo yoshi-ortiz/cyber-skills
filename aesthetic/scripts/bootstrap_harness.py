@@ -88,6 +88,14 @@ SCORE_NEVER_REMOVES = True
 PREVIEW_SUFFIXES = {".svg", ".html", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
 # Who set a rank. The distinction is the whole point: an agent-typed number and
 # a user click used to be indistinguishable in the ledger.
+# Three lifecycle groups the user reads at a glance. Derived from state, never
+# stored separately, so a state change cannot leave the group stale.
+GROUPS = (
+    ("brainstorming", "Lluvia de ideas", ("proposed",)),
+    ("developing", "En desarrollo", ("reviewed", "approved")),
+    ("rejected", "Descartado", ("rejected", "superseded")),
+)
+GROUP_OF = {state: key for key, _, states in GROUPS for state in states}
 SOURCES = ("user", "agent")
 AGENT_MAX_STARS = 1
 
@@ -228,7 +236,8 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                     preview: dict[str, str] | None = None,
                     source: str = "agent",
                     sentiment: str | None = None,
-                    implemented: str | None = None) -> dict[str, object]:
+                    implemented: str | None = None,
+                    description: str | None = None) -> dict[str, object]:
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
     if verdict not in DECISION_STATES:
         raise HarnessError(f"verdict must be one of: {', '.join(DECISION_STATES)}")
@@ -259,7 +268,10 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             e["scored"] = True
             if implemented is not None:
                 e["implemented"] = implemented
+            if description is not None:
+                e["description"] = description
             e.setdefault("implemented", None)
+            e.setdefault("description", None)
             if sentiment is not None:
                 e["sentiment"] = sentiment
             e.setdefault("sentiment", None)
@@ -272,7 +284,7 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             "element": element, "state": verdict, "stars": stars,
             "evidence": evidence, "supersededBy": None, "preview": preview,
             "source": source, "sentiment": sentiment, "scored": True,
-            "implemented": implemented,
+            "implemented": implemented, "description": description,
         })
     if any(e["state"] == "approved" for e in decisions["elements"]):
         decisions["state"] = "approved"
@@ -425,6 +437,15 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
 .dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible,
 .dh-fb [data-verdict]:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+.dh-group{margin:14px 0 2px;display:flex;align-items:center;gap:8px;
+ font:700 11px/1 var(--dh-font,ui-monospace,monospace);letter-spacing:.14em;
+ text-transform:uppercase;color:var(--dh-ink,#111);opacity:.75}
+.dh-group:first-child{margin-top:0}
+.dh-group .dh-count{font-weight:600;opacity:.6}
+.dh-group::after{content:"";flex:1;height:1px;background:currentColor;opacity:.25}
+.dh-group[data-group="rejected"]{color:#b00020;opacity:.85}
+.dh-fb[data-group="rejected"]{opacity:.62}
+.dh-fb[data-group="rejected"]:hover{opacity:1}
 .dh-shot{display:block;inline-size:var(--dh-shot-w,96px);aspect-ratio:8.5/11;overflow:hidden;
  position:relative;border:1px solid rgba(0,0,0,.25);border-radius:4px;background:#fff;contain:strict}
 .dh-shot svg{inline-size:100%;block-size:100%;display:block}
@@ -498,8 +519,7 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
     markup out.
     """
     pinned = pinned or set()
-    live = [e for e in decisions["elements"]
-            if e["state"] in ("proposed", "reviewed", "approved")]
+    live = [e for e in decisions["elements"] if e["state"] in GROUP_OF]
     theme_vars = {
         "--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent",
         "--dh-font": "font", "--dh-shot-w": "shot",
@@ -514,34 +534,56 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
              'Abre la URL del companion (http://localhost:PORT/?key=...), no el archivo.</strong>']
     if not live:
         lines.append("<!-- no elements in standing; record one with `decide` first -->")
-    rank_of = {"proposed": 0, "reviewed": 1, "approved": 2, "rejected": 3, "superseded": 4}
+    group_index = {key: n for n, (key, _, _) in enumerate(GROUPS)}
     def order(item: dict[str, object]) -> tuple:
-        # Whatever this turn touched is pinned on top; then unresolved work
-        # first, best execution first inside each group.
+        # Pinned work from this turn first, then group order, then best
+        # execution first, then id so the output stays byte-stable.
         return (0 if item["element"] in pinned else 1,
-                rank_of.get(item["state"], 5),
+                group_index[GROUP_OF[item["state"]]],
                 -int(item.get("stars") or 0),
                 item["element"])
+    rendered_group = None
     for entry in sorted(live, key=order):
+        is_pinned = entry["element"] in pinned
+        group_key = "pinned" if is_pinned else GROUP_OF[entry["state"]]
+        if group_key != rendered_group:
+            rendered_group = group_key
+            label = ("De esta ronda" if is_pinned else
+                     next(n for k, n, _ in GROUPS if k == group_key))
+            tally = sum(1 for e in live
+                        if ("pinned" if e["element"] in pinned else GROUP_OF[e["state"]]) == group_key)
+            lines.append(f'<h4 class="dh-group" data-group="{group_key}">{label}<span class="dh-count">{tally}</span></h4>')
         element, stars = entry["element"], entry["stars"]
         lines.append(
             f'<div class="dh-fb" data-element="{element}" data-stars="{stars}" '
-            f'data-scored="{"yes" if entry.get("scored") else "no"}" data-label="{element}">'
+            f'data-scored="{"yes" if entry.get("scored") else "no"}" '
+            f'data-group="{GROUP_OF[entry["state"]]}" data-label="{element}">'
         )
         lines.append(render_preview(project_root, entry.get("preview"), element))
         lines.append('<span class="dh-meta">')
-        lines.append(f"<b>{element}</b>")
-        lines.append(f'<small>{entry["state"]}</small>')
+        lines.append(f'<span class="dh-id">{element}</span>')
+        what = str(entry.get("description") or "").strip()
+        proposed = str(entry.get("evidence") or "").strip()
+        built = str(entry.get("implemented") or "").strip()
+        if what:
+            lines.append(f'<span class="dh-desc">{what}</span>')
+        if proposed:
+            lines.append(f'<span class="dh-desc"><b>Propuesto:</b> {proposed}</span>')
+        if built:
+            lines.append(f'<span class="dh-desc"><b>Implementado:</b> {built}</span>')
+        unscored = "" if entry.get("scored") else " &middot; sin puntuar"
+        lines.append(f'<span class="dh-state">{entry["state"]}{unscored}</span>')
         lines.append("</span>")
         lines.append('<span class="dh-signals">')
         stars_markup = "".join(
-            (f'<span data-rank="0" role="button" tabindex="0" aria-label="cero, descartar"'
-             f'{" class=\"on\"" if stars == 0 else ""}>0</span>') if n == 0 else
-            (f'<span data-rank="{n}" role="button" tabindex="0" aria-label="{n} de {STAR_RANGE[1]}"'
-             f'{" class=\"on\"" if 0 < n <= stars else ""}>&#9733;</span>')
+            f'<span data-rank="{n}" role="button" tabindex="0" aria-label="{n} de {STAR_RANGE[1]}: calidad de ejecucion"'
+            + (' class="on"' if 0 < n <= stars else "") + "&#9733;</span>"
             for n in range(STAR_RANGE[0], STAR_RANGE[1] + 1)
         )
-        lines.append(f'<span class="dh-stars" role="group" aria-label="rango {element}">{stars_markup}</span>')
+        lines.append(
+            f'<span class="dh-stars" role="group" aria-label="ejecucion de {element}">'
+            f'<span data-reset role="button" tabindex="0" title="borrar puntuacion" aria-label="borrar la puntuacion de {element}">&#8634;</span>'
+            f'{stars_markup}</span>')
         mood = entry.get("sentiment")
         for name, glyph, label in (("like", "&#128077;", "me gusta"), ("dislike", "&#128078;", "no me gusta")):
             on = ' class="on"' if mood == name else ""
@@ -948,8 +990,15 @@ def self_test() -> None:
             raise HarnessError("self-test: a disliked element vanished from scoring")
         record_decision(project, "explicitly.rejected", "rejected", UNRATED, "user clicked reject", [],
                         source="user")
-        if 'data-element="explicitly.rejected"' in render_feedback_controls(load_decisions(output), None, project):
-            raise HarnessError("self-test: controls offered an explicitly rejected element")
+        rejected_markup = render_feedback_controls(load_decisions(output), None, project)
+        # Rejected work stays visible in its own group so a rejection can be
+        # undone by clicking, instead of by editing JSON.
+        if 'data-element="explicitly.rejected"' not in rejected_markup:
+            raise HarnessError("self-test: rejected element is unreachable for undo")
+        if 'data-group="rejected"' not in rejected_markup:
+            raise HarnessError("self-test: rejected group not rendered")
+        if "Lluvia de ideas" not in rejected_markup:
+            raise HarnessError("self-test: brainstorming group label missing")
 
         # Every color must be a themeable token, never a literal that would
         # override the corpus palette the ledger already approved.
@@ -1163,8 +1212,10 @@ def parser() -> argparse.ArgumentParser:
     decide.add_argument("--evidence", required=True, help="verbatim user excerpt, not a paraphrase")
     decide.add_argument("--supersedes", default="", help="comma-separated element ids this replaces")
     decide.add_argument("--preview", default="", help="project-relative graphic of the element being ranked")
+    decide.add_argument("--description", default="",
+                        help="what the component IS, in plain words (shown on the scoring row)")
     decide.add_argument("--implemented", default="",
-                        help="what was actually built, shown on the scoring row")
+                        help="what was actually built for it this time")
     decide.add_argument("--source", default="agent", choices=SOURCES,
                         help="agent (capped at 1 star) or user (only via adopt)")
     adopt = subcommands.add_parser("adopt", help="fold companion star ranks into the ledger")
@@ -1227,7 +1278,8 @@ def main() -> int:
             decisions = record_decision(args.project_root, args.element, args.verdict,
                                         args.stars, args.evidence, supersedes, preview,
                                         source=args.source,
-                                        implemented=args.implemented or None)
+                                        implemented=args.implemented or None,
+                                        description=args.description or None)
             live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
             print(f"Recorded {args.element} ({args.verdict}, {args.stars}★). "
                   f"{len(live)} element(s) standing, state={decisions['state']}.")

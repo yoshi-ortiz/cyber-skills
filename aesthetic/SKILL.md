@@ -68,6 +68,48 @@ python3 scripts/bootstrap_harness.py decide --project-root . \
   --implemented "ring at 96px with the kicker on the arc" --source agent
 ```
 
+## Describing a component
+
+A dotted id is not a description. Three fields, each with one job — all optional, all shown on the scoring row:
+
+| Flag | Holds | Example |
+| --- | --- | --- |
+| `--description` | what the component **is**, in plain words | `"anillo con el antetítulo del rol alrededor del objeto"` |
+| `--evidence` | why it exists — **verbatim** user words, never a paraphrase | `"user: 'the previous ring was also kinda fine'"` |
+| `--implemented` | what was actually **built** this round | `"anillo a 96px, texto en el arco superior"` |
+
+```bash
+python3 scripts/bootstrap_harness.py decide --project-root . \
+  --element cover.ring.kicker --verdict proposed --stars 1 --source agent \
+  --description "anillo con el antetítulo alrededor del objeto" \
+  --evidence "user: 'kinda fine'" \
+  --implemented "anillo a 96px sobre la retícula"
+```
+
+A row with no `--description` shows only its id, which is what made earlier screens unrankable. Fill it when you first record an element.
+
+## Grouping and sorting
+
+Rows group themselves. The order is derived from state, never stored, so it cannot go stale:
+
+| Group | Holds | Reads as |
+| --- | --- | --- |
+| **De esta ronda** | whatever you passed to `--pin` | what changed this turn, on top |
+| **Lluvia de ideas** | `proposed` | not yet looked at |
+| **En desarrollo** | `reviewed`, `approved` | being worked on |
+| **Descartado** | `rejected`, `superseded` | set aside — still visible, dimmed |
+
+Inside each group: **best execution first**, then id, so output is byte-stable for a given ledger.
+
+Rejected work stays on screen deliberately. A rejection must be undoable by clicking, not by editing JSON — that is how a wrongly-rejected element gets restored.
+
+Pin this turn's work so the user sees it first:
+
+```bash
+python3 scripts/bootstrap_harness.py embed --project-root . --screen <screen>.html \
+  --pin cover.ring.kicker,cover.solapa.right
+```
+
 ## Statistics
 
 ```bash
