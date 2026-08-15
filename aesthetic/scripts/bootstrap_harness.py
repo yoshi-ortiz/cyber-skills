@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import mimetypes
@@ -65,6 +66,8 @@ STAR_RANGE = (1, 5)
 # carries direction. Sentiment maps to a verdict and, when the user gave no
 # star, to a fixed default rank -- fixed so replaying a ledger is reproducible.
 SENTIMENTS = {"like": ("approved", 4), "dislike": ("rejected", 1)}
+# A preview is the graphic the star is actually about.
+PREVIEW_SUFFIXES = {".svg", ".html", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
 
 class HarnessError(Exception):
@@ -199,7 +202,8 @@ def render_decisions_md(decisions: dict[str, object]) -> str:
 
 
 def record_decision(project_root: Path, element: str, verdict: str, stars: int,
-                    evidence: str, supersedes: list[str]) -> dict[str, object]:
+                    evidence: str, supersedes: list[str],
+                    preview: dict[str, str] | None = None) -> dict[str, object]:
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
     if verdict not in DECISION_STATES:
         raise HarnessError(f"verdict must be one of: {', '.join(DECISION_STATES)}")
@@ -219,11 +223,14 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             decisions["supersededCount"] += 1
         elif e["element"] == element:
             e["state"], e["stars"], e["evidence"] = verdict, stars, evidence
+            if preview is not None:
+                e["preview"] = preview
+            e.setdefault("preview", None)
             break
     else:
         decisions["elements"].append({
             "element": element, "state": verdict, "stars": stars,
-            "evidence": evidence, "supersededBy": None,
+            "evidence": evidence, "supersededBy": None, "preview": preview,
         })
     if any(e["state"] == "approved" for e in decisions["elements"]):
         decisions["state"] = "approved"
@@ -293,27 +300,117 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
     return len(accepted), skipped
 
 
+# Every token has a var()-with-fallback, never a bare literal. Two ways to set
+# them, both deterministic:
+#   1. Pass --bg/--ink/--accent/--font to `controls`; values are baked into an
+#      inline style on the wrapper, so the same flags always emit the same
+#      bytes.
+#   2. Pass none, and nest the output inside a screen that already sets
+#      --dh-bg/--dh-ink/--dh-accent/--dh-font on an ancestor (every screen this
+#      harness has produced does, since C2/rev13 scope --bg/--acc per card) --
+#      the cascade fills the fallback. Either way there is no hardcoded color
+#      the harness's own approved palette (`palette.family-from-cards`) can be
+#      overridden by.
 FEEDBACK_STYLE = """<style>
-.dh-fb{font:600 11px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:#111;
- border:1px solid currentColor;padding:6px 8px;display:flex;gap:10px;align-items:center;
- flex-wrap:wrap;background:#fff}
-.dh-fb b{font-weight:800}
-.dh-fb .dh-stars{display:flex;gap:2px}
+.dh-feedback{container-type:inline-size}
+.dh-fb{font:600 11px/1.3 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
+ color:var(--dh-ink,#111);background:var(--dh-bg,#fff);
+ border:1px solid var(--dh-ink,#111);padding:8px;display:grid;
+ grid-template-columns:var(--dh-shot-w,132px) 1fr auto;gap:12px;align-items:center;
+ contain:layout style;content-visibility:auto;contain-intrinsic-size:auto 96px}
+.dh-fb + .dh-fb{border-top:0}
+.dh-fb b{font-weight:800;overflow-wrap:anywhere}
+.dh-fb .dh-meta{display:flex;flex-direction:column;gap:5px;min-width:0}
+.dh-fb .dh-signals{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dh-fb .dh-stars{display:flex;gap:2px;color:var(--dh-accent,var(--dh-ink,#111))}
 .dh-fb [data-rank],.dh-fb [data-sentiment]{cursor:pointer;user-select:none;
- border:1px solid currentColor;padding:1px 5px;background:transparent;line-height:1.4}
-.dh-fb [data-rank].on{background:#111;color:#fff}
-.dh-fb [data-sentiment].on{background:#111;color:#fff}
+ border:1px solid var(--dh-ink,#111);padding:1px 5px;background:transparent;line-height:1.4}
+.dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible{
+ outline:2px solid var(--dh-accent,var(--dh-ink,#111));outline-offset:2px}
+.dh-fb [data-rank].on{background:var(--dh-accent,var(--dh-ink,#111));color:var(--dh-bg,#fff)}
+.dh-fb [data-sentiment].on{background:var(--dh-accent,var(--dh-ink,#111));color:var(--dh-bg,#fff)}
+/* The graphic being ranked. Isolated so an injected fragment cannot restyle
+   the list around it, and clipped to a fixed frame so a tall screen does not
+   stretch its row. */
+.dh-shot{inline-size:var(--dh-shot-w,132px);aspect-ratio:8.5/11;overflow:hidden;
+ position:relative;border:1px solid var(--dh-ink,#111);background:var(--dh-bg,#fff);
+ contain:strict;display:block}
+.dh-shot > .dh-shot-inner{position:absolute;inset-block-start:0;inset-inline-start:0;
+ inline-size:var(--dh-shot-src-w,850px);block-size:var(--dh-shot-src-h,1100px);
+ transform:scale(calc(var(--dh-shot-w,132px) / var(--dh-shot-src-w,850px)));
+ transform-origin:0 0;pointer-events:none}
+.dh-shot img{inline-size:100%;block-size:100%;object-fit:contain;display:block}
+.dh-shot-missing{display:grid;place-items:center;text-align:center;padding:6px;
+ font-size:9px;opacity:.62;block-size:100%}
+@container (max-width: 520px){
+ .dh-fb{grid-template-columns:var(--dh-shot-w,132px) 1fr}
+ .dh-fb .dh-signals{grid-column:1 / -1}
+}
+@media (prefers-reduced-motion:reduce){.dh-fb *{transition:none!important;animation:none!important}}
 </style>"""
 
 
-def render_feedback_controls(decisions: dict[str, object]) -> str:
+def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
+    """Resolve and hash a preview graphic for a design element.
+
+    Stored as a project-relative path plus a hash, on the same principle as the
+    corpus manifest: a preview that silently changed is a preview nobody
+    reviewed.
+    """
+    project_root = project_root.resolve(strict=True)
+    candidate = (project_root / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
+    if not is_within(candidate, project_root):
+        raise HarnessError("preview must live inside the project root")
+    if not candidate.is_file():
+        raise HarnessError(f"preview not found: {raw}")
+    if candidate.suffix.lower() not in PREVIEW_SUFFIXES:
+        raise HarnessError(f"unsupported preview type '{candidate.suffix}'; use one of "
+                           + ", ".join(sorted(PREVIEW_SUFFIXES)))
+    return {"path": candidate.relative_to(project_root).as_posix(), "sha256": sha256_file(candidate)}
+
+
+def render_preview(project_root: Path | None, preview: dict[str, str] | None, element: str) -> str:
+    """Inline the graphic for one element, or say plainly that there is none."""
+    if not preview:
+        return ('<span class="dh-shot"><span class="dh-shot-missing">sin gráfico<br>'
+                '--preview</span></span>')
+    if project_root is None:
+        return f'<span class="dh-shot"><span class="dh-shot-missing">{preview["path"]}</span></span>'
+    path = (project_root / preview["path"])
+    if not path.is_file():
+        return ('<span class="dh-shot"><span class="dh-shot-missing">gráfico ausente<br>'
+                f'{preview["path"]}</span></span>')
+    suffix = path.suffix.lower()
+    if suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
+        media = "image/jpeg" if suffix in {".jpg", ".jpeg"} else f"image/{suffix.lstrip('.')}"
+        encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+        body = f'<img alt="" src="data:{media};base64,{encoded}">'
+        return f'<span class="dh-shot">{body}</span>'
+    # svg / html fragment: scaled inside a clipped frame rather than reflowed
+    fragment = path.read_text(encoding="utf-8")
+    return f'<span class="dh-shot"><span class="dh-shot-inner">{fragment}</span></span>'
+
+
+def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str] | None = None,
+                             project_root: Path | None = None) -> str:
     """Emit rank + sentiment controls for every element in standing.
 
     Generated from the ledger so a screen cannot invent a design-element id.
-    Same ledger in, byte-identical markup out.
+    Each row carries the graphic being ranked: a star next to a dotted id is a
+    guess, not a judgement. Same ledger, theme and previews in, byte-identical
+    markup out.
     """
     live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
-    lines = [FEEDBACK_STYLE, '<div class="dh-feedback">']
+    theme_vars = {
+        "--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent",
+        "--dh-font": "font", "--dh-shot-w": "shot",
+    }
+    wrapper_style = ""
+    if theme:
+        declared = "; ".join(f"{prop}: {theme[key]}" for prop, key in theme_vars.items() if theme.get(key))
+        if declared:
+            wrapper_style = f' style="{declared}"'
+    lines = [FEEDBACK_STYLE, f'<div class="dh-feedback"{wrapper_style}>']
     if not live:
         lines.append("<!-- no elements in standing; record one with `decide` first -->")
     for entry in sorted(live, key=lambda item: item["element"]):
@@ -321,18 +418,55 @@ def render_feedback_controls(decisions: dict[str, object]) -> str:
         lines.append(
             f'<div class="dh-fb" data-element="{element}" data-stars="{stars}" data-label="{element}">'
         )
+        lines.append(render_preview(project_root, entry.get("preview"), element))
+        lines.append('<span class="dh-meta">')
         lines.append(f"<b>{element}</b>")
+        lines.append(f'<small>{entry["state"]}</small>')
+        lines.append("</span>")
+        lines.append('<span class="dh-signals">')
         stars_markup = "".join(
-            f'<span data-rank="{n}"{" class=\"on\"" if n <= stars else ""}>&#9733;</span>'
+            f'<span data-rank="{n}" role="button" tabindex="0" aria-label="{n} de {STAR_RANGE[1]}"'
+            f'{" class=\"on\"" if n <= stars else ""}>&#9733;</span>'
             for n in range(STAR_RANGE[0], STAR_RANGE[1] + 1)
         )
-        lines.append(f'<span class="dh-stars">{stars_markup}</span>')
+        lines.append(f'<span class="dh-stars" role="group" aria-label="rango {element}">{stars_markup}</span>')
         for name in sorted(SENTIMENTS):
             glyph = "&#128077;" if name == "like" else "&#128078;"
-            lines.append(f'<span data-sentiment="{name}" title="{name}">{glyph}</span>')
+            lines.append(f'<span data-sentiment="{name}" role="button" tabindex="0" '
+                         f'aria-label="{name} {element}" title="{name}">{glyph}</span>')
+        lines.append("</span>")
         lines.append("</div>")
     lines.append("</div>")
     return "\n".join(lines) + "\n"
+
+
+def record_preflight(project_root: Path, available: list[str], missing: list[str]) -> dict[str, object]:
+    """Record which adapters were actually observed, per the compute invariant.
+
+    The agent cannot detect its own MCP wiring from inside this script, so
+    availability is asserted explicitly and stored. An adapter that was never
+    preflighted stays `available: false` -- absence of evidence is not
+    availability.
+    """
+    output = project_root.resolve(strict=True) / "spec" / "design-harness"
+    matrix_path = output / "capability-matrix.json"
+    if not matrix_path.is_file():
+        raise HarnessError("capability-matrix.json is missing; run `init` first")
+    matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+    claimed = {item["category"] for item in matrix.get("requiredCapabilities", [])}
+    unknown = sorted((set(available) | set(missing)) - claimed)
+    if unknown:
+        raise HarnessError("capability not required by the selected profiles: " + ", ".join(unknown))
+    both = sorted(set(available) & set(missing))
+    if both:
+        raise HarnessError("capability marked both available and missing: " + ", ".join(both))
+    for item in matrix["requiredCapabilities"]:
+        if item["category"] in available:
+            item["available"] = True
+        elif item["category"] in missing:
+            item["available"] = False
+    write_json(matrix_path, matrix)
+    return matrix
 
 
 def init_harness(project_root: Path, source_root: Path, profiles: list[str]) -> Path:
@@ -423,6 +557,15 @@ def validate_harness(project_root: Path) -> None:
             raise HarnessError(f"decision '{element}' is missing a {STAR_RANGE[0]}-{STAR_RANGE[1]} star rank")
         if not str(entry.get("evidence", "")).strip():
             raise HarnessError(f"decision '{element}' has no user evidence excerpt")
+        preview = entry.get("preview")
+        if preview is not None:
+            if not isinstance(preview, dict) or not preview.get("path") or not preview.get("sha256"):
+                raise HarnessError(f"decision '{element}' has a malformed preview reference")
+            shot = project_root.resolve(strict=True) / preview["path"]
+            if not shot.is_file():
+                raise HarnessError(f"decision '{element}' references a missing preview: {preview['path']}")
+            if sha256_file(shot) != preview["sha256"]:
+                raise HarnessError(f"preview for '{element}' changed since it was ranked; re-record it")
         target = entry.get("supersededBy")
         if target and target not in {e.get("element") for e in decisions["elements"]}:
             raise HarnessError(f"decision '{element}' is superseded by an unknown element")
@@ -522,6 +665,60 @@ def self_test() -> None:
         if 'data-element="cover.background.black"' in markup:
             raise HarnessError("self-test: controls offered a rejected element")
 
+        # Every color must be a themeable token, never a literal that would
+        # override the corpus palette the ledger already approved.
+        style_block = markup.split("</style>")[0]
+        for token in ("--dh-bg", "--dh-ink", "--dh-accent", "--dh-font"):
+            if token not in style_block:
+                raise HarnessError(f"self-test: controls style omits the {token} token")
+        for literal in ("color:#111", "background:#fff", "background:#111;color:#fff"):
+            if literal in style_block.replace(" ", ""):
+                raise HarnessError(f"self-test: controls hardcode {literal} outside a var() fallback")
+
+        # A declared theme is baked in, and identical flags emit identical bytes.
+        themed = render_feedback_controls(load_decisions(output),
+                                          {"bg": "#f9e7b5", "ink": "#111", "accent": "#d9482a", "font": None})
+        if "--dh-bg: #f9e7b5" not in themed or "--dh-accent: #d9482a" not in themed:
+            raise HarnessError("self-test: declared theme was not applied")
+        if "--dh-font" in themed.split("<div")[1].split(">")[0]:
+            raise HarnessError("self-test: unset theme key leaked into the wrapper")
+        if themed != render_feedback_controls(load_decisions(output),
+                                              {"bg": "#f9e7b5", "ink": "#111", "accent": "#d9482a", "font": None}):
+            raise HarnessError("self-test: themed controls are not deterministic")
+
+        # The graphic being ranked must ride along with the rank, and must be
+        # hash-pinned: a preview that changed is a preview nobody reviewed.
+        shots = project / "shots"
+        shots.mkdir()
+        shot = shots / "cover.svg"
+        shot.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 85 110"><rect width="85" height="110" fill="#f9e7b5"/></svg>', encoding="utf-8")
+        record_decision(project, "cover.layout.two-column", "approved", 5, "user: 'c2'", [],
+                        preview_reference(project, "shots/cover.svg"))
+        validate_harness(project)
+        with_shot = render_feedback_controls(load_decisions(output), None, project)
+        if 'class="dh-shot"' not in with_shot or "#f9e7b5" not in with_shot:
+            raise HarnessError("self-test: the ranked element carries no graphic")
+        if "sin gr" not in render_feedback_controls(load_decisions(output), None, project):
+            raise HarnessError("self-test: elements without a preview must say so, not fake one")
+        if with_shot != render_feedback_controls(load_decisions(output), None, project):
+            raise HarnessError("self-test: previews broke control determinism")
+        shot.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 85 110"><rect fill="#000"/></svg>', encoding="utf-8")
+        try:
+            validate_harness(project)
+        except HarnessError:
+            pass
+        else:
+            raise HarnessError("self-test: a mutated preview must fail validation")
+        record_decision(project, "cover.layout.two-column", "approved", 5, "user: 'c2'", [],
+                        preview_reference(project, "shots/cover.svg"))
+        validate_harness(project)
+        for bad in ("../outside.svg", "shots/nope.svg", "scripts/evil.py"):
+            try:
+                preview_reference(project, bad)
+            except HarnessError:
+                continue
+            raise HarnessError(f"self-test: preview accepted an unsafe reference: {bad}")
+
         # validate must refuse a decision-less harness rather than green-light it.
         (output / "decisions.json").unlink()
         try:
@@ -548,6 +745,7 @@ def parser() -> argparse.ArgumentParser:
     decide.add_argument("--stars", required=True, type=int, help=f"{STAR_RANGE[0]}-{STAR_RANGE[1]}, set by the user")
     decide.add_argument("--evidence", required=True, help="verbatim user excerpt, not a paraphrase")
     decide.add_argument("--supersedes", default="", help="comma-separated element ids this replaces")
+    decide.add_argument("--preview", default="", help="project-relative graphic of the element being ranked")
     adopt = subcommands.add_parser("adopt", help="fold companion star ranks into the ledger")
     adopt.add_argument("--project-root", required=True, type=Path)
     adopt.add_argument("--companion-ledger", required=True, type=Path,
@@ -555,6 +753,15 @@ def parser() -> argparse.ArgumentParser:
     controls = subcommands.add_parser("controls", help="emit star + like/dislike controls from the ledger")
     controls.add_argument("--project-root", required=True, type=Path)
     controls.add_argument("--out", type=Path, help="write here instead of stdout")
+    controls.add_argument("--shot-width", default="", help="preview frame width, e.g. 132px")
+    controls.add_argument("--bg", default="", help="background color; declare the corpus palette, don't guess it")
+    controls.add_argument("--ink", default="", help="text/border color")
+    controls.add_argument("--accent", default="", help="accent color, e.g. the approved family accent")
+    controls.add_argument("--font", default="", help="font-family stack")
+    preflight = subcommands.add_parser("preflight", help="record observed adapter availability")
+    preflight.add_argument("--project-root", required=True, type=Path)
+    preflight.add_argument("--available", default="", help="comma-separated capabilities you verified")
+    preflight.add_argument("--missing", default="", help="comma-separated capabilities you confirmed absent")
     subcommands.add_parser("self-test")
     return command
 
@@ -570,8 +777,9 @@ def main() -> int:
             print("Design harness is valid; source hashes are unchanged.")
         elif args.command == "decide":
             supersedes = [item.strip() for item in args.supersedes.split(",") if item.strip()]
+            preview = preview_reference(args.project_root, args.preview) if args.preview else None
             decisions = record_decision(args.project_root, args.element, args.verdict,
-                                        args.stars, args.evidence, supersedes)
+                                        args.stars, args.evidence, supersedes, preview)
             live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
             print(f"Recorded {args.element} ({args.verdict}, {args.stars}★). "
                   f"{len(live)} element(s) standing, state={decisions['state']}.")
@@ -579,9 +787,19 @@ def main() -> int:
             adopted, skipped = adopt_companion(args.project_root, args.companion_ledger)
             print(f"Adopted {adopted} ranked decision(s); skipped {skipped} "
                   f"interaction(s) with no design-element id or usable signal.")
+        elif args.command == "preflight":
+            split = lambda raw: [i.strip() for i in raw.split(",") if i.strip()]
+            matrix = record_preflight(args.project_root, split(args.available), split(args.missing))
+            ready = [i["category"] for i in matrix["requiredCapabilities"] if i["available"]]
+            blocked = [i["category"] for i in matrix["requiredCapabilities"] if not i["available"]]
+            print(f"Available: {', '.join(ready) or 'none'}")
+            print(f"Not preflighted or missing: {', '.join(blocked) or 'none'}")
         elif args.command == "controls":
             output = args.project_root.resolve(strict=True) / "spec" / "design-harness"
-            markup = render_feedback_controls(load_decisions(output))
+            theme = {"bg": args.bg, "ink": args.ink, "accent": args.accent,
+                     "font": args.font, "shot": args.shot_width}
+            markup = render_feedback_controls(load_decisions(output), theme,
+                                              args.project_root.resolve(strict=True))
             if args.out:
                 args.out.write_text(markup, encoding="utf-8")
                 print(f"Wrote feedback controls to {args.out}")

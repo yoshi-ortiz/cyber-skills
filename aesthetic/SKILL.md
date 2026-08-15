@@ -40,17 +40,32 @@ scripts/bootstrap_harness.py adopt --project-root . \
 
 Interactions with no design-element id are skipped and reported — ask the user for the id rather than inventing one. Conversation history is not a record: an unrecorded decision is lost at the next session boundary, and losing one is a defect, not an inconvenience.
 
+## Avoiding slop
+
+Read [anti-slop.md](references/anti-slop.md) before generating. In short: every visual move traces to a corpus cluster or a verbatim excerpt; anything else is inference, labelled and ranked one star. Compose from elements already in standing rather than inventing markup. Specify behaviour — narrow and wide containers, long content, empty states, keyboard focus, reduced motion — not just appearance. Keep the diff small enough that the user can disagree with a specific part of it.
+
 ## Companion feedback
 
 The harness ships no companion and requires no particular one. Any browser surface works if it meets [companion-contract.md](references/companion-contract.md): a durable ledger outside the session directory, design-element ids on every control, and two signals per element — a 1–5 star rank and a like/dislike.
 
 **Stars carry strength, sentiment carries direction.** `stars: n` approves at rank *n*; `like` approves, `dislike` rejects, each with a fixed default rank when no star is given. Replay is ordered by timestamp, so `adopt` is idempotent.
 
-Never hand-author element ids into a screen — that is how ids drift from the ledger. Generate them:
+Never hand-author element ids into a screen — that is how ids drift from the ledger. Generate them, and pass the project palette so the controls are not styled by defaults:
 
 ```bash
-scripts/bootstrap_harness.py controls --project-root . --out controls.html
+scripts/bootstrap_harness.py controls --project-root . --out controls.html \
+  --bg "#f9e7b5" --ink "#111" --accent "#d9482a"
 ```
+
+**Rank the graphic, not the id.** A star beside `cover.ring.kicker` is a guess unless the thing itself is on screen, so attach the graphic when you record the decision:
+
+```bash
+scripts/bootstrap_harness.py decide --project-root . \
+  --element cover.ring.kicker --verdict proposed --stars 3 \
+  --evidence "user: 'kinda fine'" --preview shots/cover-ring.svg
+```
+
+Previews are hash-pinned: if the graphic changes, `validate` fails until it is re-recorded, because a preview that changed is a preview nobody reviewed. Elements with no preview render as "sin gráfico" — the harness says so rather than faking one.
 
 The markup covers only elements in standing and is byte-stable for a given ledger. If the companion cannot meet the contract, say so and use `decide` in the terminal instead of remembering what was clicked.
 
@@ -60,7 +75,16 @@ The markup covers only elements in standing and is byte-stable for a given ledge
 2. Require the user or project to identify the inspiration source path. Never assume its directory name.
 3. Resolve the exact source path and treat it as read-only. Do not rename, move, delete, normalize, optimize, or write metadata into it.
 4. Select only the domain profiles needed now. Read [domain-profiles.md](references/domain-profiles.md) for non-frontend work.
-5. Run the bootstrap script from this skill directory:
+5. Preflight the design tools before the first shot, then record what you actually observed. See [design-tools.md](references/design-tools.md):
+
+```bash
+python3 scripts/bootstrap_harness.py preflight --project-root /absolute/project \
+  --available image,pdf,repository --missing playwright
+```
+
+A capability never preflighted stays unavailable. Never narrate a tool you did not run.
+
+6. Run the bootstrap script from this skill directory:
 
 ```bash
 python3 scripts/bootstrap_harness.py init \
