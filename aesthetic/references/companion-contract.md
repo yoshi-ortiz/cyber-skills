@@ -1,5 +1,22 @@
 # Companion contract
 
+## Health-check first, always
+
+```bash
+python3 scripts/bootstrap_harness.py doctor --project-root .
+```
+
+Six links, each fails silently. Never claim the companion works on the strength of an earlier check.
+
+## Routing: newest mtime wins
+
+`/` serves **only the newest-mtime file** in the session's `content/`. Writing any screen after the scoring screen silently sends the user somewhere else. Write the scoring screen last, or `touch` it afterwards.
+
+## A file:// tab is not the companion
+
+`helper.js` is injected only into served pages. Clicks on a `file://` copy go nowhere and look identical. Generated controls carry a red offline banner that only hides once the helper connects — never remove it.
+
+
 The harness does not ship a companion and does not require a particular one. It requires any browser surface that shows screens and returns feedback to satisfy the contract below. If the available companion cannot satisfy it, say so and fall back to `decide` in the terminal — never approximate it by remembering what the user clicked.
 
 ## What the companion must provide
@@ -16,13 +33,14 @@ One JSON object per line. Unknown fields are ignored; the fields below are the c
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `element` | yes | Stable dotted design-element id, e.g. `cover.layout.two-column` |
-| `stars` | one of | Integer 1–5, the strength of the decision |
+| `stars` | one of | Integer 0–5. **0 means kill it** — a real score, not a missing value |
+| `verdict` | one of | `approved` or `rejected`, set by an explicit control |
 | `sentiment` | one of | `like` or `dislike`, the direction of the decision |
 | `text` | no | Verbatim user words, used as the evidence excerpt |
 | `timestamp` | no | Epoch millis; fixes replay order. Absent sorts as `0` |
 | `type` | no | Free label for logging (`rank`, `sentiment`, `click`) |
 
-At least one of `stars` or `sentiment` must be present. An interaction with neither, or with no `element`, **cannot bind** — the harness skips it and reports the count. Fix that by giving the control an id, never by guessing one.
+At least one of `stars`, `verdict` or `sentiment` must be present. An interaction with neither, or with no `element`, **cannot bind** — the harness skips it and reports the count. Fix that by giving the control an id, never by guessing one.
 
 ```json
 {"element":"cover.layout.two-column","stars":5,"text":"user: 'c2'","timestamp":1786745271000}
@@ -36,7 +54,9 @@ Stars and sentiment are deliberately separate: **stars carry strength, sentiment
 
 | Signal | Verdict | Rank |
 | --- | --- | --- |
-| `stars: n` | `approved` | `n` |
+| `stars: 0` | `rejected` | `0` |
+| `stars: n` (n≥1) | `approved` | `n` |
+| `verdict: approved` / `rejected` | as given | `stars` when present |
 | `sentiment: like` | `approved` | `4`, or `stars` when both are present |
 | `sentiment: dislike` | `rejected` | `1`, or `stars` when both are present |
 
@@ -85,3 +105,7 @@ python3 scripts/bootstrap_harness.py adopt --project-root . \
 ```
 
 Run it in the same turn the feedback arrives. Feedback that is not adopted is lost at the next session boundary.
+
+## Provenance
+
+Everything `adopt` ingests is recorded `source: user`. Anything the agent types with `decide` is `source: agent` and capped at 1 star. That distinction is the point: before it existed, a user's click and an agent's guess were indistinguishable in the ledger.

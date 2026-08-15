@@ -9,6 +9,7 @@ import hashlib
 import json
 import mimetypes
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -61,13 +62,17 @@ NOISE_DIRS = {".Spotlight-V100", ".fseventsd", ".TemporaryItems", "__MACOSX"}
 # A decision is binding until superseded. `stars` is the deterministic standing
 # used to rank competing elements; it is set by the user, never by the agent.
 DECISION_STATES = ("proposed", "approved", "superseded", "rejected")
-STAR_RANGE = (1, 5)
+STAR_RANGE = (0, 5)
 # Two feedback signals, deliberately separate. Stars carry strength; sentiment
 # carries direction. Sentiment maps to a verdict and, when the user gave no
 # star, to a fixed default rank -- fixed so replaying a ledger is reproducible.
 SENTIMENTS = {"like": ("approved", 4), "dislike": ("rejected", 1)}
 # A preview is the graphic the star is actually about.
 PREVIEW_SUFFIXES = {".svg", ".html", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
+# Who set a rank. The distinction is the whole point: an agent-typed number and
+# a user click used to be indistinguishable in the ledger.
+SOURCES = ("user", "agent")
+AGENT_MAX_STARS = 1
 
 
 class HarnessError(Exception):
@@ -203,7 +208,8 @@ def render_decisions_md(decisions: dict[str, object]) -> str:
 
 def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                     evidence: str, supersedes: list[str],
-                    preview: dict[str, str] | None = None) -> dict[str, object]:
+                    preview: dict[str, str] | None = None,
+                    source: str = "agent") -> dict[str, object]:
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
     if verdict not in DECISION_STATES:
         raise HarnessError(f"verdict must be one of: {', '.join(DECISION_STATES)}")
@@ -211,6 +217,13 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
         raise HarnessError(f"stars must be {STAR_RANGE[0]}-{STAR_RANGE[1]}")
     if not evidence.strip():
         raise HarnessError("evidence is required: quote the user, do not paraphrase")
+    if source not in SOURCES:
+        raise HarnessError(f"source must be one of: {', '.join(SOURCES)}")
+    if source == "agent" and stars > AGENT_MAX_STARS:
+        raise HarnessError(
+            f"agent-set rank is capped at {AGENT_MAX_STARS} star. A higher rank must come from a "
+            "user click, adopted with `adopt` -- typing the number yourself is the failure this "
+            "cap exists to prevent.")
     decisions = load_decisions(output)
     known = {e["element"] for e in decisions["elements"]}
     missing = [s for s in supersedes if s not in known]
@@ -223,6 +236,7 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             decisions["supersededCount"] += 1
         elif e["element"] == element:
             e["state"], e["stars"], e["evidence"] = verdict, stars, evidence
+            e["source"] = source
             if preview is not None:
                 e["preview"] = preview
             e.setdefault("preview", None)
@@ -231,6 +245,7 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
         decisions["elements"].append({
             "element": element, "state": verdict, "stars": stars,
             "evidence": evidence, "supersededBy": None, "preview": preview,
+            "source": source,
         })
     if any(e["state"] == "approved" for e in decisions["elements"]):
         decisions["state"] = "approved"
@@ -276,17 +291,25 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         if not element or not isinstance(element, str):
             skipped += 1
             continue
+        if event.get("verdict") not in (None, "approved", "rejected"):
+            skipped += 1
+            continue
         if sentiment is not None and sentiment not in SENTIMENTS:
             skipped += 1
             continue
-        if sentiment is None and not is_star(stars):
+        if sentiment is None and event.get("verdict") is None and not is_star(stars):
             skipped += 1
             continue
-        if sentiment is not None:
+        explicit = event.get("verdict")
+        if explicit in ("approved", "rejected"):
+            verdict = explicit
+            rank = stars if is_star(stars) else (0 if explicit == "rejected" else AGENT_MAX_STARS + 1)
+        elif sentiment is not None:
             verdict, default_stars = SENTIMENTS[sentiment]
             rank = stars if is_star(stars) else default_stars
         else:
-            verdict, rank = "approved", stars
+            # A zero is the user saying "kill it", not a missing value.
+            verdict, rank = ("rejected" if stars == 0 else "approved"), stars
         evidence = str(event.get("text") or "").strip() or (
             f"companion {sentiment}: {rank} star" if sentiment else f"companion rank: {rank} star")
         # Replay order is fixed by (timestamp, file position) so adopting the
@@ -296,7 +319,7 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         accepted.append((int(stamp), index, element, verdict, rank, evidence[:400]))
 
     for _, _, element, verdict, rank, evidence in sorted(accepted, key=lambda row: (row[0], row[1])):
-        record_decision(project_root, element, verdict, rank, evidence, [])
+        record_decision(project_root, element, verdict, rank, evidence, [], source="user")
     return len(accepted), skipped
 
 
@@ -313,6 +336,9 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
 #      overridden by.
 FEEDBACK_STYLE = """<style>
 .dh-feedback{container-type:inline-size}
+.dh-offline{display:block;background:#b00;color:#fff;font:700 12px/1.4 ui-monospace,monospace;
+ padding:8px 10px;margin-bottom:8px}
+:root[data-dh-live] .dh-offline{display:none}
 .dh-fb{font:600 11px/1.3 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
  color:var(--dh-ink,#111);background:var(--dh-bg,#fff);
  border:1px solid var(--dh-ink,#111);padding:8px;display:grid;
@@ -410,7 +436,9 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         declared = "; ".join(f"{prop}: {theme[key]}" for prop, key in theme_vars.items() if theme.get(key))
         if declared:
             wrapper_style = f' style="{declared}"'
-    lines = [FEEDBACK_STYLE, f'<div class="dh-feedback"{wrapper_style}>']
+    lines = [FEEDBACK_STYLE, f'<div class="dh-feedback"{wrapper_style}>',
+             '<strong class="dh-offline">Sin conexión al companion: estos clics NO se guardan. '
+             'Abre la URL del companion (http://localhost:PORT/?key=...), no el archivo.</strong>']
     if not live:
         lines.append("<!-- no elements in standing; record one with `decide` first -->")
     for entry in sorted(live, key=lambda item: item["element"]):
@@ -425,15 +453,17 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         lines.append("</span>")
         lines.append('<span class="dh-signals">')
         stars_markup = "".join(
-            f'<span data-rank="{n}" role="button" tabindex="0" aria-label="{n} de {STAR_RANGE[1]}"'
-            f'{" class=\"on\"" if n <= stars else ""}>&#9733;</span>'
+            (f'<span data-rank="0" role="button" tabindex="0" aria-label="cero, descartar"'
+             f'{" class=\"on\"" if stars == 0 else ""}>0</span>') if n == 0 else
+            (f'<span data-rank="{n}" role="button" tabindex="0" aria-label="{n} de {STAR_RANGE[1]}"'
+             f'{" class=\"on\"" if 0 < n <= stars else ""}>&#9733;</span>')
             for n in range(STAR_RANGE[0], STAR_RANGE[1] + 1)
         )
         lines.append(f'<span class="dh-stars" role="group" aria-label="rango {element}">{stars_markup}</span>')
-        for name in sorted(SENTIMENTS):
-            glyph = "&#128077;" if name == "like" else "&#128078;"
-            lines.append(f'<span data-sentiment="{name}" role="button" tabindex="0" '
-                         f'aria-label="{name} {element}" title="{name}">{glyph}</span>')
+        for verdict, glyph, label in (("approved", "&#10003;", "aprobar"), ("rejected", "&#10007;", "rechazar")):
+            on = ' class="on"' if entry["state"] == verdict else ""
+            lines.append(f'<span data-verdict="{verdict}" role="button" tabindex="0" '
+                         f'aria-label="{label} {element}" title="{label}"{on}>{glyph}</span>')
         lines.append("</span>")
         lines.append("</div>")
     lines.append("</div>")
@@ -539,12 +569,20 @@ def validate_harness(project_root: Path) -> None:
         raise HarnessError("capability matrix does not match selected profiles")
     source_root = Path(project["sourceRoot"]).resolve(strict=True)
     actual_entries = source_entries(source_root)
-    if manifest.get("algorithm") != "sha256" or manifest.get("entries") != actual_entries:
-        raise HarnessError("read-only source manifest mismatch")
+    corpus_drift: list[str] = []
+    if manifest.get("algorithm") != "sha256":
+        raise HarnessError("source manifest algorithm is not sha256")
+    if manifest.get("entries") != actual_entries:
+        was = {e["path"]: e["sha256"] for e in manifest.get("entries", [])}
+        now = {e["path"]: e["sha256"] for e in actual_entries}
+        corpus_drift = ([f"removed: {p}" for p in sorted(set(was) - set(now))]
+                        + [f"added: {p}" for p in sorted(set(now) - set(was))]
+                        + [f"changed: {p}" for p in sorted(set(was) & set(now)) if was[p] != now[p]])
     if "read-only" not in (output / "CONTRACTS.md").read_text(encoding="utf-8"):
         raise HarnessError("generated contracts omit the read-only source invariant")
 
     decisions = load_decisions(output)
+    warnings: list[str] = []
     seen: set[str] = set()
     for entry in decisions.get("elements", []):
         element = entry.get("element")
@@ -565,7 +603,8 @@ def validate_harness(project_root: Path) -> None:
             if not shot.is_file():
                 raise HarnessError(f"decision '{element}' references a missing preview: {preview['path']}")
             if sha256_file(shot) != preview["sha256"]:
-                raise HarnessError(f"preview for '{element}' changed since it was ranked; re-record it")
+                warnings.append(f"preview for '{element}' changed since it was ranked "
+                                f"(re-record with `decide --preview` when convenient)")
         target = entry.get("supersededBy")
         if target and target not in {e.get("element") for e in decisions["elements"]}:
             raise HarnessError(f"decision '{element}' is superseded by an unknown element")
@@ -573,6 +612,7 @@ def validate_harness(project_root: Path) -> None:
         raise HarnessError("project.json state disagrees with decisions.json state")
     if (output / "DECISIONS.md").read_text(encoding="utf-8") != render_decisions_md(decisions):
         raise HarnessError("DECISIONS.md is stale; regenerate it with `decide`")
+    return {"warnings": warnings, "corpusDrift": corpus_drift}
 
 
 def self_test() -> None:
@@ -604,8 +644,8 @@ def self_test() -> None:
 
         # A decision must survive as an artifact, carry a star rank, and win
         # over the element it supersedes.
-        record_decision(project, "cover.layout.two-column", "approved", 5, "user: 'c2'", [])
-        record_decision(project, "cover.spine.right", "approved", 4, "user: 'place it on the right'", [])
+        record_decision(project, "cover.layout.two-column", "approved", 5, "user: 'c2'", [], source="user")
+        record_decision(project, "cover.spine.right", "approved", 4, "user: 'place it on the right'", [], source="user")
         record_decision(project, "cover.layout.single-column", "rejected", 1, "user: 'you destructed the two columns'",
                         ["cover.layout.two-column"])
         validate_harness(project)
@@ -659,7 +699,7 @@ def self_test() -> None:
         if markup != render_feedback_controls(load_decisions(output)):
             raise HarnessError("self-test: controls are not deterministic")
         for required in ('data-element="form.paper.white"', 'data-rank="5"',
-                         'data-sentiment="like"', 'data-sentiment="dislike"'):
+                         'data-verdict="approved"', 'data-verdict="rejected"', 'data-rank="0"'):
             if required not in markup:
                 raise HarnessError(f"self-test: controls omitted {required}")
         if 'data-element="cover.background.black"' in markup:
@@ -693,7 +733,7 @@ def self_test() -> None:
         shot = shots / "cover.svg"
         shot.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 85 110"><rect width="85" height="110" fill="#f9e7b5"/></svg>', encoding="utf-8")
         record_decision(project, "cover.layout.two-column", "approved", 5, "user: 'c2'", [],
-                        preview_reference(project, "shots/cover.svg"))
+                        preview_reference(project, "shots/cover.svg"), source="user")
         validate_harness(project)
         with_shot = render_feedback_controls(load_decisions(output), None, project)
         if 'class="dh-shot"' not in with_shot or "#f9e7b5" not in with_shot:
@@ -702,15 +742,13 @@ def self_test() -> None:
             raise HarnessError("self-test: elements without a preview must say so, not fake one")
         if with_shot != render_feedback_controls(load_decisions(output), None, project):
             raise HarnessError("self-test: previews broke control determinism")
+        # A regenerated preview is normal work: it must be reported, not blocked.
         shot.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 85 110"><rect fill="#000"/></svg>', encoding="utf-8")
-        try:
-            validate_harness(project)
-        except HarnessError:
-            pass
-        else:
-            raise HarnessError("self-test: a mutated preview must fail validation")
+        report = validate_harness(project)
+        if not any("changed since it was ranked" in w for w in report["warnings"]):
+            raise HarnessError("self-test: preview drift must be reported as a warning")
         record_decision(project, "cover.layout.two-column", "approved", 5, "user: 'c2'", [],
-                        preview_reference(project, "shots/cover.svg"))
+                        preview_reference(project, "shots/cover.svg"), source="user")
         validate_harness(project)
         for bad in ("../outside.svg", "shots/nope.svg", "scripts/evil.py"):
             try:
@@ -718,6 +756,33 @@ def self_test() -> None:
             except HarnessError:
                 continue
             raise HarnessError(f"self-test: preview accepted an unsafe reference: {bad}")
+
+        # The agent must not be able to type a confident rank. This cap is the
+        # difference between "user clicked 4" and "agent felt like 4".
+        try:
+            record_decision(project, "agent.guess", "approved", 4, "agent hunch", [], source="agent")
+        except HarnessError:
+            pass
+        else:
+            raise HarnessError("self-test: agent was allowed to set a rank above the cap")
+        record_decision(project, "agent.guess", "proposed", 1, "agent inference", [], source="agent")
+        ledger_now = {e["element"]: e for e in json.loads((output / "decisions.json").read_text(encoding="utf-8"))["elements"]}
+        if ledger_now["agent.guess"]["source"] != "agent":
+            raise HarnessError("self-test: provenance not recorded")
+        if ledger_now["cover.layout.two-column"]["source"] != "user":
+            raise HarnessError("self-test: user provenance lost")
+
+        # zero is a real score meaning "kill it", and it must survive adoption
+        zero_ledger = root / "zero.jsonl"
+        zero_ledger.write_text(json.dumps({"element": "kill.me", "stars": 0, "timestamp": 1}) + "\n"
+                               + json.dumps({"element": "bless.me", "verdict": "approved", "timestamp": 2}) + "\n",
+                               encoding="utf-8")
+        adopt_companion(project, zero_ledger)
+        z = {e["element"]: e for e in json.loads((output / "decisions.json").read_text(encoding="utf-8"))["elements"]}
+        if z["kill.me"]["state"] != "rejected" or z["kill.me"]["stars"] != 0:
+            raise HarnessError("self-test: zero stars did not reject")
+        if z["bless.me"]["state"] != "approved" or z["bless.me"]["source"] != "user":
+            raise HarnessError("self-test: explicit approve verdict not adopted")
 
         # validate must refuse a decision-less harness rather than green-light it.
         (output / "decisions.json").unlink()
@@ -746,6 +811,8 @@ def parser() -> argparse.ArgumentParser:
     decide.add_argument("--evidence", required=True, help="verbatim user excerpt, not a paraphrase")
     decide.add_argument("--supersedes", default="", help="comma-separated element ids this replaces")
     decide.add_argument("--preview", default="", help="project-relative graphic of the element being ranked")
+    decide.add_argument("--source", default="agent", choices=SOURCES,
+                        help="agent (capped at 1 star) or user (only via adopt)")
     adopt = subcommands.add_parser("adopt", help="fold companion star ranks into the ledger")
     adopt.add_argument("--project-root", required=True, type=Path)
     adopt.add_argument("--companion-ledger", required=True, type=Path,
@@ -762,6 +829,8 @@ def parser() -> argparse.ArgumentParser:
     preflight.add_argument("--project-root", required=True, type=Path)
     preflight.add_argument("--available", default="", help="comma-separated capabilities you verified")
     preflight.add_argument("--missing", default="", help="comma-separated capabilities you confirmed absent")
+    doctor = subcommands.add_parser("doctor", help="health-check the whole feedback path end to end")
+    doctor.add_argument("--project-root", required=True, type=Path)
     subcommands.add_parser("self-test")
     return command
 
@@ -773,13 +842,23 @@ def main() -> int:
             output = init_harness(args.project_root, args.source_root, parse_profiles(args.profiles))
             print(output)
         elif args.command == "validate":
-            validate_harness(args.project_root)
-            print("Design harness is valid; source hashes are unchanged.")
+            report = validate_harness(args.project_root) or {}
+            drift, warns = report.get("corpusDrift", []), report.get("warnings", [])
+            print("Ledger is coherent." if not warns else "Ledger is coherent, with notes:")
+            for w in warns:
+                print(f"  note: {w}")
+            if drift:
+                print(f"Corpus drift ({len(drift)} file(s)) -- unrelated to the ledger, triage separately:")
+                for d in drift[:10]:
+                    print(f"  {d}")
+            else:
+                print("Corpus unchanged.")
         elif args.command == "decide":
             supersedes = [item.strip() for item in args.supersedes.split(",") if item.strip()]
             preview = preview_reference(args.project_root, args.preview) if args.preview else None
             decisions = record_decision(args.project_root, args.element, args.verdict,
-                                        args.stars, args.evidence, supersedes, preview)
+                                        args.stars, args.evidence, supersedes, preview,
+                                        source=args.source)
             live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
             print(f"Recorded {args.element} ({args.verdict}, {args.stars}★). "
                   f"{len(live)} element(s) standing, state={decisions['state']}.")
@@ -794,6 +873,9 @@ def main() -> int:
             blocked = [i["category"] for i in matrix["requiredCapabilities"] if not i["available"]]
             print(f"Available: {', '.join(ready) or 'none'}")
             print(f"Not preflighted or missing: {', '.join(blocked) or 'none'}")
+        elif args.command == "doctor":
+            script = Path(__file__).resolve().parent / "companion_doctor.py"
+            return subprocess.call([sys.executable, str(script), str(args.project_root)])
         elif args.command == "controls":
             output = args.project_root.resolve(strict=True) / "spec" / "design-harness"
             theme = {"bg": args.bg, "ink": args.ink, "accent": args.accent,

@@ -1,173 +1,113 @@
 ---
 name: aesthetic
-description: Bootstrap a deterministic, evidence-backed design harness for a design project, then serve as its resumable context. Use when a project needs read-only inspiration intake, hashed image/PDF evidence, bounded design loops, a star-ranked decision ledger that survives session boundaries, companion feedback adoption, or art-direction, frontend, product, physical-space, copywriting, motion, composition and mockup-layering workflows. Also use when resuming design work on a project that already has `spec/design-harness/`, so prior decisions are honoured rather than rebuilt.
+description: Evidence-backed design harness that keeps user decisions from being lost or invented. Use when starting design work from an inspiration corpus, when resuming a project that already has spec/design-harness/, or when collecting ranked design feedback from a browser companion. Covers art-direction, frontend, product, physical-space, copywriting, motion, composition and mockup-layering.
 ---
 
 # Aesthetic
 
-Create the least-agentic workflow that can move a project from evidence to an approved design output without inventing context.
+Design work fails in two ways: decisions get lost between sessions, and the agent invents feedback the user never gave. This harness exists to stop both. Everything else is optional.
 
-This skill has two modes. Establish which applies before doing anything else:
+**The one metric: did a rank the user actually set reach the ledger?** If no user click has landed, the session produced nothing, however many screens were made.
 
-- **Not yet bootstrapped** (no `spec/design-harness/`) — generate the harness. Follow *Start*.
-- **Already bootstrapped** — the harness *is* your context. Do not re-derive it and do not re-bootstrap over it. Follow *Resuming an existing harness*.
-
-## Resuming an existing harness
+## Every session starts here
 
 ```bash
-python3 scripts/bootstrap_harness.py validate --project-root /absolute/project
+python3 scripts/bootstrap_harness.py doctor --project-root .
 ```
 
-Then read `spec/design-harness/DECISIONS.md` **before proposing anything**.
+This sends a real click through a real socket and confirms it lands. It is the only statement about the companion you may make. **Never tell the user the companion works because you started it earlier** — check again, every time, before pointing them at a URL. The path has six links and each fails silently:
 
-Every element under Standing is binding. Each carries a 1–5 star rank set by the user: higher rank wins when two elements conflict, and a tie is a question for the user, not a judgement call for you. Agent inference is recorded at one star and never outranks a user decision.
+| Link | Fails as |
+| --- | --- |
+| Server process | dead; URL looks fine, nothing responds |
+| Served screen | `/` serves **only the newest-mtime file** — write any screen after the scoring one and you have silently redirected the user |
+| Scoring rows | screen has no `data-element` |
+| Star + verdict controls | no `data-rank` / `data-verdict` |
+| Component graphic | rows show ids, not the thing being judged |
+| Socket round trip | clicks land nowhere — a `file://` tab does this, silently |
 
-Work in small iterations. Name the design elements the iteration touches, change only those, carry the rest through untouched. Rebuilding a surface from scratch silently drops every element that surface carried — if a change would drop one, stop and record the supersede first:
+`doctor` red means stop and fix. Do not write another screen. Do not restate the URL.
+
+Then read `spec/design-harness/DECISIONS.md` before proposing anything.
+
+## Feedback is captured, never inferred
+
+Ranks come from user clicks, adopted:
 
 ```bash
-scripts/bootstrap_harness.py decide --project-root . \
-  --element cover.layout.single-column --verdict approved --stars 4 \
-  --evidence "user: 'drop the second column'" \
-  --supersedes cover.layout.two-column
-```
-
-Capture feedback as it arrives, not at the end. Feedback set in a companion is adopted, never retyped:
-
-```bash
-scripts/bootstrap_harness.py adopt --project-root . \
+python3 scripts/bootstrap_harness.py adopt --project-root . \
   --companion-ledger .superpowers/brainstorm/decisions.jsonl
 ```
 
-Interactions with no design-element id are skipped and reported — ask the user for the id rather than inventing one. Conversation history is not a record: an unrecorded decision is lost at the next session boundary, and losing one is a defect, not an inconvenience.
+`adopt` reporting `0 adopted` means **no feedback was captured** — say so plainly rather than moving on.
 
-## Avoiding slop
+The vocabulary, all user-set:
 
-Read [anti-slop.md](references/anti-slop.md) before generating. In short: every visual move traces to a corpus cluster or a verbatim excerpt; anything else is inference, labelled and ranked one star. Compose from elements already in standing rather than inventing markup. Specify behaviour — narrow and wide containers, long content, empty states, keyboard focus, reduced motion — not just appearance. Keep the diff small enough that the user can disagree with a specific part of it.
+- **0 stars** — kill it. A real score, not a missing value.
+- **1–5 stars** — strength.
+- **✓ approve / ✗ reject** — explicit verdict. Never derive a verdict from prose.
 
-## Companion feedback
-
-The harness ships no companion and requires no particular one. Any browser surface works if it meets [companion-contract.md](references/companion-contract.md): a durable ledger outside the session directory, design-element ids on every control, and two signals per element — a 1–5 star rank and a like/dislike.
-
-**Stars carry strength, sentiment carries direction.** `stars: n` approves at rank *n*; `like` approves, `dislike` rejects, each with a fixed default rank when no star is given. Replay is ordered by timestamp, so `adopt` is idempotent.
-
-Never hand-author element ids into a screen — that is how ids drift from the ledger. Generate them, and pass the project palette so the controls are not styled by defaults:
+`decide` is for agent inference only and is **capped at 1 star** by the tool. A higher rank must come from a click. If you catch yourself typing `--stars 4` from something the user said in chat, that is the bug this cap exists to prevent — ask them to click it instead.
 
 ```bash
-scripts/bootstrap_harness.py controls --project-root . --out controls.html \
-  --bg "#f9e7b5" --ink "#111" --accent "#d9482a"
+python3 scripts/bootstrap_harness.py decide --project-root . \
+  --element cover.ring.kicker --verdict proposed --stars 1 \
+  --evidence "agent inference: corpus suggests a ring" --source agent
 ```
 
-**Rank the graphic, not the id.** A star beside `cover.ring.kicker` is a guess unless the thing itself is on screen, so attach the graphic when you record the decision:
+## The scoring screen
+
+Generate it. Never hand-write scoring markup — every hand-rolled variant so far has silently dropped the component graphic:
 
 ```bash
-scripts/bootstrap_harness.py decide --project-root . \
-  --element cover.ring.kicker --verdict proposed --stars 3 \
-  --evidence "user: 'kinda fine'" --preview shots/cover-ring.svg
+python3 scripts/bootstrap_harness.py controls --project-root . \
+  --bg "#ffebb8" --ink "#111" --accent "#d9482a" --out controls.html
 ```
 
-Previews are hash-pinned: if the graphic changes, `validate` fails until it is re-recorded, because a preview that changed is a preview nobody reviewed. Elements with no preview render as "sin gráfico" — the harness says so rather than faking one.
+Every row carries the graphic being judged (`decide --preview`), zero-through-five, approve/reject, and a red banner that appears when the page is not wired to the companion — so a `file://` tab announces itself instead of eating clicks.
 
-The markup covers only elements in standing and is byte-stable for a given ledger. If the companion cannot meet the contract, say so and use `decide` in the terminal instead of remembering what was clicked.
+**Write the scoring screen last.** Anything written after it steals the `/` route.
 
-## Start
+## Evidence: cheap first
 
-1. Read the project's agent entrypoint and existing context/contracts/workflows before editing.
-2. Require the user or project to identify the inspiration source path. Never assume its directory name.
-3. Resolve the exact source path and treat it as read-only. Do not rename, move, delete, normalize, optimize, or write metadata into it.
-4. Select only the domain profiles needed now. Read [domain-profiles.md](references/domain-profiles.md) for non-frontend work.
-5. Preflight the design tools before the first shot, then record what you actually observed. See [design-tools.md](references/design-tools.md):
+Look before you extract. A screenshot of two or three pages answers most questions:
 
 ```bash
-python3 scripts/bootstrap_harness.py preflight --project-root /absolute/project \
-  --available image,pdf,repository --missing playwright
+sips -s format png --resampleWidth 1400 file.pdf --out /tmp/p.png   # then read the image
 ```
 
-A capability never preflighted stays unavailable. Never narrate a tool you did not run.
+Byte-level extraction — parsing content streams, installing packages, hashing every page — is an **escalation the user opts into**, not the default. It is infeasible on small models and usually answers a question nobody asked. Corpus files are hashed once at `init`; that is the only automatic hashing.
 
-6. Run the bootstrap script from this skill directory:
+## Working rules
+
+- **Change only the elements this iteration names.** Rebuilding a screen from scratch silently drops every element it carried. If a change would drop one, record the supersede first.
+- **Never substitute for approved artwork** — no emoji standing in for a drawn object, no placeholder where a ranked element exists.
+- **Verify by looking.** "Verified structurally" is not verification. Render the screen and measure it: `file://` in a browser pane plus computed styles catches layout bugs a grep cannot. (`file://` tests layout only, never the scoring path — that is what `doctor` is for.)
+- **Answer the question asked.** If the user repeats a complaint, you fixed something adjacent. Re-read their words before touching anything.
+- Every visual move traces to a corpus cluster or a verbatim excerpt. Anything else is inference: label it, 1 star. See [anti-slop.md](references/anti-slop.md).
+
+## Starting from scratch
 
 ```bash
-python3 scripts/bootstrap_harness.py init \
-  --project-root /absolute/project \
-  --source-root /absolute/inspiration-source \
-  --profiles frontend-layout,art-direction
+python3 scripts/bootstrap_harness.py init --project-root . \
+  --source-root /absolute/inspiration --profiles art-direction,composition
 ```
 
-Generated files live under `spec/design-harness/`. If the project already has authoritative context files, merge the generated invariants into them instead of creating competing authority.
-
-## Source Safety
-
-- Require an explicit `--source-root`; accept any directory name.
-- Resolve and record the absolute path, but never copy it into a fixed project directory.
-- Snapshot path, byte size, media type, and SHA-256 for every regular file.
-- Reject symlinks and unreadable files instead of following or changing them.
-- Run `validate` before and after any design session. A changed or missing source hash blocks inference and promotion.
-- Store generated derivatives only in the project cache or evidence directory.
-- Ask for explicit approval naming the exact path before any action that could mutate a source root.
-
-## Workflow
-
-Use `draft -> evidence-ready -> proposed -> revision-requested -> proposed -> approved -> promoted`.
-
-### Bootstrap and preflight
-
-- Generate project context, contracts, workflow, capability matrix, source manifest, and questionnaire.
-- Inspect repository evidence before external research.
-- Record actual adapters; never claim an MCP server or local tool is available without preflight evidence.
-- Missing required capabilities keep the run in `draft`.
-
-### Confirm deterministic sourcing
-
-Generate the questionnaire before fetching supplemental material. Recommend likely art-detail inputs proactively—ASCII/Unicode libraries, icon sets, motion references, composition systems, type sources, materials, spatial standards, copy evidence, or mockup renderers—when the selected profile or source manifest indicates the need.
-
-Ask the user to confirm or reject each recommendation. Do not make them name the library first. After approval, pin the authoritative URL or package version, license, retrieval time, and content hash. Follow [sourcing-policy.md](references/sourcing-policy.md).
-
-### Ingest evidence
-
-- Images: hash original bytes; derive bounded deterministic metadata before vision; group no more than four new images per vision call.
-- PDFs: pin renderer and extractor versions; create one image hash and one normalized text hash per page; keep page order; never send the full PDF when page evidence suffices.
-- HTML/API: fetch without executing; cap bytes and excerpts; store provenance and raw content outside committed context.
-- Physical product/space: record units, scale, dimensions, materials, lighting, viewpoints, tolerances, and manufacturing or accessibility constraints.
-- Copy: separate user-provided claims from researched claims; retain audience, hierarchy, voice, proof, legal, and localization constraints.
-- Mockups: use an ordered layer manifest with source hashes, transforms, masks, blend modes, color profile, output size, and pinned renderer version.
-
-### Bound model work
-
-Build requests from hashes, compact excerpts, selected constraints, semantic axes, and schema references only. Keep visible observation separate from interpretation. Require structured output, a request fingerprint, one observation per source, and confidence. Reuse validated inference by fingerprint at zero new-source cost.
-
-Use short shots. Start with four external tool calls, two URLs, four new visual sources, 24,000 extracted characters, and 1,200 output tokens unless the generated contract lowers them. Never silently raise a limit; create another shot.
-
-### Iterate and promote
-
-- Treat every user response as critique evidence, even when vague or poorly framed.
-- Preserve exact positive and negative excerpts, then translate them into testable constraints.
-- Write every accepted excerpt to the ledger with `decide` in the same turn you receive it. An excerpt that stays in the conversation is not retained.
-- Ask for a star rank per design element alongside approval; rank is the ordering signal when elements conflict.
-- Mixed or negative critique requests revision. Positive-only critique may approve.
-- Always ask for approval after a proposal.
-- Automated checks cannot manufacture user approval.
-- Promotion requires current lineage, unchanged source hashes, a ledger that validates, required capability evidence, and passing domain-specific conformance.
+The user names the corpus path; never assume its directory name. It is read-only. Profiles are in [domain-profiles.md](references/domain-profiles.md); adapters and design MCPs in [design-tools.md](references/design-tools.md) — record what you actually observed with `preflight`, and never narrate a tool you did not run.
 
 ## Validation
 
-Run the highest-level seam:
-
 ```bash
-python3 scripts/bootstrap_harness.py validate --project-root /absolute/project
+python3 scripts/bootstrap_harness.py validate --project-root .
 ```
 
-For skill changes, also run:
+Reports ledger health and corpus drift **separately**. Corpus drift is usually the user reorganising files and does not block design work. A regenerated preview is a note, not a failure — re-record it when convenient.
 
-```bash
-python3 scripts/bootstrap_harness.py self-test
-python3 /path/to/skill-creator/scripts/quick_validate.py /path/to/aesthetic
-```
+For skill changes: `python3 scripts/bootstrap_harness.py self-test`.
 
-The self-test uses a nonstandard source directory name, bootstraps a disposable fixture, verifies generated contracts and recommendations, and proves every source hash remains unchanged.
+## References
 
-## Resources
-
-- [domain-profiles.md](references/domain-profiles.md): required context and conformance by design domain.
-- [sourcing-policy.md](references/sourcing-policy.md): proactive but approval-gated deterministic sourcing.
-- [implementation-spec.md](references/implementation-spec.md): architecture specification and acceptance seam.
-- `assets/spec/`: boilerplate copied into each project.
+- [companion-contract.md](references/companion-contract.md) — what any companion must provide
+- [anti-slop.md](references/anti-slop.md) — constraints against generic output
+- [design-tools.md](references/design-tools.md) — adapters and design MCP servers
+- [domain-profiles.md](references/domain-profiles.md), [sourcing-policy.md](references/sourcing-policy.md)
