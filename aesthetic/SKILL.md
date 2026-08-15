@@ -25,6 +25,7 @@ This sends a real click through a real socket and confirms it lands. It is the o
 | Star + verdict controls | no `data-rank` / `data-verdict` |
 | Stale injected helper | served page looks right, clicks dropped — restart after editing `helper.js` |
 | Component graphic | rows show ids, not the thing being judged |
+| Invisible graphic | markup present, renders at 0px or as a corner fragment — host CSS beat the stylesheet |
 | Socket round trip | clicks land nowhere — a `file://` tab does this, silently |
 
 `doctor` red means stop and fix. Do not write another screen. Do not restate the URL.
@@ -111,6 +112,7 @@ Byte-level extraction — parsing content streams, installing packages, hashing 
 
 - **Change only the elements this iteration names.** Rebuilding a screen from scratch silently drops every element it carried. If a change would drop one, record the supersede first.
 - **Never substitute for approved artwork** — no emoji standing in for a drawn object, no placeholder where a ranked element exists.
+- **Counting markup is not verification.** Every graphic that vanished in this project passed a string count: a stylesheet that never injected, a host rule with higher specificity, artwork scaled into a corner. `doctor` now requires each graphic to carry its own inline sizing and to contain real artwork — but when a screen looks wrong, **screenshot it** before claiming anything.
 - **Verify by looking.** "Verified structurally" is not verification. Render the screen and measure it: `file://` in a browser pane plus computed styles catches layout bugs a grep cannot. (`file://` tests layout only, never the scoring path — that is what `doctor` is for.)
 - **Answer the question asked.** If the user repeats a complaint, you fixed something adjacent. Re-read their words before touching anything.
 - Every visual move traces to a corpus cluster or a verbatim excerpt. Anything else is inference: label it, 1 star. See [anti-slop.md](references/anti-slop.md).

@@ -342,7 +342,15 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
 #      the cascade fills the fallback. Either way there is no hardcoded color
 #      the harness's own approved palette (`palette.family-from-cards`) can be
 #      overridden by.
-FEEDBACK_STYLE = """<style>
+# Inline so a host stylesheet cannot collapse the one element the user must see.
+SHOT_INLINE = ("display:block;flex:0 0 auto;inline-size:var(--dh-shot-w,132px);"
+               "block-size:calc(var(--dh-shot-w,132px) * 11 / 8.5);overflow:hidden;"
+               "position:relative;border:1px solid currentColor;background:#fff")
+SHOT_INNER_INLINE = ("position:absolute;inset-block-start:0;inset-inline-start:0;"
+                     "inline-size:850px;block-size:1100px;transform-origin:0 0;"
+                     "transform:scale(calc(var(--dh-shot-w,132px) / 850));pointer-events:none")
+STYLE_MARKER = "/* dh-controls */"
+FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-feedback{container-type:inline-size}
 .dh-offline{display:block;background:#b00;color:#fff;font:700 12px/1.4 ui-monospace,monospace;
  padding:8px 10px;margin-bottom:8px}
@@ -406,23 +414,30 @@ def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
 def render_preview(project_root: Path | None, preview: dict[str, str] | None, element: str) -> str:
     """Inline the graphic for one element, or say plainly that there is none."""
     if not preview:
-        return ('<span class="dh-shot"><span class="dh-shot-missing">sin gráfico<br>'
-                '--preview</span></span>')
+        return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
+                '<span class="dh-shot-missing">sin gráfico<br>--preview</span></span>')
     if project_root is None:
-        return f'<span class="dh-shot"><span class="dh-shot-missing">{preview["path"]}</span></span>'
+        return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
+                f'<span class="dh-shot-missing">{preview["path"]}</span></span>')
     path = (project_root / preview["path"])
     if not path.is_file():
-        return ('<span class="dh-shot"><span class="dh-shot-missing">gráfico ausente<br>'
-                f'{preview["path"]}</span></span>')
+        return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
+                f'<span class="dh-shot-missing">gráfico ausente<br>{preview["path"]}</span></span>')
     suffix = path.suffix.lower()
     if suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
         media = "image/jpeg" if suffix in {".jpg", ".jpeg"} else f"image/{suffix.lstrip('.')}"
         encoded = base64.b64encode(path.read_bytes()).decode("ascii")
         body = f'<img alt="" src="data:{media};base64,{encoded}">'
-        return f'<span class="dh-shot">{body}</span>'
+        return f'<span class="dh-shot" style="{SHOT_INLINE}">{body}</span>'
     # svg / html fragment: scaled inside a clipped frame rather than reflowed
     fragment = path.read_text(encoding="utf-8")
-    return f'<span class="dh-shot"><span class="dh-shot-inner">{fragment}</span></span>'
+    if suffix == ".svg":
+        # Force the root <svg> to fill the frame regardless of its own width/height attrs.
+        fragment = re.sub(r"<svg\b", '<svg preserveAspectRatio="xMidYMid meet" '
+                          'style="width:100%;height:100%;display:block"', fragment, count=1)
+        return f'<span class="dh-shot" style="{SHOT_INLINE}">{fragment}</span>'
+    return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
+            f'<span class="dh-shot-inner" style="{SHOT_INNER_INLINE}">{fragment}</span></span>')
 
 
 def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str] | None = None,
@@ -553,7 +568,7 @@ def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | Non
         html = html[:match.start()] + replacement + html[match.end():]
         filled += len(wanted)
 
-    if style and "dh-fb{" not in html:
+    if style and STYLE_MARKER not in html:
         html = html.replace("</head>", style + "\n</head>", 1) if "</head>" in html else style + "\n" + html
     screen.write_text(html, encoding="utf-8")
     return filled

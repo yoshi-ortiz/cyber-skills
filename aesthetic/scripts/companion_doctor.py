@@ -15,6 +15,7 @@ import hashlib
 import http.client
 import json
 import os
+import re
 import secrets
 import socket
 import struct
@@ -152,6 +153,21 @@ def main() -> int:
         ok(f"every scoring row carries its graphic ({rows} rows)")
     if "data-sentiment=" in html and "data-verdict=" not in html:
         fail("rows use the retired like/dislike vocabulary instead of approve/reject")
+        bad += 1
+    # Markup present is not markup visible. Every failure in this project's
+    # history passed a string count while rendering nothing: a stylesheet that
+    # never injected, a host rule with higher specificity, artwork scaled to a
+    # corner. Sizing must ride on the element itself.
+    sized = len(re.findall(r'class="dh-shot"[^>]*style="[^"]*inline-size', html))
+    if rows and sized < rows:
+        fail(f"{rows - sized} of {rows} graphic(s) rely on a stylesheet for their size -- "
+             f"a host rule or a missing <style> makes them invisible. Re-run `embed`.")
+        bad += 1
+    else:
+        ok("graphics carry their own sizing (cannot be collapsed by host CSS)")
+    art = len(re.findall(r'class="dh-shot"[^>]*>\s*<svg', html))
+    if rows and art < rows:
+        fail(f"{rows - art} row(s) have a frame but no artwork inside it")
         bad += 1
     if "sin gr" in html:
         fail(f"{html.count('sin gr')} element(s) render with no graphic to judge")
