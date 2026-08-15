@@ -119,6 +119,20 @@ def main() -> int:
     for label, passed in checks.items():
         (ok if passed else fail)(label)
         bad += 0 if passed else 1
+    # Presence is not enough: every scoring row must carry its own graphic.
+    # A hand-rolled row block passes a global "dh-shot appears somewhere" check
+    # while showing the user nothing to judge.
+    rows = html.count("data-element=")
+    shots = html.count('class="dh-shot"')
+    if rows and shots < rows:
+        fail(f"{rows - shots} of {rows} scoring row(s) have no component graphic "
+             f"-- regenerate with `controls`, never hand-roll rows")
+        bad += 1
+    else:
+        ok(f"every scoring row carries its graphic ({rows} rows)")
+    if "data-sentiment=" in html and "data-verdict=" not in html:
+        fail("rows use the retired like/dislike vocabulary instead of approve/reject")
+        bad += 1
     if "sin gr" in html:
         fail(f"{html.count('sin gr')} element(s) render with no graphic to judge")
         bad += 1

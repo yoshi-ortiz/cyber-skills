@@ -209,7 +209,8 @@ def render_decisions_md(decisions: dict[str, object]) -> str:
 def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                     evidence: str, supersedes: list[str],
                     preview: dict[str, str] | None = None,
-                    source: str = "agent") -> dict[str, object]:
+                    source: str = "agent",
+                    sentiment: str | None = None) -> dict[str, object]:
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
     if verdict not in DECISION_STATES:
         raise HarnessError(f"verdict must be one of: {', '.join(DECISION_STATES)}")
@@ -237,6 +238,9 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
         elif e["element"] == element:
             e["state"], e["stars"], e["evidence"] = verdict, stars, evidence
             e["source"] = source
+            if sentiment is not None:
+                e["sentiment"] = sentiment
+            e.setdefault("sentiment", None)
             if preview is not None:
                 e["preview"] = preview
             e.setdefault("preview", None)
@@ -245,7 +249,7 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
         decisions["elements"].append({
             "element": element, "state": verdict, "stars": stars,
             "evidence": evidence, "supersededBy": None, "preview": preview,
-            "source": source,
+            "source": source, "sentiment": sentiment,
         })
     if any(e["state"] == "approved" for e in decisions["elements"]):
         decisions["state"] = "approved"
@@ -319,7 +323,8 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         accepted.append((int(stamp), index, element, verdict, rank, evidence[:400]))
 
     for _, _, element, verdict, rank, evidence in sorted(accepted, key=lambda row: (row[0], row[1])):
-        record_decision(project_root, element, verdict, rank, evidence, [], source="user")
+        record_decision(project_root, element, verdict, rank, evidence, [], source="user",
+                        sentiment=sentiment)
     return len(accepted), skipped
 
 
@@ -460,10 +465,14 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
             for n in range(STAR_RANGE[0], STAR_RANGE[1] + 1)
         )
         lines.append(f'<span class="dh-stars" role="group" aria-label="rango {element}">{stars_markup}</span>')
-        for verdict, glyph, label in (("approved", "&#10003;", "aprobar"), ("rejected", "&#10007;", "rechazar")):
-            on = ' class="on"' if entry["state"] == verdict else ""
-            lines.append(f'<span data-verdict="{verdict}" role="button" tabindex="0" '
+        mood = entry.get("sentiment")
+        for name, glyph, label in (("like", "&#128077;", "me gusta"), ("dislike", "&#128078;", "no me gusta")):
+            on = ' class="on"' if mood == name else ""
+            lines.append(f'<span data-sentiment="{name}" role="button" tabindex="0" '
                          f'aria-label="{label} {element}" title="{label}"{on}>{glyph}</span>')
+        on = ' class="on"' if entry["state"] == "approved" else ""
+        lines.append(f'<span data-verdict="approved" role="button" tabindex="0" '
+                     f'aria-label="aprobar {element}" title="aprobar"{on}>&#10003;</span>')
         lines.append("</span>")
         lines.append("</div>")
     lines.append("</div>")
@@ -497,6 +506,49 @@ def record_preflight(project_root: Path, available: list[str], missing: list[str
             item["available"] = False
     write_json(matrix_path, matrix)
     return matrix
+
+
+def ledger_stats(decisions: dict[str, object]) -> dict[str, object]:
+    """Deterministic aggregates over the ledger. Same ledger, same numbers.
+
+    The headline is `coverage`: what fraction of standing elements carry a
+    signal the user actually set. A high star average means nothing if the
+    agent typed all of it.
+    """
+    elements = decisions["elements"]
+    live = [e for e in elements if e["state"] in ("approved", "proposed")]
+    user = [e for e in live if e.get("source") == "user"]
+    ranked = sorted((e["stars"] for e in user))
+
+    def median(values: list[int]) -> float:
+        if not values:
+            return 0.0
+        mid = len(values) // 2
+        return float(values[mid]) if len(values) % 2 else (values[mid - 1] + values[mid]) / 2
+
+    histogram = {str(n): sum(1 for e in user if e["stars"] == n)
+                 for n in range(STAR_RANGE[0], STAR_RANGE[1] + 1)}
+    # A user who liked something but scored it low, or disliked something still
+    # standing, is telling you something an average would hide.
+    conflicts = sorted(e["element"] for e in live
+                       if (e.get("sentiment") == "like" and e["stars"] <= 1)
+                       or (e.get("sentiment") == "dislike" and e["stars"] >= 4))
+    return {
+        "standing": len(live),
+        "userSet": len(user),
+        "agentSet": len(live) - len(user),
+        "coverage": round(len(user) / len(live), 3) if live else 0.0,
+        "meanStars": round(sum(ranked) / len(ranked), 2) if ranked else 0.0,
+        "medianStars": median(ranked),
+        "histogram": histogram,
+        "likes": sum(1 for e in live if e.get("sentiment") == "like"),
+        "dislikes": sum(1 for e in live if e.get("sentiment") == "dislike"),
+        "approved": sum(1 for e in elements if e["state"] == "approved"),
+        "rejected": sum(1 for e in elements if e["state"] == "rejected"),
+        "superseded": sum(1 for e in elements if e["state"] == "superseded"),
+        "unscored": sorted(e["element"] for e in live if e.get("source") != "user"),
+        "conflicts": conflicts,
+    }
 
 
 def init_harness(project_root: Path, source_root: Path, profiles: list[str]) -> Path:
@@ -699,7 +751,8 @@ def self_test() -> None:
         if markup != render_feedback_controls(load_decisions(output)):
             raise HarnessError("self-test: controls are not deterministic")
         for required in ('data-element="form.paper.white"', 'data-rank="5"',
-                         'data-verdict="approved"', 'data-verdict="rejected"', 'data-rank="0"'):
+                         'data-verdict="approved"', 'data-sentiment="like"',
+                         'data-sentiment="dislike"', 'data-rank="0"'):
             if required not in markup:
                 raise HarnessError(f"self-test: controls omitted {required}")
         if 'data-element="cover.background.black"' in markup:
@@ -784,6 +837,23 @@ def self_test() -> None:
         if z["bless.me"]["state"] != "approved" or z["bless.me"]["source"] != "user":
             raise HarnessError("self-test: explicit approve verdict not adopted")
 
+        # Statistics must be deterministic and must not flatter the ledger:
+        # coverage tells you how much is really the user's.
+        first_stats = ledger_stats(load_decisions(output))
+        if first_stats != ledger_stats(load_decisions(output)):
+            raise HarnessError("self-test: stats are not deterministic")
+        if not 0.0 <= first_stats["coverage"] <= 1.0:
+            raise HarnessError("self-test: coverage out of range")
+        if first_stats["userSet"] + first_stats["agentSet"] != first_stats["standing"]:
+            raise HarnessError("self-test: user/agent split does not sum to standing")
+        record_decision(project, "liked.but.weak", "proposed", 1, "user click", [],
+                        source="user", sentiment="like")
+        flagged = ledger_stats(load_decisions(output))
+        if "liked.but.weak" not in flagged["conflicts"]:
+            raise HarnessError("self-test: like-with-low-stars conflict not surfaced")
+        if flagged["likes"] < 1:
+            raise HarnessError("self-test: like not counted")
+
         # validate must refuse a decision-less harness rather than green-light it.
         (output / "decisions.json").unlink()
         try:
@@ -831,6 +901,9 @@ def parser() -> argparse.ArgumentParser:
     preflight.add_argument("--missing", default="", help="comma-separated capabilities you confirmed absent")
     doctor = subcommands.add_parser("doctor", help="health-check the whole feedback path end to end")
     doctor.add_argument("--project-root", required=True, type=Path)
+    stats = subcommands.add_parser("stats", help="deterministic statistics over the ledger")
+    stats.add_argument("--project-root", required=True, type=Path)
+    stats.add_argument("--json", action="store_true", help="machine-readable output")
     subcommands.add_parser("self-test")
     return command
 
@@ -873,6 +946,24 @@ def main() -> int:
             blocked = [i["category"] for i in matrix["requiredCapabilities"] if not i["available"]]
             print(f"Available: {', '.join(ready) or 'none'}")
             print(f"Not preflighted or missing: {', '.join(blocked) or 'none'}")
+        elif args.command == "stats":
+            output = args.project_root.resolve(strict=True) / "spec" / "design-harness"
+            report = ledger_stats(load_decisions(output))
+            if args.json:
+                print(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2))
+            else:
+                bars = "  ".join(f"{n}:{report['histogram'][n]}" for n in sorted(report["histogram"]))
+                print(f"standing {report['standing']}  "
+                      f"user-set {report['userSet']}  agent-set {report['agentSet']}  "
+                      f"coverage {report['coverage']:.0%}")
+                print(f"stars    mean {report['meanStars']}  median {report['medianStars']}  [{bars}]")
+                print(f"signals  {report['likes']} like  {report['dislikes']} dislike  "
+                      f"{report['approved']} approved  {report['rejected']} rejected  "
+                      f"{report['superseded']} superseded")
+                if report["conflicts"]:
+                    print(f"conflict {len(report['conflicts'])}: " + ", ".join(report["conflicts"][:5]))
+                if report["unscored"]:
+                    print(f"unscored {len(report['unscored'])}: " + ", ".join(report["unscored"][:5]))
         elif args.command == "doctor":
             script = Path(__file__).resolve().parent / "companion_doctor.py"
             return subprocess.call([sys.executable, str(script), str(args.project_root)])

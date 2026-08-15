@@ -41,11 +41,16 @@ python3 scripts/bootstrap_harness.py adopt --project-root . \
 
 `adopt` reporting `0 adopted` means **no feedback was captured** — say so plainly rather than moving on.
 
-The vocabulary, all user-set:
+Four signals, all user-set, each meaning one thing:
 
-- **0 stars** — kill it. A real score, not a missing value.
-- **1–5 stars** — strength.
-- **✓ approve / ✗ reject** — explicit verdict. Never derive a verdict from prose.
+| Control | Meaning |
+| --- | --- |
+| **0 stars** | kill it — a real score, not a missing value |
+| **1–5 stars** | strength |
+| **👍 / 👎** | affinity, recorded independently of the verdict |
+| **✓ check** | approve — locks the element into Standing |
+
+Affinity is kept separate from verdict so "I like it but it is not settled" stays expressible. Never derive any of the four from prose.
 
 `decide` is for agent inference only and is **capped at 1 star** by the tool. A higher rank must come from a click. If you catch yourself typing `--stars 4` from something the user said in chat, that is the bug this cap exists to prevent — ask them to click it instead.
 
@@ -54,6 +59,14 @@ python3 scripts/bootstrap_harness.py decide --project-root . \
   --element cover.ring.kicker --verdict proposed --stars 1 \
   --evidence "agent inference: corpus suggests a ring" --source agent
 ```
+
+## Statistics
+
+```bash
+python3 scripts/bootstrap_harness.py stats --project-root .
+```
+
+Deterministic — same ledger, same numbers. Lead with **coverage**: the fraction of standing elements carrying a signal the user actually set. A high star average means nothing at 20% coverage, because the rest is agent inference. `conflicts` surfaces what an average hides (liked but scored low, disliked but still standing); `unscored` names exactly what still needs clicks.
 
 ## The scoring screen
 
