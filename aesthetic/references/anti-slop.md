@@ -64,7 +64,7 @@ Stop and re-source when you notice yourself:
 | --- | --- |
 | Decisions survive the session | `decisions.json`, `validate` |
 | Rank reflects the user, not the agent | `stars` set by user; inference at 1★ |
-| The graphic is reviewed, not assumed | `decide --preview`, hash-pinned by `validate` |
+| The graphic is rendered, not assumed | `decide --preview`, hash-pinned by `validate` |
 | Corpus is evidence, not decoration | `source-manifest.json`, `validate` |
 | Palette is declared, not defaulted | `controls` emits `var(--dh-*)` only |
 | Adapters are observed, not claimed | `preflight` writes `capability-matrix.json` |

@@ -1,200 +1,67 @@
 ---
 name: aesthetic
-description: Evidence-backed design harness that keeps user decisions from being lost or invented. Use when starting design work from an inspiration corpus, when resuming a project that already has spec/design-harness/, or when collecting ranked design feedback from a browser companion. Covers art-direction, frontend, product, physical-space, copywriting, motion, composition and mockup-layering.
+description: Evidence-backed design harness for durable user decisions and ranked feedback. Use for design work with an inspiration corpus or an existing spec/design-harness/. Covers art direction, UI, product, space, copy, motion, and composition.
 ---
 
 # Aesthetic
 
-Design work fails in two ways: decisions get lost between sessions, and the agent invents feedback the user never gave. This harness exists to stop both. Everything else is optional.
+Great design is specific to its subject, coherent as a system, visibly refined, and faithful to what the user actually chose. This harness makes those choices survive between sessions without inventing feedback.
 
-**The one metric: did a rank the user actually set reach the ledger?** If no user click has landed, the session produced nothing, however many screens were made.
+Success requires both: **a visible design improvement and a rank the user actually set reaching the ledger.** Screens without captured feedback are guesses; captured feedback without better work is bureaucracy. Fix harness defects in this skill once—never spend a design turn making the user QA the scoring UI.
 
-## Every session starts here
+## Start correctly
 
-```bash
-python3 scripts/bootstrap_harness.py doctor --project-root .
-```
+- **Existing harness:** run `python3 scripts/bootstrap_harness.py doctor --project-root .`, then read `spec/design-harness/DECISIONS.md` before proposing anything.
+- **New project:** read [commands.md](references/commands.md), run `init` with the user-named read-only corpus, then run `doctor` and read the new ledger. Never assume the corpus path.
 
-This sends a real click through a real socket and confirms it lands. It is the only statement about the companion you may make. **Never tell the user the companion works because you started it earlier** — check again, every time, before pointing them at a URL. The path has six links and each fails silently:
+`doctor` sends a real click through a real socket. It is **the only evidence** that the companion works; an earlier green check proves nothing. Red means stop: no new screen and no restated URL. See [companion-contract.md](references/companion-contract.md).
 
-| Link | Fails as |
-| --- | --- |
-| Server process | dead; URL looks fine, nothing responds |
-| Served screen | `/` serves **only the newest-mtime file** — write any screen after the scoring one and you have silently redirected the user |
-| Scoring rows | screen has no `data-element` |
-| Star + verdict controls | no `data-rank` / `data-verdict` |
-| Stale injected helper | served page looks right, clicks dropped — restart after editing `helper.js` |
-| Component graphic | rows show ids, not the thing being judged |
-| Invisible graphic | markup present, renders at 0px or as a corner fragment — host CSS beat the stylesheet |
-| Socket round trip | clicks land nowhere — a `file://` tab does this, silently |
+## Quality loop: frame, direct, declare, build, critique, capture
 
-`doctor` red means stop and fix. Do not write another screen. Do not restate the URL.
+1. **Frame.** Pin the concrete subject, audience, artefact's single job, real content, constraints, and already-ranked preferences. Infer what the evidence supports; ask only for a missing choice that would materially change the result.
+2. **Direct.** Cluster the corpus by recurring relationships, not isolated decoration. Write a one-sentence visual thesis rooted in the subject's own materials, language, tools, history, or environment. Choose a fitting movement or lineage and one memorable **signature** move. Reject any idea that would fit an unrelated brief unchanged.
+3. **Declare.** Specify a compact system before drawing: named palette with roles, typographic roles and scale, grid and spacing logic, primary → secondary → tertiary hierarchy, imagery or material register, copy voice, and motion or physical behavior where relevant. Spend boldness on the signature; keep supporting decisions disciplined.
+4. **Build.** Use real content. Preserve every standing element outside this iteration's scope. Match execution complexity to the thesis: expressive work needs enough craft to land; restrained work needs exact spacing, type, alignment, and finish. Never substitute placeholders or emoji for ranked artwork.
+5. **Critique.** Render and inspect a screenshot. Compare it with the brief and corpus at the **same scale**. Check hierarchy, legibility, composition, rhythm, contrast, specificity, coherence, accessibility, and domain constraints. Remove decoration with no job. If it resembles a generic default or the signature is not immediately legible, revise before showing it.
+6. **Capture.** Record what changed, embed the actual graphic beside its controls, `publish`, verify again with `doctor`, and ask for ranked feedback. On the next turn, improve liked low-scoring (`polish`) work first; do not replace it.
 
-Then read `spec/design-harness/DECISIONS.md` before proposing anything.
+Do planning and self-critique internally. Show the strongest coherent result, not a pile of underdeveloped alternatives, unless comparison is the design question.
 
-## What the signals mean
-
-Read this before touching anything. Getting it wrong has cost whole sessions and destroyed approved work.
+## Read the signals literally
 
 | Signal | Means | Does **not** mean |
 | --- | --- | --- |
-| **★ 1–5** | **Graphic execution quality** — how well the thing is drawn, ugly → beautiful. 1 is the worst execution. | Confidence, priority, or whether to do it at all |
-| **↺ reset** | Clear the rating: "I have not judged this yet" | A score of zero. Clearing and "worst execution" are different statements |
-| **👍 green** | This direction is right, keep going | That the drawing is good |
-| **👎 red** | Not this direction | That the drawing is bad |
-| **☑ reviewed** | "I have looked at this." A toggleable **status** | Approval, and it does **not** freeze the element — iteration continues after it |
+| **★ 1–5** | Graphic execution quality, ugly → beautiful | Confidence, priority, or whether to keep it |
+| **0** | Worst execution; a real score | Unrated—never-touched is `scored: false` |
+| **👍 / 👎** | Direction is / is not worth pursuing | Drawing quality |
+| **☑ completed** | Done for now; toggleable status | Approval or a freeze |
 
-**👍 with 2 stars is the most useful state in the system**, not a contradiction: *good idea, badly drawn yet*. The response is to **improve the drawing**. Never drop, supersede, or reject an element because its execution score is low — `stats` reports these under `polish`, not `conflicts`.
+**👍 with 2 stars is the most useful state:** *good idea, badly drawn yet*. Improve it. Never drop, supersede, or reject for a low execution score; `stats` reports these as `polish`. A score never changes state; only an explicit verdict does.
 
-**A score never changes state.** Only an explicit verdict does. Reading a low score as "delete this" already destroyed work the user wanted kept.
+## Declare, then draw
 
-## Feedback is captured, never inferred
-
-Ranks come from user clicks, adopted:
+Name checkable decisions before rendering:
 
 ```bash
-python3 scripts/bootstrap_harness.py adopt --project-root . \
-  --companion-ledger .superpowers/brainstorm/decisions.jsonl
+python3 scripts/golden_rules.py --scaffold cover.ring.kicker > candidate.json
+# fill body / grid / gestalt / register, then:
+python3 scripts/golden_rules.py --design candidate.json --min-coverage 0.8
 ```
 
-`adopt` reporting `0 adopted` means **no feedback was captured** — say so plainly rather than moving on.
+Coverage measures determinism, not beauty: a fully declared design can be wrong, but it can be repeated and fixed. [golden-rules.md](references/golden-rules.md) contains the checkable rules and directed doctrine—Albers, Itten, Müller-Brockmann, Bringhurst, Gestalt, Peirce, composition, typography, and movement.
 
-`decide` is for agent inference only and is **capped at 1 star** by the tool. A higher rank must come from a click. Record what you built so the row can say it:
+## Commands
 
-```bash
-python3 scripts/bootstrap_harness.py decide --project-root . \
-  --element cover.ring.kicker --verdict proposed --stars 1 \
-  --evidence "agent inference: corpus suggests a ring" \
-  --implemented "ring at 96px with the kicker on the arc" --source agent
-```
+Every verb takes `--project-root` and answers `--help`; examples are in [commands.md](references/commands.md). `doctor` proves the path · `adopt` imports clicks, the only source of ranks above 1 · `decide` records inference, capped at 1 · `describe` relabels without touching a rank · `embed`/`publish` add and serve scoring rows idempotently · `stats` reports coverage · `init`/`validate`/`self-test` maintain the harness.
 
-## Describing a component
+Rows derive from state: pinned, `proposed`, `completed`/`approved`, then dimmed `rejected`/`superseded`. Nothing disappears; undo a wrong rejection by clicking, never by editing JSON.
 
-A dotted id is not a description. Three fields, each with one job — all optional, all shown on the scoring row:
+## Rules no tool enforces
 
-| Flag | Holds | Example |
-| --- | --- | --- |
-| `--description` | what the component **is**, in plain words | `"anillo con el antetítulo del rol alrededor del objeto"` |
-| `--evidence` | why it exists — **verbatim** user words, never a paraphrase | `"user: 'the previous ring was also kinda fine'"` |
-| `--implemented` | what was actually **built** this round | `"anillo a 96px, texto en el arco superior"` |
+- **Every visual move traces to a corpus cluster, verbatim excerpt, or golden rule.** Anything else is inference: label it, 1 star. See [anti-slop.md](references/anti-slop.md).
+- **Counting markup is not verification.** Assert on what a parser builds, not on a string the generator built. When a screen looks wrong, screenshot it. See [verification.md](references/verification.md).
+- **The skill owns the scoring UI.** Never write scoring CSS in a project; fix `FEEDBACK_STYLE` so every project benefits.
+- **Look before extracting.** Screenshots answer most sourcing questions; byte extraction is an escalation the user opts into. See [sourcing-policy.md](references/sourcing-policy.md).
+- **"Continue prototype" means `/prototype`.** This skill supplies the ledger and scoring rows; `/prototype` drives the build.
 
-```bash
-python3 scripts/bootstrap_harness.py decide --project-root . \
-  --element cover.ring.kicker --verdict proposed --stars 1 --source agent \
-  --description "anillo con el antetítulo alrededor del objeto" \
-  --evidence "user: 'kinda fine'" \
-  --implemented "anillo a 96px sobre la retícula"
-```
-
-A row with no `--description` shows only its id, which is what made earlier screens unrankable. Fill it when you first record an element.
-
-## Grouping and sorting
-
-Rows group themselves. The order is derived from state, never stored, so it cannot go stale:
-
-| Group | Holds | Reads as |
-| --- | --- | --- |
-| **De esta ronda** | whatever you passed to `--pin` | what changed this turn, on top |
-| **Lluvia de ideas** | `proposed` | not yet looked at |
-| **En desarrollo** | `reviewed`, `approved` | being worked on |
-| **Descartado** | `rejected`, `superseded` | set aside — still visible, dimmed |
-
-Inside each group: **best execution first**, then id, so output is byte-stable for a given ledger.
-
-Rejected work stays on screen deliberately. A rejection must be undoable by clicking, not by editing JSON — that is how a wrongly-rejected element gets restored.
-
-Pin this turn's work so the user sees it first:
-
-```bash
-python3 scripts/bootstrap_harness.py embed --project-root . --screen <screen>.html \
-  --pin cover.ring.kicker,cover.solapa.right
-```
-
-## Statistics
-
-```bash
-python3 scripts/bootstrap_harness.py stats --project-root .
-```
-
-Deterministic — same ledger, same numbers. Lead with **coverage**: the fraction of standing elements carrying a signal the user actually set. A high star average means nothing at 20% coverage, because the rest is agent inference. `conflicts` surfaces what an average hides (liked but scored low, disliked but still standing); `unscored` names exactly what still needs clicks.
-
-## Scoring lives inside the prototype
-
-Score the design where the user can see it. Put a placeholder naming the elements a section scores:
-
-```html
-<div data-dh-controls="cover.layout.two-column,cover.spine.right"></div>
-```
-
-Fill it and serve it — two commands, never by hand. `--pin` puts this turn's work on top:
-
-```bash
-python3 scripts/bootstrap_harness.py embed --project-root . --screen <screen>.html \
-  --bg "#ffebb8" --ink "#111" --accent "#d9482a" --pin cover.spine.right
-python3 scripts/bootstrap_harness.py publish --project-root . --screen <screen>.html
-```
-
-`embed` is **idempotent** — safe to re-run on a filled screen. It refuses a screen with no placeholder and refuses ids not in Standing. `publish` stamps the screen a clear margin ahead of every other, because the companion serves **only the newest-mtime file**.
-
-**The skill owns the scoring UI. Never write scoring CSS in a project.** Every local patch has produced specificity fights and unusable controls. If a control looks wrong, fix `FEEDBACK_STYLE` in the generator so every project gets the fix — do not patch the screen.
-
-Rows sort automatically: pinned first, then unresolved → reviewed → approved, best execution first inside each group. Each row shows the graphic, the proposal (`--evidence`) and what was built (`--implemented`).
-
-**Write the scoring screen last, or re-run `publish`.**
-
-## After editing the companion's own code
-
-The companion caches `helper.js` at boot. If you change it, **restart the companion** — otherwise the served page carries a stale helper and every click is dropped while the page looks fine. `doctor` fetches the served page over HTTP and fails when the live flag is missing, so it catches this; the file on disk cannot tell you.
-
-## Evidence: cheap first
-
-Look before you extract. A screenshot of two or three pages answers most questions:
-
-```bash
-sips -s format png --resampleWidth 1400 file.pdf --out /tmp/p.png   # then read the image
-```
-
-Byte-level extraction — parsing content streams, installing packages, hashing every page — is an **escalation the user opts into**, not the default. It is infeasible on small models and usually answers a question nobody asked. Corpus files are hashed once at `init`; that is the only automatic hashing.
-
-## "continue prototype" means the /prototype skill
-
-When the user says **continue prototype**, they mean the `/prototype` skill driving the brainstorming companion — not "keep editing harness screens". Invoke it. This skill supplies the ledger, the scoring rows and `publish`; `/prototype` drives what gets built. They compose; they do not compete.
-
-## Every turn must produce a design improvement
-
-The user's measure: *sessions should be short and produce great design output on each input.* A turn spent fixing the scoring UI is a failed turn. If a control is broken, fix it **in this skill**, once, and move on — do not ask the user to re-specify what a star means.
-
-## Working rules
-
-- **Change only the elements this iteration names.** Rebuilding a screen from scratch silently drops every element it carried. If a change would drop one, record the supersede first.
-- **Never substitute for approved artwork** — no emoji standing in for a drawn object, no placeholder where a ranked element exists.
-- **Counting markup is not verification.** Every graphic that vanished in this project passed a string count: a stylesheet that never injected, a host rule with higher specificity, artwork scaled into a corner. `doctor` now requires each graphic to carry its own inline sizing and to contain real artwork — but when a screen looks wrong, **screenshot it** before claiming anything.
-- **Verify by looking.** "Verified structurally" is not verification. Render the screen and measure it: `file://` in a browser pane plus computed styles catches layout bugs a grep cannot. (`file://` tests layout only, never the scoring path — that is what `doctor` is for.)
-- **Answer the question asked.** If the user repeats a complaint, you fixed something adjacent. Re-read their words before touching anything.
-- Every visual move traces to a corpus cluster or a verbatim excerpt. Anything else is inference: label it, 1 star. See [anti-slop.md](references/anti-slop.md).
-
-## Starting from scratch
-
-```bash
-python3 scripts/bootstrap_harness.py init --project-root . \
-  --source-root /absolute/inspiration --profiles art-direction,composition
-```
-
-The user names the corpus path; never assume its directory name. It is read-only. Profiles are in [domain-profiles.md](references/domain-profiles.md); adapters and design MCPs in [design-tools.md](references/design-tools.md) — record what you actually observed with `preflight`, and never narrate a tool you did not run.
-
-## Validation
-
-```bash
-python3 scripts/bootstrap_harness.py validate --project-root .
-```
-
-Reports ledger health and corpus drift **separately**. Corpus drift is usually the user reorganising files and does not block design work. A regenerated preview is a note, not a failure — re-record it when convenient.
-
-For skill changes: `python3 scripts/bootstrap_harness.py self-test`.
-
-## References
-
-- [companion-contract.md](references/companion-contract.md) — what any companion must provide
-- [anti-slop.md](references/anti-slop.md) — constraints against generic output
-- [design-tools.md](references/design-tools.md) — adapters and design MCP servers
-- [domain-profiles.md](references/domain-profiles.md), [sourcing-policy.md](references/sourcing-policy.md)
+Changing this skill: [AGENTS.md](AGENTS.md). Other references: [design-tools.md](references/design-tools.md), [domain-profiles.md](references/domain-profiles.md).

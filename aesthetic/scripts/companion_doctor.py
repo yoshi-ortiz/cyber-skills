@@ -22,6 +22,9 @@ import struct
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bootstrap_harness import visible_controls  # noqa: E402  (sibling script)
+
 PROBE = "__doctor_probe__"
 
 
@@ -134,12 +137,28 @@ def main() -> int:
     checks = {
         "scoring rows present (data-element)": "data-element=" in html,
         "star controls present (data-rank)": "data-rank=" in html,
-        "approve/reject present (data-verdict)": "data-verdict=" in html,
+        "completed toggle present (data-verdict)": "data-verdict=" in html,
         "component graphic present (dh-shot)": "dh-shot" in html,
     }
     for label, passed in checks.items():
         (ok if passed else fail)(label)
         bad += 0 if passed else 1
+    # The checks above only prove the attributes reached the page. A control
+    # whose glyph got absorbed into a malformed opening tag keeps every
+    # attribute and still draws nothing, so parse the served page and require
+    # the controls to carry visible content.
+    for attribute, label in (("data-rank", "star"), ("data-reset", "reset"),
+                             ("data-verdict", "completed")):
+        shown = visible_controls(html, attribute)
+        blank = sorted(key for key, text in shown.items() if not text.strip())
+        if not shown:
+            fail(f"{label} controls do not parse as elements on the served page")
+            bad += 1
+        elif blank:
+            fail(f"{label} control(s) {blank} render blank -- attribute present, nothing drawn")
+            bad += 1
+        else:
+            ok(f"{label} controls draw visible content ({len(shown)} on the page)")
     # Presence is not enough: every scoring row must carry its own graphic.
     # A hand-rolled row block passes a global "dh-shot appears somewhere" check
     # while showing the user nothing to judge.
@@ -177,10 +196,10 @@ def main() -> int:
     else:
         ok("controls declare a usable hit target")
     if "data-reset" not in html:
-        fail("no reset control -- a rating cannot be cleared, so toggling off is cosmetic")
+        fail("no zero-star control -- the worst execution rating cannot be expressed")
         bad += 1
-    if 'data-verdict="approved"' in html and 'data-verdict="reviewed"' not in html:
-        fail("verdict control still says approved -- it is a reviewed status, not approval")
+    if 'data-verdict="approved"' in html and 'data-verdict="completed"' not in html:
+        fail("verdict control still says approved -- it is a completed status, not approval")
         bad += 1
     stale = [c for c in ('data-rank="0"',) if c in html]
     if stale:
