@@ -77,4 +77,6 @@ python3 scripts/bootstrap_harness.py validate --project-root .
 python3 scripts/bootstrap_harness.py self-test          # after changing this skill
 ```
 
+Profiles are listed in [domain-profiles.md](domain-profiles.md); adapters and design MCP servers in [design-tools.md](design-tools.md). Record what you actually observed with `preflight`, and never narrate a tool you did not run.
+
 The user names the corpus path; never assume its directory name. It is read-only. `validate` reports ledger health and corpus drift **separately** — drift is usually the user reorganising files and does not block design work. A regenerated preview is a note, not a failure.
