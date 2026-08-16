@@ -20,6 +20,7 @@ import secrets
 import socket
 import struct
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -282,7 +283,18 @@ def main() -> int:
     if not sent:
         fail("websocket handshake rejected -- clicks cannot reach the ledger")
         return 1 if bad else 1
-    after = ledger.read_text().count("\n") if ledger.is_file() else 0
+    # Poll rather than read once. This used to pass only because the server sent
+    # nothing back, so the send blocked on a 1.5s socket timeout that happened to
+    # give the append time to land. The moment the server started greeting new
+    # connections with a state snapshot, the read returned instantly and this
+    # check began reporting a broken feedback path on a perfectly healthy one.
+    deadline = time.monotonic() + 3.0
+    after = before
+    while time.monotonic() < deadline:
+        after = ledger.read_text().count("\n") if ledger.is_file() else 0
+        if after > before:
+            break
+        time.sleep(0.05)
     if after > before:
         ok("round trip: a click reaches the durable ledger")
         keep = [l for l in ledger.read_text().splitlines() if PROBE not in l]

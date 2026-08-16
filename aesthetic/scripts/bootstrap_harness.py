@@ -434,7 +434,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "11"
+CONTROLS_VERSION = "12"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -540,7 +540,17 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
   var ws; try{ws=new WebSocket(url)}catch(e){return}
   ws.onmessage=function(e){
    var m; try{m=JSON.parse(e.data)}catch(_){return}
-   if(m&&m.type==='dh-signal')fold(m.event);};
+   if(m&&m.type==='dh-signal'){fold(m.event);return}
+   /* The snapshot the server hands every new connection. Without applying it, a
+      browser opened after the scoring started shows the numbers baked into the
+      page it happened to load and nothing else -- which is precisely what "not
+      synced across browsers" looks like. The server's reduction of the durable
+      ledger outranks anything cached locally. */
+   if(m&&m.type==='dh-state'&&m.state){
+    Object.keys(m.state).forEach(function(el){
+     var s=m.state[el]; if(!s)return;
+     state.el[el]=s; var row=rowFor(el); if(row)paint(row,s);});
+    write();}};
   /* A dropped socket means silently going stale, which is worse than a visible
      gap -- reconnect, and repaint from shared storage on the way back. */
   ws.onclose=function(){setTimeout(function(){state=read();applyAll();socket()},1500)};
