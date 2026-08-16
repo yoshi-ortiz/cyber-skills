@@ -177,6 +177,10 @@ STRINGS = {
         "zone-antipattern-note": "Turned down. Kept so they are not proposed again.",
         "specimen-colors": "Palette", "specimen-fonts": "Typefaces",
         "hero-standing": "standing", "hero-ranked": "you ranked", "hero-asking": "asked this round",
+        "hero-ongoing": "still moving", "hero-improve": "to improve",
+        "temp-caption": "Every element, worst execution to best. Red is a 0, green is a 5, "
+                        "grey is not scored yet.",
+        "temp-alt": "Distribution of execution scores, worst to best",
         "hero-lede": "Every part below was ranked by you. The strip beside each one is how it "
                      "was scored, and clicking changes it.",
         "empty-zone": "Nothing here yet.", "zone-count": "elements",
@@ -207,7 +211,11 @@ STRINGS = {
         "zone-antipattern": "Antipatrones",
         "zone-antipattern-note": "Descartado. Queda aquí para no volver a proponerlo.",
         "specimen-colors": "Paleta", "specimen-fonts": "Tipografías",
-        "hero-standing": "en pie", "hero-ranked": "puntuados por ti", "hero-asking": "se preguntan esta ronda",
+        "hero-standing": "en pie", "hero-ranked": "puntuados por ti", "hero-asking": "esta ronda",
+        "hero-ongoing": "en curso", "hero-improve": "por mejorar",
+        "temp-caption": "Cada elemento, de peor a mejor ejecución. Rojo es un 0, verde un 5, "
+                        "gris es que todavía no tiene nota.",
+        "temp-alt": "Distribución de las notas de ejecución, de peor a mejor",
         "hero-lede": "Cada pieza de abajo la puntuaste tú. La tira que hay al lado es su nota, "
                      "y al hacer clic cambia.",
         "empty-zone": "Todavía no hay nada aquí.", "zone-count": "elementos",
@@ -494,6 +502,9 @@ def validate_tokens(value: object) -> dict[str, object]:
     for face in value.get("fonts", []):
         if not str(face.get("name", "")).strip():
             raise HarnessError("every font token needs a `name` (the face that was chosen)")
+        for key_name in ("element",):
+            if face.get(key_name) is not None and not str(face[key_name]).strip():
+                raise HarnessError(f"font `{key_name}` cannot be blank")
         variants = face.get("variants")
         if variants is not None:
             if not isinstance(variants, list) or not all(isinstance(v, dict) for v in variants):
@@ -1248,7 +1259,10 @@ ARTICLE_STYLE = """<style>/* dh-article */
 /* The signature: one bar per standing element, coloured by its own score, worst
    to best. The whole system's temperature in a single line -- real data, no
    decoration, and it reads before a single word is read. */
-.dh-temp{display:flex;gap:2px;margin:26px 0 0;block-size:9px}
+.dh-temp-wrap{margin:26px 0 0}
+.dh-temp{display:flex;gap:2px;block-size:9px}
+.dh-temp-wrap figcaption{margin:9px 0 0;font-size:10.5px;
+ color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
 .dh-temp i{flex:1 1 0;border-radius:1px;background:currentColor;min-inline-size:2px}
 .dh-t0{color:#b00020}.dh-t1{color:#c2451c}.dh-t2{color:#cf7a12}
 .dh-t3{color:#b98b07}.dh-t4{color:#6f9430}.dh-t5{color:#1c8b4b}
@@ -1311,6 +1325,13 @@ ARTICLE_STYLE = """<style>/* dh-article */
 .dh-face-head b{font-size:16px;font-weight:800;letter-spacing:-.02em}
 .dh-face-head code{font-size:10.5px;color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent);
  overflow-wrap:anywhere}
+/* Controls ride inside the specimen, so the thing being judged and the way to
+   judge it are never in two different places. */
+.dh-spec-score{flex:none;margin-inline-start:auto}
+.dh-spec-score .dh-fb.dh-fb{display:block;border:0;padding:0;background:transparent;
+ contain:none;content-visibility:visible}
+.dh-swatches li{display:flex;flex-direction:column}
+.dh-swatches .dh-spec-score{margin:0;padding:8px 10px 10px;border-block-start:1px solid var(--dh-rule)}
 .dh-face-head .dh-face-use{margin-inline-start:auto;font-size:9.5px;font-weight:700;
  letter-spacing:.16em;text-transform:uppercase;padding:3px 8px;border-radius:999px;
  border:1px solid var(--dh-rule);flex:none}
@@ -1430,7 +1451,8 @@ TOC_SCRIPT = """<script>/* dh-toc */
 </script>"""
 
 
-def _specimens(entries: list[dict[str, object]], txt: dict[str, str]) -> str:
+def _specimens(entries: list[dict[str, object]], txt: dict[str, str],
+               rows: dict[str, str] | None = None) -> str:
     """Show the material itself: the colours, the faces. Rendered from tokens the
     project recorded, so the harness invents no value it was not given."""
     colors, fonts = [], []
@@ -1438,6 +1460,35 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str]) -> str:
         tokens = entry.get("tokens") or {}
         colors += list(tokens.get("colors") or [])
         fonts += list(tokens.get("fonts") or [])
+    rows = rows or {}
+
+    def scoreable(token: dict[str, object]) -> str:
+        """A specimen the user cannot rank is a picture of a decision.
+
+        Point a token at an element id and its own controls ride beside it, so
+        a family, a pairing and a single weight are each ranked where they are
+        read -- rather than as a dotted id in a list somewhere below.
+        """
+        linked = str(token.get("element") or "").strip()
+        if linked not in rows:
+            return ""
+        row = rows[linked]
+        # Only the controls. The full row keeps the id, the state and the
+        # evidence further down; repeating all that beside a specimen that
+        # already shows the thing would say everything twice. The graphic in
+        # particular carries an inline `display:block`, which no class rule of
+        # ours can override -- so it is never emitted here rather than hidden.
+        head = re.match(r'<div class="dh-fb"[^>]*>', row)
+        start = row.find('<span class="dh-signals">')
+        if not head or start < 0:
+            return ""
+        # To the END of the signals block, not the first `</span>` inside it --
+        # a non-greedy match here emitted the zero control alone, a 44px stub
+        # where the whole strip belonged. The row closes with the signals span
+        # followed by its own </div>.
+        body = row[start:].rsplit("</div>", 1)[0].rstrip()
+        return '<div class="dh-spec-score">' + head.group(0) + body + "</div></div>"
+
     out = []
     if colors:
         items = "".join(
@@ -1445,7 +1496,7 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str]) -> str:
             f'<span class="dh-vals"><b>{html_escape(str(c.get("name") or c["value"]))}</b>'
             f'<code>{html_escape(str(c["value"]))}</code>'
             + (f'<span>{html_escape(str(c["role"]))}</span>' if c.get("role") else "")
-            + "</span></li>"
+            + "</span>" + scoreable(c) + "</li>"
             for c in colors)
         out.append(f'<div class="dh-spec"><ul class="dh-swatches">{items}</ul></div>')
     if fonts:
@@ -1459,7 +1510,7 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str]) -> str:
             variants = list(f.get("variants") or [])
             if not variants:
                 variants = [{"use": f.get("use") or "", "sample": f.get("sample") or ""}]
-            rows = []
+            rows_out = []
             for v in variants:
                 weight = str(v.get("weight") or "").strip()
                 style = str(v.get("style") or "").strip()
@@ -1473,19 +1524,20 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str]) -> str:
                 if size:
                     css += f";font-size:{html_escape(size)}"
                 spec = " · ".join(x for x in (weight, style, size) if x)
-                rows.append(
+                rows_out.append(
                     f'<li><span class="dh-sample" style="{css}">{sample}</span>'
                     f'<span class="dh-var-meta">'
                     f'<b>{html_escape(str(v.get("use") or ""))}</b>'
                     + (f'<code>{html_escape(spec)}</code>' if spec else "")
-                    + "</span></li>")
+                    + "</span>" + scoreable(v) + "</li>")
             items.append(
                 f'<li class="dh-face"><div class="dh-face-head">'
                 f'<b>{html_escape(str(f["name"]))}</b>'
                 f'<code>{stack}</code>'
                 + (f'<span class="dh-face-use">{html_escape(str(f["use"]))}</span>'
                    if f.get("use") else "")
-                + f'</div><ul class="dh-variants">{"".join(rows)}</ul></li>')
+                + scoreable(f)
+                + f'</div><ul class="dh-variants">{"".join(rows_out)}</ul></li>')
         out.append(f'<div class="dh-spec"><ul class="dh-faces">{"".join(items)}</ul></div>')
     return "".join(out)
 
@@ -1556,6 +1608,14 @@ def render_article(project_root: Path, decisions: dict[str, object],
         f'<i class="dh-t{e["stars"]}"></i>' if e.get("scored") else '<i class="dh-tnone"></i>'
         for e in sorted(live, key=lambda x: -int(x.get("stars") or 0)))
     asking = len([e for e in live if e["element"] in cohort])
+    # Three figures the reader can act on, in the order they matter: what is
+    # being asked now, what is still moving, and what is known to need another
+    # pass. "Standing" and "you ranked" counted the archive instead -- both read
+    # 32 of 32, which is true and tells nobody what to do next.
+    ongoing = len([e for e in live
+                   if e["element"] not in cohort and e["state"] not in ("completed",)
+                   and zone_of(e, cohort) != "antipattern"])
+    to_improve = len(stats["needsPolish"])
     headline = (f'<em>{html_escape(cohort_name)}</em>' if cohort_name
                 else html_escape(txt["article-title"]))
     theme_vars = {"--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent", "--dh-font": "font"}
@@ -1570,11 +1630,14 @@ def render_article(project_root: Path, decisions: dict[str, object],
            f"<h1>{headline}</h1>",
            f'<p class="dh-lede">{html_escape(txt["hero-lede"])}</p>',
            '<div class="dh-figures">',
-           f'<div><b>{stats["standing"]}</b><span>{html_escape(txt["hero-standing"])}</span></div>',
-           f'<div><b>{stats["userSet"]}</b><span>{html_escape(txt["hero-ranked"])}</span></div>',
            f'<div><b>{asking}</b><span>{html_escape(txt["hero-asking"])}</span></div>',
+           f'<div><b>{ongoing}</b><span>{html_escape(txt["hero-ongoing"])}</span></div>',
+           f'<div><b>{to_improve}</b><span>{html_escape(txt["hero-improve"])}</span></div>',
            "</div>",
-           f'<div class="dh-temp" aria-hidden="true">{bars}</div>',
+           # The strip meant nothing without saying what it plots.
+           f'<figure class="dh-temp-wrap"><div class="dh-temp" role="img" '
+           f'aria-label="{html_escape(txt["temp-alt"])}">{bars}</div>'
+           f'<figcaption>{html_escape(txt["temp-caption"])}</figcaption></figure>',
            "</header>"]
     shown = [z for z in ZONES
              if z == "round" or any(zone_of(e, cohort) == z for e in live)]
@@ -1625,7 +1688,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
                 out.append(f'<h4 class="dh-group" id="dh-{zone}-{key}" data-group="{key}">'
                            f'{txt.get(key, key)}'
                            f'<span class="dh-count">{len(same)}</span></h4>')
-                out.append(_specimens(same, txt))
+                out.append(_specimens(same, txt, rows))
             out.append(rows.get(entry["element"], ""))
         out.append("</section>")
     out += ["</div>"]

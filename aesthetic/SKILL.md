@@ -78,6 +78,10 @@ describe --element palette.family-from-cards --tokens '{"colors":[{"name":"menta
 describe --element type.dotmatrix --tokens '{"fonts":[{"name":"Matriz 5x7","stack":"ui-monospace","use":"display","variants":[{"weight":700,"size":"40px","use":"titular","sample":"EN VIVO"},{"weight":400,"size":"12px","use":"etiqueta","sample":"rol de lenguaje"}]}]}'
 ```
 
+**Point a token at an element id and it becomes rankable where it is read.** Add `"element": "<id>"` to a colour, a face or a single variant and that element's controls ride beside the specimen — so a family, a pairing and one weight are each ranked against the thing itself rather than as a dotted id in a list below. The full row still appears in its section; both stay in sync.
+
+**The pairings are decisions too.** A type system is chosen as combinations, so record them: `type.pairing.<a>-x-<b>`, with a specimen showing the two faces together. Ranking each face alone never asks the question the user actually has to answer.
+
 **Itemise the faces.** A name and one sample line is a caption — it cannot say which weight sets a heading and which sets a caption, and that is most of what a type system decides. Every `variant` names the **job it does** (`use` is required) and renders at its own weight and size, so the section shows the scale rather than describing it.
 
 Swatches render the real hex, specimens the real face. **Take both from the corpus, never invent them** — a plausible hex is exactly the fabricated evidence the star cap exists to stop, and `describe` has no cap to catch you.
@@ -106,6 +110,8 @@ Plan internally and show the strongest coherent result, not a pile of alternativ
 **A score is the input to the next iteration, not the end of the round.** When ranks arrive, redraw in the same session: every 👍 at 0–2 stars is the user saying *the idea is right and your drawing is not* — that is a brief, already written. Report what landed in two lines, then keep going. Ending on a summary and "say the word and I'll open on…" spends the user's scoring on a status update and ships no improvement; they clicked to get better work, not to be asked a question back.
 
 Stop and ask only when the ranks genuinely contradict each other, or when the next move needs something only the user has.
+
+**A proposal that came back at 0–2 stars is unfinished work, not a closed question.** You proposed it, so the low rank is a verdict on your drawing — redraw it under a new id next round. Do not leave it sitting in the backlog and do not move on to fresh surfaces while this round's own proposals are still badly ranked: the user ranked them low *so that you would fix them*. Only a 👎 changes that, because that rejects the direction rather than the execution.
 
 ### Redraw the whole cohort, never one element
 
