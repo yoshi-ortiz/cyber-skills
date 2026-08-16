@@ -34,8 +34,18 @@ The harness does not ship a companion and does not require a particular one. It 
 
 1. **A durable ledger, outside any session directory.** Append-only JSONL. A companion that restarts must append to the same file. Anything scoped to one server run is orphaned on restart and is not a record.
 2. **Design-element ids on every interactive control**, taken from the harness ledger — never invented per screen.
-3. **Four independent signals** per element, none of which implies another: a 0–5 star rank (`data-rank` for 1–5, `data-reset` for the zero), an encouragement thumb (`data-sentiment`), and a `completed` status toggle (`data-verdict`).
+3. **Four independent signals** per element, none of which implies another: a 0–5 star rank (`data-rank`, where **the zero is `data-rank="0"`** — a rank like any other), an encouragement thumb (`data-sentiment`), and a `completed` status toggle (`data-verdict`).
 4. **One line appended per interaction**, with no batching, debouncing, or deduplication. The harness is responsible for replay order, not the companion.
+5. **A refresh must not discard what the user clicked.** The served screen is a baked snapshot, so without this the user scores twenty rows, reloads, and watches every one revert to whatever the agent last published. The generated controls carry their own rehydrator; a companion must not strip inline scripts from the screens it serves.
+
+### The zero is a rank, not a reset
+
+Emitting the zero as `data-reset` is the one shape this contract forbids, because the obvious handler for a control named *reset* clears the row — and clearing the row destroys the thumb and the tick, two signals a score is never allowed to touch. Routed through `data-rank="0"` it scores 0 and changes nothing else, which is what §Deterministic semantics already requires of every score.
+
+Two further traps, both observed in the wild:
+
+- **Do not light the zero from `rank <= stars`.** It is true for every score, so a 5-star row draws `0 1 2 3 4 5` all lit at once. The zero is on only when the score *is* zero.
+- **Do not place the zero inside the star strip.** Unlabelled and one pixel from the first star, it collects the clicks meant for a 1 — and before the point above was fixed, a mis-hit zero also wiped the user's thumb.
 
 ## Event schema
 
@@ -104,7 +114,7 @@ Never hand-author element ids into a screen. Emit them from the ledger:
 python3 scripts/bootstrap_harness.py controls --project-root . --out /tmp/controls.html
 ```
 
-The markup carries `data-element`, `data-stars`, `data-rank`, `data-sentiment`, `data-verdict`, `data-reset` and `data-group`, renders every element including rejected ones, and is byte-stable for a given ledger. Prefer `embed`, which fills `data-dh-controls` placeholders in place and is idempotent — re-running it is a byte-identical no-op.
+The markup carries `data-element`, `data-stars`, `data-rank` (including the zero), `data-sentiment`, `data-verdict` and `data-group`, renders every element including rejected ones, and is byte-stable for a given ledger. Prefer `embed`, which fills `data-dh-controls` placeholders in place and is idempotent — re-running it is a byte-identical no-op.
 
 The generator owns the strip's design. Do not restyle it in a project: local CSS outranks the generator's and is how the controls went invisible before.
 
@@ -119,14 +129,12 @@ document.addEventListener('click', (e) => {
   const star = e.target.closest('[data-rank]');
   const mood = e.target.closest('[data-sentiment]');
   const mark = e.target.closest('[data-verdict]');
-  const zero = e.target.closest('[data-reset]'); // legacy attribute; this scores 0
-  if (!star && !mood && !mark && !zero) return;
+  if (!star && !mood && !mark) return;
   send({
     element: holder.dataset.element,
     stars: star ? Number(star.dataset.rank) : undefined,
     sentiment: mood ? mood.dataset.sentiment : undefined,
     verdict: mark ? mark.dataset.verdict : undefined,
-    reset: zero ? true : undefined,
     text: holder.dataset.label || null,
     timestamp: Date.now(),
   });

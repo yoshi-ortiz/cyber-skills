@@ -22,10 +22,25 @@ Success needs **both**: a visible design improvement, and a rank the user actual
 2. **Direct.** Cluster the corpus by recurring *relationships*, not isolated decoration. Write a one-sentence visual thesis rooted in the subject's own materials, language, tools, history or environment. Choose a movement and one memorable **signature** move. Reject any idea that would fit an unrelated brief unchanged.
 3. **Declare.** Specify the system before drawing: palette with roles, typographic roles and scale, grid and spacing logic, primary → secondary → tertiary hierarchy, imagery register, copy voice, motion. Spend boldness on the signature; keep everything supporting it disciplined.
 4. **Build.** Real content. Preserve every standing element outside this iteration's scope. Match craft to the thesis — expressive work needs enough to land, restrained work needs exact spacing, alignment and finish. Never substitute placeholders or emoji for ranked artwork.
-5. **Critique.** Render and screenshot it. Compare against brief and corpus **at the same scale**: hierarchy, legibility, composition, rhythm, contrast, specificity, coherence, accessibility. Cut decoration with no job. If it reads as a generic default, or the signature is not immediately legible, revise before showing it.
+5. **Critique.** Render and screenshot it, then **run `scripts/measure_screen.js` in the pane and fix every rule it reports under `failingRules` before showing the screen.** Legibility is measured, never eyeballed: screens have twice shipped with body text at 1.1:1 that no reading of the markup could catch, because a block painted a ground and let its ink inherit the companion's frame. `unreadable: 0` is a precondition. Then compare against brief and corpus **at the same scale**: hierarchy, composition, rhythm, specificity, coherence. Cut decoration with no job. If it reads as a generic default, or the signature is not immediately legible, revise before showing it.
 6. **Capture.** Record what changed, embed the graphic beside its controls, `publish`, re-run `doctor`, ask for ranks. Next turn, improve liked-but-low-scoring (`polish`) work first — never replace it.
 
 Plan and critique internally. Show the strongest coherent result, not a pile of alternatives, unless comparison *is* the question.
+
+## Scope one cohort per round
+
+When brainstorming is invoked, or the user asks to continue prototyping, **first name the cohort this round will work: a small set of related features or graphics, three to six elements that share a surface or a problem.** Say the cohort out loud, declare it on the screen, and leave every other element untouched.
+
+```html
+<div data-dh-cohort="cover-furniture"
+     data-dh-controls="cover.ring.kicker,cover.spine.right,cover.solapa.right"></div>
+```
+
+A round that touches everything scores nothing. Twenty-five rows of near-identical thumbnails is not thoroughness — it is an unreadable screen the user abandons halfway, and abandoned screens are why coverage stalls while the ledger fills with agent inference. A cohort small enough to redraw properly is small enough to judge properly.
+
+`doctor` enforces the honest half of this: a live element with no scoring row anywhere **fails** unless the screen declares a cohort. Declaring one converts a silent omission into a decision on record — it does not license leaving work unscoreable forever. Name in the same breath what the next round picks up.
+
+Pick the cohort from `stats`: `polish` first (liked, badly drawn), then `unscored`. Never from what is easiest to redraw.
 
 ## Read the signals literally
 

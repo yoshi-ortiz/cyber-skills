@@ -23,7 +23,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from bootstrap_harness import visible_controls  # noqa: E402  (sibling script)
+from bootstrap_harness import (  # noqa: E402  (sibling script)
+    CONTROLS_VERSION, GROUP_OF, load_decisions, visible_controls,
+)
 
 PROBE = "__doctor_probe__"
 
@@ -147,8 +149,7 @@ def main() -> int:
     # whose glyph got absorbed into a malformed opening tag keeps every
     # attribute and still draws nothing, so parse the served page and require
     # the controls to carry visible content.
-    for attribute, label in (("data-rank", "star"), ("data-reset", "reset"),
-                             ("data-verdict", "completed")):
+    for attribute, label in (("data-rank", "star"), ("data-verdict", "completed")):
         shown = visible_controls(html, attribute)
         blank = sorted(key for key, text in shown.items() if not text.strip())
         if not shown:
@@ -159,6 +160,39 @@ def main() -> int:
             bad += 1
         else:
             ok(f"{label} controls draw visible content ({len(shown)} on the page)")
+    # The screen is a baked snapshot: `embed` writes the CSS, the markup and the
+    # rehydrator into the file. A screen embedded by an older skill keeps that
+    # older behaviour forever, and from the browser it is indistinguishable from
+    # a fix that did not work. Compare stamps and say so plainly.
+    stamp = re.search(r"dh-controls-version:\s*(\S+?)\s*\*/", html)
+    if not stamp:
+        fail("served screen predates control versioning -- re-run `embed` to pick up "
+             "the current controls, then `publish`")
+        bad += 1
+    elif stamp.group(1) != CONTROLS_VERSION:
+        fail(f"served screen was embedded by controls v{stamp.group(1)}, skill is now "
+             f"v{CONTROLS_VERSION} -- re-run `embed` and `publish`, or you are looking "
+             "at the old bug")
+        bad += 1
+    else:
+        ok(f"controls are current (v{CONTROLS_VERSION})")
+    if "/* dh-rehydrate */" not in html:
+        fail("served screen has no rehydrator -- a refresh will silently revert every "
+             "score the user set; re-run `embed`")
+        bad += 1
+    else:
+        ok("refresh keeps the user's signals (rehydrator present)")
+    # A zero emitted as `data-reset` reaches a companion handler that also wipes
+    # the thumb and the tick. Zero is a rank; it must ride the rank path.
+    # Scoped to real markup: the companion injects its own helper source into the
+    # page, and that source mentions `data-reset` in a selector. An unscoped
+    # substring test reads the handler as if it were a control.
+    if re.search(r"<[^>]*\sdata-reset[\s>=]", html):
+        fail("zero is emitted as `data-reset` -- that path erases sentiment and verdict "
+             "along with the score; re-run `embed` for the `data-rank=\"0\"` control")
+        bad += 1
+    elif 'data-rank="0"' in html:
+        ok("zero scores 0 without touching any other signal")
     # Presence is not enough: every scoring row must carry its own graphic.
     # A hand-rolled row block passes a global "dh-shot appears somewhere" check
     # while showing the user nothing to judge.
@@ -195,15 +229,11 @@ def main() -> int:
         bad += 1
     else:
         ok("controls declare a usable hit target")
-    if "data-reset" not in html:
+    if 'data-rank="0"' not in html:
         fail("no zero-star control -- the worst execution rating cannot be expressed")
         bad += 1
     if 'data-verdict="approved"' in html and 'data-verdict="completed"' not in html:
         fail("verdict control still says approved -- it is a completed status, not approval")
-        bad += 1
-    stale = [c for c in ('data-rank="0"',) if c in html]
-    if stale:
-        fail(f"screen carries retired controls ({', '.join(stale)}) -- re-run `embed`")
         bad += 1
     if 'class="dh-desc"' not in html and rows:
         fail("rows show ids with no description of what is being scored -- "
@@ -214,6 +244,36 @@ def main() -> int:
     if "sin gr" in html:
         fail(f"{html.count('sin gr')} element(s) render with no graphic to judge")
         bad += 1
+
+    # Every element in standing must be scoreable somewhere on the served
+    # screen. A placeholder names its own ids, so an element added to the ledger
+    # after the screen was written has a rank in DECISIONS.md that no click can
+    # ever reach -- it reads as "already decided" while nobody has judged it.
+    # A screen may deliberately cover one cohort rather than the whole ledger --
+    # that focus is the point. What it may not do is leave a live element with no
+    # way to be scored ANYWHERE and no statement that this was on purpose, which
+    # is how elements ended up carrying ranks nobody could ever set or change.
+    try:
+        ledger = load_decisions(project / "spec" / "design-harness")
+        live = [e["element"] for e in ledger["elements"]
+                if e["state"] in ("approved", "proposed")]
+        on_screen = set(re.findall(r'data-element="([^"]+)"', html))
+        orphans = sorted(e for e in live if e not in on_screen)
+        cohort = re.search(r'data-dh-cohort="([^"]+)"', html)
+        if not orphans:
+            ok(f"every live element is scoreable ({len(live)})")
+        elif cohort:
+            ok(f'cohort "{cohort.group(1)}": {len(on_screen)} scoreable here, '
+               f"{len(orphans)} deliberately out of scope this round")
+        else:
+            fail(f"{len(orphans)} live element(s) have no scoring row and the screen "
+                 f"declares no cohort: {', '.join(orphans[:5])}"
+                 + (" ..." if len(orphans) > 5 else "")
+                 + ' -- add them to a placeholder, or declare the focus with '
+                   'data-dh-cohort="<name>" so the omission is a decision, not a leak')
+            bad += 1
+    except (OSError, ValueError, KeyError):
+        pass
 
     # 6 — the only check that matters: does a real click reach the ledger?
     ledger = project / ".superpowers" / "brainstorm" / "decisions.jsonl"

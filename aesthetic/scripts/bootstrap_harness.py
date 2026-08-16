@@ -430,35 +430,207 @@ SHOT_INNER_INLINE = ("position:absolute;inset-block-start:0;inset-inline-start:0
                      "inline-size:850px;block-size:1100px;transform-origin:0 0;"
                      "transform:scale(calc(var(--dh-shot-w,96px) / 850));pointer-events:none")
 STYLE_MARKER = "/* dh-controls */"
+# Bumped whenever the emitted CSS or markup changes. `embed` bakes both into the
+# screen, so a screen embedded by an older skill keeps the older bug forever and
+# looks, from the browser, exactly like a fix that did not work. `doctor`
+# compares this against the served page and fails on a mismatch.
+CONTROLS_VERSION = "11"
+VERSION_MARKER = "dh-controls-version"
+
+# Restores the signals a refresh would otherwise throw away.
+#
+# The served screen is a static snapshot: `embed` bakes each row's stars into
+# the HTML, and the companion re-serves that same file on every request. Clicks
+# travel out to the durable ledger and nothing ever brings them back, so every
+# refresh silently reverted the user's scoring to whatever the agent last
+# published -- the single defect behind "the score is not being saved".
+#
+# The durable ledger stays the source of truth for `adopt`; this only keeps the
+# screen from lying to the person clicking it. Capture phase, so it reads each
+# control's state before the companion's own handler toggles it.
+REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
+(function(){
+ if(window.__dhRehydrated)return; window.__dhRehydrated=1;
+ var KEY='dh-signals';
+ /* Every row carries the ledger revision it was baked from. A re-`embed`
+    republishes the ledger's own numbers, so anything cached against an older
+    revision is stale by definition and must lose to what the agent just baked.
+    Without this gate an overlay would keep resurrecting superseded scores. */
+ var first=document.querySelector('.dh-fb[data-dh-rev]');
+ var rev=first?first.getAttribute('data-dh-rev'):'';
+ var read=function(){try{
+   var s=JSON.parse(localStorage.getItem(KEY)||'null');
+   if(!s||s.rev!==rev||!s.el)return {rev:rev,el:{}};
+   return s;}catch(e){return {rev:rev,el:{}}}};
+ var state=read();
+ /* localStorage, never sessionStorage: sessionStorage is scoped to ONE tab, so
+    two tabs on the same screen drifted into different scores with no way to
+    tell which was real. Shared storage survives refresh AND new tabs; the
+    channel below is what makes an open tab update the instant another scores. */
+ var write=function(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}};
+ var chan=null; try{chan=new BroadcastChannel('dh-signals')}catch(e){}
+ function paint(row,s){
+  if(typeof s.stars==='number'){
+   row.dataset.stars=String(s.stars); row.dataset.scored='yes';
+   row.querySelectorAll('[data-rank]').forEach(function(b){
+    var n=parseInt(b.dataset.rank,10);
+    b.classList.toggle('on', n===0 ? s.stars===0 : (n>0&&n<=s.stars));});
+  }
+  if('sentiment' in s) row.querySelectorAll('[data-sentiment]').forEach(function(b){
+    b.classList.toggle('on', b.dataset.sentiment===s.sentiment);});
+  if('verdict' in s) row.querySelectorAll('[data-verdict]').forEach(function(b){
+    b.classList.toggle('on', b.dataset.verdict===s.verdict);});
+ }
+ /* Wait for the rows. `embed` injects this ahead of the markup -- into <head>
+    when the screen has one, otherwise at the very top of the file -- so at
+    execution time the document holds no rows at all, and an immediate pass
+    painted nothing while looking, by every attribute, perfectly correct. */
+ function rowFor(el){
+  var all=document.querySelectorAll('.dh-fb[data-element]');
+  for(var i=0;i<all.length;i++) if(all[i].getAttribute('data-element')===el) return all[i];
+  return null;}
+ function applyAll(){document.querySelectorAll('.dh-fb[data-element]').forEach(function(row){
+  var s=state.el[row.getAttribute('data-element')]; if(s)paint(row,s);});}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyAll);
+ else applyAll();
+ document.addEventListener('click',function(e){
+  var row=e.target.closest?e.target.closest('.dh-fb[data-element]'):null; if(!row)return;
+  var r=e.target.closest('[data-rank]'),m=e.target.closest('[data-sentiment]'),
+      v=e.target.closest('[data-verdict]');
+  if(!r&&!m&&!v)return;
+  var el=row.getAttribute('data-element');
+  var s=state.el[el]||(state.el[el]={});
+  if(r)s.stars=parseInt(r.dataset.rank,10);
+  if(m)s.sentiment=m.classList.contains('on')?null:m.dataset.sentiment;
+  if(v)s.verdict=v.classList.contains('on')?null:v.dataset.verdict;
+  write();
+  if(chan)try{chan.postMessage({rev:rev,el:el,s:s})}catch(_){}
+  /* Repaint after the companion's own handler has run. A companion that lights
+     every control whose rank is <= the score lights the zero as well, so a
+     5-star row drew "0 1 2 3 4 5" all lit at once. Deferring by one task lets
+     this own the final state without the skill depending on any companion. */
+  setTimeout(function(){paint(row,s)},0);
+ },true);
+ /* Instant fan-out to every other open tab. The storage event below is the
+    fallback where BroadcastChannel is unavailable; it also covers a tab that
+    was closed while another scored and is reopened later. */
+ function accept(msg){
+  if(!msg||msg.rev!==rev||!msg.el)return;
+  state.el[msg.el]=msg.s;
+  var row=rowFor(msg.el); if(row)paint(row,msg.s);}
+ if(chan)chan.onmessage=function(e){accept(e.data)};
+ window.addEventListener('storage',function(e){
+  if(e.key!==KEY)return; state=read(); applyAll();});
+ /* The channel above only reaches tabs in THIS browser profile -- storage and
+    BroadcastChannel are both per profile. Two different browsers, or two
+    machines, never see each other that way. The companion socket is the only
+    shared point, so subscribe to its fan-out and treat it as authoritative. */
+ function fold(ev){
+  if(!ev||!ev.element)return;
+  var s=state.el[ev.element]||(state.el[ev.element]={});
+  if(ev.reset===true||ev.type==='reset')s.stars=0;
+  else if(typeof ev.stars==='number')s.stars=ev.stars;
+  if('sentiment' in ev)s.sentiment=ev.sentiment;
+  if(ev.verdict==='completed'||ev.verdict==='approved')s.verdict='completed';
+  else if(ev.verdict==='proposed')s.verdict=null;
+  state.el[ev.element]=s; write();
+  var row=rowFor(ev.element); if(row)paint(row,s);}
+ (function socket(){
+  var url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/';
+  var ws; try{ws=new WebSocket(url)}catch(e){return}
+  ws.onmessage=function(e){
+   var m; try{m=JSON.parse(e.data)}catch(_){return}
+   if(m&&m.type==='dh-signal')fold(m.event);};
+  /* A dropped socket means silently going stale, which is worse than a visible
+     gap -- reconnect, and repaint from shared storage on the way back. */
+  ws.onclose=function(){setTimeout(function(){state=read();applyAll();socket()},1500)};
+ })();
+})();
+</script>"""
 FEEDBACK_STYLE = """<style>/* dh-controls */
 /* Owned by the aesthetic skill. Do not restyle in a project: every local
    patch so far has produced specificity fights and unusable controls.
    `.dh-fb.dh-fb` doubles specificity so a host rule cannot flatten it. */
-.dh-feedback{container-type:inline-size;display:flex;flex-direction:column;gap:6px}
+/* Both wrappers establish the container. `controls --out` emits .dh-feedback,
+   but `embed` lifts the rows out of it into the project's own placeholder, so
+   on every embedded screen there was no container at all and the responsive
+   rule below could never match -- the signals stayed on the row and ran off
+   the right edge however narrow the description column got. */
+.dh-feedback,[data-dh-controls]{container-type:inline-size;display:flex;
+ flex-direction:column;gap:6px}
 .dh-offline{display:block;background:#b00020;color:#fff;font:700 12px/1.4 ui-monospace,monospace;
  padding:9px 11px;border-radius:6px}
 :root[data-dh-live] .dh-offline{display:none}
-.dh-fb.dh-fb{display:grid;grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr) auto;
- gap:14px;align-items:center;padding:10px 12px;border:1px solid rgba(0,0,0,.18);
- border-radius:8px;background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
+/* The description column carries a floor. At minmax(0,1fr) the signals column
+   took its full max-content width and squeezed the text to about 80px, where
+   `overflow-wrap:anywhere` broke every word mid-syllable -- "cover.sp / ine.righ
+   / t" -- and the strip became unreadable while every control still worked. */
+.dh-fb.dh-fb{display:grid;grid-template-columns:var(--dh-shot-w,96px) minmax(26ch,1fr) auto;
+ gap:16px;align-items:center;padding:13px 15px;border:1px solid rgba(0,0,0,.14);
+ border-radius:10px;background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
  font:500 13px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
  contain:layout style;content-visibility:auto;contain-intrinsic-size:auto 120px}
 .dh-fb.dh-fb:hover{border-color:var(--dh-ink,#111)}
-.dh-fb .dh-meta{display:flex;flex-direction:column;gap:3px;min-width:0}
-.dh-fb .dh-id{font-weight:700;font-size:13px;overflow-wrap:anywhere}
-.dh-fb .dh-desc{font-size:12px;line-height:1.5;opacity:.78;overflow-wrap:anywhere}
-.dh-fb .dh-desc b{font-weight:700;opacity:.9}
-.dh-fb .dh-state{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
+.dh-fb .dh-meta{display:flex;flex-direction:column;gap:5px;min-width:0}
+/* Five stacked lines of near-identical grey monospace is what made the strip
+   tiring to read. Hierarchy now: the id leads, the description is the line you
+   actually read, provenance is demoted to a labelled aside, and the state sits
+   beside the id instead of adding a fifth line. */
+.dh-fb .dh-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0}
+.dh-fb .dh-id{font-weight:700;font-size:14px;letter-spacing:-.01em;
+ overflow-wrap:anywhere;color:var(--dh-ink,#111)}
+.dh-fb .dh-state{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+ padding:2px 6px;border-radius:3px;white-space:nowrap;
+ background:color-mix(in srgb, var(--dh-ink,#111) 8%, transparent);
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-fb .dh-desc{font-size:13px;line-height:1.5;overflow-wrap:break-word;
+ color:color-mix(in srgb, var(--dh-ink,#111) 88%, transparent)}
+/* provenance, not prose: smaller, dimmer, with a micro-label instead of a
+   run-on bold prefix inside the sentence */
+.dh-fb .dh-sub{font-size:11.5px;line-height:1.45;display:flex;gap:7px;
+ color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
+.dh-fb .dh-sub b{font-weight:700;font-size:9px;letter-spacing:.1em;
+ text-transform:uppercase;flex:none;padding-top:2px;
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
 .dh-fb .dh-signals{display:flex;gap:8px;align-items:center}
 /* One continuous strip: zero is a first-class score, not a hidden reset. */
 .dh-fb .dh-stars{display:flex;align-items:center;gap:0}
-.dh-fb .dh-stars > *{min-inline-size:34px;min-block-size:34px;display:grid;place-items:center;
- cursor:pointer;user-select:none;font-size:19px;line-height:1;border:0;background:transparent;
+.dh-fb .dh-stars > *{min-inline-size:32px;min-block-size:34px;display:grid;place-items:center;
+ cursor:pointer;user-select:none;font-size:21px;line-height:1;border:0;background:transparent;
  color:color-mix(in srgb, var(--dh-ink,#111) 26%, transparent);transition:color .12s}
-.dh-fb .dh-stars > *:hover,.dh-fb .dh-stars > *.on{color:var(--dh-accent,#d9482a)}
-.dh-fb [data-reset]{font-size:15px;opacity:.65;transition:opacity .12s}
-.dh-fb [data-reset]:hover,.dh-fb [data-reset]:focus-visible,
-.dh-fb [data-reset].on{opacity:1}
+.dh-fb .dh-stars > *.on{color:var(--dh-accent,#d9482a)}
+/* Hover previews the RANK, not one glyph. Every star up to the pointer lights,
+   and the standing score steps aside for the duration so the preview is the
+   only thing being read. Without both halves, hovering the 2nd star of a
+   4-star row changed nothing at all, and hovering the 5th lit a gap-toothed
+   1,2,3,5 -- which is what "the hover is buggy" was pointing at. */
+.dh-fb .dh-stars:hover [data-rank]{color:color-mix(in srgb, var(--dh-ink,#111) 26%, transparent)}
+.dh-fb .dh-stars [data-rank]:hover,
+.dh-fb .dh-stars [data-rank]:has(~ [data-rank]:hover){color:var(--dh-accent,#d9482a)}
+/* The zero lives OUTSIDE the star strip, and stays out of the way until the
+   user actually reaches for the bottom of the scale: it surfaces on hovering
+   ONE star. It is always visible when it IS the score, so a zero already given
+   can never be mistaken for an unrated row.
+   While hidden it is also unclickable. That pairing is the whole point -- an
+   invisible-but-clickable zero sitting beside the first star is exactly how a
+   click aimed at 1 used to score 0, and a mis-hit zero used to wipe the thumb
+   and the tick along with it. Never set the opacity without the pointer-events.
+   The spacing is padding, not margin: a margin here is dead ground where
+   neither control is hovered, and the zero vanished as the pointer crossed it. */
+.dh-fb .dh-zero{display:flex;align-items:center;padding-inline-end:13px;
+ border-inline-end:1px solid rgba(0,0,0,.18);opacity:0;transition:opacity .12s}
+.dh-fb [data-rank="0"]{min-inline-size:30px;min-block-size:34px;display:grid;place-items:center;
+ cursor:pointer;user-select:none;border:0;background:transparent;font-size:13px;font-weight:700;
+ line-height:1;color:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
+ transition:color .12s;pointer-events:none}
+.dh-fb .dh-zero:has([data-rank="0"].on),.dh-fb .dh-zero:hover,
+.dh-fb .dh-zero:has(:focus-visible),
+.dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover){opacity:1}
+.dh-fb .dh-zero:has([data-rank="0"].on) [data-rank="0"],
+.dh-fb .dh-zero:hover [data-rank="0"],
+.dh-fb .dh-zero:has(:focus-visible) [data-rank="0"],
+.dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover) [data-rank="0"]{pointer-events:auto}
+.dh-fb [data-rank="0"]:hover,.dh-fb [data-rank="0"].on{color:#b00020}
 .dh-fb [data-sentiment],.dh-fb [data-verdict]{min-inline-size:38px;min-block-size:34px;
  display:grid;place-items:center;cursor:pointer;user-select:none;font-size:15px;
  border:1px solid rgba(0,0,0,.22);border-radius:6px;background:transparent;line-height:1}
@@ -484,12 +656,18 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-shot img{inline-size:100%;block-size:100%;object-fit:contain;display:block}
 .dh-shot-missing{display:grid;place-items:center;text-align:center;padding:6px;
  font-size:9px;opacity:.6;block-size:100%}
-@container (max-width: 560px){
+@container (max-width: 780px){
  .dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
  .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-start}
 }
 @media (prefers-reduced-motion:reduce){.dh-fb *{transition:none!important}}
 </style>"""
+
+# The stamp rides the stylesheet because that is the one asset `embed` always
+# rewrites into the screen. On the wrapper it never survived: `embed` lifts the
+# rows out of the generated block and leaves the wrapper behind.
+FEEDBACK_STYLE = FEEDBACK_STYLE.replace(
+    STYLE_MARKER, f"{STYLE_MARKER}\n/* dh-controls-version: {CONTROLS_VERSION} */", 1)
 
 
 def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
@@ -552,6 +730,12 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
     """
     pinned = pinned or set()
     live = [e for e in decisions["elements"] if e["state"] in GROUP_OF]
+    # Fingerprint of what the ledger says right now. Baked onto every row so a
+    # browser can tell "these numbers are the ones I already have" from "the
+    # agent adopted and re-embedded, throw my cached overlay away".
+    ledger_rev = hashlib.sha256("|".join(
+        f'{e["element"]}:{e["stars"]}:{e.get("sentiment")}:{e["state"]}:{e.get("scored")}'
+        for e in sorted(live, key=lambda e: e["element"])).encode()).hexdigest()[:12]
     theme_vars = {
         "--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent",
         "--dh-font": "font", "--dh-shot-w": "shot",
@@ -561,7 +745,8 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         declared = "; ".join(f"{prop}: {theme[key]}" for prop, key in theme_vars.items() if theme.get(key))
         if declared:
             wrapper_style = f' style="{declared}"'
-    lines = [FEEDBACK_STYLE, f'<div class="dh-feedback"{wrapper_style}>',
+    lines = [FEEDBACK_STYLE, REHYDRATE_SCRIPT,
+             f'<div class="dh-feedback" data-{VERSION_MARKER}="{CONTROLS_VERSION}"{wrapper_style}>',
              '<strong class="dh-offline">Sin conexión al companion: estos clics NO se guardan. '
              'Abre la URL del companion (http://localhost:PORT/?key=...), no el archivo.</strong>']
     if not live:
@@ -589,22 +774,28 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         lines.append(
             f'<div class="dh-fb" data-element="{element}" data-stars="{stars}" '
             f'data-scored="{"yes" if entry.get("scored") else "no"}" '
+            f'data-dh-rev="{ledger_rev}" '
             f'data-group="{GROUP_OF[entry["state"]]}" data-label="{element}">'
         )
         lines.append(render_preview(project_root, entry.get("preview"), element))
         lines.append('<span class="dh-meta">')
-        lines.append(f'<span class="dh-id">{element}</span>')
+        unscored = "" if entry.get("scored") else " &middot; sin puntuar"
+        # The state rides beside the id instead of trailing the block as a fifth
+        # line of near-identical grey text.
+        lines.append(f'<span class="dh-head"><span class="dh-id">{element}</span>'
+                     f'<span class="dh-state">{entry["state"]}{unscored}</span></span>')
         what = str(entry.get("description") or "").strip()
         proposed = str(entry.get("evidence") or "").strip()
         built = str(entry.get("implemented") or "").strip()
         if what:
             lines.append(f'<span class="dh-desc">{what}</span>')
-        if proposed:
-            lines.append(f'<span class="dh-desc"><b>Propuesto:</b> {proposed}</span>')
+        # Evidence that only repeats the id is noise: it printed
+        # "Propuesto: palette.role-groups-three" directly under the heading
+        # "palette.role-groups-three" on almost every row.
+        if proposed and proposed != element:
+            lines.append(f'<span class="dh-desc dh-sub"><b>Propuesto</b>{proposed}</span>')
         if built:
-            lines.append(f'<span class="dh-desc"><b>Implementado:</b> {built}</span>')
-        unscored = "" if entry.get("scored") else " &middot; sin puntuar"
-        lines.append(f'<span class="dh-state">{entry["state"]}{unscored}</span>')
+            lines.append(f'<span class="dh-desc dh-sub"><b>Implementado</b>{built}</span>')
         lines.append("</span>")
         lines.append('<span class="dh-signals">')
         stars_markup = "".join(
@@ -612,12 +803,17 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
             + (' class="on"' if 0 < n <= stars else "") + ">&#9733;</span>"
             for n in range(STAR_RANGE[0], STAR_RANGE[1] + 1)
         )
+        # The zero is a rank, so it rides the rank code path: it scores 0 and
+        # touches nothing else. Emitted as `data-reset` it hit a companion
+        # handler that also stripped the thumb and the tick -- a score silently
+        # erasing two unrelated signals, which is the one thing the contract
+        # says a score must never do.
+        zero_on = ' class="on"' if entry.get("scored") and stars == ZERO_STARS else ""
         lines.append(
+            f'<span class="dh-zero"><span data-rank="0" role="button" tabindex="0" '
+            f'title="cero estrellas: pesimo, pero sigue en pie" '
+            f'aria-label="cero estrellas para {element}: pesima ejecucion"{zero_on}>0</span></span>'
             f'<span class="dh-stars" role="group" aria-label="ejecucion de {element}">'
-            f'<span data-reset role="button" tabindex="0" title="cero estrellas: pesimo" '
-            f'aria-label="cero estrellas para {element}: pesimo"'
-            + (' class="on"' if entry.get("scored") and stars == ZERO_STARS else "")
-            + ">0</span>"
             f'{stars_markup}</span>')
         mood = entry.get("sentiment")
         for name, glyph, label in (("like", "&#128077;", "me gusta"), ("dislike", "&#128078;", "no me gusta")):
@@ -691,6 +887,8 @@ def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | Non
         r'<div class="dh-fb" data-element="([^"]+)".*?\n</div>', generated, re.S)}
     style_match = re.search(r"<style>.*?</style>", generated, re.S)
     style = style_match.group(0) if style_match else ""
+    script_match = re.search(r"<script>/\* dh-rehydrate \*/.*?</script>", generated, re.S)
+    script = script_match.group(0) if script_match else ""
 
     # Match the placeholder's OWN closing tag by counting nested divs. The old
     # non-greedy `(.*?)</div>` stopped at the first </div> inside a generated
@@ -725,8 +923,17 @@ def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | Non
         html = html[:opening.start()] + replacement + html[close_end:]
         filled += len(wanted)
 
-    if style and STYLE_MARKER not in html:
-        html = html.replace("</head>", style + "\n</head>", 1) if "</head>" in html else style + "\n" + html
+    # Replace the assets, never skip them. `embed` used to inject the stylesheet
+    # only when the screen carried none, so a screen embedded by an older skill
+    # kept that older CSS for the rest of its life: fixing a control bug in the
+    # skill changed nothing the user could see, and the only symptom was "the
+    # fix did not work". Stripping first also keeps `embed` byte-idempotent.
+    html = re.sub(r"<style>/\* dh-controls \*/.*?</style>\n?", "", html, flags=re.S)
+    html = re.sub(r"<script>/\* dh-rehydrate \*/.*?</script>\n?", "", html, flags=re.S)
+    head = "\n".join(part for part in (style, script) if part)
+    if head:
+        html = (html.replace("</head>", head + "\n</head>", 1)
+                if "</head>" in html else head + "\n" + html)
     screen.write_text(html, encoding="utf-8")
     return filled
 
@@ -1065,19 +1272,69 @@ def self_test() -> None:
             raise HarnessError("self-test: controls are not deterministic")
         for required in ('data-element="form.paper.white"', 'data-rank="5"',
                          'data-verdict="completed"', 'data-sentiment="like"',
-                         'data-sentiment="dislike"', 'data-reset'):
+                         'data-sentiment="dislike"', 'data-rank="0"'):
             if required not in markup:
                 raise HarnessError(f"self-test: controls omitted {required}")
-        if re.search(r"\[data-reset\]\{[^}]*opacity:0", FEEDBACK_STYLE):
+        # Zero is a rank and must ride the rank path. As `data-reset` it reached a
+        # companion handler that cleared the thumb and the tick too, so scoring an
+        # element 0 silently destroyed two signals the user had set deliberately.
+        if "data-reset" in markup:
             raise HarnessError(
-                "self-test: the zero-star control is hidden until hover -- every rating must be discoverable")
+                "self-test: zero emitted as `data-reset` -- that path erases sentiment and verdict")
+        # The zero is revealed by hovering ONE star, which is where a user
+        # reaching for the bottom of the scale already is. Hiding it is only
+        # safe while it is also unclickable, and only honest while a zero
+        # already given still shows.
+        if 'pointer-events:none' not in re.sub(r"\s+", "", FEEDBACK_STYLE).split(
+                '[data-rank="0"]{')[1].split("}")[0]:
+            raise HarnessError(
+                "self-test: the hidden zero is still clickable -- an invisible control beside "
+                "the first star is how a click meant for 1 scores 0")
+        if '[data-rank="1"]:hover)' not in FEEDBACK_STYLE:
+            raise HarnessError(
+                "self-test: nothing reveals the zero -- it must surface when one star is hovered")
+        if '.dh-zero:has([data-rank="0"].on)' not in FEEDBACK_STYLE:
+            raise HarnessError(
+                "self-test: a zero already given would stay hidden -- it must be "
+                "distinguishable from an unrated row")
+        # The zero must not sit inside the star strip: adjacent and unlabelled, it
+        # caught clicks aimed at one star.
+        if re.search(r'<span class="dh-stars"[^>]*>\s*<span data-rank="0"', markup):
+            raise HarnessError(
+                "self-test: the zero sits inside the star strip -- it will catch clicks meant for 1 star")
+        # Hovering must preview the whole rank, not a single glyph.
+        if ":has(~ [data-rank]:hover)" not in FEEDBACK_STYLE:
+            raise HarnessError(
+                "self-test: stars do not preview a rank on hover -- hovering lights one glyph, "
+                "so the user cannot see what a click would set")
+        # A refresh must not throw away what the user clicked.
+        if "/* dh-rehydrate */" not in markup:
+            raise HarnessError(
+                "self-test: controls ship no rehydrator -- a refresh reverts every score")
+        # sessionStorage is scoped to one tab, so two tabs on the same screen
+        # drift into different scores with no way to tell which is real.
+        if re.search(r"sessionStorage\s*\.\s*(get|set)Item", markup):
+            raise HarnessError(
+                "self-test: signals cached in sessionStorage -- per-tab storage lets two tabs "
+                "disagree about the same element")
+        if "localStorage" not in markup or "BroadcastChannel" not in markup:
+            raise HarnessError(
+                "self-test: signals do not sync across tabs -- needs shared storage plus a "
+                "channel for instant fan-out")
+        if 'data-dh-rev=' not in markup:
+            raise HarnessError(
+                "self-test: rows carry no ledger revision -- a cached overlay would outlive "
+                "the re-embed that superseded it")
+        if f"dh-controls-version: {CONTROLS_VERSION}" not in markup:
+            raise HarnessError("self-test: controls carry no version stamp -- a stale embed "
+                               "cannot be told apart from a fix that did not work")
         # Substring checks above prove the ATTRIBUTES were emitted. They cannot
         # prove a browser will render anything: an unterminated opening tag keeps
         # every `data-rank="n"` intact while swallowing the star glyph into an
         # attribute, so all five controls parse as empty and the user sees a blank
         # strip. Parse it and assert on what a browser would actually show.
         for control, label, minimum in (("data-rank", "star", STAR_RANGE[1]),
-                                        ("data-reset", "reset", 1),
+                                        ("data-rank", "zero", 1),
                                         ("data-verdict", "verdict", 1)):
             shown = visible_controls(markup, control)
             if len(shown) < minimum:
@@ -1219,8 +1476,9 @@ def self_test() -> None:
         if embed_controls(project, screen) != 1:
             raise HarnessError("self-test: embed did not fill the placeholder")
         embedded = screen.read_text(encoding="utf-8")
-        for needed in ('class="dh-shot"', 'data-reset', 'data-verdict="completed"',
-                       'data-sentiment="like"', 'data-sentiment="dislike"'):
+        for needed in ('class="dh-shot"', 'data-rank="0"', 'data-verdict="completed"',
+                       'data-sentiment="like"', 'data-sentiment="dislike"',
+                       "/* dh-rehydrate */", f"dh-controls-version: {CONTROLS_VERSION}"):
             if needed not in embedded:
                 raise HarnessError(f"self-test: embedded row missing {needed}")
         # Re-running embed must be a no-op, not a duplication. The old regex
