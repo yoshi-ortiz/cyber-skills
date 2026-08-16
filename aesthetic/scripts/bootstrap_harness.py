@@ -182,8 +182,10 @@ STRINGS = {
                         "it. Solid green is done, pale green is well drawn but still open, grey "
                         "is unscored. Bars marked ? are what this round asks.",
         "temp-alt": "Distribution of execution scores, worst to best",
-        "hero-lede": "Every part below was ranked by you. The strip beside each one is how it "
-                     "was scored, and clicking changes it.",
+        "hero-lede": "Rank what this round asks, then the rest as you go \u2014 the stars on "
+                     "each row are yours to change.",
+        "key-done": "done", "key-open": "well drawn, open", "key-weak": "needs work",
+        "key-unscored": "unscored", "key-asked": "this round",
         "empty-zone": "Nothing here yet.", "zone-count": "elements",
         "execution-of": "execution of", "stars-of": "of", "execution-quality": "execution quality",
         "like": "like it", "dislike": "do not like it", "completed": "done",
@@ -214,12 +216,14 @@ STRINGS = {
         "specimen-colors": "Paleta", "specimen-fonts": "Tipografías",
         "hero-standing": "en pie", "hero-ranked": "puntuados por ti", "hero-asking": "esta ronda",
         "hero-ongoing": "en curso", "hero-improve": "por mejorar",
+        "key-done": "terminado", "key-open": "bien dibujado, abierto", "key-weak": "por mejorar",
+        "key-unscored": "sin puntuar", "key-asked": "esta ronda",
         "temp-caption": "Una barra por elemento, de peor a mejor ejecución \u2014 pulsa una para "
                         "ir a ella. Verde sólido es terminado, verde claro es bien dibujado pero "
                         "abierto, gris es sin puntuar. Las marcadas con ? son las de esta ronda.",
         "temp-alt": "Distribución de las notas de ejecución, de peor a mejor",
-        "hero-lede": "Cada pieza de abajo la puntuaste tú. La tira que hay al lado es su nota, "
-                     "y al hacer clic cambia.",
+        "hero-lede": "Puntúa lo que pide esta ronda, y el resto sobre la marcha — las estrellas "
+                     "de cada fila son tuyas y cambian al pulsar.",
         "empty-zone": "Todavía no hay nada aquí.", "zone-count": "elementos",
         "execution-of": "ejecución de", "stars-of": "de", "execution-quality": "calidad de ejecución",
         "like": "me gusta", "dislike": "no me gusta", "completed": "completado",
@@ -230,9 +234,15 @@ STRINGS = {
 
 
 def strings_for(language: str | None) -> dict[str, str]:
-    """Fall back to English rather than raising: a missing translation must
-    never be the reason a user cannot score."""
-    return STRINGS.get((language or DEFAULT_LANGUAGE).lower(), STRINGS[DEFAULT_LANGUAGE])
+    """Fall back to English PER KEY, not just per language.
+
+    Falling back only when the whole language was unknown left a gap: adding a
+    string and forgetting one translation raised KeyError mid-render, so the
+    user's own language was the one that crashed while English stayed fine. An
+    untranslated word is a blemish; no page at all is a broken tool.
+    """
+    chosen = STRINGS.get((language or DEFAULT_LANGUAGE).lower(), {})
+    return {**STRINGS[DEFAULT_LANGUAGE], **chosen}
 
 
 def project_language(project_root: Path | None) -> str:
@@ -1251,6 +1261,13 @@ ARTICLE_STYLE = """<style>/* dh-article */
 .dh-hero h1{margin:0;font-size:clamp(34px,6.2vw,68px);line-height:1.02;font-weight:800;
  letter-spacing:-.035em;text-wrap:balance}
 .dh-hero h1 em{font-style:normal;color:var(--dh-accent,#d9482a)}
+/* The round, named as a round: a label, the cohort's own id in code voice, and
+   the count. Not a headline. */
+.dh-round{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:16px 0 0}
+.dh-round b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+ padding:4px 9px;border-radius:999px;background:var(--dh-accent,#d9482a);color:#fff;flex:none}
+.dh-round code{font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--dh-ink,#111)}
+.dh-round span{font-size:12px;color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
 .dh-hero .dh-lede{margin:20px 0 0;max-inline-size:56ch;font-size:15px;
  color:color-mix(in srgb, var(--dh-ink,#111) 72%, transparent)}
 .dh-figures{display:flex;flex-wrap:wrap;gap:34px;margin:30px 0 0;padding:0;list-style:none}
@@ -1277,8 +1294,15 @@ ARTICLE_STYLE = """<style>/* dh-article */
 /* The round's own items are marked in the strip, so "what am I being asked?"
    is answerable from the sticky bar without scrolling to find out. */
 .dh-temp a[data-asked]{outline-color:var(--dh-ink,#111);min-inline-size:11px;flex-grow:1.6}
-.dh-temp-sticky{block-size:11px;margin:0 0 8px}
-.dh-toc{padding-block-end:2px}
+.dh-temp-sticky{block-size:11px;margin:0}
+.dh-key{display:flex;flex-wrap:wrap;gap:4px 16px;margin:7px 0 0;padding:0 0 8px;
+ font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
+.dh-key span{display:flex;align-items:center;gap:5px}
+.dh-key i{inline-size:11px;block-size:8px;border-radius:1px;background:currentColor;flex:none}
+.dh-key b{font-size:9px;line-height:1;padding:1px 4px;border-radius:2px;
+ border:1px solid currentColor}
+.dh-toc{padding-block-end:0}
 .dh-temp i{flex:1 1 0;border-radius:1px;background:currentColor;min-inline-size:2px}
 .dh-t0{color:#b00020}.dh-t1{color:#c2451c}.dh-t2{color:#cf7a12}
 .dh-t3{color:#b98b07}.dh-t4{color:#6f9430}.dh-t5{color:#1c8b4b}
@@ -1600,10 +1624,21 @@ ZONES = ("round", "fundamentals", "backlog", "antipattern")
 SUBNAV_ZONES = ("backlog",)
 
 
+def project_title(project_root: Path | None) -> str:
+    if project_root is None:
+        return ""
+    path = project_root / "spec" / "design-harness" / "project.json"
+    try:
+        return str(json.loads(path.read_text(encoding="utf-8")).get("title") or "")
+    except (OSError, ValueError):
+        return ""
+
+
 def render_article(project_root: Path, decisions: dict[str, object],
                    cohort: set[str] | None = None, cohort_name: str = "",
                    language: str | None = None,
-                   theme: dict[str, str] | None = None) -> str:
+                   theme: dict[str, str] | None = None,
+                   title: str = "") -> str:
     """A design-system article that is also the scoring companion.
 
     The strip alone answered "what is on the list". It could not answer "what is
@@ -1661,8 +1696,15 @@ def render_article(project_root: Path, decisions: dict[str, object],
                    if e["element"] not in cohort and e["state"] not in ("completed",)
                    and zone_of(e, cohort) != "antipattern"])
     to_improve = len(stats["needsPolish"])
-    headline = (f'<em>{html_escape(cohort_name)}</em>' if cohort_name
-                else html_escape(txt["article-title"]))
+    # A kebab-case cohort id set at 68px is a machine label wearing a headline's
+    # clothes. The hero names the artefact being designed; the round is a line
+    # underneath it, which is what it actually is.
+    headline = html_escape(title or project_title(project_root) or txt["article-title"])
+    round_line = ""
+    if cohort_name or asking:
+        round_line = (f'<p class="dh-round"><b>{html_escape(txt["zone-round"])}</b>'
+                      + (f'<code>{html_escape(cohort_name)}</code>' if cohort_name else "")
+                      + f'<span>{asking} {html_escape(txt["to-score"])}</span></p>')
     theme_vars = {"--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent", "--dh-font": "font"}
     declared = "; ".join(f"{prop}: {theme[key]}"
                          for prop, key in theme_vars.items() if (theme or {}).get(key))
@@ -1673,16 +1715,13 @@ def render_article(project_root: Path, decisions: dict[str, object],
            '<header class="dh-hero">',
            f'<p class="dh-eyebrow">{html_escape(txt["article-title"])}</p>',
            f"<h1>{headline}</h1>",
+           round_line,
            f'<p class="dh-lede">{html_escape(txt["hero-lede"])}</p>',
            '<div class="dh-figures">',
            f'<div><b>{asking}</b><span>{html_escape(txt["hero-asking"])}</span></div>',
            f'<div><b>{ongoing}</b><span>{html_escape(txt["hero-ongoing"])}</span></div>',
            f'<div><b>{to_improve}</b><span>{html_escape(txt["hero-improve"])}</span></div>',
            "</div>",
-           # The strip meant nothing without saying what it plots.
-           f'<figure class="dh-temp-wrap"><div class="dh-temp" role="img" '
-           f'aria-label="{html_escape(txt["temp-alt"])}">{bars}</div>'
-           f'<figcaption>{html_escape(txt["temp-caption"])}</figcaption></figure>',
            "</header>"]
     shown = [z for z in ZONES
              if z == "round" or any(zone_of(e, cohort) == z for e in live)]
@@ -1699,7 +1738,16 @@ def render_article(project_root: Path, decisions: dict[str, object],
                + '"><ol>' + "".join(links) + "</ol>"
                + f'<div class="dh-temp dh-temp-sticky" role="group" '
                  f'aria-label="{html_escape(txt["temp-alt"])}">{bars}</div>'
-               + "</nav>")
+               # A key, not a paragraph. Two lines of grey prose under a sticky
+               # bar is a caption nobody reads twice, and it said in sentences
+               # what four swatches say at a glance.
+               + '<p class="dh-key">'
+               + f'<span><i class="dh-tdone"></i>{html_escape(txt["key-done"])}</span>'
+               + f'<span><i class="dh-thigh"></i>{html_escape(txt["key-open"])}</span>'
+               + f'<span><i class="dh-t1"></i>{html_escape(txt["key-weak"])}</span>'
+               + f'<span><i class="dh-tnone"></i>{html_escape(txt["key-unscored"])}</span>'
+               + f'<span><b>?</b>{html_escape(txt["key-asked"])}</span>'
+               + "</p></nav>")
     for zone in ZONES:
         members = sorted((e for e in live if zone_of(e, cohort) == zone), key=rank)
         if not members and zone != "round":
@@ -2558,6 +2606,9 @@ def parser() -> argparse.ArgumentParser:
     article.add_argument("--out", required=True, type=Path, help="screen to write (then `publish` it)")
     article.add_argument("--cohort", default="", help="element ids this round asks about")
     article.add_argument("--cohort-name", default="", help="what to call this round, e.g. cover-furniture")
+    article.add_argument("--title", default="",
+                         help="the artefact being designed, in the user's own words "
+                              "(stored in project.json and reused)")
     article.add_argument("--lang", default="", choices=["", *sorted(STRINGS)])
     article.add_argument("--bg", default="")
     article.add_argument("--ink", default="")
@@ -2645,8 +2696,16 @@ def main() -> int:
             unknown = sorted(cohort - known)
             if unknown:
                 raise HarnessError("cohort names element(s) not in the ledger: " + ", ".join(unknown))
+            if args.title:
+                # Remembered, so the next run does not have to be told again --
+                # and so a forgotten flag cannot silently rename the artefact.
+                path = root / "spec" / "design-harness" / "project.json"
+                stored = json.loads(path.read_text(encoding="utf-8"))
+                stored["title"] = args.title
+                write_json(path, stored)
             markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
-                                    cohort, args.cohort_name, args.lang or None, theme or None)
+                                    cohort, args.cohort_name, args.lang or None, theme or None,
+                                    args.title)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(markup, encoding="utf-8")
             print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "

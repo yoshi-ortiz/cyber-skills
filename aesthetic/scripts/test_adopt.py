@@ -636,13 +636,50 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             asked = re.search(r'href="#dh-el-cover\.strong"[^>]*data-asked="1"[^>]*>'
                               r'<span>\?</span>', markup)
             self.assertIsNotNone(asked)
-            self.assertEqual(markup.count('data-asked="1"'), 2)  # hero + sticky
+            # One strip, in the sticky bar. Two of them a hundred pixels apart
+            # read as a rendering fault, not as emphasis.
+            self.assertEqual(markup.count('data-asked="1"'), 1)
+            self.assertEqual(markup.count('class="dh-temp dh-temp-sticky"'), 1)
 
     def test_every_bar_carries_a_tooltip_naming_the_element(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             markup = bh.render_article(root, self.system(root))
             self.assertIn('title="palette.family', markup)
+
+    def test_a_missing_translation_falls_back_instead_of_crashing(self):
+        """Falling back only on an unknown LANGUAGE left a gap: forget one
+        translation and the user's own language is the one that crashes while
+        English renders fine."""
+        bh.STRINGS["xx"] = {"zone-round": "Ronda XX"}
+        try:
+            words = bh.strings_for("xx")
+            self.assertEqual(words["zone-round"], "Ronda XX")
+            self.assertEqual(words["key-done"], bh.STRINGS["en"]["key-done"])
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                markup = bh.render_article(root, self.system(root), language="xx")
+                self.assertIn("Ronda XX", markup)
+        finally:
+            del bh.STRINGS["xx"]
+
+    def test_every_language_defines_every_key_the_article_uses(self):
+        missing = {lang: sorted(set(bh.STRINGS["en"]) - set(words))
+                   for lang, words in bh.STRINGS.items() if lang != "en"}
+        self.assertEqual({k: v for k, v in missing.items() if v}, {})
+
+    def test_the_headline_names_the_artefact_not_the_cohort_slug(self):
+        """A kebab-case cohort id set at 68px is a machine label wearing a
+        headline's clothes."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"cover.strong"},
+                                       cohort_name="cover-furniture-redraw",
+                                       title="Fichas de performance")
+            h1 = markup.split("<h1>")[1].split("</h1>")[0]
+            self.assertEqual(h1, "Fichas de performance")
+            self.assertNotIn("cover-furniture-redraw", h1)
+            self.assertIn("cover-furniture-redraw", markup.split('class="dh-round"')[1])
 
     def test_antipatterns_sit_last_and_muted(self):
         with tempfile.TemporaryDirectory() as tmp:
