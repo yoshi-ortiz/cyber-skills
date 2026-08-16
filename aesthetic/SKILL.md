@@ -61,6 +61,19 @@ Startup is not the round. If the cohort is unnamed and no screen is on its way a
 
 `doctor` **fails** a screen on which every element is already user-ranked: that round improved the drawing and proposed nothing. Watch for `agent-set 0` in `stats` — with `coverage 100%` it looks finished, but it means the round asked no question.
 
+## Ship the article, not a list of rows
+
+`article --out <screen>.html --cohort <ids> --cohort-name <name>` writes the whole page: a hero whose thesis is **the question this round asks**, then four zones the reader can never confuse — **this round** (inverted, the only section asking for anything), **core system** (settled), **backlog** (unresolved), **antipatterns** (turned down, kept so they are not proposed again). Rows run best-score-first inside each foundation. Pass the project's own `--bg/--ink/--accent`: the article is structure only and takes the palette being judged, never one of its own.
+
+**A section must show its material, not name it.** A "Typography" heading over one scoring row is a list. Record the specimens and the section becomes a design system:
+
+```bash
+describe --element palette.family-from-cards --tokens '{"colors":[{"name":"menta","value":"#b2ffc2","role":"grupo"}]}'
+describe --element type.dotmatrix --tokens '{"fonts":[{"name":"Matriz 5x7","stack":"ui-monospace","use":"display","sample":"EN VIVO"}]}'
+```
+
+Swatches render the real hex, specimens the real face. **Take both from the corpus, never invent them** — a plausible hex is exactly the fabricated evidence the star cap exists to stop, and `describe` has no cap to catch you.
+
 ## The strip is a design system, not a list
 
 Rows group themselves by **design-system foundation** — core ideas, colour palette, typography, illustration & texture, composition & layout, copy & voice, motion — read off the element id's own prefix. `palette.family-from-cards` files under colour, `type.bracket-numerals` under typography, `family.mark.dotmatrix` under illustration, anything unrecognised under core ideas. Nothing to configure: **name ids for the foundation they belong to and the system assembles itself.** Each foundation heads its section once per screen.

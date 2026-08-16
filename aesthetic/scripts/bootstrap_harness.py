@@ -165,6 +165,18 @@ STRINGS = {
         "voice": "Copy & voice", "motion": "Motion",
         "unscored": "not yet scored", "proposed-by": "Proposed", "built": "Built",
         "no-graphic": "no graphic",
+        "article-title": "Design system", "zone-round": "This round",
+        "zone-round-note": "The only section asking for something. Rank what is here.",
+        "zone-core": "Core system",
+        "zone-core-note": "Settled. Standing until something ranked higher replaces it.",
+        "zone-backlog": "Backlog", "zone-backlog-note": "Proposed, not resolved yet.",
+        "zone-antipattern": "Antipatterns",
+        "zone-antipattern-note": "Turned down. Kept so they are not proposed again.",
+        "specimen-colors": "Palette", "specimen-fonts": "Typefaces",
+        "hero-standing": "standing", "hero-ranked": "you ranked", "hero-asking": "asked this round",
+        "hero-lede": "Every part below was ranked by you. The strip beside each one is how it "
+                     "was scored, and clicking changes it.",
+        "empty-zone": "Nothing here yet.", "zone-count": "elements",
         "execution-of": "execution of", "stars-of": "of", "execution-quality": "execution quality",
         "like": "like it", "dislike": "do not like it", "completed": "done",
         "zero-title": "zero stars: terrible, but it still stands",
@@ -181,6 +193,18 @@ STRINGS = {
         "voice": "Texto y voz", "motion": "Movimiento",
         "unscored": "sin puntuar", "proposed-by": "Propuesto", "built": "Implementado",
         "no-graphic": "sin gráfico",
+        "article-title": "Sistema de diseño", "zone-round": "Esta ronda",
+        "zone-round-note": "La única sección que pide algo. Puntúa lo que hay aquí.",
+        "zone-core": "Núcleo del sistema",
+        "zone-core-note": "Resuelto. En pie hasta que algo mejor puntuado lo reemplace.",
+        "zone-backlog": "Pendientes", "zone-backlog-note": "Propuesto, todavía sin resolver.",
+        "zone-antipattern": "Antipatrones",
+        "zone-antipattern-note": "Descartado. Queda aquí para no volver a proponerlo.",
+        "specimen-colors": "Paleta", "specimen-fonts": "Tipografías",
+        "hero-standing": "en pie", "hero-ranked": "puntuados por ti", "hero-asking": "se preguntan esta ronda",
+        "hero-lede": "Cada pieza de abajo la puntuaste tú. La tira que hay al lado es su nota, "
+                     "y al hacer clic cambia.",
+        "empty-zone": "Todavía no hay nada aquí.", "zone-count": "elementos",
         "execution-of": "ejecución de", "stars-of": "de", "execution-quality": "calidad de ejecución",
         "like": "me gusta", "dislike": "no me gusta", "completed": "completado",
         "zero-title": "cero estrellas: pésimo, pero sigue en pie",
@@ -406,13 +430,14 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             if preview is not None:
                 e["preview"] = preview
             e.setdefault("preview", None)
+            e.setdefault("tokens", None)
             break
     else:
         decisions["elements"].append({
             "element": element, "state": verdict, "stars": stars,
             "evidence": evidence, "supersededBy": None, "preview": preview,
             "source": source, "scored": True,
-            "sentiment": None if sentiment is KEEP_SENTIMENT else sentiment,
+            "sentiment": None if sentiment is KEEP_SENTIMENT else sentiment, "tokens": None,
             "implemented": implemented, "description": description,
         })
     if any(e["state"] == "approved" for e in decisions["elements"]):
@@ -428,8 +453,41 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
     return decisions
 
 
+def parse_tokens(raw: str) -> dict[str, object]:
+    """The specimen data a design-system section is made of.
+
+    A "Typography" heading over a scoring row is a list, not a design system:
+    the section has to show the faces that were chosen, and a palette section
+    has to show the actual colours. The ledger held ids and prose and no hex
+    value anywhere, so that section could never be more than a list. Shape:
+
+        {"colors": [{"name": "crema", "value": "#F4E9D2", "role": "paper"}],
+         "fonts":  [{"name": "Söhne Mono", "stack": "ui-monospace",
+                     "use": "display", "sample": "Aa"}]}
+    """
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as err:
+        raise HarnessError(f"--tokens is not valid JSON: {err}") from err
+    if not isinstance(value, dict):
+        raise HarnessError('--tokens must be a JSON object, e.g. {"colors": [...]}')
+    for key, items in value.items():
+        if key not in ("colors", "fonts"):
+            raise HarnessError(f"unknown token group: {key} (expected colors or fonts)")
+        if not isinstance(items, list) or not all(isinstance(i, dict) for i in items):
+            raise HarnessError(f"{key} must be a list of objects")
+    for swatch in value.get("colors", []):
+        if not str(swatch.get("value", "")).strip():
+            raise HarnessError("every colour token needs a `value` (the hex the design uses)")
+    for face in value.get("fonts", []):
+        if not str(face.get("name", "")).strip():
+            raise HarnessError("every font token needs a `name` (the face that was chosen)")
+    return value
+
+
 def describe_element(project_root: Path, element: str,
-                     description: str | None, implemented: str | None) -> dict[str, object]:
+                     description: str | None, implemented: str | None,
+                     tokens: dict[str, object] | None = None) -> dict[str, object]:
     """Label an existing element without touching its verdict, rank or source.
 
     `decide` cannot do this: it demands a verdict and a rank, so relabelling a
@@ -437,8 +495,8 @@ def describe_element(project_root: Path, element: str,
     exists to prevent.
     """
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
-    if description is None and implemented is None:
-        raise HarnessError("nothing to set: pass --description and/or --implemented")
+    if description is None and implemented is None and tokens is None:
+        raise HarnessError("nothing to set: pass --description, --implemented and/or --tokens")
     decisions = load_decisions(output)
     for entry in decisions["elements"]:
         if entry["element"] == element:
@@ -449,6 +507,8 @@ def describe_element(project_root: Path, element: str,
         entry["description"] = description
     if implemented is not None:
         entry["implemented"] = implemented
+    if tokens is not None:
+        entry["tokens"] = tokens
     write_json(output / "decisions.json", decisions)
     (output / "DECISIONS.md").write_text(render_decisions_md(decisions), encoding="utf-8")
     return entry
@@ -1139,6 +1199,216 @@ def newest_session_dir(project_root: Path) -> Path:
     return max(sessions, key=lambda d: d.stat().st_mtime)
 
 
+ARTICLE_STYLE = """<style>/* dh-article */
+/* The article takes the PROJECT's palette, never one of its own. This page sits
+   beside the artwork being judged, and chrome in a competing palette would
+   corrupt the very judgement it is collecting -- so every surface here is a
+   var() the screen already sets, and the harness supplies only structure. */
+.dh-art{--dh-rule:color-mix(in srgb, var(--dh-ink,#111) 16%, transparent);
+ background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
+ font:400 15px/1.55 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
+ max-inline-size:1180px;margin:0 auto;padding:0 24px 96px;box-sizing:border-box}
+.dh-art *,.dh-art *::before,.dh-art *::after{box-sizing:inherit}
+/* Hero. The thesis is the QUESTION this round asks -- not a stat block, which
+   would say what has been counted rather than what is wanted. */
+.dh-hero{padding:64px 0 28px;border-block-end:2px solid var(--dh-ink,#111)}
+.dh-hero .dh-eyebrow{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent);margin:0 0 18px}
+.dh-hero h1{margin:0;font-size:clamp(34px,6.2vw,68px);line-height:1.02;font-weight:800;
+ letter-spacing:-.035em;text-wrap:balance}
+.dh-hero h1 em{font-style:normal;color:var(--dh-accent,#d9482a)}
+.dh-hero .dh-lede{margin:20px 0 0;max-inline-size:56ch;font-size:15px;
+ color:color-mix(in srgb, var(--dh-ink,#111) 72%, transparent)}
+.dh-figures{display:flex;flex-wrap:wrap;gap:34px;margin:30px 0 0;padding:0;list-style:none}
+.dh-figures div{display:flex;flex-direction:column;gap:3px}
+.dh-figures b{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.dh-figures span{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+/* The signature: one bar per standing element, coloured by its own score, worst
+   to best. The whole system's temperature in a single line -- real data, no
+   decoration, and it reads before a single word is read. */
+.dh-temp{display:flex;gap:2px;margin:26px 0 0;block-size:9px}
+.dh-temp i{flex:1 1 0;border-radius:1px;background:currentColor;min-inline-size:2px}
+.dh-t0{color:#b00020}.dh-t1{color:#c2451c}.dh-t2{color:#cf7a12}
+.dh-t3{color:#b98b07}.dh-t4{color:#6f9430}.dh-t5{color:#1c8b4b}
+.dh-tnone{color:color-mix(in srgb, var(--dh-ink,#111) 18%, transparent)}
+/* Zones. Four, and the reader must never wonder which one they are in. */
+.dh-zone{padding:60px 0 0}
+.dh-zone > header{margin:0 0 26px}
+.dh-zone h2{margin:0;font-size:clamp(24px,3.4vw,36px);font-weight:800;letter-spacing:-.028em}
+.dh-zone .dh-note{margin:8px 0 0;max-inline-size:52ch;font-size:13px;
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-zone .dh-tag{display:inline-block;margin:0 0 12px;padding:4px 10px;border-radius:999px;
+ font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+ border:1px solid var(--dh-rule)}
+/* This round is the only section that asks for something, so it is the only one
+   that raises its voice: inverted, full bleed against everything else. */
+.dh-zone[data-zone="round"]{background:var(--dh-ink,#111);color:var(--dh-bg,#fff);
+ margin:56px -24px 0;padding:44px 24px 48px;border-radius:14px}
+.dh-zone[data-zone="round"] .dh-tag{border-color:var(--dh-bg,#fff);background:var(--dh-accent,#d9482a);
+ border-color:var(--dh-accent,#d9482a);color:#fff}
+.dh-zone[data-zone="round"] .dh-note{color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
+.dh-zone[data-zone="antipattern"] .dh-tag{color:#b00020;border-color:#b00020}
+.dh-zone[data-zone="antipattern"] .dh-fb{opacity:.72}
+.dh-zone[data-zone="antipattern"] .dh-fb:hover{opacity:1}
+.dh-empty{margin:0;font-size:13px;font-style:italic;
+ color:color-mix(in srgb, var(--dh-ink,#111) 45%, transparent)}
+/* Specimens: the section shows the actual material before it shows the rows.
+   A palette section that lists ids is a list; one that shows the colours is a
+   design system. */
+.dh-spec{margin:0 0 22px}
+.dh-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
+ gap:10px;margin:0;padding:0;list-style:none}
+.dh-swatches li{border:1px solid var(--dh-rule);border-radius:8px;overflow:hidden}
+.dh-swatches .dh-chip{display:block;block-size:76px}
+.dh-swatches .dh-vals{padding:9px 10px;display:flex;flex-direction:column;gap:2px;
+ background:var(--dh-bg,#fff);color:var(--dh-ink,#111)}
+.dh-swatches b{font-size:12px;font-weight:700;letter-spacing:-.01em}
+.dh-swatches code{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
+.dh-swatches span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 48%, transparent)}
+.dh-faces{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
+.dh-faces li{display:flex;align-items:baseline;gap:20px;flex-wrap:wrap;
+ padding:16px 18px;border:1px solid var(--dh-rule);border-radius:10px}
+.dh-faces .dh-sample{font-size:40px;line-height:1;letter-spacing:-.02em;flex:none}
+.dh-faces .dh-face-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dh-faces b{font-size:14px;font-weight:700}
+.dh-faces span{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+@media (max-width:640px){
+ .dh-art{padding-inline:16px}
+ .dh-zone[data-zone="round"]{margin-inline:-16px;padding-inline:16px}
+ .dh-faces .dh-sample{font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){.dh-art *{transition:none!important}}
+</style>"""
+
+
+def _specimens(entries: list[dict[str, object]], txt: dict[str, str]) -> str:
+    """Show the material itself: the colours, the faces. Rendered from tokens the
+    project recorded, so the harness invents no value it was not given."""
+    colors, fonts = [], []
+    for entry in entries:
+        tokens = entry.get("tokens") or {}
+        colors += list(tokens.get("colors") or [])
+        fonts += list(tokens.get("fonts") or [])
+    out = []
+    if colors:
+        items = "".join(
+            f'<li><span class="dh-chip" style="background:{html_escape(str(c["value"]))}"></span>'
+            f'<span class="dh-vals"><b>{html_escape(str(c.get("name") or c["value"]))}</b>'
+            f'<code>{html_escape(str(c["value"]))}</code>'
+            + (f'<span>{html_escape(str(c["role"]))}</span>' if c.get("role") else "")
+            + "</span></li>"
+            for c in colors)
+        out.append(f'<div class="dh-spec"><ul class="dh-swatches">{items}</ul></div>')
+    if fonts:
+        items = []
+        for f in fonts:
+            stack = html_escape(str(f.get("stack") or "inherit"))
+            sample = html_escape(str(f.get("sample") or "Aa Bb Cc 0123"))
+            use = f'<span>{html_escape(str(f["use"]))}</span>' if f.get("use") else ""
+            items.append(f'<li><span class="dh-sample" style="font-family:{stack}">{sample}</span>'
+                         f'<span class="dh-face-meta"><b>{html_escape(str(f["name"]))}</b>{use}</span></li>')
+        out.append(f'<div class="dh-spec"><ul class="dh-faces">{"".join(items)}</ul></div>')
+    return "".join(out)
+
+
+def zone_of(entry: dict[str, object], cohort: set[str]) -> str:
+    """Four zones, and every element is in exactly one.
+
+    A flat list of twenty-eight rows cannot say which are settled, which are
+    being asked about now, and which were turned down -- so the user re-reads
+    decisions they already made looking for the three that matter.
+    """
+    if entry["element"] in cohort:
+        return "round"
+    if entry["state"] in ("rejected", "superseded") or entry.get("sentiment") == "dislike":
+        return "antipattern"
+    if entry["state"] in ("approved", "completed"):
+        return "core"
+    return "backlog"
+
+
+ZONES = ("round", "core", "backlog", "antipattern")
+
+
+def render_article(project_root: Path, decisions: dict[str, object],
+                   cohort: set[str] | None = None, cohort_name: str = "",
+                   language: str | None = None,
+                   theme: dict[str, str] | None = None) -> str:
+    """A design-system article that is also the scoring companion.
+
+    The strip alone answered "what is on the list". It could not answer "what is
+    the typography doing", because a heading with one row under it is a list.
+    Here each foundation shows its own material first -- the palette as colour,
+    the faces as type -- and the scoring row sits against the thing it judges.
+    """
+    txt = strings_for(language or project_language(project_root))
+    cohort = cohort or set()
+    generated = render_feedback_controls(decisions, theme, project_root, cohort, language)
+    rows = {m.group(1): m.group(0) for m in re.finditer(
+        r'<div class="dh-fb" data-element="([^"]+)".*?\n</div>', generated, re.S)}
+    style = re.search(r"<style>/\* dh-controls \*/.*?</style>", generated, re.S)
+    script = re.search(r"<script>/\* dh-rehydrate \*/.*?</script>", generated, re.S)
+    live = [e for e in decisions["elements"] if e["state"] in GROUP_OF]
+    stats = ledger_stats(decisions)
+
+    def rank(entry: dict[str, object]) -> tuple:
+        # Best execution on top, inside its own foundation. A user scanning for
+        # what is working should not have to read every row to find it.
+        return (FOUNDATION_ORDER.get(foundation_of(entry["element"]), len(FOUNDATION_ORDER)),
+                -int(entry.get("stars") or 0), entry["element"])
+
+    bars = "".join(
+        f'<i class="dh-t{e["stars"]}"></i>' if e.get("scored") else '<i class="dh-tnone"></i>'
+        for e in sorted(live, key=lambda x: -int(x.get("stars") or 0)))
+    asking = len([e for e in live if e["element"] in cohort])
+    headline = (f'<em>{html_escape(cohort_name)}</em>' if cohort_name
+                else html_escape(txt["article-title"]))
+    theme_vars = {"--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent", "--dh-font": "font"}
+    declared = "; ".join(f"{prop}: {theme[key]}"
+                         for prop, key in theme_vars.items() if (theme or {}).get(key))
+    root_style = f' style="{declared}"' if declared else ""
+    out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
+           f'<div class="dh-art"{root_style}>',
+           '<header class="dh-hero">',
+           f'<p class="dh-eyebrow">{html_escape(txt["article-title"])}</p>',
+           f"<h1>{headline}</h1>",
+           f'<p class="dh-lede">{html_escape(txt["hero-lede"])}</p>',
+           '<div class="dh-figures">',
+           f'<div><b>{stats["standing"]}</b><span>{html_escape(txt["hero-standing"])}</span></div>',
+           f'<div><b>{stats["userSet"]}</b><span>{html_escape(txt["hero-ranked"])}</span></div>',
+           f'<div><b>{asking}</b><span>{html_escape(txt["hero-asking"])}</span></div>',
+           "</div>",
+           f'<div class="dh-temp" aria-hidden="true">{bars}</div>',
+           "</header>"]
+    for zone in ZONES:
+        members = sorted((e for e in live if zone_of(e, cohort) == zone), key=rank)
+        if not members and zone != "round":
+            continue
+        out += [f'<section class="dh-zone" data-zone="{zone}">', "<header>",
+                f'<p class="dh-tag">{len(members)} {html_escape(txt["zone-count"])}</p>',
+                f'<h2>{html_escape(txt[f"zone-{zone}"])}</h2>',
+                f'<p class="dh-note">{html_escape(txt[f"zone-{zone}-note"])}</p>', "</header>"]
+        if not members:
+            out.append(f'<p class="dh-empty">{html_escape(txt["empty-zone"])}</p>')
+        seen_foundation = None
+        for entry in members:
+            key = foundation_of(entry["element"])
+            if key != seen_foundation:
+                seen_foundation = key
+                same = [e for e in members if foundation_of(e["element"]) == key]
+                out.append(f'<h4 class="dh-group" data-group="{key}">{txt.get(key, key)}'
+                           f'<span class="dh-count">{len(same)}</span></h4>')
+                out.append(_specimens(same, txt))
+            out.append(rows.get(entry["element"], ""))
+        out.append("</section>")
+    out += ["</div>"]
+    return "\n".join(part for part in out if part) + "\n"
+
+
 def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | None = None,
                    pinned: set[str] | None = None, language: str | None = None) -> int:
     """Fill a screen's `data-dh-controls` placeholders with generated rows.
@@ -1205,9 +1475,15 @@ def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | Non
         # rendered there never reached an embedded screen -- the grouping
         # existed and was invisible on the only page the user actually scores.
         # Ordered by foundation, author's order kept inside each one.
+        by_id = {e["element"]: e for e in load_decisions(output)["elements"]}
         buckets: dict[str, list[str]] = {}
         for name in wanted:
             buckets.setdefault(foundation_of(name), []).append(name)
+        # Best execution on top within each foundation. The author's typing order
+        # carried no information, so the strongest work could sit last and the
+        # user had to read every row to find what was working.
+        for names in buckets.values():
+            names.sort(key=lambda n: (-int((by_id.get(n) or {}).get("stars") or 0), n))
         ordered = sorted(buckets.items(),
                          key=lambda kv: FOUNDATION_ORDER.get(kv[0], len(FOUNDATION_ORDER)))
         body = "\n".join(
@@ -1926,6 +2202,9 @@ def parser() -> argparse.ArgumentParser:
     describe.add_argument("--description", default="",
                           help="what the component IS, in plain words (shown on the scoring row)")
     describe.add_argument("--implemented", default="", help="what was actually built for it")
+    describe.add_argument("--tokens", default="",
+                          help='specimen data, JSON: {"colors":[{"name":..,"value":"#hex","role":..}],'
+                               ' "fonts":[{"name":..,"stack":..,"use":..,"sample":..}]}')
     retire = subcommands.add_parser(
         "supersede", help="retire the losing element, leaving the winner's user rank intact")
     retire.add_argument("--project-root", required=True, type=Path)
@@ -1937,6 +2216,17 @@ def parser() -> argparse.ArgumentParser:
     adopt.add_argument("--project-root", required=True, type=Path)
     adopt.add_argument("--companion-ledger", required=True, type=Path,
                        help="path to the companion's durable decisions.jsonl")
+    article = subcommands.add_parser(
+        "article", help="generate the design-system article that is also the scoring companion")
+    article.add_argument("--project-root", required=True, type=Path)
+    article.add_argument("--out", required=True, type=Path, help="screen to write (then `publish` it)")
+    article.add_argument("--cohort", default="", help="element ids this round asks about")
+    article.add_argument("--cohort-name", default="", help="what to call this round, e.g. cover-furniture")
+    article.add_argument("--lang", default="", choices=["", *sorted(STRINGS)])
+    article.add_argument("--bg", default="")
+    article.add_argument("--ink", default="")
+    article.add_argument("--accent", default="")
+    article.add_argument("--font", default="")
     controls = subcommands.add_parser("controls", help="emit star + like/dislike controls from the ledger")
     controls.add_argument("--project-root", required=True, type=Path)
     controls.add_argument("--out", type=Path, help="write here instead of stdout")
@@ -2003,13 +2293,28 @@ def main() -> int:
                   f"{len(live)} element(s) standing, state={decisions['state']}.")
         elif args.command == "describe":
             entry = describe_element(args.project_root, args.element,
-                                     args.description or None, args.implemented or None)
+                                     args.description or None, args.implemented or None,
+                                     parse_tokens(args.tokens) if args.tokens else None)
             print(f"Labelled {args.element} (still {entry['state']}, {entry['stars']}★, "
                   f"set by {entry.get('source', 'unknown')}).")
         elif args.command == "supersede":
             entry = retire_element(args.project_root, args.element, args.winner, args.evidence)
             print(f"Retired {args.element} in favour of {args.winner}. "
                   f"{args.winner} was not written -- its rank and source are untouched.")
+        elif args.command == "article":
+            root = args.project_root.resolve(strict=True)
+            theme = {k: getattr(args, k) for k in ("bg", "ink", "accent", "font") if getattr(args, k)}
+            cohort = {e.strip() for e in args.cohort.split(",") if e.strip()}
+            known = {e["element"] for e in load_decisions(root / "spec" / "design-harness")["elements"]}
+            unknown = sorted(cohort - known)
+            if unknown:
+                raise HarnessError("cohort names element(s) not in the ledger: " + ", ".join(unknown))
+            markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
+                                    cohort, args.cohort_name, args.lang or None, theme or None)
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(markup, encoding="utf-8")
+            print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "
+                  f"Run `publish` to serve it.")
         elif args.command == "adopt":
             adopted, skipped = adopt_companion(args.project_root, args.companion_ledger)
             print(f"Adopted {adopted} ranked decision(s); skipped {skipped} "

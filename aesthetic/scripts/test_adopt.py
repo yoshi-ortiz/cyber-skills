@@ -467,5 +467,95 @@ class CohortIsVisible(unittest.TestCase):
             self.assertEqual(once.count('class="dh-cohort"'), 1)
 
 
+class TheArticleIsADesignSystem(unittest.TestCase):
+    """A foundation heading with one scoring row under it is a list. The section
+    has to show the material -- the palette as colour, the faces as type -- and
+    the four zones have to be distinguishable, or the user re-reads decisions
+    they already made looking for the three that matter."""
+
+    def system(self, root: Path) -> dict:
+        harness(root)
+        bh.record_decision(root, "palette.family", "approved", 1, "user picked it", [])
+        bh.describe_element(root, "palette.family", None, None, {
+            "colors": [{"name": "menta", "value": "#b2ffc2", "role": "grupo"}]})
+        bh.record_decision(root, "type.display", "approved", 1, "chosen face", [])
+        bh.describe_element(root, "type.display", None, None, {
+            "fonts": [{"name": "Matriz 5x7", "stack": "monospace", "use": "display"}]})
+        bh.record_decision(root, "cover.weak", "proposed", 1, "backlog item", [])
+        # A rank above 1 has to come from a click, so the fixture clicks.
+        bh.adopt_companion(root, ledger(root, {
+            "element": "cover.strong", "stars": 4, "text": "user liked it", "timestamp": 1}))
+        bh.record_decision(root, "cover.bad", "rejected", 1, "user said no", [])
+        return bh.load_decisions(root / "spec" / "design-harness")
+
+    def test_the_palette_section_shows_the_actual_colour(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            self.assertIn("#b2ffc2", markup)
+            self.assertIn("dh-swatches", markup)
+
+    def test_the_typography_section_names_the_face(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            self.assertIn("Matriz 5x7", markup)
+            self.assertIn("dh-faces", markup)
+
+    def test_each_element_lands_in_exactly_one_zone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            decisions = self.system(root)
+            cohort = {"cover.strong"}
+            seen = {}
+            for entry in decisions["elements"]:
+                if entry["state"] in bh.GROUP_OF:
+                    seen[entry["element"]] = bh.zone_of(entry, cohort)
+            self.assertEqual(seen["cover.strong"], "round")
+            self.assertEqual(seen["palette.family"], "core")
+            self.assertEqual(seen["cover.weak"], "backlog")
+            self.assertEqual(seen["cover.bad"], "antipattern")
+
+    def test_a_disliked_element_is_an_antipattern_whatever_its_state(self):
+        entry = {"element": "x.y", "state": "proposed", "stars": 3, "sentiment": "dislike"}
+        self.assertEqual(bh.zone_of(entry, set()), "antipattern")
+
+    def test_rows_run_best_score_first_inside_a_foundation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            backlog = markup.split('data-zone="backlog"')[1]
+            self.assertLess(backlog.index('data-element="cover.strong"'),
+                            backlog.index('data-element="cover.weak"'))
+
+    def test_the_round_zone_renders_even_when_the_cohort_is_empty(self):
+        """An empty round is a fact worth stating: it means nothing is being
+        asked, which is exactly the failure doctor now catches."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            self.assertIn('data-zone="round"', markup)
+            self.assertIn("dh-empty", markup)
+
+    def test_the_article_imposes_no_palette_of_its_own(self):
+        """Chrome in a competing palette corrupts the judgement it collects."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), theme={"bg": "#FDF6E3"})
+            style = markup.split("<style>/* dh-article */")[1].split("</style>")[0]
+            self.assertNotIn("#fff5", style)
+            self.assertIn("var(--dh-bg", style)
+            self.assertIn("--dh-bg: #FDF6E3", markup)
+
+    def test_every_element_stays_scoreable_in_the_article(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            decisions = self.system(root)
+            markup = bh.render_article(root, decisions)
+            for entry in decisions["elements"]:
+                if entry["state"] in bh.GROUP_OF:
+                    self.assertIn(f'data-element="{entry["element"]}"', markup)
+
+
 if __name__ == "__main__":
     unittest.main()
