@@ -87,6 +87,33 @@ def main() -> int:
     host, port, key = "127.0.0.1", info["port"], info["url"].split("key=")[-1]
     bad = 0
 
+    # Every server process keeps its own websocket client set, so a decision
+    # broadcast by one is invisible to browsers attached to another. Two live
+    # servers means two browsers can sit on two ports and never agree, while
+    # both append to the same ledger -- so the split leaves no trace on disk and
+    # reads, from the outside, as "the scoring does not sync across browsers".
+    alive = []
+    for other in sorted((project / ".superpowers" / "brainstorm").glob("*/")):
+        meta, pidfile = other / "state" / "server-info", other / "state" / "server.pid"
+        if not (meta.is_file() and pidfile.is_file()):
+            continue
+        try:
+            os.kill(int(pidfile.read_text().strip()), 0)
+        except (OSError, ValueError):
+            continue
+        try:
+            alive.append((json.loads(meta.read_text())["port"], other.name))
+        except (ValueError, KeyError):
+            continue
+    if len(alive) > 1:
+        listing = ", ".join(f":{p} ({n})" for p, n in sorted(alive))
+        fail(f"{len(alive)} companion servers are live -- {listing}. A broadcast cannot "
+             "cross processes, so browsers on different ports never see each other's "
+             "scores. Stop all but one and re-open every browser on the survivor")
+        bad += 1
+    else:
+        ok("exactly one companion server (a single broadcast domain)")
+
     # 1 — is the server actually alive right now, not "alive when I last looked"
     try:
         conn = http.client.HTTPConnection(host, port, timeout=4)
