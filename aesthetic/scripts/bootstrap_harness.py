@@ -434,7 +434,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "12"
+CONTROLS_VERSION = "13"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -451,24 +451,13 @@ VERSION_MARKER = "dh-controls-version"
 REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
 (function(){
  if(window.__dhRehydrated)return; window.__dhRehydrated=1;
- var KEY='dh-signals';
- /* Every row carries the ledger revision it was baked from. A re-`embed`
-    republishes the ledger's own numbers, so anything cached against an older
-    revision is stale by definition and must lose to what the agent just baked.
-    Without this gate an overlay would keep resurrecting superseded scores. */
- var first=document.querySelector('.dh-fb[data-dh-rev]');
- var rev=first?first.getAttribute('data-dh-rev'):'';
- var read=function(){try{
-   var s=JSON.parse(localStorage.getItem(KEY)||'null');
-   if(!s||s.rev!==rev||!s.el)return {rev:rev,el:{}};
-   return s;}catch(e){return {rev:rev,el:{}}}};
- var state=read();
- /* localStorage, never sessionStorage: sessionStorage is scoped to ONE tab, so
-    two tabs on the same screen drifted into different scores with no way to
-    tell which was real. Shared storage survives refresh AND new tabs; the
-    channel below is what makes an open tab update the instant another scores. */
- var write=function(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}};
- var chan=null; try{chan=new BroadcastChannel('dh-signals')}catch(e){}
+ /* The socket is the only store. The screen is a snapshot `embed` baked, and
+    the server already pushes the ledger's own reduction on connect and every
+    decision after it -- so a browser-local cache adds a second opinion and no
+    information. The one that used to live here read its revision stamp before
+    the rows were parsed, wrote every entry under an empty revision, and threw
+    the whole cache away on the next load: three layers of sync that had never
+    once been read back. Everything that worked was this socket. */
  function paint(row,s){
   if(typeof s.stars==='number'){
    row.dataset.stars=String(s.stars); row.dataset.scored='yes';
@@ -481,79 +470,43 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
   if('verdict' in s) row.querySelectorAll('[data-verdict]').forEach(function(b){
     b.classList.toggle('on', b.dataset.verdict===s.verdict);});
  }
- /* Wait for the rows. `embed` injects this ahead of the markup -- into <head>
-    when the screen has one, otherwise at the very top of the file -- so at
-    execution time the document holds no rows at all, and an immediate pass
-    painted nothing while looking, by every attribute, perfectly correct. */
  function rowFor(el){
   var all=document.querySelectorAll('.dh-fb[data-element]');
   for(var i=0;i<all.length;i++) if(all[i].getAttribute('data-element')===el) return all[i];
   return null;}
- function applyAll(){document.querySelectorAll('.dh-fb[data-element]').forEach(function(row){
-  var s=state.el[row.getAttribute('data-element')]; if(s)paint(row,s);});}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyAll);
- else applyAll();
- document.addEventListener('click',function(e){
-  var row=e.target.closest?e.target.closest('.dh-fb[data-element]'):null; if(!row)return;
-  var r=e.target.closest('[data-rank]'),m=e.target.closest('[data-sentiment]'),
-      v=e.target.closest('[data-verdict]');
-  if(!r&&!m&&!v)return;
-  var el=row.getAttribute('data-element');
-  var s=state.el[el]||(state.el[el]={});
-  if(r)s.stars=parseInt(r.dataset.rank,10);
-  if(m)s.sentiment=m.classList.contains('on')?null:m.dataset.sentiment;
-  if(v)s.verdict=v.classList.contains('on')?null:v.dataset.verdict;
-  write();
-  if(chan)try{chan.postMessage({rev:rev,el:el,s:s})}catch(_){}
-  /* Repaint after the companion's own handler has run. A companion that lights
-     every control whose rank is <= the score lights the zero as well, so a
-     5-star row drew "0 1 2 3 4 5" all lit at once. Deferring by one task lets
-     this own the final state without the skill depending on any companion. */
-  setTimeout(function(){paint(row,s)},0);
- },true);
- /* Instant fan-out to every other open tab. The storage event below is the
-    fallback where BroadcastChannel is unavailable; it also covers a tab that
-    was closed while another scored and is reopened later. */
- function accept(msg){
-  if(!msg||msg.rev!==rev||!msg.el)return;
-  state.el[msg.el]=msg.s;
-  var row=rowFor(msg.el); if(row)paint(row,msg.s);}
- if(chan)chan.onmessage=function(e){accept(e.data)};
- window.addEventListener('storage',function(e){
-  if(e.key!==KEY)return; state=read(); applyAll();});
- /* The channel above only reaches tabs in THIS browser profile -- storage and
-    BroadcastChannel are both per profile. Two different browsers, or two
-    machines, never see each other that way. The companion socket is the only
-    shared point, so subscribe to its fan-out and treat it as authoritative. */
+ /* The greeting routinely beats DOMContentLoaded, and a state applied to rows
+    that do not exist yet is silently lost. Hold it until they do. */
+ var ready=false, pending={};
+ function applyState(st){
+  Object.keys(st).forEach(function(el){
+   var s=st[el]; if(!s)return;
+   if(!ready){pending[el]=s; return}
+   var row=rowFor(el); if(row)paint(row,s);});}
+ function boot(){ready=true; var q=pending; pending={}; applyState(q);}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
+ else boot();
  function fold(ev){
   if(!ev||!ev.element)return;
-  var s=state.el[ev.element]||(state.el[ev.element]={});
+  var s={};
   if(ev.reset===true||ev.type==='reset')s.stars=0;
   else if(typeof ev.stars==='number')s.stars=ev.stars;
   if('sentiment' in ev)s.sentiment=ev.sentiment;
   if(ev.verdict==='completed'||ev.verdict==='approved')s.verdict='completed';
-  else if(ev.verdict==='proposed')s.verdict=null;
-  state.el[ev.element]=s; write();
-  var row=rowFor(ev.element); if(row)paint(row,s);}
+  else if(ev.verdict==='proposed'||ev.verdict==='rejected')s.verdict=null;
+  var one={}; one[ev.element]=s; applyState(one);}
+ /* No click handler: the companion already sends every click, and the server
+    broadcasts it back to all clients including this one. That echo is also
+    what corrects a companion that lights the zero on any score, so the
+    deferred repaint that used to race it is gone too. */
  (function socket(){
-  var url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/';
-  var ws; try{ws=new WebSocket(url)}catch(e){return}
+  var ws;
+  try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/')}
+  catch(e){return}
   ws.onmessage=function(e){
    var m; try{m=JSON.parse(e.data)}catch(_){return}
-   if(m&&m.type==='dh-signal'){fold(m.event);return}
-   /* The snapshot the server hands every new connection. Without applying it, a
-      browser opened after the scoring started shows the numbers baked into the
-      page it happened to load and nothing else -- which is precisely what "not
-      synced across browsers" looks like. The server's reduction of the durable
-      ledger outranks anything cached locally. */
-   if(m&&m.type==='dh-state'&&m.state){
-    Object.keys(m.state).forEach(function(el){
-     var s=m.state[el]; if(!s)return;
-     state.el[el]=s; var row=rowFor(el); if(row)paint(row,s);});
-    write();}};
-  /* A dropped socket means silently going stale, which is worse than a visible
-     gap -- reconnect, and repaint from shared storage on the way back. */
-  ws.onclose=function(){setTimeout(function(){state=read();applyAll();socket()},1500)};
+   if(m&&m.type==='dh-signal')fold(m.event);
+   else if(m&&m.type==='dh-state'&&m.state)applyState(m.state);};
+  ws.onclose=function(){setTimeout(socket,1500)};
  })();
 })();
 </script>"""
@@ -740,12 +693,6 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
     """
     pinned = pinned or set()
     live = [e for e in decisions["elements"] if e["state"] in GROUP_OF]
-    # Fingerprint of what the ledger says right now. Baked onto every row so a
-    # browser can tell "these numbers are the ones I already have" from "the
-    # agent adopted and re-embedded, throw my cached overlay away".
-    ledger_rev = hashlib.sha256("|".join(
-        f'{e["element"]}:{e["stars"]}:{e.get("sentiment")}:{e["state"]}:{e.get("scored")}'
-        for e in sorted(live, key=lambda e: e["element"])).encode()).hexdigest()[:12]
     theme_vars = {
         "--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent",
         "--dh-font": "font", "--dh-shot-w": "shot",
@@ -784,7 +731,6 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         lines.append(
             f'<div class="dh-fb" data-element="{element}" data-stars="{stars}" '
             f'data-scored="{"yes" if entry.get("scored") else "no"}" '
-            f'data-dh-rev="{ledger_rev}" '
             f'data-group="{GROUP_OF[entry["state"]]}" data-label="{element}">'
         )
         lines.append(render_preview(project_root, entry.get("preview"), element))
@@ -1321,20 +1267,6 @@ def self_test() -> None:
         if "/* dh-rehydrate */" not in markup:
             raise HarnessError(
                 "self-test: controls ship no rehydrator -- a refresh reverts every score")
-        # sessionStorage is scoped to one tab, so two tabs on the same screen
-        # drift into different scores with no way to tell which is real.
-        if re.search(r"sessionStorage\s*\.\s*(get|set)Item", markup):
-            raise HarnessError(
-                "self-test: signals cached in sessionStorage -- per-tab storage lets two tabs "
-                "disagree about the same element")
-        if "localStorage" not in markup or "BroadcastChannel" not in markup:
-            raise HarnessError(
-                "self-test: signals do not sync across tabs -- needs shared storage plus a "
-                "channel for instant fan-out")
-        if 'data-dh-rev=' not in markup:
-            raise HarnessError(
-                "self-test: rows carry no ledger revision -- a cached overlay would outlive "
-                "the re-embed that superseded it")
         if f"dh-controls-version: {CONTROLS_VERSION}" not in markup:
             raise HarnessError("self-test: controls carry no version stamp -- a stale embed "
                                "cannot be told apart from a fix that did not work")
