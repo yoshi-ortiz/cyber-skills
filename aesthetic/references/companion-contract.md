@@ -2,54 +2,50 @@
 
 ## Health-check first, always
 
-```bash
-python3 scripts/bootstrap_harness.py doctor --project-root .
-```
-
-Never claim the companion works on the strength of an earlier check. Each link fails silently:
+Run `doctor` and never claim the companion works on an earlier check. Each link fails silently:
 
 | Link | Fails as |
 | --- | --- |
 | Server process | dead; URL looks fine, nothing responds |
-| Served screen | `/` serves **only the newest-mtime file** — write any screen after the scoring one and you have silently redirected the user |
+| Served screen | `/` serves **only the newest-mtime file** — a later write silently redirects the user |
 | Scoring rows | screen has no `data-element` |
-| Star + verdict controls | no `data-rank` / `data-verdict` |
-| Stale injected helper | served page looks right, clicks dropped — restart after editing `helper.js` |
+| Star + verdict controls | no `data-rank` / `data-verdict` on the row |
+| Stale injected helper | page looks right, clicks dropped — restart after editing `helper.js` |
 | Component graphic | rows show ids, not the thing being judged |
-| Invisible graphic | markup present, renders at 0px or as a corner fragment — host CSS beat the stylesheet |
-| Socket round trip | clicks land nowhere — a `file://` tab does this, silently |
+| Invisible graphic | markup present, renders at 0px or as a fragment — host CSS beat the stylesheet |
+| Socket round trip | clicks land nowhere — a `file://` tab does this silently |
 
 ## Routing: newest mtime wins
 
-`/` serves **only the newest-mtime file** in the session's `content/`. Writing any screen after the scoring screen silently sends the user somewhere else. Write the scoring screen last, or `touch` it afterwards.
+`/` serves **only the newest-mtime file** in the session's `content/`. Write the scoring screen last, or `touch` it afterwards; any later write silently sends the user somewhere else.
 
 ## A file:// tab is not the companion
 
-`helper.js` is injected only into served pages. Clicks on a `file://` copy go nowhere and look identical. Generated controls carry a red offline banner that only hides once the helper connects — never remove it.
+`helper.js` is injected only into served pages; clicks on a `file://` copy go nowhere and look identical. Generated controls carry a red offline banner that hides only once the helper connects — never remove it.
 
 
-The harness does not ship a companion and does not require a particular one. It requires any browser surface that shows screens and returns feedback to satisfy the contract below. If the available companion cannot satisfy it, say so and fall back to `decide` in the terminal — never approximate it by remembering what the user clicked.
+The harness requires no particular companion — any browser surface that shows screens and returns feedback, satisfying the contract below. `companion/` vendors one that does. If none can satisfy it, say so and fall back to `decide` in the terminal — never approximate it by remembering what the user clicked.
 
 ## What the companion must provide
 
-1. **A durable ledger, outside any session directory.** Append-only JSONL. A companion that restarts must append to the same file. Anything scoped to one server run is orphaned on restart and is not a record.
+1. **A durable ledger, outside any session directory.** Append-only JSONL, and a restarted companion must append to the same file. Anything scoped to one server run is orphaned on restart and is not a record.
 2. **Design-element ids on every interactive control**, taken from the harness ledger — never invented per screen.
-3. **Four independent signals** per element, none of which implies another: a 0–5 star rank (`data-rank`, where **the zero is `data-rank="0"`** — a rank like any other), an encouragement thumb (`data-sentiment`), and a `completed` status toggle (`data-verdict`).
-4. **One line appended per interaction**, with no batching, debouncing, or deduplication. The harness is responsible for replay order, not the companion.
-5. **A refresh must not discard what the user clicked.** The served screen is a baked snapshot, so without this the user scores twenty rows, reloads, and watches every one revert to whatever the agent last published. The generated controls carry their own rehydrator; a companion must not strip inline scripts from the screens it serves.
+3. **Independent signals** per element, none implying another: a 0–5 star rank (`data-rank`, where **the zero is `data-rank="0"`** — a rank like any other), an encouragement thumb (`data-sentiment`), and a `completed` toggle (`data-verdict`).
+4. **One line appended per interaction** — no batching, debouncing or deduplication. Replay order is the harness's job, not the companion's.
+5. **A refresh must not discard what the user clicked.** The served screen is a baked snapshot: without this the user scores twenty rows, reloads, and watches every one revert to what the agent last published. The generated controls carry their own rehydrator — a companion must not strip inline scripts from the screens it serves.
 
 ### The zero is a rank, not a reset
 
-Emitting the zero as `data-reset` is the one shape this contract forbids, because the obvious handler for a control named *reset* clears the row — and clearing the row destroys the thumb and the tick, two signals a score is never allowed to touch. Routed through `data-rank="0"` it scores 0 and changes nothing else, which is what §Deterministic semantics already requires of every score.
+Emitting the zero as `data-reset` is the one shape this contract forbids: the obvious handler for a control named *reset* clears the row, and that destroys the thumb and the tick, two signals a score may never touch. Routed through `data-rank="0"` it scores 0 and changes nothing else, as §Deterministic semantics requires of every score.
 
 Two further traps, both observed in the wild:
 
 - **Do not light the zero from `rank <= stars`.** It is true for every score, so a 5-star row draws `0 1 2 3 4 5` all lit at once. The zero is on only when the score *is* zero.
-- **Do not place the zero inside the star strip.** Unlabelled and one pixel from the first star, it collects the clicks meant for a 1 — and before the point above was fixed, a mis-hit zero also wiped the user's thumb.
+- **Do not place the zero inside the star strip.** Unlabelled and a pixel from the first star, it collects the clicks meant for a 1 — and before the point above was fixed, a mis-hit zero also wiped the thumb.
 
 ## Event schema
 
-One JSON object per line. Unknown fields are ignored; the fields below are the contract.
+One JSON object per line. Unknown fields are ignored; these are the contract.
 
 | Field | Required | Meaning |
 | --- | --- | --- |
@@ -62,17 +58,16 @@ One JSON object per line. Unknown fields are ignored; the fields below are the c
 | `timestamp` | no | Epoch millis; fixes replay order. Absent sorts as `0` |
 | `type` | no | Free label for logging (`rank`, `sentiment`, `click`) |
 
-At least one of `stars`, `verdict` or `sentiment` must be present. An interaction with neither, or with no `element`, **cannot bind** — the harness skips it and reports the count. Fix that by giving the control an id, never by guessing one.
+At least one of `stars`, `verdict` or `sentiment` must be present. An interaction with none, or with no `element`, **cannot bind** — the harness skips it and reports the count. Fix that by giving the control an id, never by guessing one.
 
 ```json
 {"element":"cover.layout.two-column","stars":5,"text":"user: 'c2'","timestamp":1786745271000}
 {"element":"cover.ring.kicker","sentiment":"like","timestamp":1786745272000}
-{"element":"cover.background.black","sentiment":"dislike","timestamp":1786745273000}
 ```
 
 ## Deterministic semantics
 
-**A score never changes state.** Stars rate how well a thing is *drawn*; they say nothing about whether it should exist. Only an explicit verdict control moves an element between groups. This is the single most important rule in this file: an earlier version mapped `stars: 0 → rejected`, and an element the user rated 0 was auto-rejected and its work deleted from the design.
+**A score never changes state.** Stars rate how well a thing is *drawn*; they say nothing about whether it should exist. Only an explicit verdict moves an element between groups. This is the single most important rule in this file: an earlier version mapped `stars: 0 → rejected`, so an element the user rated 0 was auto-rejected and its work deleted from the design.
 
 | Signal | Effect on state | Effect on rank |
 | --- | --- | --- |
@@ -82,17 +77,15 @@ At least one of `stars`, `verdict` or `sentiment` must be present. An interactio
 | `verdict: completed` | → `completed` (a toggleable status, *not* a lock) | `stars` when present, else unchanged |
 | `verdict: approved` / `rejected` | as given | `stars` when present, else unchanged |
 
-`0` and "unrated" are different things and the number does not distinguish them — `scored` does. An element nobody has touched is `scored: false`; an element scored zero is `scored: true, stars: 0` and counts toward coverage. It has been judged.
+`0` and "unrated" are different things and the number does not distinguish them — `scored` does. An element nobody has touched is `scored: false`; one scored zero is `scored: true, stars: 0` and counts toward coverage. It has been judged.
 
-A `rejected` or `superseded` element that receives a fresh score returns to `proposed` rather than staying buried — a rank is a sign of renewed interest.
+A `rejected` or `superseded` element that receives a fresh score returns to `proposed` rather than staying buried — a rank is renewed interest. Sentiment never supersedes or rejects anything; replacing one element with another is a deliberate `decide --supersedes`.
 
-The defaults are fixed constants, not judgement. Replay is ordered by `(timestamp, file position)`, so adopting a ledger twice produces a byte-identical result — `adopt` is idempotent and safe to re-run.
-
-Sentiment never supersedes another element, and never rejects one. Replacing one element with another is a `decide --supersedes`, which is a deliberate act.
+Replay is ordered by `(timestamp, file position)`, so adopting a ledger twice is byte-identical — `adopt` is idempotent and safe to re-run.
 
 ### Groups
 
-Rows render grouped by lifecycle, and **nothing is ever hidden**:
+Rows group by lifecycle and **nothing is ever hidden**:
 
 | Group | Label | States |
 | --- | --- | --- |
@@ -100,27 +93,21 @@ Rows render grouped by lifecycle, and **nothing is ever hidden**:
 | `developing` | En desarrollo | `completed`, `approved` |
 | `rejected` | Descartado | `rejected`, `superseded` |
 
-Rejected work stays on screen, dimmed, carrying live controls. A rejection is undone by clicking, never by editing JSON.
+Rejected work stays on screen, dimmed, with live controls. A rejection is undone by clicking, never by editing JSON.
 
 ### `polish`
 
-An element with a `like` and a low star rank is **`polish`**, not a conflict: the idea is good and the execution is not there yet. The correct response is to redraw it. Never drop it.
+An element with a `like` and a low star rank is **`polish`**, not a conflict: the idea is good, the execution is not there yet. Redraw it. Never drop it.
 
 ## Generating the controls
 
-Never hand-author element ids into a screen. Emit them from the ledger:
-
-```bash
-python3 scripts/bootstrap_harness.py controls --project-root . --out /tmp/controls.html
-```
-
-The markup carries `data-element`, `data-stars`, `data-rank` (including the zero), `data-sentiment`, `data-verdict` and `data-group`, renders every element including rejected ones, and is byte-stable for a given ledger. Prefer `embed`, which fills `data-dh-controls` placeholders in place and is idempotent — re-running it is a byte-identical no-op.
+Never hand-author element ids into a screen: emit them from the ledger with `controls`, or better `embed`, which fills `data-dh-controls` placeholders in place and is idempotent (see `commands.md`). The markup carries `data-element`, `data-stars`, `data-rank` (including the zero), `data-sentiment`, `data-verdict` and `data-group`, renders every element including rejected ones, and is byte-stable for a given ledger.
 
 The generator owns the strip's design. Do not restyle it in a project: local CSS outranks the generator's and is how the controls went invisible before.
 
 ## Wiring a companion that lacks handlers
 
-If the companion has no rank/sentiment handling, add a listener that appends one line per click to the durable ledger:
+A companion with no rank/sentiment handling needs a listener that appends one line per click to the durable ledger:
 
 ```js
 document.addEventListener('click', (e) => {
@@ -141,17 +128,12 @@ document.addEventListener('click', (e) => {
 });
 ```
 
-`send` is whatever the companion uses to reach its durable ledger. The only hard requirement is that the line lands outside the session directory.
+`send` is whatever reaches the durable ledger. The only hard requirement is that the line lands outside the session directory.
 
 ## Adopting
 
-```bash
-python3 scripts/bootstrap_harness.py adopt --project-root . \
-  --companion-ledger <path>/decisions.jsonl
-```
-
-Run it in the same turn the feedback arrives. Feedback that is not adopted is lost at the next session boundary.
+Run `adopt` (see `commands.md`) in the same turn the feedback arrives. Feedback that is not adopted is lost at the next session boundary.
 
 ## Provenance
 
-Everything `adopt` ingests is recorded `source: user`. Anything the agent types with `decide` is `source: agent` and capped at 1 star. That distinction is the point: before it existed, a user's click and an agent's guess were indistinguishable in the ledger.
+Everything `adopt` ingests is recorded `source: user`. Anything the agent types with `decide` is `source: agent`, capped at 1 star. That distinction is the point: before it existed, a user's click and an agent's guess were indistinguishable in the ledger.
