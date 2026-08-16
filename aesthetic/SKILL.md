@@ -1,6 +1,7 @@
 ---
 name: aesthetic
 description: Evidence-backed design harness for durable user decisions and ranked feedback. Use for design work with an inspiration corpus or an existing spec/design-harness/. Covers art direction, UI, product, space, copy, motion, and composition.
+argument-hint: "[continue|<corpus-dir>]"
 ---
 
 # Aesthetic
@@ -37,6 +38,8 @@ Scripts are at `<skill>/scripts/`, the companion at `<skill>/companion/` — nev
 
 `doctor` sends a real click through a real socket. It is **the only evidence** the companion works — an earlier green proves nothing. [companion-contract.md](references/companion-contract.md)
 
+**Give the user the URL `doctor` prints on its last line, `?key=…` and all.** The key *is* the address. An IDE preview widget shows the origin only — it drops the query string — so the widget can never open the companion in the user's own browser; pasting the origin alone lands on "Session key required". Restate the full URL whenever the companion restarts, since the key changes with it.
+
 ## Open the round by naming the cohort
 
 **Before any other work, say which three to six elements this round works** — a set sharing a surface or a problem — and leave the rest untouched. Pick from `stats`: `polish` first (liked, badly drawn), then `unscored`; never what is easiest to redraw.
@@ -51,6 +54,12 @@ Scripts are at `<skill>/scripts/`, the companion at `<skill>/companion/` — nev
 A round that touches everything scores nothing: twenty-five near-identical thumbnails is a screen the user abandons halfway. `doctor` enforces the honest half — a live element with no scoring row **fails** unless the screen declares a cohort.
 
 Startup is not the round. If the cohort is unnamed and no screen is on its way after a dozen tool calls, you are doing infrastructure — say what is blocking.
+
+## Every new implementation gets its own element id
+
+**Redrawing an element under the id the user already ranked leaves them nothing to judge.** A new drawing of the anillo is a new proposal — `cover.ring.kicker.antetitulo-arco`, not another pass at `cover.ring.kicker`. Record it with `decide` as `proposed` at **1 star max**, put it in the cohort, and leave the id it competes with standing until the user picks. Supersede only after they rank the replacement above it.
+
+`doctor` **fails** a screen on which every element is already user-ranked: that round improved the drawing and proposed nothing. Watch for `agent-set 0` in `stats` — with `coverage 100%` it looks finished, but it means the round asked no question.
 
 ## The loop
 

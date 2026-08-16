@@ -340,6 +340,33 @@ def main() -> int:
                  + ' -- add them to a placeholder, or declare the focus with '
                    'data-dh-cohort="<name>" so the omission is a decision, not a leak')
             bad += 1
+        # A round has to put something NEW in front of the user. Redrawing an
+        # element the user already ranked, under the id they ranked, leaves them
+        # a screen of their own settled scores and nothing to judge -- and every
+        # other check here passes, because the ledger is complete and every row
+        # has a graphic. `stats` even reads 100% coverage, which is the ledger
+        # saying "nothing was proposed", not "everything is done". A round is
+        # only asking a question if at least one element on the screen is one
+        # the user has not already scored.
+        by_id = {e["element"]: e for e in ledger["elements"]}
+        cohort_ids = on_screen
+        if cohort:
+            declared = re.search(r'data-dh-cohort="[^"]*"[^>]*data-dh-controls="([^"]*)"'
+                                 r'|data-dh-controls="([^"]*)"[^>]*data-dh-cohort="[^"]*"', html)
+            if declared:
+                named = declared.group(1) or declared.group(2) or ""
+                cohort_ids = {e.strip() for e in named.split(",") if e.strip()} or on_screen
+        fresh = sorted(e for e in cohort_ids
+                       if by_id.get(e, {}).get("source") != "user"
+                       or not by_id.get(e, {}).get("scored", False))
+        if fresh:
+            ok(f"the round asks something new ({len(fresh)} element(s) the user has not ranked)")
+        else:
+            fail(f"every element on this screen is already user-ranked -- the round "
+                 f"redrew work without proposing anything to judge. Record each new "
+                 f"implementation under its own element id with `decide` (proposed, "
+                 f"1 star max) and put it in the cohort, so there is something to rank")
+            bad += 1
     except (OSError, ValueError, KeyError):
         pass
 
@@ -384,6 +411,11 @@ def main() -> int:
         bad += 1
 
     print(f"\n{'FEEDBACK PATH BROKEN' if bad else 'feedback path healthy'} ({bad} problem(s))")
+    # The key is the whole address. An IDE preview widget shows the origin only
+    # -- it strips the query string -- so a user who wants the companion in
+    # their own browser gets "Session key required" and no way forward. Print
+    # the complete URL every run so it is always one copy away.
+    print(f"open in any browser: {info['url']}")
     return 1 if bad else 0
 
 

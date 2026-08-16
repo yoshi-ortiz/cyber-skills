@@ -503,7 +503,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "16"
+CONTROLS_VERSION = "17"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -530,6 +530,11 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
  function paint(row,s){
   if(typeof s.stars==='number'){
    row.dataset.stars=String(s.stars); row.dataset.scored='yes';
+   /* The readout is CSS reading attr() off the strip, so the strip needs the
+      value too -- without this the number stayed at whatever was baked into
+      the page and only a refresh corrected it. */
+   var strip=row.querySelector('.dh-stars');
+   if(strip){strip.dataset.stars=String(s.stars); strip.dataset.scored='yes';}
    row.querySelectorAll('[data-rank]').forEach(function(b){
     var n=parseInt(b.dataset.rank,10);
     b.classList.toggle('on', n===0 ? s.stars===0 : (n>0&&n<=s.stars));});
@@ -652,10 +657,23 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-fb .dh-signals{display:flex;gap:8px;align-items:center}
 /* One continuous strip: zero is a first-class score, not a hidden reset. */
 .dh-fb .dh-stars{display:flex;align-items:center;gap:0}
-.dh-fb .dh-stars > *{min-inline-size:32px;min-block-size:34px;display:grid;place-items:center;
- cursor:pointer;user-select:none;font-size:21px;line-height:1;border:0;background:transparent;
- color:color-mix(in srgb, var(--dh-ink,#111) 26%, transparent);transition:color .12s}
+.dh-fb .dh-stars > *{min-inline-size:30px;min-block-size:34px;display:grid;place-items:center;
+ cursor:pointer;user-select:none;font-size:20px;line-height:1;border:0;background:transparent;
+ color:color-mix(in srgb, var(--dh-ink,#111) 30%, transparent);transition:color .12s}
 .dh-fb .dh-stars > *.on{color:var(--dh-accent,#d9482a)}
+/* The rank in figures. Five glyphs differing only in tint is a shape the eye
+   has to count, and at 24 rows nobody counts -- the standing score was there
+   and still unreadable at a glance. attr() off the strip means a click updates
+   it with no extra script. `--` is not-yet-judged, which a row of grey stars
+   cannot distinguish from a zero. */
+.dh-fb .dh-stars::after{content:attr(data-stars);margin-inline-start:9px;min-inline-size:1.4ch;
+ font:700 13px/1 var(--dh-font,ui-monospace,monospace);font-variant-numeric:tabular-nums;
+ color:var(--dh-accent,#d9482a)}
+.dh-fb .dh-stars[data-scored="no"]::after{content:"--";
+ color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
+/* The preview has to move the number too, or hovering shows one rank and
+   reads another. */
+.dh-fb .dh-stars:hover::after{color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
 /* Hover previews the RANK, not one glyph. Every star up to the pointer lights,
    and the standing score steps aside for the duration so the preview is the
    only thing being read. Without both halves, hovering the 2nd star of a
@@ -692,14 +710,22 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-fb .dh-zero:has(:focus-visible) [data-rank="0"],
 .dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover) [data-rank="0"]{pointer-events:auto}
 .dh-fb [data-rank="0"]:hover,.dh-fb [data-rank="0"].on{color:#b00020}
-.dh-fb [data-sentiment],.dh-fb [data-verdict]{min-inline-size:38px;min-block-size:34px;
- display:grid;place-items:center;cursor:pointer;user-select:none;font-size:15px;
- border:1px solid rgba(0,0,0,.22);border-radius:6px;background:transparent;line-height:1}
-.dh-fb [data-sentiment]:hover,.dh-fb [data-verdict]:hover{border-color:var(--dh-ink,#111)}
-.dh-fb [data-sentiment="like"].on{background:#1c8b4b;border-color:#126435;color:#fff}
+/* Chips in the row's own ink, not a stock green and red imported from another
+   design system. `on` is a solid fill: set/unset is carried by weight, which
+   survives at a glance down a long column and does not depend on hue. */
+.dh-fb [data-sentiment],.dh-fb [data-verdict]{min-inline-size:34px;min-block-size:34px;
+ display:grid;place-items:center;cursor:pointer;user-select:none;
+ font:700 16px/1 var(--dh-font,ui-monospace,monospace);
+ border:1px solid color-mix(in srgb, var(--dh-ink,#111) 26%, transparent);
+ border-radius:6px;background:transparent;transition:background .12s,color .12s,border-color .12s;
+ color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+.dh-fb [data-sentiment]:hover,.dh-fb [data-verdict]:hover{border-color:var(--dh-ink,#111);
+ color:var(--dh-ink,#111)}
+.dh-fb [data-sentiment].on,.dh-fb [data-verdict].on{background:var(--dh-ink,#111);
+ border-color:var(--dh-ink,#111);color:var(--dh-bg,#fff)}
+/* Direction is the one thing worth a hue: a rejected direction is the only
+   signal here that asks the agent to stop rather than to polish. */
 .dh-fb [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
-/* Approve reads as done: green fill, white tick, unmistakable. */
-.dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
 .dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible,
 .dh-fb [data-verdict]:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
 .dh-group{margin:14px 0 2px;display:flex;align-items:center;gap:8px;
@@ -867,10 +893,18 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
             f'<span class="dh-zero"><span data-rank="0" role="button" tabindex="0" '
             f'title="cero estrellas: pesimo, pero sigue en pie" '
             f'aria-label="cero estrellas para {element}: pesima ejecucion"{zero_on}>0</span></span>'
-            f'<span class="dh-stars" role="group" aria-label="ejecucion de {element}">'
+            # data-stars is mirrored onto the strip so the numeric readout can be
+            # pure CSS (attr()) and still track a click: `paint` writes it here
+            # as well as on the row.
+            f'<span class="dh-stars" role="group" data-stars="{stars}" '
+            f'data-scored="{"yes" if entry.get("scored") else "no"}" '
+            f'aria-label="ejecucion de {element}">'
             f'{stars_markup}</span>')
         mood = entry.get("sentiment")
-        for name, glyph, label in (("like", "&#128077;", "me gusta"), ("dislike", "&#128078;", "no me gusta")):
+        # Emoji ignore `color`, so a thumb could never take the strip's ink and
+        # the two chips stayed the one saturated, differently-drawn thing in an
+        # otherwise monochrome monospace row. Typographic marks inherit.
+        for name, glyph, label in (("like", "&#43;", "me gusta"), ("dislike", "&#8722;", "no me gusta")):
             on = ' class="on"' if mood == name else ""
             lines.append(f'<span data-sentiment="{name}" role="button" tabindex="0" '
                          f'aria-label="{label} {element}" title="{label}"{on}>{glyph}</span>')
