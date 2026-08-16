@@ -57,6 +57,8 @@ Scripts are at `<skill>/scripts/`, the companion at `<skill>/companion/` — nev
 
 `data-dh-cohort` goes on the **same div** as `data-dh-controls` — `embed` rewrites that placeholder, and an outer wrapper's attributes never reach it. From there `embed` renders the cohort name above the rows, so the user opens the round reading which elements it asks about and which are deliberately untouched.
 
+**If you cannot say in one sentence what the cohort shares, it is not a cohort.** `article` refuses one spanning more than two foundations unless you pass `--asks "<one sentence>"`, and prints the domain on the screen. Three redraws from typography, illustration and composition under a name like `cover-furniture` is a batch of errands: the page cannot state what it asks, so the user opens it and has to be told in prose what they are looking at — which has happened, and it wastes the round.
+
 A round that touches everything scores nothing: twenty-five near-identical thumbnails is a screen the user abandons halfway. `doctor` enforces the honest half — a live element with no scoring row **fails** unless the screen declares a cohort.
 
 Startup is not the round. If the cohort is unnamed and no screen is on its way after a dozen tool calls, you are doing infrastructure — say what is blocking.

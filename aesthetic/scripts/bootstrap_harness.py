@@ -1279,6 +1279,11 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-versus .dh-fb-before{opacity:.7}
 .dh-versus .dh-fb-before:hover{opacity:1}
 .dh-zone[data-zone="round"] .dh-versus{border-color:color-mix(in srgb, var(--dh-bg,#fff) 34%, transparent)}
+/* What the round is ABOUT, in the system's own vocabulary. Without it the
+   reader has to infer the domain from three unrelated rows. */
+.dh-domain{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.dh-domain span{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+ padding:4px 9px;border-radius:999px;border:1px solid currentColor;opacity:.75}
 .dh-round{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:16px 0 0}
 .dh-round b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
  padding:4px 9px;border-radius:999px;background:var(--dh-accent,#d9482a);color:#fff;flex:none}
@@ -1686,7 +1691,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
                    cohort: set[str] | None = None, cohort_name: str = "",
                    language: str | None = None,
                    theme: dict[str, str] | None = None,
-                   title: str = "") -> str:
+                   title: str = "", asks: str = "") -> str:
     """A design-system article that is also the scoring companion.
 
     The strip alone answered "what is on the list". It could not answer "what is
@@ -1696,6 +1701,17 @@ def render_article(project_root: Path, decisions: dict[str, object],
     """
     txt = strings_for(language or project_language(project_root))
     cohort = cohort or set()
+    # A cohort is one surface or one problem. Three elements drawn from three
+    # different foundations, under a name that claims a shared surface, is a
+    # batch of errands -- and the page cannot say what it is asking, so the
+    # agent ends up explaining the round in prose the user never asked for.
+    # Either the domain is evident from the ledger, or it has to be stated.
+    domains = sorted({foundation_of(e) for e in cohort})
+    if len(domains) > 2 and not asks.strip():
+        raise HarnessError(
+            "this cohort spans " + ", ".join(domains) + " -- that is a batch of errands, "
+            "not a round. Narrow it to one surface or one problem, or say what they share "
+            "with --asks \"<one sentence>\" so the screen can state it.")
     generated = render_feedback_controls(decisions, theme, project_root, cohort, language)
     rows = {m.group(1): m.group(0) for m in re.finditer(
         r'<div class="dh-fb" data-element="([^"]+)".*?\n</div>', generated, re.S)}
@@ -1817,10 +1833,21 @@ def render_article(project_root: Path, decisions: dict[str, object],
         members = sorted((e for e in live if zone_of(e, cohort) == zone), key=rank)
         if not members and zone != "round":
             continue
+        note = txt[f"zone-{zone}-note"]
+        domain_line = ""
+        if zone == "round":
+            if asks.strip():
+                note = asks.strip()
+            if domains:
+                domain_line = ('<p class="dh-domain">'
+                               + "".join(f'<span>{html_escape(txt.get(d, d))}</span>'
+                                         for d in domains)
+                               + "</p>")
         out += [f'<section class="dh-zone" id="dh-zone-{zone}" data-zone="{zone}">', "<header>",
                 f'<p class="dh-tag">{len(members)} {html_escape(txt["zone-count"])}</p>',
                 f'<h2>{html_escape(txt[f"zone-{zone}"])}</h2>',
-                f'<p class="dh-note">{html_escape(txt[f"zone-{zone}-note"])}</p>', "</header>"]
+                domain_line,
+                f'<p class="dh-note">{html_escape(note)}</p>', "</header>"]
         if not members:
             out.append(f'<p class="dh-empty">{html_escape(txt["empty-zone"])}</p>')
         # A second sticky level for the long zone: the reader arrives here
@@ -2689,6 +2716,9 @@ def parser() -> argparse.ArgumentParser:
     article.add_argument("--out", required=True, type=Path, help="screen to write (then `publish` it)")
     article.add_argument("--cohort", default="", help="element ids this round asks about")
     article.add_argument("--cohort-name", default="", help="what to call this round, e.g. cover-furniture")
+    article.add_argument("--asks", default="",
+                         help="one sentence: what this round asks the user to judge. "
+                              "Required when the cohort spans more than two foundations")
     article.add_argument("--title", default="",
                          help="the artefact being designed, in the user's own words "
                               "(stored in project.json and reused)")
@@ -2788,7 +2818,7 @@ def main() -> int:
                 write_json(path, stored)
             markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
                                     cohort, args.cohort_name, args.lang or None, theme or None,
-                                    args.title)
+                                    args.title, args.asks)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(markup, encoding="utf-8")
             print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "

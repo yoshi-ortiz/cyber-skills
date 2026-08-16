@@ -741,6 +741,38 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             self.assertIn("data-tip=", markup)
             self.assertIn("content:attr(data-tip)", markup)
 
+    def test_a_cohort_spanning_many_foundations_is_refused(self):
+        """Three elements from three foundations under a name claiming a shared
+        surface is a batch of errands. The page cannot say what it asks, so the
+        agent ends up explaining the round in prose instead."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.system(root)
+            bh.record_decision(root, "voice.labels", "proposed", 1, "fixture", [])
+            decisions = bh.load_decisions(root / "spec" / "design-harness")
+            scattered = {"type.display", "cover.weak", "voice.labels"}
+            with self.assertRaises(bh.HarnessError) as caught:
+                bh.render_article(root, decisions, scattered)
+            self.assertIn("one surface or one problem", str(caught.exception))
+
+    def test_stating_what_they_share_is_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.system(root)
+            bh.record_decision(root, "voice.labels", "proposed", 1, "fixture", [])
+            decisions = bh.load_decisions(root / "spec" / "design-harness")
+            markup = bh.render_article(root, decisions,
+                                       {"type.display", "cover.weak", "voice.labels"},
+                                       asks="Everything the cover says out loud.")
+            self.assertIn("Everything the cover says out loud.", markup)
+
+    def test_a_single_domain_cohort_needs_no_sentence_and_names_itself(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"type.display"})
+            block = markup.split('id="dh-zone-round"')[1].split("</header>")[0]
+            self.assertIn(bh.STRINGS["en"]["typography"], block)
+
     def test_antipatterns_sit_last_and_muted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
