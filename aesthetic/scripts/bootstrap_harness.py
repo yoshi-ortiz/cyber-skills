@@ -167,8 +167,11 @@ STRINGS = {
         "no-graphic": "no graphic",
         "article-title": "Design system", "zone-round": "This round",
         "zone-round-note": "The only section asking for something. Rank what is here.",
-        "zone-core": "Core system",
-        "zone-core-note": "Settled. Standing until something ranked higher replaces it.",
+        "toc-jump": "Jump to",
+        "zone-fundamentals": "Design fundamentals",
+        "zone-fundamentals-note": "Understanding the direction. The ideas, the palette and the "
+                                  "type, together \u2014 rank them as a system: the pairings, "
+                                  "not only the parts.",
         "zone-backlog": "Backlog", "zone-backlog-note": "Proposed, not resolved yet.",
         "zone-antipattern": "Antipatterns",
         "zone-antipattern-note": "Turned down. Kept so they are not proposed again.",
@@ -195,8 +198,11 @@ STRINGS = {
         "no-graphic": "sin gráfico",
         "article-title": "Sistema de diseño", "zone-round": "Esta ronda",
         "zone-round-note": "La única sección que pide algo. Puntúa lo que hay aquí.",
-        "zone-core": "Núcleo del sistema",
-        "zone-core-note": "Resuelto. En pie hasta que algo mejor puntuado lo reemplace.",
+        "toc-jump": "Ir a",
+        "zone-fundamentals": "Fundamentos de diseño",
+        "zone-fundamentals-note": "Entender la dirección. Las ideas, la paleta y la tipografía, "
+                                  "juntas \u2014 púntualas como sistema: los emparejamientos, "
+                                  "no solo las piezas.",
         "zone-backlog": "Pendientes", "zone-backlog-note": "Propuesto, todavía sin resolver.",
         "zone-antipattern": "Antipatrones",
         "zone-antipattern-note": "Descartado. Queda aquí para no volver a proponerlo.",
@@ -1337,8 +1343,35 @@ ARTICLE_STYLE = """<style>/* dh-article */
 .dh-toc a em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.7}
 .dh-toc a[aria-current="true"]{color:var(--dh-bg,#fff);background:var(--dh-ink,#111);
  border-color:var(--dh-ink,#111)}
-.dh-toc a:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+/* The round is the ask, so its link is a button and everything else is a
+   place to go. It keeps that weight even when the reader is elsewhere --
+   that is the point of a call to action. */
+.dh-toc a[data-cta]{background:var(--dh-accent,#d9482a);border-color:var(--dh-accent,#d9482a);
+ color:#fff;box-shadow:0 1px 0 color-mix(in srgb, var(--dh-ink,#111) 22%, transparent)}
+.dh-toc a[data-cta]:hover{filter:brightness(1.08);color:#fff}
+.dh-toc a[data-cta][aria-current="true"]{background:var(--dh-ink,#111);
+ border-color:var(--dh-ink,#111)}
+.dh-toc a[data-cta] em{opacity:.85}
+.dh-ico{inline-size:13px;block-size:13px;flex:none}
+.dh-toc a:focus-visible,.dh-subnav a:focus-visible{
+ outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+/* Second level: sticks directly under the first, never over it. */
+.dh-subnav{position:sticky;inset-block-start:47px;z-index:15;margin:0 0 20px;
+ background:color-mix(in srgb, var(--dh-bg,#fff) 92%, transparent);backdrop-filter:blur(8px);
+ border-block-end:1px solid var(--dh-rule)}
+.dh-subnav ol{display:flex;gap:14px;margin:0;padding:8px 0;list-style:none;
+ overflow-x:auto;scrollbar-width:none}
+.dh-subnav ol::-webkit-scrollbar{display:none}
+.dh-subnav a{display:flex;align-items:baseline;gap:6px;text-decoration:none;white-space:nowrap;
+ font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 0;
+ border-block-end:2px solid transparent;
+ color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
+.dh-subnav a:hover{color:var(--dh-ink,#111)}
+.dh-subnav a[aria-current="true"]{color:var(--dh-ink,#111);
+ border-block-end-color:var(--dh-accent,#d9482a)}
+.dh-subnav em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.6}
 .dh-zone{scroll-margin-block-start:64px}
+.dh-group{scroll-margin-block-start:104px}
 @media (max-width:640px){
  .dh-art{padding-inline:16px}
  .dh-zone[data-zone="round"],.dh-zone[data-zone="antipattern"]{margin-inline:-16px;padding-inline:16px}
@@ -1347,6 +1380,12 @@ ARTICLE_STYLE = """<style>/* dh-article */
 @media (prefers-reduced-motion:reduce){.dh-art *{transition:none!important}}
 </style>"""
 
+
+# Stroke icon, not an emoji: emoji ignore `color`, so a bin glyph could never
+# take the bar's ink or invert with the active pill.
+TRASH_ICON = ('<svg class="dh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              'stroke-width="2" stroke-linecap="round" aria-hidden="true">'
+              '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>')
 
 TOC_SCRIPT = """<script>/* dh-toc */
 (function(){
@@ -1369,6 +1408,21 @@ TOC_SCRIPT = """<script>/* dh-toc */
    for(var i=0;i<zones.length;i++){ if(visible[zones[i].id]){ mark(zones[i].id); return } }
   },{rootMargin:'-64px 0px -70% 0px', threshold:0});
   zones.forEach(function(z){io.observe(z)});
+  /* The second level tracks headings, not sections, so it needs its own
+     observer -- sharing one made a heading scrolling past re-mark the zone. */
+  var subs=[].slice.call(document.querySelectorAll('.dh-subnav a[data-sub]'));
+  var heads=subs.map(function(a){return document.getElementById(a.getAttribute('href').slice(1))})
+                .filter(Boolean);
+  if(!heads.length)return;
+  function markSub(id){subs.forEach(function(a){
+   a.setAttribute('aria-current', a.getAttribute('href')==='#'+id ? 'true':'false');});}
+  markSub(heads[0].id);
+  var vis={};
+  var io2=new IntersectionObserver(function(entries){
+   entries.forEach(function(e){vis[e.target.id]=e.isIntersecting});
+   for(var i=heads.length-1;i>=0;i--){ if(vis[heads[i].id]){ markSub(heads[i].id); return } }
+  },{rootMargin:'-100px 0px -60% 0px', threshold:0});
+  heads.forEach(function(h){io2.observe(h)});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
  else start();
@@ -1436,6 +1490,13 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str]) -> str:
     return "".join(out)
 
 
+# The choices that ARE the direction. They belong together whatever their
+# lifecycle state: a type system is judged as a system -- the pairings, the
+# scale, the palette against the faces -- and scattering half of it into a
+# backlog because it is still `proposed` makes that judgement impossible.
+FUNDAMENTAL_FOUNDATIONS = ("core", "palette", "typography")
+
+
 def zone_of(entry: dict[str, object], cohort: set[str]) -> str:
     """Four zones, and every element is in exactly one.
 
@@ -1453,12 +1514,15 @@ def zone_of(entry: dict[str, object], cohort: set[str]) -> str:
         return "antipattern"
     if entry["state"] in ("rejected", "superseded"):
         return "backlog" if entry.get("sentiment") == "like" else "antipattern"
-    if entry["state"] in ("approved", "completed"):
-        return "core"
+    if foundation_of(entry["element"]) in FUNDAMENTAL_FOUNDATIONS:
+        return "fundamentals"
     return "backlog"
 
 
-ZONES = ("round", "core", "backlog", "antipattern")
+ZONES = ("round", "fundamentals", "backlog", "antipattern")
+# Only the backlog earns a second level of navigation: it is the long one, and
+# the reader arrives at it looking for a particular surface.
+SUBNAV_ZONES = ("backlog",)
 
 
 def render_article(project_root: Path, decisions: dict[str, object],
@@ -1514,12 +1578,17 @@ def render_article(project_root: Path, decisions: dict[str, object],
            "</header>"]
     shown = [z for z in ZONES
              if z == "round" or any(zone_of(e, cohort) == z for e in live)]
-    out.append('<nav class="dh-toc" aria-label="' + html_escape(txt["article-title"]) + '"><ol>'
-               + "".join(
-                   f'<li><a href="#dh-zone-{z}" data-zone="{z}">{html_escape(txt[f"zone-{z}"])}'
-                   f'<em>{len([e for e in live if zone_of(e, cohort) == z])}</em></a></li>'
-                   for z in shown)
-               + "</ol></nav>")
+    links = []
+    for z in shown:
+        tally = len([e for e in live if zone_of(e, cohort) == z])
+        icon = TRASH_ICON if z == "antipattern" else ""
+        # This round is the one thing being asked for, so it is the only link
+        # that looks like a button. The rest are places to go.
+        cta = ' data-cta="1"' if z == "round" else ""
+        links.append(f'<li><a href="#dh-zone-{z}" data-zone="{z}"{cta}>{icon}'
+                     f'{html_escape(txt[f"zone-{z}"])}<em>{tally}</em></a></li>')
+    out.append('<nav class="dh-toc" aria-label="' + html_escape(txt["article-title"])
+               + '"><ol>' + "".join(links) + "</ol></nav>")
     for zone in ZONES:
         members = sorted((e for e in live if zone_of(e, cohort) == zone), key=rank)
         if not members and zone != "round":
@@ -1530,13 +1599,31 @@ def render_article(project_root: Path, decisions: dict[str, object],
                 f'<p class="dh-note">{html_escape(txt[f"zone-{zone}-note"])}</p>', "</header>"]
         if not members:
             out.append(f'<p class="dh-empty">{html_escape(txt["empty-zone"])}</p>')
+        # A second sticky level for the long zone: the reader arrives here
+        # hunting a surface, and scrolling twenty rows to find it is the cost
+        # the first bar was supposed to remove.
+        if zone in SUBNAV_ZONES and members:
+            order_seen: list[str] = []
+            for entry in members:
+                key = foundation_of(entry["element"])
+                if key not in order_seen:
+                    order_seen.append(key)
+            if len(order_seen) > 1:
+                out.append(
+                    f'<nav class="dh-subnav" aria-label="{html_escape(txt["toc-jump"])}"><ol>'
+                    + "".join(
+                        f'<li><a href="#dh-{zone}-{key}" data-sub="{key}">{html_escape(txt.get(key, key))}'
+                        f'<em>{len([e for e in members if foundation_of(e["element"]) == key])}</em>'
+                        "</a></li>" for key in order_seen)
+                    + "</ol></nav>")
         seen_foundation = None
         for entry in members:
             key = foundation_of(entry["element"])
             if key != seen_foundation:
                 seen_foundation = key
                 same = [e for e in members if foundation_of(e["element"]) == key]
-                out.append(f'<h4 class="dh-group" data-group="{key}">{txt.get(key, key)}'
+                out.append(f'<h4 class="dh-group" id="dh-{zone}-{key}" data-group="{key}">'
+                           f'{txt.get(key, key)}'
                            f'<span class="dh-count">{len(same)}</span></h4>')
                 out.append(_specimens(same, txt))
             out.append(rows.get(entry["element"], ""))

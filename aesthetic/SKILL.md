@@ -63,7 +63,9 @@ Startup is not the round. If the cohort is unnamed and no screen is on its way a
 
 ## Ship the article, not a list of rows
 
-`article --out <screen>.html --cohort <ids> --cohort-name <name>` writes the whole page: a sticky contents bar that marks the section being read, a hero whose thesis is **the question this round asks**, then four zones the reader can never confuse — **this round** (inverted, the only section asking for anything), **core system** (settled), **backlog** (unresolved), **antipatterns** (last, on muted ground). Rows run best-score-first inside each foundation. Pass the project's own `--bg/--ink/--accent`: the article is structure only and takes the palette being judged, never one of its own.
+`article --out <screen>.html --cohort <ids> --cohort-name <name>` writes the whole page: a sticky contents bar whose **this round** link is the one call to action, a hero whose thesis is **the question this round asks**, then four zones — **this round** (inverted, the only section asking for anything), **design fundamentals**, **backlog** (with its own second-level sticky nav, since it is the long one), **antipatterns** (last, trash-marked, on muted ground).
+
+**Design fundamentals gathers the direction itself** — core ideas, palette and typography — *whatever their lifecycle state*. A type system is judged as a system: the family pairings, the scale, the faces against the palette. Scattering half of it into a backlog because it is still `proposed` makes exactly the comparison the user needs impossible. Rows run best-score-first inside each foundation. Pass the project's own `--bg/--ink/--accent`: the article is structure only and takes the palette being judged, never one of its own.
 
 **A 👍 is never an antipattern**, whatever became of that particular drawing — the thumb judges the direction, so superseded work the user still likes is held in the backlog, not condemned. Only a 👎, or work turned down without one, goes to the bottom. That section mutes its **ground**, never its rows: the stars and thumbs inside are the only way a rejection gets undone, so they stay at full contrast and stay clickable.
 
@@ -104,6 +106,16 @@ Plan internally and show the strongest coherent result, not a pile of alternativ
 **A score is the input to the next iteration, not the end of the round.** When ranks arrive, redraw in the same session: every 👍 at 0–2 stars is the user saying *the idea is right and your drawing is not* — that is a brief, already written. Report what landed in two lines, then keep going. Ending on a summary and "say the word and I'll open on…" spends the user's scoring on a status update and ships no improvement; they clicked to get better work, not to be asked a question back.
 
 Stop and ask only when the ranks genuinely contradict each other, or when the next move needs something only the user has.
+
+### Redraw the whole cohort, never one element
+
+**A round ships 3–6 redraws in one turn.** Drawing a single element, publishing, and ending the turn to wait for its rank makes the project move one element per session — a thirty-element system then needs thirty sessions, which is the pace the user experiences as *stuck*. Draw the whole cohort, embed every new id, publish once, and ask for the set.
+
+Never end a turn waiting for a rank while work you could already do is sitting in the ledger. **`stats` → `polish` is a standing brief**: those elements are 👍 at 0–2 stars, so the user has already said the idea is right and the drawing is not. Take the top 3–6 and redraw them without asking which.
+
+If the user has scored everything and nothing is proposed, that is not a blocked state — it is the fullest brief you will ever get. `doctor` failing with *"every element on this screen is already user-ranked"* means **go build now**; it is the one red that is never a reason to stop, unlike a dead companion.
+
+Per turn: one `doctor`, one `adopt`, one `article`, one `publish` — and the rest of the turn drawing. If half a turn has gone to harness commands, you are doing infrastructure on the user's time.
 
 ## Read the signals literally
 

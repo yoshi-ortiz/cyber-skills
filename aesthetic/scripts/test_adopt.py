@@ -544,10 +544,59 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             root = Path(tmp)
             markup = bh.render_article(root, self.system(root), {"cover.strong"})
             self.assertIn('class="dh-toc"', markup)
-            for zone in ("round", "core", "backlog", "antipattern"):
+            for zone in bh.ZONES:
                 self.assertIn(f'href="#dh-zone-{zone}"', markup)
                 self.assertIn(f'id="dh-zone-{zone}"', markup)
             self.assertIn("aria-current", markup)
+
+    def test_typography_and_palette_land_in_fundamentals_whatever_their_state(self):
+        """A type system is judged as a system. Scattering half of it into a
+        backlog because it is still `proposed` makes the pairings unrankable."""
+        for state in ("proposed", "approved", "completed"):
+            for element_id in ("type.display", "palette.family", "core.thesis"):
+                entry = {"element": element_id, "state": state, "stars": 1, "sentiment": None}
+                self.assertEqual(bh.zone_of(entry, set()), "fundamentals",
+                                 f"{element_id} @ {state}")
+
+    def test_the_round_link_is_the_only_call_to_action(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"cover.strong"})
+            toc = markup.split('class="dh-toc"')[1].split("</nav>")[0]
+            self.assertEqual(toc.count("data-cta"), 1)
+            cta = toc.split("<li>")[1]
+            self.assertIn('href="#dh-zone-round"', cta)
+
+    def test_the_antipattern_link_carries_an_inheriting_icon(self):
+        """Emoji ignore `color`, so a bin glyph could never invert with the
+        active pill or take the bar's ink."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            toc = markup.split('class="dh-toc"')[1].split("</nav>")[0]
+            self.assertIn("<svg", toc)
+            self.assertIn("currentColor", toc)
+
+    def test_the_long_zone_gets_a_second_level_of_navigation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.system(root)
+            bh.record_decision(root, "voice.labels", "proposed", 1, "fixture", [])
+            decisions = bh.load_decisions(root / "spec" / "design-harness")
+            markup = bh.render_article(root, decisions)
+            backlog = markup.split('id="dh-zone-backlog"')[1].split("</section>")[0]
+            self.assertIn('class="dh-subnav"', backlog)
+            self.assertIn('href="#dh-backlog-composition"', backlog)
+            self.assertIn('id="dh-backlog-composition"', backlog)
+
+    def test_fundamentals_gets_no_second_level(self):
+        """Only the long zone earns one; two sticky bars over a short list is
+        chrome for its own sake."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            block = markup.split('id="dh-zone-fundamentals"')[1].split("</section>")[0]
+            self.assertNotIn('class="dh-subnav"', block)
 
     def test_antipatterns_sit_last_and_muted(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -574,7 +623,7 @@ class TheArticleIsADesignSystem(unittest.TestCase):
                 if entry["state"] in bh.GROUP_OF:
                     seen[entry["element"]] = bh.zone_of(entry, cohort)
             self.assertEqual(seen["cover.strong"], "round")
-            self.assertEqual(seen["palette.family"], "core")
+            self.assertEqual(seen["palette.family"], "fundamentals")
             self.assertEqual(seen["cover.weak"], "backlog")
             self.assertEqual(seen["cover.bad"], "antipattern")
 
