@@ -351,6 +351,46 @@ def describe_element(project_root: Path, element: str,
     return entry
 
 
+def retire_element(project_root: Path, loser: str, winner: str,
+                   evidence: str) -> dict[str, object]:
+    """Retire `loser` in favour of `winner`, touching nothing on the winner.
+
+    `decide --supersedes` cannot do this. It records the supersede on the
+    WINNER, and the winner is necessarily the element the user just ranked --
+    so writing it re-runs the agent path, which is capped at 1 star and stamps
+    `source=agent`. Recording a win therefore destroyed the very click that
+    decided it: a user's 3-star rank came back as agent 1-star, and `adopt`
+    would not restore it because it had already consumed that click. The
+    supersede belongs on the loser, where nothing the user set is at stake.
+    """
+    output = project_root.resolve(strict=True) / "spec" / "design-harness"
+    if loser == winner:
+        raise HarnessError("an element cannot supersede itself")
+    if not evidence.strip():
+        raise HarnessError("evidence is required: quote the user, do not paraphrase")
+    decisions = load_decisions(output)
+    by_id = {e["element"]: e for e in decisions["elements"]}
+    for name in (loser, winner):
+        if name not in by_id:
+            raise HarnessError(f"unknown element: {name}. Record it with `decide` first.")
+    entry = by_id[loser]
+    if entry["state"] == "superseded" and entry.get("supersededBy") == winner:
+        return entry
+    entry["state"] = "superseded"
+    entry["supersededBy"] = winner
+    entry["evidence"] = evidence
+    decisions["supersededCount"] += 1
+    if any(e["state"] == "approved" for e in decisions["elements"]):
+        decisions["state"] = "approved"
+    write_json(output / "decisions.json", decisions)
+    (output / "DECISIONS.md").write_text(render_decisions_md(decisions), encoding="utf-8")
+    project_path = output / "project.json"
+    project = json.loads(project_path.read_text(encoding="utf-8"))
+    project["state"] = decisions["state"]
+    write_json(project_path, project)
+    return entry
+
+
 def ledger_cursor_key(project_root: Path, ledger_path: Path) -> str:
     """Name a companion ledger without baking an absolute path into decisions.json."""
     resolved = ledger_path.resolve()
@@ -503,7 +543,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "17"
+CONTROLS_VERSION = "18"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -660,15 +700,25 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-fb .dh-stars > *{min-inline-size:30px;min-block-size:34px;display:grid;place-items:center;
  cursor:pointer;user-select:none;font-size:20px;line-height:1;border:0;background:transparent;
  color:color-mix(in srgb, var(--dh-ink,#111) 30%, transparent);transition:color .12s}
-.dh-fb .dh-stars > *.on{color:var(--dh-accent,#d9482a)}
+/* Gold, not the screen's accent. A star is the same instrument on every
+   project, and tinting it with whatever accent the design happens to use made
+   the rank read as part of the artwork being judged. */
+.dh-fb .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
 /* The rank in figures. Five glyphs differing only in tint is a shape the eye
    has to count, and at 24 rows nobody counts -- the standing score was there
    and still unreadable at a glance. attr() off the strip means a click updates
    it with no extra script. `--` is not-yet-judged, which a row of grey stars
-   cannot distinguish from a zero. */
+   cannot distinguish from a zero.
+   The figure runs red at 0 to green at 5, so a column of them reads as a
+   temperature before it reads as digits. */
 .dh-fb .dh-stars::after{content:attr(data-stars);margin-inline-start:9px;min-inline-size:1.4ch;
  font:700 13px/1 var(--dh-font,ui-monospace,monospace);font-variant-numeric:tabular-nums;
- color:var(--dh-accent,#d9482a)}
+ color:#b00020}
+.dh-fb .dh-stars[data-stars="1"]::after{color:#c2451c}
+.dh-fb .dh-stars[data-stars="2"]::after{color:#cf7a12}
+.dh-fb .dh-stars[data-stars="3"]::after{color:#b98b07}
+.dh-fb .dh-stars[data-stars="4"]::after{color:#6f9430}
+.dh-fb .dh-stars[data-stars="5"]::after{color:#1c8b4b}
 .dh-fb .dh-stars[data-scored="no"]::after{content:"--";
  color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
 /* The preview has to move the number too, or hovering shows one rank and
@@ -681,7 +731,7 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
    1,2,3,5 -- which is what "the hover is buggy" was pointing at. */
 .dh-fb .dh-stars:hover [data-rank]{color:color-mix(in srgb, var(--dh-ink,#111) 26%, transparent)}
 .dh-fb .dh-stars [data-rank]:hover,
-.dh-fb .dh-stars [data-rank]:has(~ [data-rank]:hover){color:var(--dh-accent,#d9482a)}
+.dh-fb .dh-stars [data-rank]:has(~ [data-rank]:hover){color:var(--dh-star,#e0a20a)}
 /* The zero lives OUTSIDE the star strip, and stays out of the way until the
    user actually reaches for the bottom of the scale: it surfaces on hovering
    ONE star. It is always visible when it IS the score, so a zero already given
@@ -710,22 +760,18 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-fb .dh-zero:has(:focus-visible) [data-rank="0"],
 .dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover) [data-rank="0"]{pointer-events:auto}
 .dh-fb [data-rank="0"]:hover,.dh-fb [data-rank="0"].on{color:#b00020}
-/* Chips in the row's own ink, not a stock green and red imported from another
-   design system. `on` is a solid fill: set/unset is carried by weight, which
-   survives at a glance down a long column and does not depend on hue. */
-.dh-fb [data-sentiment],.dh-fb [data-verdict]{min-inline-size:34px;min-block-size:34px;
- display:grid;place-items:center;cursor:pointer;user-select:none;
- font:700 16px/1 var(--dh-font,ui-monospace,monospace);
- border:1px solid color-mix(in srgb, var(--dh-ink,#111) 26%, transparent);
- border-radius:6px;background:transparent;transition:background .12s,color .12s,border-color .12s;
- color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
-.dh-fb [data-sentiment]:hover,.dh-fb [data-verdict]:hover{border-color:var(--dh-ink,#111);
- color:var(--dh-ink,#111)}
-.dh-fb [data-sentiment].on,.dh-fb [data-verdict].on{background:var(--dh-ink,#111);
- border-color:var(--dh-ink,#111);color:var(--dh-bg,#fff)}
-/* Direction is the one thing worth a hue: a rejected direction is the only
-   signal here that asks the agent to stop rather than to polish. */
+/* Green go, red stop, and the tick green with them. These hues are fixed on
+   purpose: they are the same instrument on every project, so they do not
+   follow --dh-accent into whatever palette is being judged. */
+.dh-fb [data-sentiment],.dh-fb [data-verdict]{min-inline-size:38px;min-block-size:34px;
+ display:grid;place-items:center;cursor:pointer;user-select:none;font-size:15px;
+ border:1px solid rgba(0,0,0,.22);border-radius:6px;background:transparent;line-height:1;
+ transition:background .12s,color .12s,border-color .12s}
+.dh-fb [data-sentiment]:hover,.dh-fb [data-verdict]:hover{border-color:var(--dh-ink,#111)}
+.dh-fb [data-sentiment="like"].on{background:#1c8b4b;border-color:#126435;color:#fff}
 .dh-fb [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
+/* Approve reads as done: green fill, white tick, unmistakable. */
+.dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
 .dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible,
 .dh-fb [data-verdict]:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
 .dh-group{margin:14px 0 2px;display:flex;align-items:center;gap:8px;
@@ -901,10 +947,7 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
             f'aria-label="ejecucion de {element}">'
             f'{stars_markup}</span>')
         mood = entry.get("sentiment")
-        # Emoji ignore `color`, so a thumb could never take the strip's ink and
-        # the two chips stayed the one saturated, differently-drawn thing in an
-        # otherwise monochrome monospace row. Typographic marks inherit.
-        for name, glyph, label in (("like", "&#43;", "me gusta"), ("dislike", "&#8722;", "no me gusta")):
+        for name, glyph, label in (("like", "&#128077;", "me gusta"), ("dislike", "&#128078;", "no me gusta")):
             on = ' class="on"' if mood == name else ""
             lines.append(f'<span data-sentiment="{name}" role="button" tabindex="0" '
                          f'aria-label="{label} {element}" title="{label}"{on}>{glyph}</span>')
@@ -1691,6 +1734,13 @@ def parser() -> argparse.ArgumentParser:
     describe.add_argument("--description", default="",
                           help="what the component IS, in plain words (shown on the scoring row)")
     describe.add_argument("--implemented", default="", help="what was actually built for it")
+    retire = subcommands.add_parser(
+        "supersede", help="retire the losing element, leaving the winner's user rank intact")
+    retire.add_argument("--project-root", required=True, type=Path)
+    retire.add_argument("--element", required=True, help="the element being retired (the loser)")
+    retire.add_argument("--by", required=True, dest="winner",
+                        help="the element that beat it (left completely untouched)")
+    retire.add_argument("--evidence", required=True, help="quote the user, do not paraphrase")
     adopt = subcommands.add_parser("adopt", help="fold companion star ranks into the ledger")
     adopt.add_argument("--project-root", required=True, type=Path)
     adopt.add_argument("--companion-ledger", required=True, type=Path,
@@ -1761,6 +1811,10 @@ def main() -> int:
                                      args.description or None, args.implemented or None)
             print(f"Labelled {args.element} (still {entry['state']}, {entry['stars']}★, "
                   f"set by {entry.get('source', 'unknown')}).")
+        elif args.command == "supersede":
+            entry = retire_element(args.project_root, args.element, args.winner, args.evidence)
+            print(f"Retired {args.element} in favour of {args.winner}. "
+                  f"{args.winner} was not written -- its rank and source are untouched.")
         elif args.command == "adopt":
             adopted, skipped = adopt_companion(args.project_root, args.companion_ledger)
             print(f"Adopted {adopted} ranked decision(s); skipped {skipped} "

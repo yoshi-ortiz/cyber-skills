@@ -74,6 +74,10 @@ Each step in full, with its failure modes: [loop.md](references/loop.md).
 
 Plan internally and show the strongest coherent result, not a pile of alternatives — unless comparison *is* the question.
 
+**A score is the input to the next iteration, not the end of the round.** When ranks arrive, redraw in the same session: every 👍 at 0–2 stars is the user saying *the idea is right and your drawing is not* — that is a brief, already written. Report what landed in two lines, then keep going. Ending on a summary and "say the word and I'll open on…" spends the user's scoring on a status update and ships no improvement; they clicked to get better work, not to be asked a question back.
+
+Stop and ask only when the ranks genuinely contradict each other, or when the next move needs something only the user has.
+
 ## Read the signals literally
 
 **★ 1–5** is graphic execution, ugly → beautiful — never confidence, priority, or whether to keep a thing. **0** is a real score, the worst one; never-touched is `scored: false`. **👍/👎** judges the direction, not the drawing. **☑ completed** is a status, not approval and not a freeze. Full semantics: [companion-contract.md](references/companion-contract.md).
@@ -83,6 +87,8 @@ Plan internally and show the strongest coherent result, not a pile of alternativ
 ## Commands
 
 Every verb takes `--project-root` and answers `--help`. Full list: [commands.md](references/commands.md). Two facts that are semantics, not usage: **`adopt` is the only source of ranks above 1 star**, and **`decide` is capped at 1** — a higher rank comes from a click. Nothing ever disappears; undo a wrong rejection by clicking, never by editing JSON.
+
+**Record a win with `supersede --element <loser> --by <winner>`, never `decide --supersedes`.** The winner is by definition the element the user just ranked, and `decide` writes the element it names through the agent path — 1 star, `source=agent`. Recording the win that way overwrites the click that decided it, and `adopt` will not give it back: it has already consumed that click. `supersede` writes only the loser.
 
 ## Rules no tool enforces
 

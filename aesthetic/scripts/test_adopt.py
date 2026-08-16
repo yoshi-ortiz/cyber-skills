@@ -247,6 +247,69 @@ class CompletedIsRendered(unittest.TestCase):
             self.assertIn(f"e.{state}", text, state)
 
 
+class RecordingAWinKeepsTheRank(unittest.TestCase):
+    """`decide --supersedes` records the supersede on the WINNER, and the winner
+    is always the element the user just ranked -- so writing it ran the agent
+    path, capped at 1 star with source=agent, and destroyed the click that
+    decided the contest. A real 3-star user rank came back as agent 1-star, and
+    adopt would not restore it: it had already consumed that click."""
+
+    def contest(self, root: Path) -> Path:
+        output = harness(root)
+        bh.record_decision(root, "cover.ring.kicker", "proposed", 1, "flat label", [])
+        bh.adopt_companion(root, ledger(root, {
+            "element": "cover.ring.kicker.antetitulo-arco", "stars": 3,
+            "text": "user: 'el antetitulo sobre el arco'", "timestamp": 1000}))
+        return output
+
+    def test_retiring_the_loser_leaves_the_winner_untouched(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.contest(root)
+            before = element(output, "cover.ring.kicker.antetitulo-arco")
+            bh.retire_element(root, "cover.ring.kicker",
+                              "cover.ring.kicker.antetitulo-arco",
+                              "user: 3 estrellas contra 1")
+            self.assertEqual(element(output, "cover.ring.kicker.antetitulo-arco"), before)
+
+    def test_the_loser_is_marked_superseded_by_the_winner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.contest(root)
+            bh.retire_element(root, "cover.ring.kicker",
+                              "cover.ring.kicker.antetitulo-arco", "user: gana el arco")
+            loser = element(output, "cover.ring.kicker")
+            self.assertEqual(loser["state"], "superseded")
+            self.assertEqual(loser["supersededBy"], "cover.ring.kicker.antetitulo-arco")
+
+    def test_the_winners_user_stars_and_source_survive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.contest(root)
+            bh.retire_element(root, "cover.ring.kicker",
+                              "cover.ring.kicker.antetitulo-arco", "user: gana el arco")
+            winner = element(output, "cover.ring.kicker.antetitulo-arco")
+            self.assertEqual(winner["stars"], 3)
+            self.assertEqual(winner["source"], "user")
+
+    def test_re_retiring_the_same_pair_is_a_no_op(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.contest(root)
+            args = ("cover.ring.kicker", "cover.ring.kicker.antetitulo-arco", "user: gana")
+            bh.retire_element(root, *args)
+            once = bh.load_decisions(output)
+            bh.retire_element(root, *args)
+            self.assertEqual(once, bh.load_decisions(output))
+
+    def test_an_element_cannot_supersede_itself(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.contest(root)
+            with self.assertRaises(bh.HarnessError):
+                bh.retire_element(root, "cover.ring.kicker", "cover.ring.kicker", "x")
+
+
 class CohortIsVisible(unittest.TestCase):
     """A round opens by naming its cohort. `data-dh-cohort` was an attribute
     only -- doctor read it, the user never saw it -- so the screen never said
