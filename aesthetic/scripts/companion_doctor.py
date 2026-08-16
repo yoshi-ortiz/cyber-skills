@@ -25,10 +25,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bootstrap_harness import (  # noqa: E402  (sibling script)
-    CONTROLS_VERSION, GROUP_OF, load_decisions, visible_controls,
+    CONTROLS_VERSION, GROUP_OF, PROBE_ELEMENT, load_decisions, visible_controls,
 )
 
-PROBE = "__doctor_probe__"
+PROBE = PROBE_ELEMENT
 
 
 def fail(msg: str) -> None:

@@ -102,6 +102,10 @@ GROUPS = (
 GROUP_OF = {state: key for key, _, states in GROUPS for state in states}
 SOURCES = ("user", "agent")
 AGENT_MAX_STARS = 1
+# companion_doctor sends a click on this synthetic element to prove the socket
+# reaches the ledger, then strips its rows back out. An `adopt` racing that
+# cleanup used to fold the probe in as a real element, and adopt never removes.
+PROBE_ELEMENT = "__doctor_probe__"
 
 
 class HarnessError(Exception):
@@ -205,6 +209,10 @@ def load_decisions(output: Path) -> dict[str, object]:
 
 def render_decisions_md(decisions: dict[str, object]) -> str:
     live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
+    # `completed` is a status, not a lock, so it gets its own section rather than
+    # sitting under Standing -- but it must still be rendered. Omitting it made
+    # finished elements invisible to any agent resuming from this file.
+    done = [e for e in decisions["elements"] if e["state"] == "completed"]
     dead = [e for e in decisions["elements"] if e["state"] in ("superseded", "rejected")]
     lines = [
         "# Design Decisions",
@@ -227,6 +235,13 @@ def render_decisions_md(decisions: dict[str, object]) -> str:
             lines.append(f"| `{e['element']}` | {e['state']} | {stars} | {e['evidence']} |")
     else:
         lines.append("_No decisions recorded yet._")
+    if done:
+        lines += ["", "## Completed", "",
+                  "Finished for now. Still binding as a record; iteration may continue.",
+                  "", "| Element | Stars | Evidence |", "| --- | --- | --- |"]
+        for e in sorted(done, key=lambda x: (-x["stars"], x["element"])):
+            stars = "★" * e["stars"] + "☆" * (STAR_RANGE[1] - e["stars"])
+            lines.append(f"| `{e['element']}` | {stars} | {e['evidence']} |")
     if dead:
         lines += ["", "## Superseded", ""]
         for e in sorted(dead, key=lambda x: x["element"]):
@@ -346,8 +361,8 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         return value == ZERO_STARS or STAR_RANGE[0] <= value <= STAR_RANGE[1]
 
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
-    existing = {e["element"]: e for e in load_decisions(output)["elements"]}
-    accepted: list[tuple[int, int, str, str, int, str, str | None]] = []
+    existing = {e["element"]: dict(e) for e in load_decisions(output)["elements"]}
+    accepted: list[tuple[int, int, dict[str, object]]] = []
     resets: list[tuple[int, int, str]] = []
     skipped = 0
     for index, line in enumerate(ledger_path.read_text(encoding="utf-8").splitlines()):
@@ -360,6 +375,9 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
             skipped += 1
             continue
         element = event.get("element")
+        if element == PROBE_ELEMENT:
+            skipped += 1
+            continue
         stars, sentiment = event.get("stars"), event.get("sentiment")
         if event.get("type") == "reset" or event.get("reset") is True:
             # The zero-star control. "This is bad" is a rating the user must be
@@ -386,30 +404,37 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         if sentiment is None and event.get("verdict") is None and not is_star(stars):
             skipped += 1
             continue
+        # Replay order is fixed by (timestamp, file position) so adopting the
+        # same ledger twice always yields the same ledger.
+        stamp = event.get("timestamp")
+        stamp = stamp if isinstance(stamp, (int, float)) and not isinstance(stamp, bool) else 0
+        accepted.append((int(stamp), index, event))
+
+    # Resolve each event against the ledger AS OF that event, not as of the start
+    # of the batch. A rank and a verdict on the same element at the same
+    # millisecond (max stars auto-fires a completed toggle) used to be resolved
+    # against the same pre-batch snapshot, so the verdict -- carrying no stars of
+    # its own -- fell back to the pre-batch rank and overwrote the star just set.
+    for _, _, event in sorted(accepted, key=lambda row: (row[0], row[1])):
+        element = event["element"]
+        stars, sentiment = event.get("stars"), event.get("sentiment")
         explicit = event.get("verdict")
         prior = existing.get(element, {})
         if explicit in ("approved", "rejected", "completed", "proposed"):
             # Only an explicit verdict control moves state. A star never does.
             verdict = explicit
-            rank = stars if is_star(stars) else prior.get("stars", 0)
         else:
             # Scores and thumbs leave state alone: an element already standing
             # stays standing, and a new one arrives as `proposed` for review.
             verdict = prior.get("state") or "proposed"
             if verdict in ("superseded", "rejected"):
                 verdict = "proposed"
-            rank = stars if is_star(stars) else prior.get("stars", 0)
+        rank = stars if is_star(stars) else prior.get("stars", 0)
         evidence = str(event.get("text") or "").strip() or (
             f"companion {sentiment}: {rank} star" if sentiment else f"companion rank: {rank} star")
-        # Replay order is fixed by (timestamp, file position) so adopting the
-        # same ledger twice always yields the same ledger.
-        stamp = event.get("timestamp")
-        stamp = stamp if isinstance(stamp, (int, float)) and not isinstance(stamp, bool) else 0
-        accepted.append((int(stamp), index, element, verdict, rank, evidence[:400], sentiment))
-
-    for _, _, element, verdict, rank, evidence, mood in sorted(accepted, key=lambda row: (row[0], row[1])):
-        record_decision(project_root, element, verdict, rank, evidence, [], source="user",
-                        sentiment=mood)
+        record_decision(project_root, element, verdict, rank, evidence[:400], [],
+                        source="user", sentiment=sentiment)
+        existing[element] = dict(prior, element=element, state=verdict, stars=rank)
     for _, _, element in sorted(resets, key=lambda row: (row[0], row[1])):
         score_zero(project_root, element)
     return len(accepted), skipped
