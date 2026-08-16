@@ -707,15 +707,30 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             markup = bh.render_article(root, self.system(root), {"cover.strong"})
             self.assertIn(bh.STRINGS["en"]["brand-new"], markup)
 
-    def test_the_strip_leads_with_the_round_and_ends_with_antipatterns(self):
+    def test_the_strip_keeps_score_order_and_sinks_antipatterns(self):
+        """A bar's POSITION says how that work compares, so the round's bars
+        stay where their score puts them -- the ? and the outline make them
+        findable in place."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            markup = bh.render_article(root, self.system(root), {"cover.strong"})
+            markup = bh.render_article(root, self.system(root), {"cover.weak"})
             nav = markup.split('class="dh-temp dh-temp-sticky"')[1].split("</div>")[0]
-            bars = re.findall(r'<a class="([^"]+)"[^>]*?(data-asked)?[^>]*>', nav)
             classes = re.findall(r'<a class="([^"]+)"', nav)
-            self.assertIn("data-asked", nav.split("</a>")[0])
             self.assertEqual(classes[-1], "dh-tanti")
+            # cover.weak is in the round at 1 star; cover.strong outranks it and
+            # must still come first.
+            order = re.findall(r'href="#dh-el-([^"]+)"', nav)
+            self.assertLess(order.index("cover.strong"), order.index("cover.weak"))
+
+    def test_the_key_reads_from_this_round_to_set_aside(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            key = markup.split('class="dh-key"')[1].split("</p>")[0]
+            labels = re.findall(r'</[ib]>([^<]+)</span>', key)
+            words = bh.STRINGS["en"]
+            self.assertEqual(labels, [words["key-asked"], words["key-done"], words["key-open"],
+                                      words["key-weak"], words["key-unscored"], words["key-anti"]])
 
     def test_every_bar_carries_its_own_tooltip_not_the_browsers(self):
         """`title` waits a second, uses the OS font, and never fires on keyboard

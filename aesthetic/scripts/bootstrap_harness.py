@@ -1740,13 +1740,12 @@ def render_article(project_root: Path, decisions: dict[str, object],
                 f'<span>{"?" if asked else ""}</span></a>')
 
     def bar_order(entry: dict[str, object]) -> tuple:
-        # What is being asked comes first; what was turned down sinks to the
-        # end. Between them, best execution leads. A strip sorted purely by
-        # score buried this round's three bars somewhere in the middle, which
-        # is the one thing the reader is scanning for.
-        zone = zone_of(entry, cohort)
-        rank = 0 if zone == "round" else (2 if zone == "antipattern" else 1)
-        return (rank, -int(entry.get("stars") or 0), entry["element"])
+        # Worst to best, with what was set aside after it. The round's own bars
+        # stay where their score puts them -- they carry a ? and an outline, so
+        # they are findable in place, and a bar's POSITION is what says how the
+        # work compares. Hoisting them to the front threw that reading away.
+        anti = 1 if zone_of(entry, cohort) == "antipattern" else 0
+        return (anti, -int(entry.get("stars") or 0), entry["element"])
 
     ordered_bars = sorted(live, key=bar_order)
     bars = "".join(bar(e) for e in ordered_bars)
@@ -1804,12 +1803,15 @@ def render_article(project_root: Path, decisions: dict[str, object],
                # A key, not a paragraph. Two lines of grey prose under a sticky
                # bar is a caption nobody reads twice, and it said in sentences
                # what four swatches say at a glance.
+               # Read in the order the work moves: what is being asked, then
+               # finished, well drawn, weak, untouched, and set aside last.
                + '<p class="dh-key">'
+               + f'<span><b>?</b>{html_escape(txt["key-asked"])}</span>'
                + f'<span><i class="dh-tdone"></i>{html_escape(txt["key-done"])}</span>'
                + f'<span><i class="dh-thigh"></i>{html_escape(txt["key-open"])}</span>'
                + f'<span><i class="dh-t1"></i>{html_escape(txt["key-weak"])}</span>'
                + f'<span><i class="dh-tnone"></i>{html_escape(txt["key-unscored"])}</span>'
-               + f'<span><b>?</b>{html_escape(txt["key-asked"])}</span>'
+               + f'<span><i class="dh-tanti"></i>{html_escape(txt["key-anti"])}</span>'
                + "</p></nav>")
     for zone in ZONES:
         members = sorted((e for e in live if zone_of(e, cohort) == zone), key=rank)
