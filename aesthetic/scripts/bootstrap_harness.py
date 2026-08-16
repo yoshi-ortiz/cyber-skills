@@ -440,7 +440,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "14"
+CONTROLS_VERSION = "15"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -606,10 +606,14 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  cursor:pointer;user-select:none;border:0;background:transparent;font-size:13px;font-weight:700;
  line-height:1;color:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
  transition:color .12s;pointer-events:none}
-.dh-fb .dh-zero:has([data-rank="0"].on),.dh-fb .dh-zero:hover,
+/* Visibility follows the ROW'S DATA, not the button's class. A companion that
+   lights every control whose rank is <= the score lights this one on any
+   score, and keying off that class made the zero flash into view on every
+   click until the echo corrected it. data-stars is right immediately. */
+.dh-fb[data-stars="0"][data-scored="yes"] .dh-zero,.dh-fb .dh-zero:hover,
 .dh-fb .dh-zero:has(:focus-visible),
 .dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover){opacity:1}
-.dh-fb .dh-zero:has([data-rank="0"].on) [data-rank="0"],
+.dh-fb[data-stars="0"][data-scored="yes"] .dh-zero [data-rank="0"],
 .dh-fb .dh-zero:hover [data-rank="0"],
 .dh-fb .dh-zero:has(:focus-visible) [data-rank="0"],
 .dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover) [data-rank="0"]{pointer-events:auto}
@@ -1270,7 +1274,7 @@ def self_test() -> None:
         if '[data-rank="1"]:hover)' not in FEEDBACK_STYLE:
             raise HarnessError(
                 "self-test: nothing reveals the zero -- it must surface when one star is hovered")
-        if '.dh-zero:has([data-rank="0"].on)' not in FEEDBACK_STYLE:
+        if '.dh-fb[data-stars="0"][data-scored="yes"] .dh-zero' not in FEEDBACK_STYLE:
             raise HarnessError(
                 "self-test: a zero already given would stay hidden -- it must be "
                 "distinguishable from an unrated row")

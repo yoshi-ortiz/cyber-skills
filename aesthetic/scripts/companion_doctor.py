@@ -77,6 +77,46 @@ def ws_send(host: str, port: int, key: str, payload: dict) -> bool:
     return True
 
 
+def greeting(host: str, port: int, key: str) -> dict | None:
+    """What the companion says to a browser that has just connected.
+
+    A companion that says nothing cannot keep two browsers agreeing: the second
+    one starts from whatever snapshot was baked into its page and never learns
+    what the first already scored. That is invisible from the screen, so it has
+    to be asked for directly.
+    """
+    nonce = base64.b64encode(secrets.token_bytes(16)).decode()
+    req = (f"GET / HTTP/1.1\r\nHost: localhost:{port}\r\nUpgrade: websocket\r\n"
+           f"Connection: Upgrade\r\nOrigin: http://localhost:{port}\r\n"
+           f"Sec-WebSocket-Key: {nonce}\r\nSec-WebSocket-Version: 13\r\n"
+           f"Cookie: brainstorm-key-{port}={key}\r\n\r\n")
+    try:
+        with socket.create_connection((host, port), timeout=4) as sock:
+            sock.sendall(req.encode())
+            sock.settimeout(1.5)
+            blob = b""
+            try:
+                while b"\r\n\r\n" not in blob:
+                    blob += sock.recv(65535)
+                blob += sock.recv(65535)
+            except OSError:
+                pass
+    except OSError:
+        return None
+    body = blob.split(b"\r\n\r\n", 1)[1] if b"\r\n\r\n" in blob else b""
+    if not body or body[0] != 0x81:
+        return None
+    length, offset = body[1] & 0x7F, 2
+    if length == 126:
+        length, offset = struct.unpack(">H", body[2:4])[0], 4
+    elif length == 127:
+        length, offset = struct.unpack(">Q", body[2:10])[0], 10
+    try:
+        return json.loads(body[offset:offset + length].decode())
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
 def main() -> int:
     project = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     session = newest_session(project)
@@ -302,6 +342,19 @@ def main() -> int:
             bad += 1
     except (OSError, ValueError, KeyError):
         pass
+
+    # The companion must tell an arriving browser where every element already
+    # stands. Without it the scoring is per-browser: each one shows the snapshot
+    # baked into the page it happened to load, they disagree the moment anyone
+    # clicks, and nothing on screen reveals which is right.
+    hello = greeting(host, port, key)
+    if not hello or hello.get("type") != "dh-state":
+        fail("companion does not send state to a new connection -- browsers will each "
+             "show their own stale copy. Install the required companion: "
+             "<skill>/companion/install.sh, then restart it")
+        bad += 1
+    else:
+        ok(f"new connections are given current state ({len(hello.get('state', {}))} elements)")
 
     # 6 — the only check that matters: does a real click reach the ledger?
     ledger = project / ".superpowers" / "brainstorm" / "decisions.jsonl"
