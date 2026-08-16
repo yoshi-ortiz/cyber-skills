@@ -61,6 +61,14 @@ Startup is not the round. If the cohort is unnamed and no screen is on its way a
 
 `doctor` **fails** a screen on which every element is already user-ranked: that round improved the drawing and proposed nothing. Watch for `agent-set 0` in `stats` — with `coverage 100%` it looks finished, but it means the round asked no question.
 
+## The strip is a design system, not a list
+
+Rows group themselves by **design-system foundation** — core ideas, colour palette, typography, illustration & texture, composition & layout, copy & voice, motion — read off the element id's own prefix. `palette.family-from-cards` files under colour, `type.bracket-numerals` under typography, `family.mark.dotmatrix` under illustration, anything unrecognised under core ideas. Nothing to configure: **name ids for the foundation they belong to and the system assembles itself.** Each foundation heads its section once per screen.
+
+This is what makes a round rankable as a system rather than a to-do list — the user sees the whole typography together and can say the lettering is working while the palette is not.
+
+**The strip speaks the project's language.** `init --language es` stores it; every later verb reads it from `project.json`, and `--lang` overrides per run. Never hardcode a word into the generator — a screen that mixes an English banner with Spanish rows is the bug this replaced. Only `en` and `es` ship; add a language by adding one dict to `STRINGS`.
+
 ## The loop
 
 Each step in full, with its failure modes: [loop.md](references/loop.md).
@@ -81,6 +89,8 @@ Stop and ask only when the ranks genuinely contradict each other, or when the ne
 ## Read the signals literally
 
 **★ 1–5** is graphic execution, ugly → beautiful — never confidence, priority, or whether to keep a thing. **0** is a real score, the worst one; never-touched is `scored: false`. **👍/👎** judges the direction, not the drawing. **☑ completed** is a status, not approval and not a freeze. Full semantics: [companion-contract.md](references/companion-contract.md).
+
+**Taking a thumb back is itself a signal** — "I no longer stand behind this direction", which is not the same as never having judged it. The companion sends it as an explicit `sentiment: null` and `adopt` clears the stored thumb; a plain star click, carrying no sentiment key at all, leaves it alone.
 
 **👍 with 2 stars is the most useful state:** *good idea, badly drawn yet* — improve it. Never drop, supersede or reject for a low score; `stats` reports these as `polish`. A score never changes state; only a verdict does.
 

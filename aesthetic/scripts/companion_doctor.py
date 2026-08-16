@@ -309,8 +309,10 @@ def main() -> int:
         bad += 1
     else:
         ok("rows describe what is being scored")
-    if "sin gr" in html:
-        fail(f"{html.count('sin gr')} element(s) render with no graphic to judge")
+    # Keyed on the marker attribute, not on Spanish words: the strip is
+    # translated now, and a text grep would silently pass on any other language.
+    if "data-dh-no-graphic" in html:
+        fail(f"{html.count('data-dh-no-graphic')} element(s) render with no graphic to judge")
         bad += 1
 
     # Every element in standing must be scoreable somewhere on the served

@@ -85,6 +85,14 @@ ZERO_STARS = 0
 # state in the system: good idea, execution not beautiful yet -> improve it,
 # never drop it. Collapsing these is what caused ideas to be discarded.
 SENTIMENTS = {"like": "encouraged", "dislike": "discouraged"}
+# Taking a thumb back is a signal in its own right -- "I no longer stand behind
+# this direction" -- and the companion says so with an explicit `sentiment:
+# null`. It needs a value distinct from that null, because `None` was carrying
+# both meanings at once ("leave the thumb alone" and "remove the thumb") and a
+# single argument cannot mean both: withdrawals lost, every time. One real
+# ledger held 18 of them, one element un-liked twelve times, while `stats` went
+# on counting every withdrawn like.
+KEEP_SENTIMENT = object()
 # A score never changes an element's state. Removal is always a deliberate act
 # (`decide --supersedes` or an explicit reject control), because reading a low
 # score as "delete this" already destroyed work the user wanted kept.
@@ -96,13 +104,105 @@ PREVIEW_SUFFIXES = {".svg", ".html", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
 # Three lifecycle groups the user reads at a glance. Derived from state, never
 # stored separately, so a state change cannot leave the group stale.
 GROUPS = (
-    ("brainstorming", "Lluvia de ideas", ("proposed",)),
-    ("developing", "En desarrollo", ("completed", "approved")),
-    ("rejected", "Descartado", ("rejected", "superseded")),
+    ("brainstorming", "brainstorming", ("proposed",)),
+    ("developing", "developing", ("completed", "approved")),
+    ("rejected", "rejected", ("rejected", "superseded")),
 )
 GROUP_OF = {state: key for key, _, states in GROUPS for state in states}
+
+# The foundations of a design system, in the order one is read: what the thing
+# IS, then its colour, its lettering, its imagery, how it is laid out, how it
+# speaks, how it moves. Rows grouped this way are a design system with a rank
+# against each part; grouped only by lifecycle they are a to-do list, and the
+# user could not see whether the typography as a whole was working.
+#
+# Derived from the element id's own prefix -- zero configuration, nothing new to
+# maintain, and an id that says `palette.` files itself under colour. An
+# unrecognised prefix falls to `core`, never to a crash.
+FOUNDATIONS = (
+    ("core", ("core", "idea", "concept", "identity", "signature", "thesis", "brand")),
+    ("palette", ("palette", "color", "colour", "tone", "hue")),
+    ("typography", ("type", "typo", "typography", "font", "lettering", "numerals")),
+    ("illustration", ("art", "artsource", "illustration", "image", "imagery",
+                      "texture", "photo", "icon", "mark", "drawing")),
+    ("composition", ("layout", "grid", "composition", "form", "format", "page",
+                     "spread", "cover", "interior", "spine", "margin")),
+    ("voice", ("copy", "voice", "language", "roles", "label", "microcopy")),
+    ("motion", ("motion", "anim", "animation", "transition")),
+)
+FOUNDATION_OF_WORD = {word: key for key, words in FOUNDATIONS for word in words}
+FOUNDATION_ORDER = {key: n for n, (key, _) in enumerate(FOUNDATIONS)}
+
+
+def foundation_of(element: str) -> str:
+    """Which design-system foundation an element id belongs to.
+
+    Reads the id's leading segments, most specific first: `family.mark.dotmatrix`
+    files under illustration on `mark` rather than falling through on `family`.
+    """
+    parts = [p for p in re.split(r"[.\-_]", element.lower()) if p]
+    for part in parts:
+        if part in FOUNDATION_OF_WORD:
+            return FOUNDATION_OF_WORD[part]
+    return "core"
 SOURCES = ("user", "agent")
 AGENT_MAX_STARS = 1
+
+# Every word the scoring strip draws. The strip used to be Spanish literals with
+# an English cohort banner bolted on, so one screen spoke two languages and no
+# other project could use it without editing this file. The language is a
+# property of the project (stored by `init`), not of the harness.
+DEFAULT_LANGUAGE = "en"
+STRINGS = {
+    "en": {
+        "offline": "No connection to the companion: these clicks are NOT saved. "
+                   "Open the companion URL (http://localhost:PORT/?key=...), not the file.",
+        "this-round": "this round", "to-score": "element(s) to score",
+        "from-this-round": "From this round",
+        "brainstorming": "Brainstorming", "developing": "In progress", "rejected": "Set aside",
+        "core": "Core ideas", "palette": "Colour palette", "typography": "Typography",
+        "illustration": "Illustration & texture", "composition": "Composition & layout",
+        "voice": "Copy & voice", "motion": "Motion",
+        "unscored": "not yet scored", "proposed-by": "Proposed", "built": "Built",
+        "no-graphic": "no graphic",
+        "execution-of": "execution of", "stars-of": "of", "execution-quality": "execution quality",
+        "like": "like it", "dislike": "do not like it", "completed": "done",
+        "zero-title": "zero stars: terrible, but it still stands",
+        "zero-label": "zero stars for {element}: terrible execution",
+    },
+    "es": {
+        "offline": "Sin conexión al companion: estos clics NO se guardan. "
+                   "Abre la URL del companion (http://localhost:PORT/?key=...), no el archivo.",
+        "this-round": "esta ronda", "to-score": "elemento(s) por puntuar",
+        "from-this-round": "De esta ronda",
+        "brainstorming": "Lluvia de ideas", "developing": "En desarrollo", "rejected": "Descartado",
+        "core": "Ideas centrales", "palette": "Paleta de color", "typography": "Tipografía",
+        "illustration": "Ilustración y textura", "composition": "Composición y retícula",
+        "voice": "Texto y voz", "motion": "Movimiento",
+        "unscored": "sin puntuar", "proposed-by": "Propuesto", "built": "Implementado",
+        "no-graphic": "sin gráfico",
+        "execution-of": "ejecución de", "stars-of": "de", "execution-quality": "calidad de ejecución",
+        "like": "me gusta", "dislike": "no me gusta", "completed": "completado",
+        "zero-title": "cero estrellas: pésimo, pero sigue en pie",
+        "zero-label": "cero estrellas para {element}: pésima ejecución",
+    },
+}
+
+
+def strings_for(language: str | None) -> dict[str, str]:
+    """Fall back to English rather than raising: a missing translation must
+    never be the reason a user cannot score."""
+    return STRINGS.get((language or DEFAULT_LANGUAGE).lower(), STRINGS[DEFAULT_LANGUAGE])
+
+
+def project_language(project_root: Path | None) -> str:
+    if project_root is None:
+        return DEFAULT_LANGUAGE
+    path = project_root / "spec" / "design-harness" / "project.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("language") or DEFAULT_LANGUAGE
+    except (OSError, ValueError):
+        return DEFAULT_LANGUAGE
 # companion_doctor sends a click on this synthetic element to prove the socket
 # reaches the ledger, then strips its rows back out. An `adopt` racing that
 # cleanup used to fold the probe in as a real element, and adopt never removes.
@@ -260,12 +360,14 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                     evidence: str, supersedes: list[str],
                     preview: dict[str, str] | None = None,
                     source: str = "agent",
-                    sentiment: str | None = None,
+                    sentiment: str | None | object = KEEP_SENTIMENT,
                     implemented: str | None = None,
                     description: str | None = None) -> dict[str, object]:
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
     if verdict not in DECISION_STATES:
         raise HarnessError(f"verdict must be one of: {', '.join(DECISION_STATES)}")
+    if sentiment is not KEEP_SENTIMENT and sentiment is not None and sentiment not in SENTIMENTS:
+        raise HarnessError(f"sentiment must be one of: {', '.join(SENTIMENTS)}, or None to withdraw it")
     if stars != ZERO_STARS and not STAR_RANGE[0] <= stars <= STAR_RANGE[1]:
         raise HarnessError(f"stars must be {STAR_RANGE[0]}-{STAR_RANGE[1]}, "
                            f"or {ZERO_STARS} meaning bad execution")
@@ -298,7 +400,7 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                 e["description"] = description
             e.setdefault("implemented", None)
             e.setdefault("description", None)
-            if sentiment is not None:
+            if sentiment is not KEEP_SENTIMENT:
                 e["sentiment"] = sentiment
             e.setdefault("sentiment", None)
             if preview is not None:
@@ -309,7 +411,8 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
         decisions["elements"].append({
             "element": element, "state": verdict, "stars": stars,
             "evidence": evidence, "supersededBy": None, "preview": preview,
-            "source": source, "sentiment": sentiment, "scored": True,
+            "source": source, "scored": True,
+            "sentiment": None if sentiment is KEEP_SENTIMENT else sentiment,
             "implemented": implemented, "description": description,
         })
     if any(e["state"] == "approved" for e in decisions["elements"]):
@@ -451,6 +554,7 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
             skipped += 1
             continue
         stars, sentiment = event.get("stars"), event.get("sentiment")
+        has_sentiment = "sentiment" in event
         if event.get("type") == "reset" or event.get("reset") is True:
             # The zero-star control. "This is bad" is a rating the user must be
             # able to give, and the 1-5 strip cannot express it.
@@ -473,7 +577,12 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         if sentiment is not None and sentiment not in SENTIMENTS:
             skipped += 1
             continue
-        if sentiment is None and event.get("verdict") is None and not is_star(stars):
+        # `"sentiment": null` present is a WITHDRAWAL and carries signal; the key
+        # missing entirely means the event never spoke about the thumb. The
+        # rehydrate script has always drawn this line (`if('sentiment' in ev)`)
+        # -- adopt did not, so the browser cleared the chip and the ledger kept
+        # the like forever.
+        if not has_sentiment and event.get("verdict") is None and not is_star(stars):
             skipped += 1
             continue
         # Replay order is fixed by (timestamp, file position) so adopting the
@@ -502,10 +611,14 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
             if verdict in ("superseded", "rejected"):
                 verdict = "proposed"
         rank = stars if is_star(stars) else prior.get("stars", 0)
+        withdrawn = "sentiment" in event and sentiment is None
         evidence = str(event.get("text") or "").strip() or (
-            f"companion {sentiment}: {rank} star" if sentiment else f"companion rank: {rank} star")
+            f"companion {sentiment}: {rank} star" if sentiment else
+            (f"companion withdrew the thumb: {rank} star" if withdrawn
+             else f"companion rank: {rank} star"))
         record_decision(project_root, element, verdict, rank, evidence[:400], [],
-                        source="user", sentiment=sentiment)
+                        source="user",
+                        sentiment=sentiment if "sentiment" in event else KEEP_SENTIMENT)
         existing[element] = dict(prior, element=element, state=verdict, stars=rank)
     for _, _, element in sorted(resets, key=lambda row: (row[0], row[1])):
         score_zero(project_root, element)
@@ -543,7 +656,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "18"
+CONTROLS_VERSION = "19"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -774,12 +887,22 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
 .dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible,
 .dh-fb [data-verdict]:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
-.dh-group{margin:14px 0 2px;display:flex;align-items:center;gap:8px;
- font:700 11px/1 var(--dh-font,ui-monospace,monospace);letter-spacing:.14em;
- text-transform:uppercase;color:var(--dh-ink,#111);opacity:.75}
+/* A foundation heading opens a section of a design system, so it is sized like
+   one. At 11px uppercase it read as a caption and the eye slid past it -- the
+   grouping was there and invisible, which is the same as absent. The rule under
+   the heading does the separating, so the rows need no extra chrome. */
+.dh-group{margin:32px 0 12px;display:flex;align-items:baseline;gap:10px;
+ padding-block-end:8px;
+ border-block-end:1px solid color-mix(in srgb, var(--dh-ink,#111) 24%, transparent);
+ font:700 20px/1.15 var(--dh-font,ui-monospace,monospace);letter-spacing:-.015em;
+ text-transform:none;color:var(--dh-ink,#111)}
 .dh-group:first-child{margin-top:0}
-.dh-group .dh-count{font-weight:600;opacity:.6}
-.dh-group::after{content:"";flex:1;height:1px;background:currentColor;opacity:.25}
+.dh-group .dh-count{font-size:11px;font-weight:700;letter-spacing:.12em;
+ margin-inline-start:auto;font-variant-numeric:tabular-nums;
+ color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+/* This round is the one section the user must not scroll past. */
+.dh-group[data-group="pinned"]{border-block-end-color:var(--dh-accent,#d9482a);
+ color:var(--dh-accent,#d9482a)}
 .dh-group[data-group="rejected"]{color:#b00020;opacity:.85}
 .dh-fb[data-group="rejected"]{opacity:.62}
 .dh-fb[data-group="rejected"]:hover{opacity:1}
@@ -822,11 +945,19 @@ def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
     return {"path": candidate.relative_to(project_root).as_posix(), "sha256": sha256_file(candidate)}
 
 
-def render_preview(project_root: Path | None, preview: dict[str, str] | None, element: str) -> str:
-    """Inline the graphic for one element, or say plainly that there is none."""
+def render_preview(project_root: Path | None, preview: dict[str, str] | None, element: str,
+                   txt: dict[str, str] | None = None) -> str:
+    """Inline the graphic for one element, or say plainly that there is none.
+
+    The "no graphic" state carries a stable CLASS as well as its words: doctor
+    used to grep for the Spanish text, so translating the strip would have
+    quietly disabled the check that every row shows what is being judged.
+    """
+    txt = txt or strings_for(DEFAULT_LANGUAGE)
     if not preview:
         return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
-                '<span class="dh-shot-missing">sin gráfico<br>--preview</span></span>')
+                f'<span class="dh-shot-missing" data-dh-no-graphic="1">{txt["no-graphic"]}'
+                '<br>--preview</span></span>')
     if project_root is None:
         return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
                 f'<span class="dh-shot-missing">{preview["path"]}</span></span>')
@@ -853,7 +984,8 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
 
 def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str] | None = None,
                              project_root: Path | None = None,
-                             pinned: set[str] | None = None) -> str:
+                             pinned: set[str] | None = None,
+                             language: str | None = None) -> str:
     """Emit rank + sentiment controls for every element in standing.
 
     Generated from the ledger so a screen cannot invent a design-element id.
@@ -862,6 +994,7 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
     markup out.
     """
     pinned = pinned or set()
+    txt = strings_for(language or project_language(project_root))
     live = [e for e in decisions["elements"] if e["state"] in GROUP_OF]
     theme_vars = {
         "--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent",
@@ -874,38 +1007,40 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
             wrapper_style = f' style="{declared}"'
     lines = [FEEDBACK_STYLE, REHYDRATE_SCRIPT,
              f'<div class="dh-feedback" data-{VERSION_MARKER}="{CONTROLS_VERSION}"{wrapper_style}>',
-             '<strong class="dh-offline">Sin conexión al companion: estos clics NO se guardan. '
-             'Abre la URL del companion (http://localhost:PORT/?key=...), no el archivo.</strong>']
+             f'<strong class="dh-offline">{txt["offline"]}</strong>']
     if not live:
         lines.append("<!-- no elements in standing; record one with `decide` first -->")
-    group_index = {key: n for n, (key, _, _) in enumerate(GROUPS)}
+    # Grouped by design-system foundation, not by lifecycle. The user asked to
+    # see the typography together, the palette together -- that is a design
+    # system with a rank against each part. Lifecycle still rides on each row's
+    # own state chip, where it belongs.
+    def group_of(item: dict[str, object]) -> str:
+        return "pinned" if item["element"] in pinned else foundation_of(item["element"])
     def order(item: dict[str, object]) -> tuple:
-        # Pinned work from this turn first, then group order, then best
+        # This round first, then the foundations in reading order, then best
         # execution first, then id so the output stays byte-stable.
         return (0 if item["element"] in pinned else 1,
-                group_index[GROUP_OF[item["state"]]],
+                FOUNDATION_ORDER.get(group_of(item), len(FOUNDATION_ORDER)),
                 -int(item.get("stars") or 0),
                 item["element"])
     rendered_group = None
     for entry in sorted(live, key=order):
-        is_pinned = entry["element"] in pinned
-        group_key = "pinned" if is_pinned else GROUP_OF[entry["state"]]
+        group_key = group_of(entry)
         if group_key != rendered_group:
             rendered_group = group_key
-            label = ("De esta ronda" if is_pinned else
-                     next(n for k, n, _ in GROUPS if k == group_key))
-            tally = sum(1 for e in live
-                        if ("pinned" if e["element"] in pinned else GROUP_OF[e["state"]]) == group_key)
+            label = txt["from-this-round"] if group_key == "pinned" else txt.get(group_key, group_key)
+            tally = sum(1 for e in live if group_of(e) == group_key)
             lines.append(f'<h4 class="dh-group" data-group="{group_key}">{label}<span class="dh-count">{tally}</span></h4>')
         element, stars = entry["element"], entry["stars"]
         lines.append(
             f'<div class="dh-fb" data-element="{element}" data-stars="{stars}" '
             f'data-scored="{"yes" if entry.get("scored") else "no"}" '
-            f'data-group="{GROUP_OF[entry["state"]]}" data-label="{element}">'
+            f'data-group="{GROUP_OF[entry["state"]]}" data-foundation="{foundation_of(element)}" '
+            f'data-label="{element}">'
         )
-        lines.append(render_preview(project_root, entry.get("preview"), element))
+        lines.append(render_preview(project_root, entry.get("preview"), element, txt))
         lines.append('<span class="dh-meta">')
-        unscored = "" if entry.get("scored") else " &middot; sin puntuar"
+        unscored = "" if entry.get("scored") else f' &middot; {txt["unscored"]}'
         # The state rides beside the id instead of trailing the block as a fifth
         # line of near-identical grey text.
         lines.append(f'<span class="dh-head"><span class="dh-id">{element}</span>'
@@ -919,13 +1054,14 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         # "Propuesto: palette.role-groups-three" directly under the heading
         # "palette.role-groups-three" on almost every row.
         if proposed and proposed != element:
-            lines.append(f'<span class="dh-desc dh-sub"><b>Propuesto</b>{proposed}</span>')
+            lines.append(f'<span class="dh-desc dh-sub"><b>{txt["proposed-by"]}</b>{proposed}</span>')
         if built:
-            lines.append(f'<span class="dh-desc dh-sub"><b>Implementado</b>{built}</span>')
+            lines.append(f'<span class="dh-desc dh-sub"><b>{txt["built"]}</b>{built}</span>')
         lines.append("</span>")
         lines.append('<span class="dh-signals">')
         stars_markup = "".join(
-            f'<span data-rank="{n}" role="button" tabindex="0" aria-label="{n} de {STAR_RANGE[1]}: calidad de ejecucion"'
+            f'<span data-rank="{n}" role="button" tabindex="0" '
+            f'aria-label="{n} {txt["stars-of"]} {STAR_RANGE[1]}: {txt["execution-quality"]}"'
             + (' class="on"' if 0 < n <= stars else "") + ">&#9733;</span>"
             for n in range(STAR_RANGE[0], STAR_RANGE[1] + 1)
         )
@@ -937,17 +1073,18 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         zero_on = ' class="on"' if entry.get("scored") and stars == ZERO_STARS else ""
         lines.append(
             f'<span class="dh-zero"><span data-rank="0" role="button" tabindex="0" '
-            f'title="cero estrellas: pesimo, pero sigue en pie" '
-            f'aria-label="cero estrellas para {element}: pesima ejecucion"{zero_on}>0</span></span>'
+            f'title="{txt["zero-title"]}" '
+            f'aria-label="{txt["zero-label"].format(element=element)}"{zero_on}>0</span></span>'
             # data-stars is mirrored onto the strip so the numeric readout can be
             # pure CSS (attr()) and still track a click: `paint` writes it here
             # as well as on the row.
             f'<span class="dh-stars" role="group" data-stars="{stars}" '
             f'data-scored="{"yes" if entry.get("scored") else "no"}" '
-            f'aria-label="ejecucion de {element}">'
+            f'aria-label="{txt["execution-of"]} {element}">'
             f'{stars_markup}</span>')
         mood = entry.get("sentiment")
-        for name, glyph, label in (("like", "&#128077;", "me gusta"), ("dislike", "&#128078;", "no me gusta")):
+        for name, glyph, label in (("like", "&#128077;", txt["like"]),
+                                   ("dislike", "&#128078;", txt["dislike"])):
             on = ' class="on"' if mood == name else ""
             lines.append(f'<span data-sentiment="{name}" role="button" tabindex="0" '
                          f'aria-label="{label} {element}" title="{label}"{on}>{glyph}</span>')
@@ -957,7 +1094,7 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         on = ' class="on"' if done else ""
         lines.append(f'<span data-verdict="completed" role="button" tabindex="0" '
                      f'aria-pressed="{"true" if done else "false"}" '
-                     f'aria-label="completado: {element}" title="completado"{on}>'
+                     f'aria-label="{txt["completed"]}: {element}" title="{txt["completed"]}"{on}>'
                      f'<span>&#10003;</span></span>')
         lines.append("</span>")
         lines.append("</div>")
@@ -1003,7 +1140,7 @@ def newest_session_dir(project_root: Path) -> Path:
 
 
 def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | None = None,
-                   pinned: set[str] | None = None) -> int:
+                   pinned: set[str] | None = None, language: str | None = None) -> int:
     """Fill a screen's `data-dh-controls` placeholders with generated rows.
 
     Without this, an agent wanting scoring inside a prototype hand-writes the
@@ -1013,7 +1150,10 @@ def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | Non
     project_root = project_root.resolve(strict=True)
     output = project_root / "spec" / "design-harness"
     html = screen.read_text(encoding="utf-8")
-    generated = render_feedback_controls(load_decisions(output), theme, project_root, pinned)
+    language = language or project_language(project_root)
+    txt = strings_for(language)
+    generated = render_feedback_controls(load_decisions(output), theme, project_root,
+                                         pinned, language)
     rows = {m.group(1): m.group(0) for m in re.finditer(
         r'<div class="dh-fb" data-element="([^"]+)".*?\n</div>', generated, re.S)}
     style_match = re.search(r"<style>.*?</style>", generated, re.S)
@@ -1041,23 +1181,50 @@ def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | Non
             "Add one where scoring belongs -- never hand-write the rows.")
 
     filled = 0
+    # A foundation heads its section once per screen, at its first appearance.
+    # This screen carries sixteen placeholders, so heading each one in isolation
+    # printed "Composition & layout" four times -- a repetition that reads as
+    # noise rather than as a design system. Decided in document order here,
+    # because the rewrite below has to run backwards.
+    headed: set[str] = set()
+    heads_at: dict[int, set[str]] = {}
+    for position, (opening, _) in enumerate(placeholders):
+        names = [e.strip() for e in opening.group(2).split(",") if e.strip()]
+        fresh = {foundation_of(n) for n in names} - headed
+        heads_at[position] = fresh
+        headed |= fresh
     # Right to left so earlier offsets stay valid. Each placeholder's contents
     # are replaced wholesale, which is what makes embed safe to re-run.
-    for opening, close_end in reversed(placeholders):
+    for position, (opening, close_end) in reversed(list(enumerate(placeholders))):
         wanted = [e.strip() for e in opening.group(2).split(",") if e.strip()]
         missing = [e for e in wanted if e not in rows]
         if missing:
             raise HarnessError("placeholder names element(s) not in standing: " + ", ".join(missing))
-        body = "\n".join(rows[e] for e in wanted)
+        # Group the placeholder's own elements by design-system foundation.
+        # `embed` lifts bare rows out of the generated wrapper, so the headings
+        # rendered there never reached an embedded screen -- the grouping
+        # existed and was invisible on the only page the user actually scores.
+        # Ordered by foundation, author's order kept inside each one.
+        buckets: dict[str, list[str]] = {}
+        for name in wanted:
+            buckets.setdefault(foundation_of(name), []).append(name)
+        ordered = sorted(buckets.items(),
+                         key=lambda kv: FOUNDATION_ORDER.get(kv[0], len(FOUNDATION_ORDER)))
+        body = "\n".join(
+            (f'<h4 class="dh-group" data-group="{key}">{txt.get(key, key)}'
+             f'<span class="dh-count">{len(names)}</span></h4>\n'
+             if key in heads_at[position] else "")
+            + "\n".join(rows[e] for e in names)
+            for key, names in ordered)
         # A round names its cohort so the user knows what is being asked and what
         # is deliberately out of scope. Read it off THIS div: an outer wrapper's
         # attributes never survive into the placeholder embed rewrites.
         attributes = opening.group(1) + opening.group(3)
         cohort = re.search(r'data-dh-cohort="([^"]*)"', attributes)
         if cohort and cohort.group(1).strip():
-            banner = (f'<p class="dh-cohort"><b>this round</b>'
+            banner = (f'<p class="dh-cohort"><b>{txt["this-round"]}</b>'
                       f'<span>{html_escape(cohort.group(1).strip())}</span>'
-                      f'{len(wanted)} element(s) to score</p>\n')
+                      f'{len(wanted)} {txt["to-score"]}</p>\n')
             body = banner + body
         replacement = (f'<div{opening.group(1)}data-dh-controls="{opening.group(2)}"'
                        f'{opening.group(3)}>\n{body}\n</div>')
@@ -1164,7 +1331,8 @@ def ledger_stats(decisions: dict[str, object]) -> dict[str, object]:
     }
 
 
-def init_harness(project_root: Path, source_root: Path, profiles: list[str]) -> Path:
+def init_harness(project_root: Path, source_root: Path, profiles: list[str],
+                 language: str = DEFAULT_LANGUAGE) -> Path:
     project_root = project_root.resolve(strict=True)
     source_root = source_root.resolve(strict=True)
     if not project_root.is_dir() or not source_root.is_dir():
@@ -1187,6 +1355,9 @@ def init_harness(project_root: Path, source_root: Path, profiles: list[str]) -> 
         "sourceRoot": str(source_root),
         "sourcePolicy": "read-only",
         "profiles": profiles,
+        # Stored once, so every later verb draws the strip in the user's own
+        # language without being told again.
+        "language": language,
         "state": "draft",
         "budgets": {"toolCalls": 4, "urls": 2, "newVisuals": 4, "extractedChars": 24000, "outputTokens": 1200},
     }
@@ -1497,9 +1668,27 @@ def self_test() -> None:
         if 'data-element="explicitly.rejected"' not in rejected_markup:
             raise HarnessError("self-test: rejected element is unreachable for undo")
         if 'data-group="rejected"' not in rejected_markup:
-            raise HarnessError("self-test: rejected group not rendered")
-        if "Lluvia de ideas" not in rejected_markup:
-            raise HarnessError("self-test: brainstorming group label missing")
+            raise HarnessError("self-test: rejected lifecycle group not marked on the row")
+        # Headings group by design-system foundation, so the user reads the
+        # typography together and the palette together. Lifecycle rides on the
+        # row, which is what dims rejected work and drives the state chip.
+        if 'class="dh-group" data-group="palette"' not in rejected_markup:
+            raise HarnessError("self-test: rows are not grouped by design-system foundation")
+        if strings_for("es")["palette"] in rejected_markup:
+            raise HarnessError("self-test: default strip is not in the default language")
+        spanish = render_feedback_controls(load_decisions(output), None, project, language="es")
+        if strings_for("es")["palette"] not in spanish:
+            raise HarnessError("self-test: --lang did not translate the group headings")
+        if strings_for("en")["proposed-by"] in spanish:
+            raise HarnessError("self-test: a translated strip still carries English row labels")
+        for element_id, expected in (("palette.family-from-cards", "palette"),
+                                     ("type.bracket-numerals", "typography"),
+                                     ("cover.layout.two-column", "composition"),
+                                     ("family.mark.dotmatrix", "illustration"),
+                                     ("something.unmapped", "core")):
+            if foundation_of(element_id) != expected:
+                raise HarnessError(
+                    f"self-test: {element_id} filed under {foundation_of(element_id)}, not {expected}")
 
         # Every color must be a themeable token, never a literal that would
         # override the corpus palette the ledger already approved.
@@ -1537,7 +1726,7 @@ def self_test() -> None:
         with_shot = render_feedback_controls(load_decisions(output), None, project)
         if 'class="dh-shot"' not in with_shot or "#f9e7b5" not in with_shot:
             raise HarnessError("self-test: the ranked element carries no graphic")
-        if "sin gr" not in render_feedback_controls(load_decisions(output), None, project):
+        if "data-dh-no-graphic" not in render_feedback_controls(load_decisions(output), None, project):
             raise HarnessError("self-test: elements without a preview must say so, not fake one")
         if with_shot != render_feedback_controls(load_decisions(output), None, project):
             raise HarnessError("self-test: previews broke control determinism")
@@ -1711,6 +1900,9 @@ def parser() -> argparse.ArgumentParser:
     init.add_argument("--project-root", required=True, type=Path)
     init.add_argument("--source-root", required=True, type=Path)
     init.add_argument("--profiles", required=True)
+    init.add_argument("--language", default=DEFAULT_LANGUAGE,
+                      choices=sorted(STRINGS),
+                      help="language for the scoring strip (stored in project.json)")
     validate = subcommands.add_parser("validate")
     validate.add_argument("--project-root", required=True, type=Path)
     decide = subcommands.add_parser("decide", help="record a binding design decision")
@@ -1750,6 +1942,8 @@ def parser() -> argparse.ArgumentParser:
     controls.add_argument("--out", type=Path, help="write here instead of stdout")
     controls.add_argument("--shot-width", default="", help="preview frame width, e.g. 132px")
     controls.add_argument("--pin", default="", help="element ids to pin on top (this turn's work)")
+    controls.add_argument("--lang", default="", choices=["", *sorted(STRINGS)],
+                          help="override the project's stored language")
     controls.add_argument("--bg", default="", help="background color; declare the corpus palette, don't guess it")
     controls.add_argument("--ink", default="", help="text/border color")
     controls.add_argument("--accent", default="", help="accent color, e.g. the approved family accent")
@@ -1781,7 +1975,8 @@ def main() -> int:
     args = parser().parse_args()
     try:
         if args.command == "init":
-            output = init_harness(args.project_root, args.source_root, parse_profiles(args.profiles))
+            output = init_harness(args.project_root, args.source_root,
+                              parse_profiles(args.profiles), args.language)
             print(output)
         elif args.command == "validate":
             report = validate_harness(args.project_root) or {}

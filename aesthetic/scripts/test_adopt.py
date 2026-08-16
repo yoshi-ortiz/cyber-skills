@@ -196,6 +196,80 @@ class AlreadyAdoptedHistory(unittest.TestCase):
             self.assertEqual(element(output, "cover.spine")["stars"], 5)
 
 
+class WithdrawingAThumb(unittest.TestCase):
+    """Taking a thumb back is a signal, not the absence of one. The companion
+    sends `"sentiment": null` and 18 such events were already sitting in one
+    real ledger -- one element un-liked twelve times -- while `stats` still
+    counted every withdrawn like. `sentiment=None` meant BOTH "leave it alone"
+    and "clear it", so it could only ever mean the first."""
+
+    def liked(self, root: Path) -> Path:
+        output = harness(root)
+        bh.adopt_companion(root, ledger(root, {
+            "type": "sentiment", "element": "palette.role-groups-three",
+            "sentiment": "like", "stars": 2, "timestamp": 1000}))
+        return output
+
+    def test_a_withdrawal_clears_the_stored_sentiment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.liked(root)
+            bh.adopt_companion(root, ledger(root, {
+                "type": "sentiment", "element": "palette.role-groups-three",
+                "choice": "palette.role-groups-three", "sentiment": None,
+                "stars": 2, "text": "palette.role-groups-three", "timestamp": 2000}))
+            self.assertIsNone(element(output, "palette.role-groups-three")["sentiment"])
+
+    def test_a_withdrawal_leaves_the_star_rank_alone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.liked(root)
+            bh.adopt_companion(root, ledger(root, {
+                "type": "sentiment", "element": "palette.role-groups-three",
+                "sentiment": None, "stars": 2, "timestamp": 2000}))
+            self.assertEqual(element(output, "palette.role-groups-three")["stars"], 2)
+
+    def test_an_event_with_no_sentiment_key_does_not_clear_it(self):
+        """The correction must not overshoot: a plain star click carries no
+        sentiment key at all and has never meant 'take the thumb back'."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.liked(root)
+            bh.adopt_companion(root, ledger(root, {
+                "element": "palette.role-groups-three", "stars": 5, "timestamp": 2000}))
+            entry = element(output, "palette.role-groups-three")
+            self.assertEqual(entry["sentiment"], "like")
+            self.assertEqual(entry["stars"], 5)
+
+    def test_a_bare_withdrawal_carrying_no_stars_is_still_adopted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.liked(root)
+            adopted, skipped = bh.adopt_companion(root, ledger(root, {
+                "type": "sentiment", "element": "palette.role-groups-three",
+                "sentiment": None, "timestamp": 2000}))
+            self.assertEqual((adopted, skipped), (1, 0))
+            self.assertIsNone(element(output, "palette.role-groups-three")["sentiment"])
+
+    def test_stats_stops_counting_a_withdrawn_like(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.liked(root)
+            self.assertEqual(bh.ledger_stats(bh.load_decisions(output))["likes"], 1)
+            bh.adopt_companion(root, ledger(root, {
+                "type": "sentiment", "element": "palette.role-groups-three",
+                "sentiment": None, "stars": 2, "timestamp": 2000}))
+            self.assertEqual(bh.ledger_stats(bh.load_decisions(output))["likes"], 0)
+
+    def test_decide_without_a_sentiment_argument_keeps_the_existing_one(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.liked(root)
+            bh.record_decision(root, "palette.role-groups-three", "proposed", 1,
+                               "agent re-records", [])
+            self.assertEqual(element(output, "palette.role-groups-three")["sentiment"], "like")
+
+
 class DoctorProbe(unittest.TestCase):
     """companion_doctor strips its probe rows back out, but an adopt racing that
     cleanup used to fold the probe in as a real element -- and adopt never
@@ -343,6 +417,42 @@ class CohortIsVisible(unittest.TestCase):
             path = self.screen(root, 'data-dh-controls="cover.ring.kicker"')
             bh.embed_controls(root, path)
             self.assertNotIn('class="dh-cohort"', path.read_text(encoding="utf-8"))
+
+    def test_an_embedded_screen_carries_the_foundation_headings(self):
+        """embed lifts bare rows out of the generated wrapper, so headings
+        rendered there never reached the page the user actually scores."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            harness(root)
+            path = self.screen(root, 'data-dh-controls="cover.ring.kicker,cover.spine.right"')
+            bh.record_decision(root, "palette.family-from-cards", "proposed", 1, "fixture", [])
+            path.write_text('<html><body><div data-dh-controls="cover.ring.kicker,'
+                            'palette.family-from-cards"></div></body></html>', encoding="utf-8")
+            bh.embed_controls(root, path)
+            markup = path.read_text(encoding="utf-8")
+            self.assertIn('data-group="palette"', markup)
+            self.assertIn('data-group="composition"', markup)
+            # Foundations render in reading order, not in the order typed.
+            self.assertLess(markup.index('data-group="palette"'),
+                            markup.index('data-group="composition"'))
+
+    def test_a_foundation_heads_its_section_once_per_screen(self):
+        """Sixteen placeholders on one screen printed "Composition & layout"
+        four times, which reads as noise rather than as a design system."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            harness(root)
+            path = self.screen(root, 'data-dh-controls="cover.ring.kicker"')
+            path.write_text('<html><body>'
+                            '<div data-dh-controls="cover.ring.kicker"></div>'
+                            '<div data-dh-controls="cover.spine.right"></div>'
+                            '</body></html>', encoding="utf-8")
+            bh.embed_controls(root, path)
+            markup = path.read_text(encoding="utf-8")
+            self.assertEqual(markup.count('data-group="composition"'), 1)
+            # Both rows still render -- only the repeated heading is dropped.
+            self.assertIn('data-element="cover.ring.kicker"', markup)
+            self.assertIn('data-element="cover.spine.right"', markup)
 
     def test_the_banner_does_not_duplicate_on_re_embed(self):
         with tempfile.TemporaryDirectory() as tmp:
