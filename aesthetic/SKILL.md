@@ -1,7 +1,7 @@
 ---
 name: aesthetic
 description: Evidence-backed design harness for durable user decisions and ranked feedback. Use for design work with an inspiration corpus or an existing spec/design-harness/. Covers art direction, UI, product, space, copy, motion, and composition.
-argument-hint: "[continue|<corpus-dir>]"
+argument-hint: "continue | critique | interpret @<art-folder>"
 ---
 
 # Aesthetic
@@ -10,7 +10,13 @@ Great design is specific to its subject, coherent as a system, visibly refined, 
 
 ## When invoked
 
-Arguments are usually empty or a stub — "continue prototype development", or nothing. **They are not the brief.** Read the state from disk first:
+Three modes, and the argument names which:
+
+- **`continue`** (or nothing) — the default. Open the next round: `doctor`, `stats`, name the cohort, redraw 3–6.
+- **`critique`** — judge what stands without proposing anything new. Read the ledger and the served screen, say where the system contradicts itself or drifts from the corpus, and rank nothing on the user's behalf.
+- **`interpret @<art-folder>`** — a corpus arrived. Read it read-only, cluster it by recurring relationships, and turn it into declared foundations (palette, faces, pairings) the user can rank. This is the only mode that adds fundamentals from outside.
+
+Anything else is a stub, not a brief. **Read the state from disk first:**
 
 - **`spec/design-harness/` exists** → continue: `doctor`, `stats`, `DECISIONS.md`, then name the cohort. Do not re-ask what the ledger already answers.
 - **It does not** → ask, in one question, for the two things only the user has: **the inspiration corpus directory** — read-only, never guessed — and **the artistic direction**: subject, audience, what the artefact is for. Then `init`.
@@ -80,7 +86,9 @@ describe --element type.dotmatrix --tokens '{"fonts":[{"name":"Matriz 5x7","stac
 
 **Point a token at an element id and it becomes rankable where it is read.** Add `"element": "<id>"` to a colour, a face or a single variant and that element's controls ride beside the specimen — so a family, a pairing and one weight are each ranked against the thing itself rather than as a dotted id in a list below. The full row still appears in its section; both stay in sync.
 
-**The pairings are decisions too.** A type system is chosen as combinations, so record them: `type.pairing.<a>-x-<b>`, with a specimen showing the two faces together. Ranking each face alone never asks the question the user actually has to answer.
+**Name the actual families.** `name` is the typeface, as a typographer would say it — "Söhne Mono", "GT Alpina", "SF Mono / Menlo". A description of what it looks like ("dot-matrix headline face") is not a name, and a section full of descriptions cannot be ranked: the user cannot choose between two things neither of which is identified. If the artwork draws its letterforms rather than setting them, say so in `use` and still name the face the rest of the system sets.
+
+**The pairings are decisions too, and they are named by their families.** A type system is chosen as combinations, so record each one: `type.pairing.<a>-x-<b>`, named `"<Family A> + <Family B>"`, with a specimen showing the two set together at the sizes they actually meet. Ranking each face alone never asks the question the user has to answer, which is whether *these two* belong on a page together.
 
 **Itemise the faces.** A name and one sample line is a caption — it cannot say which weight sets a heading and which sets a caption, and that is most of what a type system decides. Every `variant` names the **job it does** (`use` is required) and renders at its own weight and size, so the section shows the scale rather than describing it.
 

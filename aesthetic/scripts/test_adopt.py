@@ -598,6 +598,52 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             block = markup.split('id="dh-zone-fundamentals"')[1].split("</section>")[0]
             self.assertNotIn('class="dh-subnav"', block)
 
+    def test_the_status_strip_is_a_clickable_index_in_the_sticky_bar(self):
+        """A chart nobody can act on is decoration. Every bar is the element it
+        stands for, and its target has to exist."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"cover.strong"})
+            nav = markup.split('class="dh-toc"')[1].split("</nav>")[0]
+            self.assertIn("dh-temp-sticky", nav)
+            targets = re.findall(r'href="#(dh-el-[^"]+)"', nav)
+            self.assertTrue(targets)
+            for target in targets:
+                self.assertIn(f'id="{target}"', markup)
+
+    def test_only_completed_work_is_solid_green(self):
+        """A top score says the drawing is beautiful, not that the question is
+        closed. Sharing one green made the handful of finished things
+        unfindable."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.system(root)
+            bh.adopt_companion(root, ledger(
+                root,
+                {"element": "cover.strong", "stars": 5, "timestamp": 3},
+                {"element": "palette.family", "stars": 5, "verdict": "completed", "timestamp": 4}))
+            decisions = bh.load_decisions(root / "spec" / "design-harness")
+            markup = bh.render_article(root, decisions)
+            done = re.search(r'class="dh-tdone" href="#dh-el-([^"]+)"', markup)
+            high = re.search(r'class="dh-thigh" href="#dh-el-([^"]+)"', markup)
+            self.assertEqual(done.group(1), "palette.family")
+            self.assertEqual(high.group(1), "cover.strong")
+
+    def test_the_rounds_own_bars_are_marked_with_a_question(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"cover.strong"})
+            asked = re.search(r'href="#dh-el-cover\.strong"[^>]*data-asked="1"[^>]*>'
+                              r'<span>\?</span>', markup)
+            self.assertIsNotNone(asked)
+            self.assertEqual(markup.count('data-asked="1"'), 2)  # hero + sticky
+
+    def test_every_bar_carries_a_tooltip_naming_the_element(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            self.assertIn('title="palette.family', markup)
+
     def test_antipatterns_sit_last_and_muted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

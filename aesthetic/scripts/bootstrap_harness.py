@@ -178,8 +178,9 @@ STRINGS = {
         "specimen-colors": "Palette", "specimen-fonts": "Typefaces",
         "hero-standing": "standing", "hero-ranked": "you ranked", "hero-asking": "asked this round",
         "hero-ongoing": "still moving", "hero-improve": "to improve",
-        "temp-caption": "Every element, worst execution to best. Red is a 0, green is a 5, "
-                        "grey is not scored yet.",
+        "temp-caption": "One bar per element, worst execution to best \u2014 click one to jump to "
+                        "it. Solid green is done, pale green is well drawn but still open, grey "
+                        "is unscored. Bars marked ? are what this round asks.",
         "temp-alt": "Distribution of execution scores, worst to best",
         "hero-lede": "Every part below was ranked by you. The strip beside each one is how it "
                      "was scored, and clicking changes it.",
@@ -213,8 +214,9 @@ STRINGS = {
         "specimen-colors": "Paleta", "specimen-fonts": "Tipografías",
         "hero-standing": "en pie", "hero-ranked": "puntuados por ti", "hero-asking": "esta ronda",
         "hero-ongoing": "en curso", "hero-improve": "por mejorar",
-        "temp-caption": "Cada elemento, de peor a mejor ejecución. Rojo es un 0, verde un 5, "
-                        "gris es que todavía no tiene nota.",
+        "temp-caption": "Una barra por elemento, de peor a mejor ejecución \u2014 pulsa una para "
+                        "ir a ella. Verde sólido es terminado, verde claro es bien dibujado pero "
+                        "abierto, gris es sin puntuar. Las marcadas con ? son las de esta ronda.",
         "temp-alt": "Distribución de las notas de ejecución, de peor a mejor",
         "hero-lede": "Cada pieza de abajo la puntuaste tú. La tira que hay al lado es su nota, "
                      "y al hacer clic cambia.",
@@ -1260,12 +1262,30 @@ ARTICLE_STYLE = """<style>/* dh-article */
    to best. The whole system's temperature in a single line -- real data, no
    decoration, and it reads before a single word is read. */
 .dh-temp-wrap{margin:26px 0 0}
-.dh-temp{display:flex;gap:2px;block-size:9px}
+.dh-temp{display:flex;gap:2px;block-size:12px}
 .dh-temp-wrap figcaption{margin:9px 0 0;font-size:10.5px;
  color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+/* Every bar is the element it stands for: click it and you are at its row.
+   A chart nobody can act on is decoration, and this one is the only view of
+   the whole system that fits on one line. */
+.dh-temp a{flex:1 1 0;min-inline-size:3px;border-radius:1px;background:currentColor;
+ display:grid;place-items:center;text-decoration:none;transition:transform .1s,outline-color .1s;
+ outline:1px solid transparent;outline-offset:1px}
+.dh-temp a:hover,.dh-temp a:focus-visible{transform:scaleY(1.55);
+ outline-color:var(--dh-ink,#111)}
+.dh-temp a span{font-size:8px;font-weight:800;line-height:1;color:var(--dh-bg,#fff)}
+/* The round's own items are marked in the strip, so "what am I being asked?"
+   is answerable from the sticky bar without scrolling to find out. */
+.dh-temp a[data-asked]{outline-color:var(--dh-ink,#111);min-inline-size:11px;flex-grow:1.6}
+.dh-temp-sticky{block-size:11px;margin:0 0 8px}
+.dh-toc{padding-block-end:2px}
 .dh-temp i{flex:1 1 0;border-radius:1px;background:currentColor;min-inline-size:2px}
 .dh-t0{color:#b00020}.dh-t1{color:#c2451c}.dh-t2{color:#cf7a12}
 .dh-t3{color:#b98b07}.dh-t4{color:#6f9430}.dh-t5{color:#1c8b4b}
+/* Solid green means DONE, and only that. A top score is a different claim --
+   beautifully drawn, question still open -- so it sits back as a faded green. */
+.dh-tdone{color:#1c8b4b}
+.dh-thigh{color:#9ec78a}
 .dh-tnone{color:color-mix(in srgb, var(--dh-ink,#111) 18%, transparent)}
 /* Zones. Four, and the reader must never wonder which one they are in. */
 .dh-zone{padding:60px 0 0}
@@ -1356,25 +1376,25 @@ ARTICLE_STYLE = """<style>/* dh-article */
 .dh-toc ol{display:flex;gap:4px;margin:0;padding:9px 0;list-style:none;
  overflow-x:auto;scrollbar-width:none}
 .dh-toc ol::-webkit-scrollbar{display:none}
-.dh-toc a{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;
+.dh-toc ol a{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;
  text-decoration:none;white-space:nowrap;color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);
  font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
  border:1px solid transparent;transition:color .15s,background .15s,border-color .15s}
-.dh-toc a:hover{color:var(--dh-ink,#111);border-color:var(--dh-rule)}
-.dh-toc a em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.7}
-.dh-toc a[aria-current="true"]{color:var(--dh-bg,#fff);background:var(--dh-ink,#111);
+.dh-toc ol a:hover{color:var(--dh-ink,#111);border-color:var(--dh-rule)}
+.dh-toc ol a em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.7}
+.dh-toc ol a[aria-current="true"]{color:var(--dh-bg,#fff);background:var(--dh-ink,#111);
  border-color:var(--dh-ink,#111)}
 /* The round is the ask, so its link is a button and everything else is a
    place to go. It keeps that weight even when the reader is elsewhere --
    that is the point of a call to action. */
-.dh-toc a[data-cta]{background:var(--dh-accent,#d9482a);border-color:var(--dh-accent,#d9482a);
+.dh-toc ol a[data-cta]{background:var(--dh-accent,#d9482a);border-color:var(--dh-accent,#d9482a);
  color:#fff;box-shadow:0 1px 0 color-mix(in srgb, var(--dh-ink,#111) 22%, transparent)}
-.dh-toc a[data-cta]:hover{filter:brightness(1.08);color:#fff}
-.dh-toc a[data-cta][aria-current="true"]{background:var(--dh-ink,#111);
+.dh-toc ol a[data-cta]:hover{filter:brightness(1.08);color:#fff}
+.dh-toc ol a[data-cta][aria-current="true"]{background:var(--dh-ink,#111);
  border-color:var(--dh-ink,#111)}
-.dh-toc a[data-cta] em{opacity:.85}
+.dh-toc ol a[data-cta] em{opacity:.85}
 .dh-ico{inline-size:13px;block-size:13px;flex:none}
-.dh-toc a:focus-visible,.dh-subnav a:focus-visible{
+.dh-toc ol a:focus-visible,.dh-subnav a:focus-visible{
  outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
 /* Second level: sticks directly under the first, never over it. */
 .dh-subnav{position:sticky;inset-block-start:47px;z-index:15;margin:0 0 20px;
@@ -1393,6 +1413,9 @@ ARTICLE_STYLE = """<style>/* dh-article */
 .dh-subnav em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.6}
 .dh-zone{scroll-margin-block-start:64px}
 .dh-group{scroll-margin-block-start:104px}
+/* Jumped-to rows must clear the sticky bars, or the bar lands on top of the
+   row it just took you to. */
+.dh-art .dh-fb{scroll-margin-block-start:112px}
 @media (max-width:640px){
  .dh-art{padding-inline:16px}
  .dh-zone[data-zone="round"],.dh-zone[data-zone="antipattern"]{margin-inline:-16px;padding-inline:16px}
@@ -1604,9 +1627,31 @@ def render_article(project_root: Path, decisions: dict[str, object],
         return (FOUNDATION_ORDER.get(foundation_of(entry["element"]), len(FOUNDATION_ORDER)),
                 -int(entry.get("stars") or 0), entry["element"])
 
-    bars = "".join(
-        f'<i class="dh-t{e["stars"]}"></i>' if e.get("scored") else '<i class="dh-tnone"></i>'
-        for e in sorted(live, key=lambda x: -int(x.get("stars") or 0)))
+    def bar_class(entry: dict[str, object]) -> str:
+        # Solid green is reserved for finished work. A high score is not the
+        # same claim -- it says this drawing is beautiful, not that the question
+        # is closed -- so it reads as a faded green and the eye can still find
+        # the handful of things actually done.
+        if not entry.get("scored"):
+            return "dh-tnone"
+        if entry["state"] == "completed":
+            return "dh-tdone"
+        if int(entry.get("stars") or 0) >= 4:
+            return "dh-thigh"
+        return f'dh-t{entry["stars"]}'
+
+    def bar(entry: dict[str, object]) -> str:
+        stars = "--" if not entry.get("scored") else entry["stars"]
+        asked = entry["element"] in cohort
+        tip = f'{entry["element"]} — {stars}/{STAR_RANGE[1]} — {entry["state"]}'
+        if asked:
+            tip = f'{txt["zone-round"]}: {tip}'
+        return (f'<a class="{bar_class(entry)}" href="#dh-el-{html_escape(entry["element"])}"'
+                f'{" data-asked=\"1\"" if asked else ""} title="{html_escape(tip)}">'
+                f'<span>{"?" if asked else ""}</span></a>')
+
+    ordered_bars = sorted(live, key=lambda x: (-int(x.get("stars") or 0), x["element"]))
+    bars = "".join(bar(e) for e in ordered_bars)
     asking = len([e for e in live if e["element"] in cohort])
     # Three figures the reader can act on, in the order they matter: what is
     # being asked now, what is still moving, and what is known to need another
@@ -1651,7 +1696,10 @@ def render_article(project_root: Path, decisions: dict[str, object],
         links.append(f'<li><a href="#dh-zone-{z}" data-zone="{z}"{cta}>{icon}'
                      f'{html_escape(txt[f"zone-{z}"])}<em>{tally}</em></a></li>')
     out.append('<nav class="dh-toc" aria-label="' + html_escape(txt["article-title"])
-               + '"><ol>' + "".join(links) + "</ol></nav>")
+               + '"><ol>' + "".join(links) + "</ol>"
+               + f'<div class="dh-temp dh-temp-sticky" role="group" '
+                 f'aria-label="{html_escape(txt["temp-alt"])}">{bars}</div>'
+               + "</nav>")
     for zone in ZONES:
         members = sorted((e for e in live if zone_of(e, cohort) == zone), key=rank)
         if not members and zone != "round":
@@ -1689,7 +1737,9 @@ def render_article(project_root: Path, decisions: dict[str, object],
                            f'{txt.get(key, key)}'
                            f'<span class="dh-count">{len(same)}</span></h4>')
                 out.append(_specimens(same, txt, rows))
-            out.append(rows.get(entry["element"], ""))
+            row = rows.get(entry["element"], "")
+            out.append(row.replace('<div class="dh-fb"',
+                                   f'<div id="dh-el-{entry["element"]}" class="dh-fb"', 1))
         out.append("</section>")
     out += ["</div>"]
     return "\n".join(part for part in out if part) + "\n"
