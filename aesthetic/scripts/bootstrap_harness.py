@@ -469,6 +469,12 @@ def parse_tokens(raw: str) -> dict[str, object]:
         value = json.loads(raw)
     except json.JSONDecodeError as err:
         raise HarnessError(f"--tokens is not valid JSON: {err}") from err
+    return validate_tokens(value)
+
+
+def validate_tokens(value: object) -> dict[str, object]:
+    """Checked here, not in the CLI: the rules protect the ledger, so they have
+    to hold for every caller rather than only for people typing a command."""
     if not isinstance(value, dict):
         raise HarnessError('--tokens must be a JSON object, e.g. {"colors": [...]}')
     for key, items in value.items():
@@ -482,6 +488,15 @@ def parse_tokens(raw: str) -> dict[str, object]:
     for face in value.get("fonts", []):
         if not str(face.get("name", "")).strip():
             raise HarnessError("every font token needs a `name` (the face that was chosen)")
+        variants = face.get("variants")
+        if variants is not None:
+            if not isinstance(variants, list) or not all(isinstance(v, dict) for v in variants):
+                raise HarnessError("font `variants` must be a list of objects")
+            for variant in variants:
+                if not str(variant.get("use", "")).strip():
+                    raise HarnessError(
+                        "every font variant needs a `use` -- a weight nobody can point at a job "
+                        "is a specimen, not a system")
     return value
 
 
@@ -508,7 +523,7 @@ def describe_element(project_root: Path, element: str,
     if implemented is not None:
         entry["implemented"] = implemented
     if tokens is not None:
-        entry["tokens"] = tokens
+        entry["tokens"] = validate_tokens(tokens)
     write_json(output / "decisions.json", decisions)
     (output / "DECISIONS.md").write_text(render_decisions_md(decisions), encoding="utf-8")
     return entry
@@ -1248,9 +1263,24 @@ ARTICLE_STYLE = """<style>/* dh-article */
 .dh-zone[data-zone="round"] .dh-tag{border-color:var(--dh-bg,#fff);background:var(--dh-accent,#d9482a);
  border-color:var(--dh-accent,#d9482a);color:#fff}
 .dh-zone[data-zone="round"] .dh-note{color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
+/* Turned-down work is kept, not displayed. It sits last and reads at low
+   contrast so the eye passes over it on the way down and can still stop when
+   it needs to -- muted, never hidden: a rejection is undone by clicking the
+   row, so the row has to stay reachable. */
+/* The SECTION recedes, not its contents. Dimming the rows made the stars and
+   thumbs inside them hard to read, and those controls are the only way a
+   rejection gets undone -- so the ground goes quiet and the rows stay at full
+   contrast on top of it. */
+.dh-zone[data-zone="antipattern"]{margin:72px -24px 0;padding:38px 24px 44px;border-radius:14px;
+ background:color-mix(in srgb, var(--dh-ink,#111) 6%, var(--dh-bg,#fff));
+ border:1px solid var(--dh-rule)}
+.dh-zone[data-zone="antipattern"] > header h2{font-size:clamp(19px,2.4vw,25px);font-weight:700;
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-zone[data-zone="antipattern"] > header .dh-note{
+ color:color-mix(in srgb, var(--dh-ink,#111) 50%, transparent)}
+.dh-zone[data-zone="antipattern"] .dh-group{
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
 .dh-zone[data-zone="antipattern"] .dh-tag{color:#b00020;border-color:#b00020}
-.dh-zone[data-zone="antipattern"] .dh-fb{opacity:.72}
-.dh-zone[data-zone="antipattern"] .dh-fb:hover{opacity:1}
 .dh-empty{margin:0;font-size:13px;font-style:italic;
  color:color-mix(in srgb, var(--dh-ink,#111) 45%, transparent)}
 /* Specimens: the section shows the actual material before it shows the rows.
@@ -1268,21 +1298,82 @@ ARTICLE_STYLE = """<style>/* dh-article */
  color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
 .dh-swatches span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
  color:color-mix(in srgb, var(--dh-ink,#111) 48%, transparent)}
-.dh-faces{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
-.dh-faces li{display:flex;align-items:baseline;gap:20px;flex-wrap:wrap;
- padding:16px 18px;border:1px solid var(--dh-rule);border-radius:10px}
-.dh-faces .dh-sample{font-size:40px;line-height:1;letter-spacing:-.02em;flex:none}
-.dh-faces .dh-face-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
-.dh-faces b{font-size:14px;font-weight:700}
-.dh-faces span{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+.dh-faces{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
+.dh-faces .dh-face{border:1px solid var(--dh-rule);border-radius:10px;overflow:hidden}
+.dh-face-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 18px;
+ border-block-end:1px solid var(--dh-rule)}
+.dh-face-head b{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.dh-face-head code{font-size:10.5px;color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent);
+ overflow-wrap:anywhere}
+.dh-face-head .dh-face-use{margin-inline-start:auto;font-size:9.5px;font-weight:700;
+ letter-spacing:.16em;text-transform:uppercase;padding:3px 8px;border-radius:999px;
+ border:1px solid var(--dh-rule);flex:none}
+/* One row per weight actually in use, each pointed at the job it does. */
+.dh-variants{margin:0;padding:0;list-style:none}
+.dh-variants li{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:13px 18px}
+.dh-variants li + li{border-block-start:1px solid var(--dh-rule)}
+.dh-variants .dh-sample{font-size:30px;line-height:1.15;letter-spacing:-.02em;
+ flex:1 1 auto;min-inline-size:0;overflow-wrap:anywhere}
+.dh-variants .dh-var-meta{display:flex;flex-direction:column;gap:3px;text-align:end;
+ margin-inline-start:auto;flex:none}
+.dh-variants b{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.dh-variants code{font-size:10px;font-variant-numeric:tabular-nums;
+ color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
+/* Sticky contents. The article is long by design -- four zones and every
+   foundation -- so without this the reader loses which zone they are reading,
+   and "is this settled or is this being asked?" is the one question the page
+   exists to answer. */
+.dh-toc{position:sticky;inset-block-start:0;z-index:20;margin:0 -24px;padding:0 24px;
+ background:color-mix(in srgb, var(--dh-bg,#fff) 92%, transparent);
+ backdrop-filter:blur(8px);border-block-end:1px solid var(--dh-rule)}
+.dh-toc ol{display:flex;gap:4px;margin:0;padding:9px 0;list-style:none;
+ overflow-x:auto;scrollbar-width:none}
+.dh-toc ol::-webkit-scrollbar{display:none}
+.dh-toc a{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;
+ text-decoration:none;white-space:nowrap;color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);
+ font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+ border:1px solid transparent;transition:color .15s,background .15s,border-color .15s}
+.dh-toc a:hover{color:var(--dh-ink,#111);border-color:var(--dh-rule)}
+.dh-toc a em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.7}
+.dh-toc a[aria-current="true"]{color:var(--dh-bg,#fff);background:var(--dh-ink,#111);
+ border-color:var(--dh-ink,#111)}
+.dh-toc a:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+.dh-zone{scroll-margin-block-start:64px}
 @media (max-width:640px){
  .dh-art{padding-inline:16px}
- .dh-zone[data-zone="round"]{margin-inline:-16px;padding-inline:16px}
+ .dh-zone[data-zone="round"],.dh-zone[data-zone="antipattern"]{margin-inline:-16px;padding-inline:16px}
  .dh-faces .dh-sample{font-size:30px}
 }
 @media (prefers-reduced-motion:reduce){.dh-art *{transition:none!important}}
 </style>"""
+
+
+TOC_SCRIPT = """<script>/* dh-toc */
+(function(){
+ if(window.__dhToc)return; window.__dhToc=1;
+ function start(){
+  var links=[].slice.call(document.querySelectorAll('.dh-toc a[data-zone]'));
+  var zones=links.map(function(a){return document.getElementById(a.getAttribute('href').slice(1))})
+                 .filter(Boolean);
+  if(!zones.length)return;
+  function mark(id){links.forEach(function(a){
+   a.setAttribute('aria-current', a.getAttribute('href')==='#'+id ? 'true':'false');});}
+  mark(zones[0].id);
+  /* Highest section still intersecting the top band wins. Picking the largest
+     visible ratio instead makes a short section that is fully on screen beat
+     the long one the reader is actually inside. */
+  if(!('IntersectionObserver' in window))return;
+  var visible={};
+  var io=new IntersectionObserver(function(entries){
+   entries.forEach(function(e){visible[e.target.id]=e.isIntersecting});
+   for(var i=0;i<zones.length;i++){ if(visible[zones[i].id]){ mark(zones[i].id); return } }
+  },{rootMargin:'-64px 0px -70% 0px', threshold:0});
+  zones.forEach(function(z){io.observe(z)});
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
+ else start();
+})();
+</script>"""
 
 
 def _specimens(entries: list[dict[str, object]], txt: dict[str, str]) -> str:
@@ -1307,10 +1398,40 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str]) -> str:
         items = []
         for f in fonts:
             stack = html_escape(str(f.get("stack") or "inherit"))
-            sample = html_escape(str(f.get("sample") or "Aa Bb Cc 0123"))
-            use = f'<span>{html_escape(str(f["use"]))}</span>' if f.get("use") else ""
-            items.append(f'<li><span class="dh-sample" style="font-family:{stack}">{sample}</span>'
-                         f'<span class="dh-face-meta"><b>{html_escape(str(f["name"]))}</b>{use}</span></li>')
+            # A family, then every weight it is actually used at, each labelled
+            # with the job it does. One sample line and a name is a caption: it
+            # cannot tell you which weight sets a heading and which sets a
+            # caption, which is most of what a type system decides.
+            variants = list(f.get("variants") or [])
+            if not variants:
+                variants = [{"use": f.get("use") or "", "sample": f.get("sample") or ""}]
+            rows = []
+            for v in variants:
+                weight = str(v.get("weight") or "").strip()
+                style = str(v.get("style") or "").strip()
+                size = str(v.get("size") or "").strip()
+                sample = html_escape(str(v.get("sample") or f.get("sample") or "Aa Bb Cc 0123"))
+                css = f"font-family:{stack}"
+                if weight:
+                    css += f";font-weight:{html_escape(weight)}"
+                if style:
+                    css += f";font-style:{html_escape(style)}"
+                if size:
+                    css += f";font-size:{html_escape(size)}"
+                spec = " · ".join(x for x in (weight, style, size) if x)
+                rows.append(
+                    f'<li><span class="dh-sample" style="{css}">{sample}</span>'
+                    f'<span class="dh-var-meta">'
+                    f'<b>{html_escape(str(v.get("use") or ""))}</b>'
+                    + (f'<code>{html_escape(spec)}</code>' if spec else "")
+                    + "</span></li>")
+            items.append(
+                f'<li class="dh-face"><div class="dh-face-head">'
+                f'<b>{html_escape(str(f["name"]))}</b>'
+                f'<code>{stack}</code>'
+                + (f'<span class="dh-face-use">{html_escape(str(f["use"]))}</span>'
+                   if f.get("use") else "")
+                + f'</div><ul class="dh-variants">{"".join(rows)}</ul></li>')
         out.append(f'<div class="dh-spec"><ul class="dh-faces">{"".join(items)}</ul></div>')
     return "".join(out)
 
@@ -1324,8 +1445,14 @@ def zone_of(entry: dict[str, object], cohort: set[str]) -> str:
     """
     if entry["element"] in cohort:
         return "round"
-    if entry["state"] in ("rejected", "superseded") or entry.get("sentiment") == "dislike":
+    # A thumb up says the DIRECTION is right, so the element cannot be a wrong
+    # direction -- whatever became of this particular drawing. Superseded work
+    # that the user still likes is history, not an antipattern, and filing it
+    # here told the next agent to stop pursuing an idea the user endorsed.
+    if entry.get("sentiment") == "dislike":
         return "antipattern"
+    if entry["state"] in ("rejected", "superseded"):
+        return "backlog" if entry.get("sentiment") == "like" else "antipattern"
     if entry["state"] in ("approved", "completed"):
         return "core"
     return "backlog"
@@ -1372,6 +1499,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
                          for prop, key in theme_vars.items() if (theme or {}).get(key))
     root_style = f' style="{declared}"' if declared else ""
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
+           TOC_SCRIPT,
            f'<div class="dh-art"{root_style}>',
            '<header class="dh-hero">',
            f'<p class="dh-eyebrow">{html_escape(txt["article-title"])}</p>',
@@ -1384,11 +1512,19 @@ def render_article(project_root: Path, decisions: dict[str, object],
            "</div>",
            f'<div class="dh-temp" aria-hidden="true">{bars}</div>',
            "</header>"]
+    shown = [z for z in ZONES
+             if z == "round" or any(zone_of(e, cohort) == z for e in live)]
+    out.append('<nav class="dh-toc" aria-label="' + html_escape(txt["article-title"]) + '"><ol>'
+               + "".join(
+                   f'<li><a href="#dh-zone-{z}" data-zone="{z}">{html_escape(txt[f"zone-{z}"])}'
+                   f'<em>{len([e for e in live if zone_of(e, cohort) == z])}</em></a></li>'
+                   for z in shown)
+               + "</ol></nav>")
     for zone in ZONES:
         members = sorted((e for e in live if zone_of(e, cohort) == zone), key=rank)
         if not members and zone != "round":
             continue
-        out += [f'<section class="dh-zone" data-zone="{zone}">', "<header>",
+        out += [f'<section class="dh-zone" id="dh-zone-{zone}" data-zone="{zone}">', "<header>",
                 f'<p class="dh-tag">{len(members)} {html_escape(txt["zone-count"])}</p>',
                 f'<h2>{html_escape(txt[f"zone-{zone}"])}</h2>',
                 f'<p class="dh-note">{html_escape(txt[f"zone-{zone}-note"])}</p>', "</header>"]

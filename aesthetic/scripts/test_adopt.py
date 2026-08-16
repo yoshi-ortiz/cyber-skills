@@ -5,6 +5,7 @@ This class of bug corrupts a user's design ledger without raising anything:
 clicked, never from replaying what the implementation does.
 """
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -502,6 +503,67 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             self.assertIn("Matriz 5x7", markup)
             self.assertIn("dh-faces", markup)
 
+    def test_a_face_itemises_its_variants_and_what_each_is_for(self):
+        """A name and one sample line is a caption. It cannot say which weight
+        sets a heading and which sets a caption, which is most of what a type
+        system actually decides."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.system(root)
+            bh.describe_element(root, "type.display", None, None, {"fonts": [{
+                "name": "Matriz 5x7", "stack": "ui-monospace", "use": "display",
+                "variants": [
+                    {"weight": 700, "size": "32px", "use": "titular", "sample": "EN VIVO"},
+                    {"weight": 400, "size": "13px", "use": "pie", "sample": "nota al pie"}]}]})
+            markup = bh.render_article(root, bh.load_decisions(root / "spec" / "design-harness"))
+            self.assertIn("ui-monospace", markup)          # the stack that renders
+            for word in ("titular", "pie", "700", "400", "32px", "13px"):
+                self.assertIn(word, markup, word)
+            self.assertEqual(markup.count('class="dh-variants"'), 1)
+            # each variant renders AT its own weight, not merely described
+            self.assertIn("font-weight:700", markup)
+
+    def test_a_variant_must_say_what_it_is_for(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.system(root)
+            with self.assertRaises(bh.HarnessError):
+                bh.describe_element(root, "type.display", None, None, {"fonts": [{
+                    "name": "X", "variants": [{"weight": 700}]}]})
+
+    def test_a_face_with_no_variants_still_renders(self):
+        """Older ledgers carry {name, stack, use, sample} and must not break."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            self.assertIn('class="dh-variants"', markup)
+            self.assertIn("Matriz 5x7", markup)
+
+    def test_the_toc_lists_every_zone_shown_and_marks_one_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"cover.strong"})
+            self.assertIn('class="dh-toc"', markup)
+            for zone in ("round", "core", "backlog", "antipattern"):
+                self.assertIn(f'href="#dh-zone-{zone}"', markup)
+                self.assertIn(f'id="dh-zone-{zone}"', markup)
+            self.assertIn("aria-current", markup)
+
+    def test_antipatterns_sit_last_and_muted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            sections = re.findall(r'<section class="dh-zone" id="dh-zone-(\w+)"', markup)
+            self.assertEqual(sections[-1], "antipattern")
+            style = markup.split("<style>/* dh-article */")[1].split("</style>")[0]
+            muted = style.split('.dh-zone[data-zone="antipattern"]{')[1].split("}")[0]
+            # The GROUND goes quiet, not the contents: dimming the rows made the
+            # stars and thumbs unreadable, and those are the only way a
+            # rejection gets undone.
+            self.assertIn("background:", muted)
+            self.assertNotIn("opacity:", muted)
+            self.assertNotIn("filter:", muted)
+
     def test_each_element_lands_in_exactly_one_zone(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -520,11 +582,40 @@ class TheArticleIsADesignSystem(unittest.TestCase):
         entry = {"element": "x.y", "state": "proposed", "stars": 3, "sentiment": "dislike"}
         self.assertEqual(bh.zone_of(entry, set()), "antipattern")
 
+    def test_a_thumbed_up_element_is_never_an_antipattern(self):
+        """A thumb up says the direction is right. Filing it under antipatterns
+        told the next agent to stop pursuing an idea the user endorsed."""
+        for state in ("rejected", "superseded", "proposed", "approved"):
+            entry = {"element": "x.y", "state": state, "stars": 2, "sentiment": "like"}
+            self.assertNotEqual(bh.zone_of(entry, set()), "antipattern", state)
+
+    def test_superseded_work_the_user_liked_is_held_not_condemned(self):
+        entry = {"element": "x.y", "state": "superseded", "stars": 4, "sentiment": "like"}
+        self.assertEqual(bh.zone_of(entry, set()), "backlog")
+
+    def test_no_thumbed_up_element_reaches_the_antipattern_section(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.system(root)
+            bh.adopt_companion(root, ledger(root, {
+                "element": "cover.bad", "sentiment": "like", "timestamp": 9}))
+            decisions = bh.load_decisions(root / "spec" / "design-harness")
+            markup = bh.render_article(root, decisions)
+            anti = markup.split('id="dh-zone-antipattern"')
+            if len(anti) > 1:
+                self.assertNotIn('data-element="cover.bad"', anti[1])
+            liked = {e["element"] for e in decisions["elements"]
+                     if e.get("sentiment") == "like" and e["state"] in bh.GROUP_OF}
+            for name in liked:
+                self.assertNotEqual(bh.zone_of(
+                    next(e for e in decisions["elements"] if e["element"] == name), set()),
+                    "antipattern", name)
+
     def test_rows_run_best_score_first_inside_a_foundation(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             markup = bh.render_article(root, self.system(root))
-            backlog = markup.split('data-zone="backlog"')[1]
+            backlog = markup.split('id="dh-zone-backlog"')[1]
             self.assertLess(backlog.index('data-element="cover.strong"'),
                             backlog.index('data-element="cover.weak"'))
 

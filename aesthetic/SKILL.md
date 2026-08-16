@@ -63,14 +63,20 @@ Startup is not the round. If the cohort is unnamed and no screen is on its way a
 
 ## Ship the article, not a list of rows
 
-`article --out <screen>.html --cohort <ids> --cohort-name <name>` writes the whole page: a hero whose thesis is **the question this round asks**, then four zones the reader can never confuse — **this round** (inverted, the only section asking for anything), **core system** (settled), **backlog** (unresolved), **antipatterns** (turned down, kept so they are not proposed again). Rows run best-score-first inside each foundation. Pass the project's own `--bg/--ink/--accent`: the article is structure only and takes the palette being judged, never one of its own.
+`article --out <screen>.html --cohort <ids> --cohort-name <name>` writes the whole page: a sticky contents bar that marks the section being read, a hero whose thesis is **the question this round asks**, then four zones the reader can never confuse — **this round** (inverted, the only section asking for anything), **core system** (settled), **backlog** (unresolved), **antipatterns** (last, on muted ground). Rows run best-score-first inside each foundation. Pass the project's own `--bg/--ink/--accent`: the article is structure only and takes the palette being judged, never one of its own.
+
+**A 👍 is never an antipattern**, whatever became of that particular drawing — the thumb judges the direction, so superseded work the user still likes is held in the backlog, not condemned. Only a 👎, or work turned down without one, goes to the bottom. That section mutes its **ground**, never its rows: the stars and thumbs inside are the only way a rejection gets undone, so they stay at full contrast and stay clickable.
+
+`adopt` **before** `article`, always. The article places each element by its ledger state, so an unadopted click puts a thing the user just endorsed under Antipatterns.
 
 **A section must show its material, not name it.** A "Typography" heading over one scoring row is a list. Record the specimens and the section becomes a design system:
 
 ```bash
 describe --element palette.family-from-cards --tokens '{"colors":[{"name":"menta","value":"#b2ffc2","role":"grupo"}]}'
-describe --element type.dotmatrix --tokens '{"fonts":[{"name":"Matriz 5x7","stack":"ui-monospace","use":"display","sample":"EN VIVO"}]}'
+describe --element type.dotmatrix --tokens '{"fonts":[{"name":"Matriz 5x7","stack":"ui-monospace","use":"display","variants":[{"weight":700,"size":"40px","use":"titular","sample":"EN VIVO"},{"weight":400,"size":"12px","use":"etiqueta","sample":"rol de lenguaje"}]}]}'
 ```
+
+**Itemise the faces.** A name and one sample line is a caption — it cannot say which weight sets a heading and which sets a caption, and that is most of what a type system decides. Every `variant` names the **job it does** (`use` is required) and renders at its own weight and size, so the section shows the scale rather than describing it.
 
 Swatches render the real hex, specimens the real face. **Take both from the corpus, never invent them** — a plausible hex is exactly the fabricated evidence the star cap exists to stop, and `describe` has no cap to catch you.
 
