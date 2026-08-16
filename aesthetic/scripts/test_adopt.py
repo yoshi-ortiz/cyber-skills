@@ -137,6 +137,65 @@ class SameTimestampPairs(unittest.TestCase):
             self.assertEqual(once, bh.load_decisions(output))
 
 
+class AlreadyAdoptedHistory(unittest.TestCase):
+    """`decide --source user` writes straight to decisions.json and never reaches
+    the companion ledger, so it has no position in the chronological replay. If
+    adopt replays the whole file every run, an old `proposed` click lands back on
+    top of an approval the user gave afterwards -- which downgraded seven
+    standing elements in one real run."""
+
+    def test_an_approval_survives_a_re_adopt_of_an_older_proposed_click(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = harness(root)
+            path = ledger(root, {"element": "cover.solapa.right", "verdict": "proposed",
+                                 "stars": 3, "timestamp": 1000})
+            bh.adopt_companion(root, path)
+            bh.record_decision(root, "cover.solapa.right", "approved", 5,
+                               "user: 'la solapa a la derecha'", [], source="user")
+            bh.adopt_companion(root, path)
+            entry = element(output, "cover.solapa.right")
+            self.assertEqual(entry["state"], "approved")
+            self.assertEqual(entry["stars"], 5)
+
+    def test_lines_appended_after_the_last_adopt_are_still_applied(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = harness(root)
+            path = ledger(root, {"element": "cover.solapa.right", "stars": 2, "timestamp": 1000})
+            bh.adopt_companion(root, path)
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps({"element": "cover.solapa.right", "stars": 4,
+                                         "timestamp": 2000}) + "\n")
+                handle.write(json.dumps({"element": "cover.ring", "verdict": "completed",
+                                         "timestamp": 3000}) + "\n")
+            adopted, _ = bh.adopt_companion(root, path)
+            self.assertEqual(adopted, 2)
+            self.assertEqual(element(output, "cover.solapa.right")["stars"], 4)
+            self.assertEqual(element(output, "cover.ring")["state"], "completed")
+
+    def test_a_second_adopt_of_an_unchanged_ledger_replays_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = ledger(root, {"element": "cover.ring", "stars": 4, "timestamp": 1000})
+            harness(root)
+            bh.adopt_companion(root, path)
+            self.assertEqual(bh.adopt_companion(root, path), (0, 0))
+
+    def test_a_replaced_ledger_at_the_same_path_is_replayed_in_full(self):
+        """A companion restart writes a fresh ledger where the old one sat.
+        Trusting the stale line count there would silently drop real clicks."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = harness(root)
+            bh.adopt_companion(root, ledger(
+                root, {"element": "cover.ring", "stars": 1, "timestamp": 1000}))
+            adopted, _ = bh.adopt_companion(root, ledger(
+                root, {"element": "cover.spine", "stars": 5, "timestamp": 2000}))
+            self.assertEqual(adopted, 1)
+            self.assertEqual(element(output, "cover.spine")["stars"], 5)
+
+
 class DoctorProbe(unittest.TestCase):
     """companion_doctor strips its probe rows back out, but an adopt racing that
     cleanup used to fold the probe in as a real element -- and adopt never
@@ -186,6 +245,53 @@ class CompletedIsRendered(unittest.TestCase):
         text = bh.render_decisions_md(decisions)
         for state in bh.DECISION_STATES:
             self.assertIn(f"e.{state}", text, state)
+
+
+class CohortIsVisible(unittest.TestCase):
+    """A round opens by naming its cohort. `data-dh-cohort` was an attribute
+    only -- doctor read it, the user never saw it -- so the screen never said
+    which elements this round is asking about and which are left alone."""
+
+    def screen(self, root: Path, attributes: str) -> Path:
+        bh.record_decision(root, "cover.ring.kicker", "proposed", 1, "fixture", [])
+        bh.record_decision(root, "cover.spine.right", "proposed", 1, "fixture", [])
+        session = root / ".superpowers" / "brainstorm" / "s1" / "content"
+        session.mkdir(parents=True)
+        path = session / "proto.html"
+        path.write_text(f"<html><body><div {attributes}></div></body></html>", encoding="utf-8")
+        return path
+
+    def test_the_cohort_name_is_rendered_above_the_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            harness(root)
+            path = self.screen(root, 'data-dh-cohort="cover-furniture" '
+                                     'data-dh-controls="cover.ring.kicker,cover.spine.right"')
+            bh.embed_controls(root, path)
+            markup = path.read_text(encoding="utf-8")
+            self.assertIn("cover-furniture", markup.split('class="dh-fb"')[0])
+            self.assertIn('class="dh-cohort"', markup)
+            self.assertIn("2 element(s) to score", markup)
+
+    def test_a_screen_with_no_cohort_renders_no_banner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            harness(root)
+            path = self.screen(root, 'data-dh-controls="cover.ring.kicker"')
+            bh.embed_controls(root, path)
+            self.assertNotIn('class="dh-cohort"', path.read_text(encoding="utf-8"))
+
+    def test_the_banner_does_not_duplicate_on_re_embed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            harness(root)
+            path = self.screen(root, 'data-dh-cohort="cover-furniture" '
+                                     'data-dh-controls="cover.ring.kicker"')
+            bh.embed_controls(root, path)
+            once = path.read_text(encoding="utf-8")
+            bh.embed_controls(root, path)
+            self.assertEqual(once, path.read_text(encoding="utf-8"))
+            self.assertEqual(once.count('class="dh-cohort"'), 1)
 
 
 if __name__ == "__main__":

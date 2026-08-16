@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from html import escape as html_escape
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -122,6 +123,11 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def ledger_digest(lines: list[str]) -> str:
+    """Fingerprint the ledger prefix an adopt has already consumed."""
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
 
 
 def is_within(path: Path, parent: Path) -> bool:
@@ -345,12 +351,26 @@ def describe_element(project_root: Path, element: str,
     return entry
 
 
+def ledger_cursor_key(project_root: Path, ledger_path: Path) -> str:
+    """Name a companion ledger without baking an absolute path into decisions.json."""
+    resolved = ledger_path.resolve()
+    root = project_root.resolve(strict=True)
+    return str(resolved.relative_to(root)) if is_within(resolved, root) else resolved.name
+
+
 def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
     """Fold the companion's durable ledger into the harness ledger.
 
     The companion records what the user actually clicked and ranked. Without this
     step an agent re-types those decisions by hand, which is where design-element
     ids drift and elements in standing get silently rebuilt.
+
+    Only lines added since the last adopt are replayed. Replaying the whole
+    ledger every run re-litigates settled history: `decide --source user` writes
+    straight to decisions.json and never appears in this file, so an approval
+    granted after the user un-ticked a box has no position in the chronological
+    replay -- and the older `proposed` click lands back on top of it. That
+    silently downgraded seven standing elements in one run.
     """
     if not ledger_path.is_file():
         raise HarnessError(f"companion ledger not found: {ledger_path}")
@@ -361,13 +381,25 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         return value == ZERO_STARS or STAR_RANGE[0] <= value <= STAR_RANGE[1]
 
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
-    existing = {e["element"]: dict(e) for e in load_decisions(output)["elements"]}
+    decisions = load_decisions(output)
+    existing = {e["element"]: dict(e) for e in decisions["elements"]}
+    lines = ledger_path.read_text(encoding="utf-8").splitlines()
+    key = ledger_cursor_key(project_root, ledger_path)
+    cursor = (decisions.get("adoptedLedgers") or {}).get(key) or {}
+    start = cursor.get("lines") or 0
+    # The mark is only trustworthy if the lines it claims to have consumed are
+    # still the same lines. A companion restart writes a fresh ledger at the
+    # same path; trusting a stale count there would skip real clicks, so an
+    # unrecognised prefix falls back to a full replay.
+    if not isinstance(start, int) or not 0 <= start <= len(lines) or \
+            ledger_digest(lines[:start]) != cursor.get("digest"):
+        start = 0
     accepted: list[tuple[int, int, dict[str, object]]] = []
     resets: list[tuple[int, int, str]] = []
     skipped = 0
-    for index, line in enumerate(ledger_path.read_text(encoding="utf-8").splitlines()):
+    for index, line in enumerate(lines):
         line = line.strip()
-        if not line:
+        if index < start or not line:
             continue
         try:
             event = json.loads(line)
@@ -437,6 +469,12 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         existing[element] = dict(prior, element=element, state=verdict, stars=rank)
     for _, _, element in sorted(resets, key=lambda row: (row[0], row[1])):
         score_zero(project_root, element)
+    # Re-read: every record_decision above rewrote the file underneath us.
+    decisions = load_decisions(output)
+    ledgers = dict(decisions.get("adoptedLedgers") or {})
+    ledgers[key] = {"lines": len(lines), "digest": ledger_digest(lines)}
+    decisions["adoptedLedgers"] = ledgers
+    write_json(output / "decisions.json", decisions)
     return len(accepted), skipped
 
 
@@ -465,7 +503,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "15"
+CONTROLS_VERSION = "16"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -569,6 +607,17 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-offline{display:block;background:#b00020;color:#fff;font:700 12px/1.4 ui-monospace,monospace;
  padding:9px 11px;border-radius:6px}
 :root[data-dh-live] .dh-offline{display:none}
+/* The round's scope, said out loud. `data-dh-cohort` was an attribute only:
+   doctor could read it, the user could not, so the one thing that tells them
+   which elements this round is asking about -- and which are deliberately left
+   alone -- was invisible on the screen they were scoring. */
+.dh-cohort{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin:0 0 2px;
+ font:500 12px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-cohort b{font-weight:700;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+ flex:none;color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-cohort span{font-weight:700;font-size:13px;letter-spacing:-.01em;
+ color:var(--dh-accent,#d9482a)}
 /* The description column carries a floor. At minmax(0,1fr) the signals column
    took its full max-content width and squeezed the text to about 80px, where
    `overflow-wrap:anywhere` broke every word mid-syllable -- "cover.sp / ine.righ
@@ -923,6 +972,16 @@ def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | Non
         if missing:
             raise HarnessError("placeholder names element(s) not in standing: " + ", ".join(missing))
         body = "\n".join(rows[e] for e in wanted)
+        # A round names its cohort so the user knows what is being asked and what
+        # is deliberately out of scope. Read it off THIS div: an outer wrapper's
+        # attributes never survive into the placeholder embed rewrites.
+        attributes = opening.group(1) + opening.group(3)
+        cohort = re.search(r'data-dh-cohort="([^"]*)"', attributes)
+        if cohort and cohort.group(1).strip():
+            banner = (f'<p class="dh-cohort"><b>this round</b>'
+                      f'<span>{html_escape(cohort.group(1).strip())}</span>'
+                      f'{len(wanted)} element(s) to score</p>\n')
+            body = banner + body
         replacement = (f'<div{opening.group(1)}data-dh-controls="{opening.group(2)}"'
                        f'{opening.group(3)}>\n{body}\n</div>')
         html = html[:opening.start()] + replacement + html[close_end:]

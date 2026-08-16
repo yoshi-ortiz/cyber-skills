@@ -46,6 +46,8 @@ Scripts are at `<skill>/scripts/`, the companion at `<skill>/companion/` — nev
      data-dh-controls="cover.ring.kicker,cover.spine.right,cover.solapa.right"></div>
 ```
 
+`data-dh-cohort` goes on the **same div** as `data-dh-controls` — `embed` rewrites that placeholder, and an outer wrapper's attributes never reach it. From there `embed` renders the cohort name above the rows, so the user opens the round reading which elements it asks about and which are deliberately untouched.
+
 A round that touches everything scores nothing: twenty-five near-identical thumbnails is a screen the user abandons halfway. `doctor` enforces the honest half — a live element with no scoring row **fails** unless the screen declares a cohort.
 
 Startup is not the round. If the cohort is unnamed and no screen is on its way after a dozen tool calls, you are doing infrastructure — say what is blocking.
