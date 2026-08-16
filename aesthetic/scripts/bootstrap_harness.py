@@ -185,7 +185,8 @@ STRINGS = {
         "hero-lede": "Rank what this round asks, then the rest as you go \u2014 the stars on "
                      "each row are yours to change.",
         "key-done": "done", "key-open": "well drawn, open", "key-weak": "needs work",
-        "key-unscored": "unscored", "key-asked": "this round",
+        "key-unscored": "unscored", "key-asked": "this round", "key-anti": "set aside",
+        "before": "what stands now", "after": "proposed instead", "brand-new": "new, nothing to beat",
         "empty-zone": "Nothing here yet.", "zone-count": "elements",
         "execution-of": "execution of", "stars-of": "of", "execution-quality": "execution quality",
         "like": "like it", "dislike": "do not like it", "completed": "done",
@@ -217,7 +218,9 @@ STRINGS = {
         "hero-standing": "en pie", "hero-ranked": "puntuados por ti", "hero-asking": "esta ronda",
         "hero-ongoing": "en curso", "hero-improve": "por mejorar",
         "key-done": "terminado", "key-open": "bien dibujado, abierto", "key-weak": "por mejorar",
-        "key-unscored": "sin puntuar", "key-asked": "esta ronda",
+        "key-unscored": "sin puntuar", "key-asked": "esta ronda", "key-anti": "descartado",
+        "before": "lo que hay ahora", "after": "se propone en su lugar",
+        "brand-new": "nuevo, no compite con nada",
         "temp-caption": "Una barra por elemento, de peor a mejor ejecución \u2014 pulsa una para "
                         "ir a ella. Verde sólido es terminado, verde claro es bien dibujado pero "
                         "abierto, gris es sin puntuar. Las marcadas con ? son las de esta ronda.",
@@ -1248,6 +1251,8 @@ ARTICLE_STYLE = """<style>/* dh-article */
    beside the artwork being judged, and chrome in a competing palette would
    corrupt the very judgement it is collecting -- so every surface here is a
    var() the screen already sets, and the harness supplies only structure. */
+html:has(.dh-art){scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html:has(.dh-art){scroll-behavior:auto}}
 .dh-art{--dh-rule:color-mix(in srgb, var(--dh-ink,#111) 16%, transparent);
  background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
  font:400 15px/1.55 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
@@ -1263,6 +1268,17 @@ ARTICLE_STYLE = """<style>/* dh-article */
 .dh-hero h1 em{font-style:normal;color:var(--dh-accent,#d9482a)}
 /* The round, named as a round: a label, the cohort's own id in code voice, and
    the count. Not a headline. */
+/* A proposal shown beside what it replaces. "Is this good?" has no answer;
+   "is this better than what stands?" does. */
+.dh-versus{display:flex;flex-direction:column;gap:7px;margin:0 0 22px;padding:16px;
+ border:1px solid var(--dh-rule);border-radius:12px}
+.dh-versus-label{margin:0}
+.dh-versus-label b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+ color:color-mix(in srgb, currentColor 58%, transparent)}
+.dh-versus-label b.dh-now{color:var(--dh-accent,#d9482a)}
+.dh-versus .dh-fb-before{opacity:.7}
+.dh-versus .dh-fb-before:hover{opacity:1}
+.dh-zone[data-zone="round"] .dh-versus{border-color:color-mix(in srgb, var(--dh-bg,#fff) 34%, transparent)}
 .dh-round{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:16px 0 0}
 .dh-round b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
  padding:4px 9px;border-radius:999px;background:var(--dh-accent,#d9482a);color:#fff;flex:none}
@@ -1290,6 +1306,19 @@ ARTICLE_STYLE = """<style>/* dh-article */
  outline:1px solid transparent;outline-offset:1px}
 .dh-temp a:hover,.dh-temp a:focus-visible{transform:scaleY(1.55);
  outline-color:var(--dh-ink,#111)}
+/* Its own tooltip, not the browser's: `title` waits a second, renders in the
+   OS font at the pointer, and never appears at all on a keyboard focus. This
+   one is instant, legible, and follows focus too. */
+.dh-temp a::after{content:attr(data-tip);position:absolute;inset-block-start:18px;
+ inset-inline-start:0;z-index:40;padding:6px 9px;border-radius:6px;pointer-events:none;
+ background:var(--dh-ink,#111);color:var(--dh-bg,#fff);white-space:nowrap;
+ font:600 10.5px/1.3 var(--dh-font,ui-monospace,monospace);letter-spacing:.02em;
+ opacity:0;transition:opacity .1s}
+.dh-temp{position:relative}
+.dh-temp a{position:relative}
+.dh-temp a:hover::after,.dh-temp a:focus-visible::after{opacity:1}
+/* The last bars would push their tooltip off the right edge. */
+.dh-temp a:nth-last-child(-n+8)::after{inset-inline-start:auto;inset-inline-end:0}
 .dh-temp a span{font-size:8px;font-weight:800;line-height:1;color:var(--dh-bg,#fff)}
 /* The round's own items are marked in the strip, so "what am I being asked?"
    is answerable from the sticky bar without scrolling to find out. */
@@ -1310,6 +1339,7 @@ ARTICLE_STYLE = """<style>/* dh-article */
    beautifully drawn, question still open -- so it sits back as a faded green. */
 .dh-tdone{color:#1c8b4b}
 .dh-thigh{color:#9ec78a}
+.dh-tanti{color:#9c7078}
 .dh-tnone{color:color-mix(in srgb, var(--dh-ink,#111) 18%, transparent)}
 /* Zones. Four, and the reader must never wonder which one they are in. */
 .dh-zone{padding:60px 0 0}
@@ -1618,6 +1648,24 @@ def zone_of(entry: dict[str, object], cohort: set[str]) -> str:
     return "backlog"
 
 
+def incumbent_of(element: str, known: set[str]) -> str:
+    """The element a proposal is competing with, read off its own id.
+
+    `cover.ring.kicker.antetitulo-arco` is a new drawing of
+    `cover.ring.kicker` -- the convention the skill already requires. Without
+    showing that pair the user is asked to score a drawing against nothing:
+    "is this good?" has no answer, where "is this better than what stands?"
+    does. Longest matching prefix wins, so a third pass compares against the
+    second rather than the original.
+    """
+    parts = element.split(".")
+    for cut in range(len(parts) - 1, 0, -1):
+        candidate = ".".join(parts[:cut])
+        if candidate in known:
+            return candidate
+    return ""
+
+
 ZONES = ("round", "fundamentals", "backlog", "antipattern")
 # Only the backlog earns a second level of navigation: it is the long one, and
 # the reader arrives at it looking for a particular surface.
@@ -1654,6 +1702,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
     style = re.search(r"<style>/\* dh-controls \*/.*?</style>", generated, re.S)
     script = re.search(r"<script>/\* dh-rehydrate \*/.*?</script>", generated, re.S)
     live = [e for e in decisions["elements"] if e["state"] in GROUP_OF]
+    known_ids = {e["element"] for e in decisions["elements"]}
     stats = ledger_stats(decisions)
 
     def rank(entry: dict[str, object]) -> tuple:
@@ -1667,6 +1716,10 @@ def render_article(project_root: Path, decisions: dict[str, object],
         # same claim -- it says this drawing is beautiful, not that the question
         # is closed -- so it reads as a faded green and the eye can still find
         # the handful of things actually done.
+        # Turned-down work keeps a red, drained of its urgency: still legible
+        # as "rejected", no longer shouting alongside a live 0-star problem.
+        if zone_of(entry, cohort) == "antipattern":
+            return "dh-tanti"
         if not entry.get("scored"):
             return "dh-tnone"
         if entry["state"] == "completed":
@@ -1682,10 +1735,20 @@ def render_article(project_root: Path, decisions: dict[str, object],
         if asked:
             tip = f'{txt["zone-round"]}: {tip}'
         return (f'<a class="{bar_class(entry)}" href="#dh-el-{html_escape(entry["element"])}"'
-                f'{" data-asked=\"1\"" if asked else ""} title="{html_escape(tip)}">'
+                f'{" data-asked=\"1\"" if asked else ""} data-tip="{html_escape(tip)}" '
+                f'title="{html_escape(tip)}">'
                 f'<span>{"?" if asked else ""}</span></a>')
 
-    ordered_bars = sorted(live, key=lambda x: (-int(x.get("stars") or 0), x["element"]))
+    def bar_order(entry: dict[str, object]) -> tuple:
+        # What is being asked comes first; what was turned down sinks to the
+        # end. Between them, best execution leads. A strip sorted purely by
+        # score buried this round's three bars somewhere in the middle, which
+        # is the one thing the reader is scanning for.
+        zone = zone_of(entry, cohort)
+        rank = 0 if zone == "round" else (2 if zone == "antipattern" else 1)
+        return (rank, -int(entry.get("stars") or 0), entry["element"])
+
+    ordered_bars = sorted(live, key=bar_order)
     bars = "".join(bar(e) for e in ordered_bars)
     asking = len([e for e in live if e["element"] in cohort])
     # Three figures the reader can act on, in the order they matter: what is
@@ -1786,8 +1849,26 @@ def render_article(project_root: Path, decisions: dict[str, object],
                            f'<span class="dh-count">{len(same)}</span></h4>')
                 out.append(_specimens(same, txt, rows))
             row = rows.get(entry["element"], "")
-            out.append(row.replace('<div class="dh-fb"',
-                                   f'<div id="dh-el-{entry["element"]}" class="dh-fb"', 1))
+            row = row.replace('<div class="dh-fb"',
+                              f'<div id="dh-el-{entry["element"]}" class="dh-fb"', 1)
+            if zone == "round":
+                # Paired with what it replaces, or plainly marked as new. Either
+                # way the user is never asked to rank a drawing against nothing.
+                prior = incumbent_of(entry["element"], known_ids)
+                if prior and prior in rows:
+                    out.append(
+                        '<div class="dh-versus">'
+                        f'<p class="dh-versus-label"><b>{html_escape(txt["before"])}</b></p>'
+                        + rows[prior].replace('<div class="dh-fb"',
+                                              '<div class="dh-fb dh-fb-before"', 1)
+                        + f'<p class="dh-versus-label"><b class="dh-now">{html_escape(txt["after"])}</b></p>'
+                        + row + "</div>")
+                    continue
+                out.append('<div class="dh-versus">'
+                           f'<p class="dh-versus-label"><b class="dh-now">'
+                           f'{html_escape(txt["brand-new"])}</b></p>' + row + "</div>")
+                continue
+            out.append(row)
         out.append("</section>")
     out += ["</div>"]
     return "\n".join(part for part in out if part) + "\n"

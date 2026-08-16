@@ -681,6 +681,51 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             self.assertNotIn("cover-furniture-redraw", h1)
             self.assertIn("cover-furniture-redraw", markup.split('class="dh-round"')[1])
 
+    def test_a_proposal_is_shown_beside_what_it_replaces(self):
+        """"Is this good?" has no answer. "Is this better than what stands?"
+        does -- and without the pair the user cannot score the round at all."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.system(root)
+            bh.record_decision(root, "cover.strong.redraw", "proposed", 1, "new pass", [])
+            decisions = bh.load_decisions(root / "spec" / "design-harness")
+            markup = bh.render_article(root, decisions, {"cover.strong.redraw"})
+            block = markup.split('class="dh-versus"')[1].split("</div></div>")[0]
+            self.assertLess(block.index('data-element="cover.strong"'),
+                            block.index('data-element="cover.strong.redraw"'))
+            self.assertIn("dh-fb-before", block)
+
+    def test_the_incumbent_is_the_longest_matching_prefix(self):
+        known = {"cover.ring", "cover.ring.kicker", "unrelated"}
+        self.assertEqual(bh.incumbent_of("cover.ring.kicker.arco", known), "cover.ring.kicker")
+        self.assertEqual(bh.incumbent_of("cover.ring.other", known), "cover.ring")
+        self.assertEqual(bh.incumbent_of("brand.new.thing", known), "")
+
+    def test_a_proposal_with_no_incumbent_says_so(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"cover.strong"})
+            self.assertIn(bh.STRINGS["en"]["brand-new"], markup)
+
+    def test_the_strip_leads_with_the_round_and_ends_with_antipatterns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"cover.strong"})
+            nav = markup.split('class="dh-temp dh-temp-sticky"')[1].split("</div>")[0]
+            bars = re.findall(r'<a class="([^"]+)"[^>]*?(data-asked)?[^>]*>', nav)
+            classes = re.findall(r'<a class="([^"]+)"', nav)
+            self.assertIn("data-asked", nav.split("</a>")[0])
+            self.assertEqual(classes[-1], "dh-tanti")
+
+    def test_every_bar_carries_its_own_tooltip_not_the_browsers(self):
+        """`title` waits a second, uses the OS font, and never fires on keyboard
+        focus."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            self.assertIn("data-tip=", markup)
+            self.assertIn("content:attr(data-tip)", markup)
+
     def test_antipatterns_sit_last_and_muted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
