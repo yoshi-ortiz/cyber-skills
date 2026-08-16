@@ -371,7 +371,13 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         if not element or not isinstance(element, str):
             skipped += 1
             continue
-        if event.get("verdict") not in (None, "approved", "rejected", "completed"):
+        # Companions spell the completed status differently, and un-completing
+        # arrives as `proposed`. Both were being skipped: 15 real toggle-offs in
+        # one ledger were discarded because `proposed` was not on this list, so
+        # un-ticking a box did nothing and the tick came back on the next adopt.
+        if event.get("verdict") == "reviewed":
+            event["verdict"] = "completed"
+        if event.get("verdict") not in (None, "approved", "rejected", "completed", "proposed"):
             skipped += 1
             continue
         if sentiment is not None and sentiment not in SENTIMENTS:
@@ -382,7 +388,7 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
             continue
         explicit = event.get("verdict")
         prior = existing.get(element, {})
-        if explicit in ("approved", "rejected", "completed"):
+        if explicit in ("approved", "rejected", "completed", "proposed"):
             # Only an explicit verdict control moves state. A star never does.
             verdict = explicit
             rank = stars if is_star(stars) else prior.get("stars", 0)
@@ -434,7 +440,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "13"
+CONTROLS_VERSION = "14"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -494,19 +500,33 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
   if(ev.verdict==='completed'||ev.verdict==='approved')s.verdict='completed';
   else if(ev.verdict==='proposed'||ev.verdict==='rejected')s.verdict=null;
   var one={}; one[ev.element]=s; applyState(one);}
- /* No click handler: the companion already sends every click, and the server
-    broadcasts it back to all clients including this one. That echo is also
-    what corrects a companion that lights the zero on any score, so the
-    deferred repaint that used to race it is gone too. */
+ /* Ranks and thumbs are the companion's to send, and the server echoes them
+    back here. The completed toggle is NOT: a companion that only recognises
+    its own verdict words drops the click before anything is sent -- no DOM
+    change, no event, nothing in the ledger -- and the box simply refused to
+    tick. This skill owns its own vocabulary, so it delivers this one itself
+    rather than hoping the companion happens to share it. */
+ var sock=null;
+ document.addEventListener('click',function(e){
+  var btn=e.target.closest?e.target.closest('[data-verdict]'):null; if(!btn)return;
+  var row=btn.closest('.dh-fb[data-element]'); if(!row)return;
+  if(!sock||sock.readyState!==1)return;
+  var on=btn.classList.contains('on');
+  sock.send(JSON.stringify({type:'verdict',element:row.getAttribute('data-element'),
+   choice:row.getAttribute('data-element'),
+   verdict:on?'proposed':(btn.getAttribute('data-verdict')||'completed'),
+   text:row.getAttribute('data-label')||null,timestamp:Date.now()}));
+ },true);
  (function socket(){
   var ws;
   try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/')}
   catch(e){return}
+  sock=ws;
   ws.onmessage=function(e){
    var m; try{m=JSON.parse(e.data)}catch(_){return}
    if(m&&m.type==='dh-signal')fold(m.event);
    else if(m&&m.type==='dh-state'&&m.state)applyState(m.state);};
-  ws.onclose=function(){setTimeout(socket,1500)};
+  ws.onclose=function(){sock=null;setTimeout(socket,1500)};
  })();
 })();
 </script>"""
@@ -1224,6 +1244,7 @@ def self_test() -> None:
 
         # Controls are generated from the ledger and are byte-stable.
         markup = render_feedback_controls(load_decisions(output))
+        s_adopt_states = '("approved", "rejected", "completed", "proposed")'
         if markup != render_feedback_controls(load_decisions(output)):
             raise HarnessError("self-test: controls are not deterministic")
         for required in ('data-element="form.paper.white"', 'data-rank="5"',
@@ -1267,6 +1288,19 @@ def self_test() -> None:
         if "/* dh-rehydrate */" not in markup:
             raise HarnessError(
                 "self-test: controls ship no rehydrator -- a refresh reverts every score")
+        # The emitted verdict word must be one `adopt` will fold back in. These
+        # two drifted apart once already: the UI emitted `completed` while the
+        # ledger reader accepted a different set, so the tick could be clicked
+        # and never survived the round trip.
+        for word in set(re.findall(r'data-verdict="([a-z]+)"', markup)):
+            if word not in ("approved", "rejected", "completed"):
+                raise HarnessError(
+                    f"self-test: controls emit data-verdict=\"{word}\", which `adopt` "
+                    "does not accept -- the tick would never reach the ledger")
+        # And the toggle-off must survive too, or un-ticking silently reverts.
+        if '"proposed"' not in s_adopt_states:
+            raise HarnessError(
+                "self-test: `adopt` drops the un-complete event -- a cleared tick comes back")
         if f"dh-controls-version: {CONTROLS_VERSION}" not in markup:
             raise HarnessError("self-test: controls carry no version stamp -- a stale embed "
                                "cannot be told apart from a fix that did not work")
