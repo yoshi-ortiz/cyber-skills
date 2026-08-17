@@ -2135,6 +2135,12 @@ html:has(.dh-art){scroll-behavior:smooth}
  cursor:pointer;font-size:21px}
 .dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
 .dh-lb-score .dh-stars{display:flex;gap:4px;align-items:center}
+/* The zero is a rank, so it sits with the ranks instead of exiled to the
+   verdict row where it read as a fourth verdict. */
+.dh-lb-zero{margin-inline-start:6px;cursor:pointer;font:inherit;font-size:13px;
+ line-height:1;padding:5px 9px;border-radius:8px;background:transparent;color:inherit;
+ border:1px solid var(--dh-rule)}
+.dh-lb-zero:hover{border-color:currentColor}
 .dh-lb-acts{display:flex;gap:var(--s1);margin-block-start:var(--s2);flex-wrap:wrap}
 .dh-lb-acts button{cursor:pointer;font:inherit;font-size:15px;line-height:1;padding:7px 11px;
  border-radius:8px;border:1px solid var(--dh-rule);background:transparent;color:inherit}
@@ -2361,13 +2367,13 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
    strip+='<span data-proxy=\\'.dh-stars [data-rank="'+n+'"]\\' role="button" tabindex="0"'+
           (n<=stars?' class="on"':'')+'>&#9733;</span>';
   }
+  strip+='<button type="button" class="dh-lb-zero" data-proxy=\\'[data-rank="0"]\\'>0</button>';
   strip+='</div>';
   var sent=row.querySelector('[data-sentiment="like"].on')?'like':
            (row.querySelector('[data-sentiment="dislike"].on')?'dislike':'');
   var done=row.querySelector('[data-verdict="completed"].on')?' class="on"':'';
   strip+='<div class="dh-lb-acts">'+
-   '<button type="button" data-proxy=\\'[data-rank="0"]\\'>0</button>'+
-   '<button type="button" data-proxy=\\'[data-sentiment="like"]\\''+
+      '<button type="button" data-proxy=\\'[data-sentiment="like"]\\''+
      (sent==='like'?' class="on"':'')+'>&#128077;</button>'+
    '<button type="button" data-proxy=\\'[data-sentiment="dislike"]\\''+
      (sent==='dislike'?' class="on"':'')+'>&#128078;</button>'+
@@ -3091,7 +3097,12 @@ def publish_screen(project_root: Path, screen: Path, gap_seconds: int = 5) -> Pa
     session = newest_session_dir(project_root.resolve(strict=True))
     content = session / "content"
     if screen.resolve().parent != content.resolve():
-        raise HarnessError(f"screen must live in the served session: {content}")
+        # The served session dir changes whenever the companion restarts, so
+        # refusing here made a correct screen unpublishable and left the user
+        # on a stale page. Move it instead -- which is what everyone did by
+        # hand anyway. One fix here covers every caller that names a path.
+        content.mkdir(parents=True, exist_ok=True)
+        screen = Path(shutil.copy2(screen, content / screen.name))
     others = [p for p in content.glob("*.html") if p.resolve() != screen.resolve()]
     newest_other = max((p.stat().st_mtime for p in others), default=0.0)
     stamp = max(time.time(), newest_other + gap_seconds)

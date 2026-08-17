@@ -101,8 +101,13 @@ legible, revise before showing it.
 
 ## 6 · Capture
 
-Record what changed, embed each graphic beside its controls, `publish`, re-run
-`doctor`, and ask for ranks in the same turn. Feedback that is not adopted in the
+Give the user `doctor`'s URL with its `?key=`, once. If `publish` reports a
+different session directory it has already moved the screen there -- the
+companion restarts into a new one and no caller can guess it.
+
+Record what changed, embed each graphic beside its controls, `publish`, and ask
+for ranks in the same turn. Run `doctor` once at the start and once after the
+first ranks come back -- it is a health check, not a progress bar. Feedback that is not adopted in the
 turn it arrives is lost at the next session boundary.
 
 Next round, improve liked-but-low-scoring (`polish`) work first. A low star with

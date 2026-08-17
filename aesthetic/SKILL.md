@@ -46,6 +46,20 @@ Comps are drawn in **HTML/CSS** and rendered with `shoot` -- never hand-authored
 
 Every thumbnail opens a slideshow: the graphic full height, its argument beside it, its own scoring strip, arrows across the set. Score from there or from the row — same control, one write path.
 
+## How to talk to the user
+
+They are a designer, not the person who built this. Write the way they write.
+
+- **Their language.** The article, every `--description`, `--title`, `--asks` and every chat reply go in the user's language. Ids, flags and file paths stay English.
+- **Name the move, not the machinery.** "The tab now takes its role's colour" — not "adopted a per-role token mapping in the palette layer". Art-direction terms are fine; pipeline terms are not.
+- **Say what you are doing and why it takes time**, in one line, before a long step. "Redrawing the cover, about a minute." Silence reads as a hang.
+- **No status essays.** If the screen can show it, do not narrate it. A round ends with: what changed, the URL, and the one thing you want ranked.
+- Never explain the harness, the ledger, the zones, or your own reasoning unless asked.
+
+## When to run doctor
+
+Once at the start, and once after the first ranks come back. Not between every draw — it is a health check, not a progress bar.
+
 ## Shared
 
 1. Ledger via verbs. Do not open `bootstrap_harness.py` from a design run.

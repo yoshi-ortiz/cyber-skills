@@ -169,6 +169,9 @@ h1 { color: #333; } p { color: #666; }
 .brand a { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; min-width: 0; max-width: 100%; line-height: 1; }
 .brand-copy { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1; transform: translateY(-1px); }
 .brand-logo { display: block; height: 1em; width: auto; max-width: 180px; filter: invert(1); }
+.brand { gap: 0.6rem; flex-wrap: wrap; }
+.brand-copy { font-weight: 700; color: #ddd; letter-spacing: 0.02em; }
+.brand-credit { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
 </style>
 </head>
 <body><!-- BRANDING --><h1>Brainstorm Companion</h1>
@@ -240,15 +243,14 @@ function escapeHtmlText(value) {
 }
 
 function brandMarkup() {
-  const version = escapeHtmlText(SUPERPOWERS_VERSION);
-  const text = SUPERPOWERS_TELEMETRY_DISABLED
-    ? 'Prime Radiant Superpowers v' + version
-    : 'Superpowers v' + version;
-  const logo = SUPERPOWERS_TELEMETRY_DISABLED
-    ? ''
-    : '<img class="brand-logo" src="' + SUPERPOWERS_BRAND_IMAGE_URL + '?v=' + encodeURIComponent(SUPERPOWERS_VERSION) + '" alt="Prime Radiant" referrerpolicy="no-referrer" decoding="async">';
-
-  return '<div class="brand"><a href="https://github.com/obra/superpowers">' + logo + '<span class="brand-copy">' + text + '</span></a></div>';
+  // The page belongs to the user's project, not to the tool serving it. The
+  // owner leads; the engine that runs it is a credit, and `vunknown` helped
+  // nobody so the version is gone.
+  return '<div class="brand">'
+    + '<span class="brand-copy">Cyber Yoshi: SKILLS</span>'
+    + '<a class="brand-credit" href="https://github.com/obra/superpowers">'
+    + 'Live companion \u00b7 powered by Jesse Vincent \u00b7 Superpowers</a>'
+    + '</div>';
 }
 
 function renderBranding(html) {

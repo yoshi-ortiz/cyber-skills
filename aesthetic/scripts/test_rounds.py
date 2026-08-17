@@ -508,6 +508,51 @@ class TheArticleFitsItsContainer(unittest.TestCase):
                               "a container rule must outrank the legacy media query")
 
 
+class PublishSurvivesACompanionRestart(unittest.TestCase):
+    """The companion restarts into a new session directory, so any caller that
+    names a path is guessing. Refusing left a correct screen unpublishable and
+    the user on a stale page."""
+
+    def test_a_screen_written_elsewhere_is_moved_not_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            served = root / ".superpowers" / "brainstorm" / "1-1" / "content"
+            served.mkdir(parents=True)
+            stray = root / "elsewhere.html"
+            stray.write_text("<p>screen</p>", encoding="utf-8")
+            out = bh.publish_screen(root, stray)
+            self.assertEqual(out.parent.resolve(), served.resolve())
+            self.assertTrue((served / "elsewhere.html").is_file())
+
+    def test_the_published_screen_is_the_newest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            served = root / ".superpowers" / "brainstorm" / "1-1" / "content"
+            served.mkdir(parents=True)
+            (served / "old.html").write_text("old", encoding="utf-8")
+            stray = root / "new.html"
+            stray.write_text("new", encoding="utf-8")
+            bh.publish_screen(root, stray)
+            newest = max(served.glob("*.html"), key=lambda p: p.stat().st_mtime)
+            self.assertEqual(newest.name, "new.html")
+
+
+class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
+    def test_zero_sits_in_the_star_row_not_the_verdict_row(self):
+        # A zero is a rank. In the verdict row it read as a fourth verdict.
+        markup = bh.render_article(
+            Path("/tmp"), {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
+                           "elements": [{"element": "core.idea", "stars": 2, "sentiment": None,
+                                         "state": "proposed", "scored": True, "source": "user"}]},
+            set(), "", "en", None, "F", "Ask.")
+        script = re.search(r"<script>/\* dh-lightbox \*/(.*?)</script>", markup, re.S).group(1)
+        stars_block = script.split("dh-lb-acts")[0]
+        self.assertIn("dh-lb-zero", stars_block,
+                      "the zero must be emitted with the stars")
+        self.assertNotIn('data-rank="0"', script.split("dh-lb-acts")[1],
+                         "the zero must not also sit in the verdict row")
+
+
 class PreviewsMustBeVisible(unittest.TestCase):
     """The gate that replaces hand-authored SVG with something checkable.
 
