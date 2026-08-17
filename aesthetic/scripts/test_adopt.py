@@ -674,18 +674,27 @@ class TheArticleIsADesignSystem(unittest.TestCase):
                    for lang, words in bh.STRINGS.items() if lang != "en"}
         self.assertEqual({k: v for k, v in missing.items() if v}, {})
 
-    def test_the_headline_names_the_artefact_not_the_cohort_slug(self):
-        """A kebab-case cohort id set at 68px is a machine label wearing a
-        headline's clothes."""
+    def test_the_hero_says_who_is_asking_what_page_and_which_project(self):
+        """A designer opening this page needs, in order: who is asking, what
+        this page is, which project, and what is on the table right now.
+
+        A kebab-case cohort id set at 68px is a machine label wearing a
+        headline's clothes -- it belongs on the `Designing` line, never as h1.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             markup = bh.render_article(root, self.system(root), {"cover.strong"},
                                        cohort_name="cover-furniture-redraw",
                                        title="Fichas de performance")
+            eyebrow = markup.split('class="dh-eyebrow">')[1].split("</p>")[0]
             h1 = markup.split("<h1>")[1].split("</h1>")[0]
-            self.assertEqual(h1, "Fichas de performance")
+            project = markup.split('class="dh-project">')[1].split("</p>")[0]
+            designing = markup.split('class="dh-designing">')[1].split("</p>")[0]
+            self.assertEqual(eyebrow, "Design Agent")
+            self.assertEqual(h1, "Aesthetic ranking")
+            self.assertIn("Fichas de performance", project)
             self.assertNotIn("cover-furniture-redraw", h1)
-            self.assertIn("cover-furniture-redraw", markup.split('class="dh-round"')[1])
+            self.assertIn("cover-furniture-redraw", designing)
 
     def test_a_proposal_is_shown_beside_what_it_replaces(self):
         """"Is this good?" has no answer. "Is this better than what stands?"

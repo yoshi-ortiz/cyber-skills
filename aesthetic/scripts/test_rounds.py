@@ -321,6 +321,121 @@ class AnAgentPlaceholderIsNotAScore(unittest.TestCase):
                              "the unscored marker")
 
 
+class TheArticleSpeaksToADesigner(unittest.TestCase):
+    """The reader is a graphic designer, not whoever built the harness.
+
+    Every label here was rewritten to say what the reader must DO. These tests
+    pin the words, because the page's whole job is to be understood by someone
+    who has never seen the ledger.
+    """
+
+    def article(self, lang: str = "en") -> str:
+        # One element per zone, or the empty zones never render and the test
+        # passes by not looking at them.
+        def entry(element, stars, sentiment, state="proposed", source="user"):
+            return {"element": element, "stars": stars, "sentiment": sentiment,
+                    "state": state, "scored": source == "user", "source": source}
+        decisions = {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
+                     "elements": [
+                         entry("core.idea", 2, "like"),                      # fundamentals
+                         entry("core.idea.redraw", 0, None, source="agent"),  # the round
+                         entry("composition.grid", 2, "like"),                # on development
+                         entry("voice.shouty", 1, "dislike")]}                # rejected
+        with tempfile.TemporaryDirectory() as tmp:
+            return bh.render_article(Path(tmp), decisions, {"core.idea.redraw"},
+                                     "tab-por-color", lang, None, "Fichas",
+                                     "Does the coloured tab beat the one you liked?")
+
+    def test_the_hero_answers_who_what_which_project_and_what_now(self):
+        markup = self.article()
+        self.assertIn(">Design Agent<", markup)
+        self.assertIn("<h1>Aesthetic ranking</h1>", markup)
+        project = markup.split('class="dh-project">')[1].split("</p>")[0]
+        self.assertIn("Project", project)
+        self.assertIn("Fichas", project)
+        designing = markup.split('class="dh-designing">')[1].split("</p>")[0]
+        self.assertIn("Designing", designing)
+        self.assertIn("tab-por-color", designing)
+
+    def test_the_lede_tells_the_designer_what_to_do_next(self):
+        # Scoring is half the job; going back to the chat is the other half,
+        # and nothing else on the page says so.
+        lede = self.article().split('class="dh-lede">')[1].split("</p>")[0]
+        for phrase in ("score", "agent chat", "critique"):
+            self.assertIn(phrase, lede.lower(), f"the lede must mention {phrase}")
+
+    def test_the_zones_are_named_for_a_designer(self):
+        markup = self.article()
+        for heading in ("Design round", "Critical components",
+                        "On development", "Rejected"):
+            self.assertIn(f"<h2>{heading}</h2>", markup,
+                          f"expected a section headed {heading!r}")
+        self.assertNotIn("Antipatterns", markup)
+        self.assertNotIn("Backlog", markup)
+
+    def test_the_round_question_is_the_protagonist_not_a_footnote(self):
+        markup = self.article()
+        self.assertIn('class="dh-ask"', markup,
+                      "the round's question must not be filed as a grey note")
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
+        rule = re.search(r"\.dh-ask\{([^}]*)\}", style).group(1)
+        self.assertIn("clamp(", rule, "the question is set large")
+        header = re.search(r'\.dh-zone\[data-zone="round"\] > header\{([^}]*)\}', style)
+        self.assertIn("text-align:center", header.group(1))
+
+    def test_counts_are_designs_not_elements(self):
+        self.assertIn("designs</p>", self.article())
+
+    def test_the_sticky_bar_names_the_page(self):
+        self.assertIn('class="dh-toc-title">Aesthetic ranking', self.article())
+
+    def test_group_headings_carry_two_different_ranks(self):
+        # In the critical components the group IS the subject and reads big; in
+        # the development backlog it is a folder label and stays small.
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.article(), re.S).group(1)
+        big = re.search(r'\.dh-zone\[data-zone="fundamentals"\] \.dh-group\{([^}]*)\}', style)
+        small = re.search(r'\.dh-zone\[data-zone="backlog"\] \.dh-group\{([^}]*)\}', style)
+        self.assertIsNotNone(big, "critical-component groups lost their big heading")
+        self.assertIsNotNone(small, "development groups lost their small heading")
+        self.assertIn("clamp(", big.group(1))
+        self.assertIn("font-size:13px", small.group(1))
+
+    def test_the_confirmation_fires_on_the_ledger_not_on_the_click(self):
+        """"Preference saved" must mean the ledger agreed.
+
+        Flashing it on mousedown would promise something the companion has not
+        recorded -- and a dropped socket is exactly when the user most needs to
+        know their score did not save.
+        """
+        markup = self.article()
+        self.assertIn('data-saved="Preference saved"', markup,
+                      "the confirmation string must reach the page; the article "
+                      "strips the controls wrapper, so it rides on the article root")
+        script = re.search(r"<script>/\* dh-rehydrate \*/(.*?)</script>", markup, re.S).group(1)
+        self.assertIn("function flashSaved", script)
+        paint = script.split("function paint(row,s){", 1)[1][:120]
+        self.assertIn("flashSaved(row)", paint,
+                      "the confirmation must be raised by paint(), which only runs "
+                      "when the companion echoes the write back")
+        # and never from a raw click handler
+        for handler in re.findall(r"addEventListener\('click'.*?\n", script):
+            self.assertNotIn("flashSaved", handler)
+
+    def test_every_language_defines_the_new_keys(self):
+        for key in ("brand", "project-label", "designing", "saved",
+                    "designs", "round-heading"):
+            for lang, words in bh.STRINGS.items():
+                self.assertIn(key, words, f"{lang} is missing {key!r}")
+
+    def test_spanish_renders_the_same_structure(self):
+        markup = self.article("es")
+        self.assertIn("<h1>Aesthetic ranking</h1>", markup)   # product name, untranslated
+        self.assertIn("<h2>Ronda de diseño</h2>", markup)
+        self.assertIn("<h2>Componentes críticos</h2>", markup)
+        self.assertIn('data-saved="Preferencia guardada"', markup)
+
+
 class PreviewsMustBeVisible(unittest.TestCase):
     """The gate that replaces hand-authored SVG with something checkable.
 

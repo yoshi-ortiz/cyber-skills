@@ -165,25 +165,31 @@ STRINGS = {
         "voice": "Copy & voice", "motion": "Motion",
         "unscored": "not yet scored", "proposed-by": "Proposed", "built": "Built",
         "no-graphic": "no graphic",
-        "article-title": "Design system", "zone-round": "This round",
+        "article-title": "Aesthetic ranking", "brand": "Design Agent",
+        "project-label": "Project", "designing": "Designing",
+        "saved": "Preference saved", "designs": "designs",
+        "zone-round": "This round",
         "zone-round-note": "The only section asking for something. Rank what is here.",
+        "round-heading": "Design round",
         "toc-jump": "Jump to",
-        "zone-fundamentals": "Design fundamentals",
+        "zone-fundamentals": "Critical components",
         "zone-fundamentals-note": "Understanding the direction. The ideas, the palette and the "
                                   "type, together \u2014 rank them as a system: the pairings, "
                                   "not only the parts.",
-        "zone-backlog": "Backlog", "zone-backlog-note": "Proposed, not resolved yet.",
-        "zone-antipattern": "Antipatterns",
+        "zone-backlog": "On development", "zone-backlog-note": "Proposed, not resolved yet.",
+        "zone-antipattern": "Rejected",
         "zone-antipattern-note": "Turned down. Kept so they are not proposed again.",
         "specimen-colors": "Palette", "specimen-fonts": "Typefaces",
-        "hero-standing": "standing", "hero-ranked": "you ranked", "hero-asking": "asked this round",
-        "hero-ongoing": "still moving", "hero-improve": "to improve",
+        "hero-standing": "standing", "hero-ranked": "you ranked",
+        "hero-asking": "well done graphics", "hero-ongoing": "to review",
+        "hero-improve": "rejected",
         "temp-caption": "One bar per element, worst execution to best \u2014 click one to jump to "
                         "it. Solid green is done, pale green is well drawn but still open, grey "
                         "is unscored. Bars marked ? are what this round asks.",
         "temp-alt": "Distribution of execution scores, worst to best",
-        "hero-lede": "Rank what this round asks, then the rest as you go \u2014 the stars on "
-                     "each row are yours to change.",
+        "hero-lede": "Give your score to the AI element designs below. When you finish "
+                     "giving points, go back to your agent chat and give your critique and "
+                     "directions \u2014 we'll generate new designs and improvements.",
         "key-done": "done", "key-open": "well drawn, open", "key-weak": "needs work",
         "key-unscored": "unscored", "key-asked": "this round", "key-anti": "set aside",
         "before": "what stands now", "after": "proposed instead", "brand-new": "new, nothing to beat",
@@ -204,19 +210,24 @@ STRINGS = {
         "voice": "Texto y voz", "motion": "Movimiento",
         "unscored": "sin puntuar", "proposed-by": "Propuesto", "built": "Implementado",
         "no-graphic": "sin gráfico",
-        "article-title": "Sistema de diseño", "zone-round": "Esta ronda",
+        "article-title": "Aesthetic ranking", "brand": "Design Agent",
+        "project-label": "Proyecto", "designing": "Diseñando",
+        "saved": "Preferencia guardada", "designs": "diseños",
+        "zone-round": "Esta ronda",
         "zone-round-note": "La única sección que pide algo. Puntúa lo que hay aquí.",
+        "round-heading": "Ronda de diseño",
         "toc-jump": "Ir a",
-        "zone-fundamentals": "Fundamentos de diseño",
+        "zone-fundamentals": "Componentes críticos",
         "zone-fundamentals-note": "Entender la dirección. Las ideas, la paleta y la tipografía, "
                                   "juntas \u2014 púntualas como sistema: los emparejamientos, "
                                   "no solo las piezas.",
-        "zone-backlog": "Pendientes", "zone-backlog-note": "Propuesto, todavía sin resolver.",
-        "zone-antipattern": "Antipatrones",
+        "zone-backlog": "En desarrollo", "zone-backlog-note": "Propuesto, todavía sin resolver.",
+        "zone-antipattern": "Descartados",
         "zone-antipattern-note": "Descartado. Queda aquí para no volver a proponerlo.",
         "specimen-colors": "Paleta", "specimen-fonts": "Tipografías",
-        "hero-standing": "en pie", "hero-ranked": "puntuados por ti", "hero-asking": "esta ronda",
-        "hero-ongoing": "en curso", "hero-improve": "por mejorar",
+        "hero-standing": "en pie", "hero-ranked": "puntuados por ti",
+        "hero-asking": "gráficos logrados", "hero-ongoing": "por revisar",
+        "hero-improve": "descartados",
         "key-done": "terminado", "key-open": "bien dibujado, abierto", "key-weak": "por mejorar",
         "key-unscored": "sin puntuar", "key-asked": "esta ronda", "key-anti": "descartado",
         "before": "lo que hay ahora", "after": "se propone en su lugar",
@@ -225,8 +236,9 @@ STRINGS = {
                         "ir a ella. Verde sólido es terminado, verde claro es bien dibujado pero "
                         "abierto, gris es sin puntuar. Las marcadas con ? son las de esta ronda.",
         "temp-alt": "Distribución de las notas de ejecución, de peor a mejor",
-        "hero-lede": "Puntúa lo que pide esta ronda, y el resto sobre la marcha — las estrellas "
-                     "de cada fila son tuyas y cambian al pulsar.",
+        "hero-lede": "Puntúa los diseños que la IA propone abajo. Cuando termines de "
+                     "dar puntos, vuelve al chat con tu agente y dale tu crítica y tus "
+                     "indicaciones \u2014 generaremos nuevos diseños y mejoras.",
         "empty-zone": "Todavía no hay nada aquí.", "zone-count": "elementos",
         "execution-of": "ejecución de", "stars-of": "de", "execution-quality": "calidad de ejecución",
         "like": "me gusta", "dislike": "no me gusta", "completed": "completado",
@@ -809,7 +821,23 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
     the rows were parsed, wrote every entry under an empty revision, and threw
     the whole cache away on the next load: three layers of sync that had never
     once been read back. Everything that worked was this socket. */
+ /* Confirmation on the ROUND TRIP, not on the click. The score is written by
+    the companion and echoed back; flashing "saved" on mousedown would promise
+    something the ledger has not agreed to yet -- and a dropped socket is
+    exactly when the user most needs to know it did not save. */
+ function flashSaved(row){
+  var strip=row.querySelector('.dh-signals'); if(!strip)return;
+  var host=document.querySelector('[data-saved]');
+  var tag=row.querySelector('.dh-saved');
+  if(!tag){tag=document.createElement('span'); tag.className='dh-saved';
+           tag.setAttribute('role','status'); strip.appendChild(tag);}
+  tag.textContent=(host&&host.getAttribute('data-saved'))||'Saved';
+  tag.setAttribute('data-on','1');
+  clearTimeout(tag.__dhT);
+  tag.__dhT=setTimeout(function(){tag.removeAttribute('data-on')},2400);
+ }
  function paint(row,s){
+  flashSaved(row);
   if(typeof s.stars==='number'){
    row.dataset.stars=String(s.stars); row.dataset.scored='yes';
    /* The readout is CSS reading attr() off the strip, so the strip needs the
@@ -956,6 +984,15 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  text-transform:uppercase;padding-top:2px;white-space:nowrap;
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
 .dh-fb .dh-signals{display:flex;gap:8px;align-items:center}
+/* The confirmation. Takes no layout when idle, so a row does not reflow the
+   moment a score lands -- and it is announced, so it is not colour-only. */
+.dh-fb .dh-saved{flex:none;font-size:10px;font-weight:700;letter-spacing:.12em;
+ text-transform:uppercase;white-space:nowrap;padding:3px 8px;border-radius:999px;
+ opacity:0;transform:translateY(2px);pointer-events:none;
+ transition:opacity .18s ease,transform .18s ease;
+ background:color-mix(in srgb, #1c8b4b 16%, transparent);color:#1c8b4b;
+ border:1px solid color-mix(in srgb, #1c8b4b 45%, transparent)}
+.dh-fb .dh-saved[data-on]{opacity:1;transform:none}
 /* One continuous strip: zero is a first-class score, not a hidden reset. */
 .dh-fb .dh-stars{display:flex;align-items:center;gap:0}
 .dh-fb .dh-stars > *{min-inline-size:30px;min-block-size:34px;display:grid;place-items:center;
@@ -1360,7 +1397,8 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         if declared:
             wrapper_style = f' style="{declared}"'
     lines = [FEEDBACK_STYLE, REHYDRATE_SCRIPT,
-             f'<div class="dh-feedback" data-{VERSION_MARKER}="{CONTROLS_VERSION}"{wrapper_style}>',
+             f'<div class="dh-feedback" data-{VERSION_MARKER}="{CONTROLS_VERSION}" '
+             f'data-saved="{html_escape(txt["saved"])}"{wrapper_style}>',
              f'<strong class="dh-offline">{txt["offline"]}</strong>']
     if not live:
         lines.append("<!-- no elements in standing; record one with `decide` first -->")
@@ -1554,8 +1592,21 @@ html:has(.dh-art){scroll-behavior:smooth}
  padding:4px 9px;border-radius:999px;background:var(--dh-accent,#d9482a);color:#fff;flex:none}
 .dh-round code{font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--dh-ink,#111)}
 .dh-round span{font-size:12px;color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
-.dh-hero .dh-lede{margin:20px 0 0;max-inline-size:56ch;font-size:15px;
- color:color-mix(in srgb, var(--dh-ink,#111) 72%, transparent)}
+/* Project and what is being designed: two labelled facts, not headings. The
+   reader has to know which project this is before they score anything. */
+.dh-project,.dh-designing{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+ margin:14px 0 0;font-size:15px}
+.dh-project span,.dh-designing span{font-size:9.5px;font-weight:700;letter-spacing:.18em;
+ text-transform:uppercase;padding:4px 9px;border-radius:999px;flex:none;
+ border:1px solid var(--dh-rule);
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-designing span{background:var(--dh-accent,#d9482a);border-color:var(--dh-accent,#d9482a);
+ color:#fff}
+.dh-project b,.dh-designing b{font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere}
+/* The instruction is the point of the page: it tells a designer what to do
+   here AND what to do next. It reads at body size, not as fine print. */
+.dh-hero .dh-lede{margin:24px 0 0;max-inline-size:62ch;font-size:16px;line-height:1.6;
+ color:color-mix(in srgb, var(--dh-ink,#111) 82%, transparent)}
 .dh-figures{display:flex;flex-wrap:wrap;gap:34px;margin:30px 0 0;padding:0;list-style:none}
 .dh-figures div{display:flex;flex-direction:column;gap:3px}
 .dh-figures b{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
@@ -1605,6 +1656,11 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-key b{font-size:9px;line-height:1;padding:1px 4px;border-radius:2px;
  border:1px solid currentColor}
 .dh-toc{padding-block-end:0}
+/* The sticky bar names itself. Scrolled deep into the page, a row of pills
+   with no title does not say what the page is or what it is collecting. */
+.dh-toc-title{margin:0;padding:9px 0 0;font-size:10px;font-weight:700;
+ letter-spacing:.2em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
 .dh-temp i{flex:1 1 0;border-radius:1px;background:currentColor;min-inline-size:2px}
 .dh-t0{color:#b00020}.dh-t1{color:#c2451c}.dh-t2{color:#cf7a12}
 .dh-t3{color:#b98b07}.dh-t4{color:#6f9430}.dh-t5{color:#1c8b4b}
@@ -1657,6 +1713,30 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-zone[data-zone="antipattern"] .dh-tag{color:#b00020;border-color:#b00020}
 .dh-empty{margin:0;font-size:13px;font-style:italic;
  color:color-mix(in srgb, var(--dh-ink,#111) 45%, transparent)}
+/* The round's question, set as the protagonist it is. Filed as a grey note
+   under a heading it was the one sentence on the page nobody read -- and it is
+   the only thing the page is actually asking. */
+.dh-zone[data-zone="round"] > header{max-inline-size:none;text-align:center;
+ margin-block-end:var(--s5)}
+.dh-zone[data-zone="round"] > header .dh-tag,
+.dh-zone[data-zone="round"] > header .dh-domain{margin-inline:auto}
+.dh-zone[data-zone="round"] > header .dh-domain{justify-content:center}
+.dh-ask{margin:var(--s4) auto 0;max-inline-size:34ch;padding:0 var(--s3);
+ font-size:clamp(21px,2.9vw,30px);line-height:1.28;font-weight:700;
+ letter-spacing:-.02em;text-wrap:balance;
+ color:color-mix(in srgb, var(--dh-bg,#fff) 96%, transparent)}
+/* Group headings carry two different ranks. In the critical components the
+   group IS the subject -- the palette, the type -- so it reads big. In the
+   development backlog it is a folder label under an accordion, so it stays
+   bold but small. One `.dh-group` rule could not say both. */
+.dh-art .dh-zone[data-zone="fundamentals"] .dh-group{
+ font-size:clamp(19px,2.2vw,26px);font-weight:800;letter-spacing:-.02em;
+ text-transform:none;
+ color:color-mix(in srgb, var(--dh-ink,#111) 92%, transparent)}
+.dh-art .dh-zone[data-zone="fundamentals"] .dh-group .dh-count{font-size:13px;opacity:.55}
+.dh-art .dh-zone[data-zone="backlog"] .dh-group{
+ font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:none;
+ color:color-mix(in srgb, var(--dh-ink,#111) 78%, transparent)}
 /* Specimens: the section shows the actual material before it shows the rows.
    A palette section that lists ids is a list; one that shows the colours is a
    design system. */
@@ -2490,22 +2570,23 @@ def render_article(project_root: Path, decisions: dict[str, object],
     # clothes. The hero names the artefact being designed; the round is a line
     # underneath it, which is what it actually is.
     headline = html_escape(title or project_title(project_root) or txt["article-title"])
-    round_line = ""
-    if cohort_name or asking:
-        round_line = (f'<p class="dh-round"><b>{html_escape(txt["zone-round"])}</b>'
-                      + (f'<code>{html_escape(cohort_name)}</code>' if cohort_name else "")
-                      + f'<span>{asking} {html_escape(txt["to-score"])}</span></p>')
     theme_vars = {"--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent", "--dh-font": "font"}
     declared = "; ".join(f"{prop}: {theme[key]}"
                          for prop, key in theme_vars.items() if (theme or {}).get(key))
     root_style = f' style="{declared}"' if declared else ""
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
            TOC_SCRIPT, LIGHTBOX_SCRIPT,
-           f'<div class="dh-art"{root_style}>',
+           f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}"{root_style}>',
            '<header class="dh-hero">',
-           f'<p class="dh-eyebrow">{html_escape(txt["article-title"])}</p>',
-           f"<h1>{headline}</h1>",
-           round_line,
+           # Read by a graphic designer, not by whoever built the harness: who
+           # is asking, what this page is, which project, and what is on the
+           # table right now -- in that order, before any number.
+           f'<p class="dh-eyebrow">{html_escape(txt["brand"])}</p>',
+           f'<h1>{html_escape(txt["article-title"])}</h1>',
+           f'<p class="dh-project"><span>{html_escape(txt["project-label"])}</span>'
+           f'<b>{headline}</b></p>',
+           (f'<p class="dh-designing"><span>{html_escape(txt["designing"])}</span>'
+            f'<b>{html_escape(cohort_name)}</b></p>' if cohort_name else ""),
            f'<p class="dh-lede">{html_escape(txt["hero-lede"])}</p>',
            '<div class="dh-figures">',
            f'<div><b>{asking}</b><span>{html_escape(txt["hero-asking"])}</span></div>',
@@ -2525,7 +2606,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
         links.append(f'<li><a href="#dh-zone-{z}" data-zone="{z}"{cta}>{icon}'
                      f'{html_escape(txt[f"zone-{z}"])}<em>{tally}</em></a></li>')
     out.append('<nav class="dh-toc" aria-label="' + html_escape(txt["article-title"])
-               + '"><ol>' + "".join(links) + "</ol>"
+               + '"><p class="dh-toc-title">' + html_escape(txt["article-title"]) + "</p>"
+               + '<ol>' + "".join(links) + "</ol>"
                + f'<div class="dh-temp dh-temp-sticky" role="group" '
                  f'aria-label="{html_escape(txt["temp-alt"])}">{bars}</div>'
                # A key, not a paragraph. Two lines of grey prose under a sticky
@@ -2555,11 +2637,17 @@ def render_article(project_root: Path, decisions: dict[str, object],
                                + "".join(f'<span>{html_escape(txt.get(d, d))}</span>'
                                          for d in domains)
                                + "</p>")
+        # The round is the only section that ASKS, so its own question is the
+        # protagonist of the page -- set large and centred rather than filed as
+        # a grey note under a heading, which is where nobody read it.
+        heading = txt["round-heading"] if zone == "round" else txt[f"zone-{zone}"]
+        note_markup = (f'<p class="dh-ask">{html_escape(note)}</p>' if zone == "round"
+                       else f'<p class="dh-note">{html_escape(note)}</p>')
         out += [f'<section class="dh-zone" id="dh-zone-{zone}" data-zone="{zone}">', "<header>",
-                f'<p class="dh-tag">{len(members)} {html_escape(txt["zone-count"])}</p>',
-                f'<h2>{html_escape(txt[f"zone-{zone}"])}</h2>',
+                f'<p class="dh-tag">{len(members)} {html_escape(txt["designs"])}</p>',
+                f'<h2>{html_escape(heading)}</h2>',
                 domain_line,
-                f'<p class="dh-note">{html_escape(note)}</p>', "</header>"]
+                note_markup, "</header>"]
         if not members:
             out.append(f'<p class="dh-empty">{html_escape(txt["empty-zone"])}</p>')
         # A second sticky level for the long zone: the reader arrives here
