@@ -1070,13 +1070,15 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 /* Out of flow, top-right. In the flex line it pushed the controls sideways
    every time a score landed. */
 .dh-fb{position:relative}
+/* Opaque, and it owns the corner while it is up: it shared the spot with the
+   status chip and the two translucent pills overprinted into noise. */
+.dh-fb:has(.dh-saved[data-on]) .dh-state{opacity:0}
 .dh-fb .dh-saved{position:absolute;inset-block-start:8px;inset-inline-end:10px;z-index:3;
  font-size:10px;font-weight:700;letter-spacing:.12em;
  text-transform:uppercase;white-space:nowrap;padding:3px 8px;border-radius:999px;
  opacity:0;transform:translateY(2px);pointer-events:none;
  transition:opacity .18s ease,transform .18s ease;
- background:color-mix(in srgb, #1c8b4b 16%, transparent);color:#1c8b4b;
- border:1px solid color-mix(in srgb, #1c8b4b 45%, transparent)}
+ background:#1c8b4b;color:#fff;border:1px solid #126435}
 .dh-fb .dh-saved[data-on]{opacity:1;transform:none}
 /* One continuous strip: zero is a first-class score, not a hidden reset. */
 .dh-fb .dh-stars{display:flex;align-items:center;gap:0}
@@ -1807,9 +1809,11 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* Inside the bar, not around it. `outline-offset` pushed a ring into the gaps
    either side, so the marked bars read as two loose boxes sitting on top of the
    strip instead of as bars within it. */
-.dh-temp a[data-asked]{box-shadow:inset 0 0 0 2px var(--dh-bg,#fff),
- inset 0 0 0 4px var(--dh-ink,#111);outline:0;
- min-inline-size:15px;flex-grow:2;border-radius:2px;z-index:1}
+/* A negative outline offset draws the ring INSIDE the bar without touching the
+   gaps. The two stacked inset shadows before this were 6px of ring on a 15px
+   bar -- they ate it, and the marks came out as dark specks. */
+.dh-temp a[data-asked]{outline:2px solid var(--dh-ink,#111);outline-offset:-2px;
+ box-shadow:none;min-inline-size:18px;flex-grow:2.4;border-radius:2px;z-index:1}
 .dh-temp-sticky{block-size:11px;margin:0}
 .dh-key{display:flex;flex-wrap:wrap;gap:4px 16px;margin:7px 0 0;padding:0 0 8px;
  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
@@ -1830,14 +1834,16 @@ html:has(.dh-art){scroll-behavior:smooth}
    inherits its border-box and their padding was adding to a 100% width --
    24px of horizontal overflow on the whole page. */
 .dh-brand,.dh-bar{box-sizing:border-box;max-inline-size:100%}
-.dh-brand{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;flex:1 1 auto;
- min-inline-size:0}
+.dh-brand{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+ flex:1 1 auto;min-inline-size:0}
+.dh-brand-side{display:flex;flex-direction:column;gap:.15rem;min-inline-size:0}
+.dh-brand-right{align-items:flex-end;text-align:end;flex:none}
 .dh-brand a{text-decoration:none;color:inherit}
 .dh-brand-name{font-size:.9rem;font-weight:800;letter-spacing:.02em;color:#f2f2f2}
 .dh-brand-name:hover{text-decoration:underline}
 .dh-brand-credit{font-size:.68rem;letter-spacing:.06em;opacity:.62}
 .dh-brand-credit a{text-decoration:underline;text-underline-offset:2px}
-.dh-brand-agent{margin-inline-start:auto;display:flex;align-items:center;gap:.45rem;
+.dh-brand-agent{display:flex;align-items:center;gap:.45rem;
  font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;opacity:.85}
 .dh-brand-agent::before{content:"";inline-size:7px;block-size:7px;border-radius:999px;
  background:#e0902a}
@@ -1923,11 +1929,8 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* The section name is the label; the round's own topic is the subject, so it
    reads larger. The question below is the ask, weighted just under it. */
 .dh-zone[data-zone="round"] > header h2{font-weight:900;letter-spacing:-.03em}
-.dh-round-topic{margin:var(--s1) 0 0;font-size:clamp(26px,3.6vw,40px);line-height:1.06;
- font-weight:800;letter-spacing:-.03em;text-wrap:balance;
- color:color-mix(in srgb, var(--dh-bg,#fff) 96%, transparent)}
-.dh-ask{margin:var(--s3) auto 0;max-inline-size:34ch;padding:0 var(--s3);
- font-size:clamp(17px,2.1vw,22px);line-height:1.4;font-weight:600;
+.dh-ask{margin:var(--s3) auto 0;max-inline-size:30ch;padding:0 var(--s3);
+ font-size:clamp(20px,2.6vw,27px);line-height:1.36;font-weight:600;
  letter-spacing:-.02em;text-wrap:balance;
  color:color-mix(in srgb, var(--dh-bg,#fff) 96%, transparent)}
 /* Group headings carry two different ranks. In the critical components the
@@ -2314,8 +2317,7 @@ html:has(.dh-art){scroll-behavior:smooth}
    page whose whole job is sober judgement. */
 @keyframes dh-pop{0%{transform:scale(1)}38%{transform:scale(1.32)}100%{transform:scale(1)}}
 .dh-fb [data-verdict].on{animation:dh-pop .34s ease-out}
-.dh-fb .dh-saved[data-cheer]{background:color-mix(in srgb, #1c8b4b 26%, transparent);
- border-color:#1c8b4b}
+.dh-fb .dh-saved[data-cheer]{background:#126435;border-color:#0c4423}
 @media (prefers-reduced-motion:reduce){.dh-art *,.dh-lb *{transition:none!important;
  animation:none!important}}
 </style>"""
@@ -2352,7 +2354,7 @@ BRAND_SCRIPT = """<script>/* dh-brand */
   var credit=document.createElement('span');
   credit.className='dh-brand-credit';
   credit.innerHTML='Companion powered by '
-   +'<a href="https://github.com/obra">Jesse Vincent</a> '
+   +'<a href="https://github.com/obra">Jesse Vincent</a> \u2022 '
    +'<a href="https://github.com/obra/superpowers">obra/Superpowers</a>';
   /* A link only when we were given one: inventing a URL scheme for someone
      else's desktop app is a dead click, which is worse than plain text. */
@@ -2361,7 +2363,16 @@ BRAND_SCRIPT = """<script>/* dh-brand */
   agent.setAttribute('data-state',state);
   if(url)agent.href=url;
   agent.textContent=label;
-  brand.appendChild(name); brand.appendChild(credit); brand.appendChild(agent);
+  /* Two lines a side. The companion's own connection pill lives outside this
+     element, so it is moved in under the agent rather than left dangling on a
+     third line beside it. */
+  var left=document.createElement('span'); left.className='dh-brand-side';
+  left.appendChild(name); left.appendChild(credit);
+  var right=document.createElement('span'); right.className='dh-brand-side dh-brand-right';
+  right.appendChild(agent);
+  var pill=document.querySelector('.status');
+  if(pill)right.appendChild(pill);
+  brand.appendChild(left); brand.appendChild(right);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);
  else go();
@@ -3059,14 +3070,15 @@ def render_article(project_root: Path, decisions: dict[str, object],
         heading = txt["round-heading"] if zone == "round" else txt[f"zone-{zone}"]
         note_markup = (f'<p class="dh-ask">{html_escape(note)}</p>' if zone == "round"
                        else f'<p class="dh-note">{html_escape(note)}</p>')
-        topic = (f'<p class="dh-round-topic">{html_escape(cohort_name)}</p>'
-                 if zone == "round" and cohort_name else "")
+        # The round's tag names the ROUND, not a count the nav already carries.
+        # A separate display line for the topic made three headings stacked.
+        tag = (html_escape(cohort_name) if zone == "round" and cohort_name
+               else f'{len(members)} {html_escape(txt["designs"])}')
         icon = ROUND_ICON if zone == "round" else ""
         out += [f'<section class="dh-zone" id="dh-zone-{zone}" data-zone="{zone}">', "<header>",
                 icon,
-                f'<p class="dh-tag">{len(members)} {html_escape(txt["designs"])}</p>',
+                f'<p class="dh-tag">{tag}</p>',
                 f'<h2>{html_escape(heading)}</h2>',
-                topic,
                 domain_line,
                 note_markup, "</header>"]
         if not members:

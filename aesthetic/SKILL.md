@@ -35,6 +35,8 @@ Scripts at `<skill>/scripts/`, companion at `<skill>/companion/`. Existing: `boo
 
 Give the user the URL `doctor` prints, `?key=` and all. An IDE preview drops the query string.
 
+Pass `article --agent-url` the deep link back to this session so the page can point at you. Left empty it renders as plain text — better than a dead click.
+
 ## What a round must be
 
 `article` refuses two rounds. Both are satisfiable by doing the right thing, not by a flag.
