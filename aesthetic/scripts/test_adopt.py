@@ -773,6 +773,47 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             block = markup.split('id="dh-zone-round"')[1].split("</header>")[0]
             self.assertIn(bh.STRINGS["en"]["typography"], block)
 
+    def test_a_specimen_follows_its_element_into_the_round(self):
+        """The specimen IS the thing being judged. Keeping specimens out of the
+        round to dodge a styling bug lost the picture for exactly the element
+        being asked about."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"type.display"})
+            block = markup.split('id="dh-zone-round"')[1].split("</section>")[0]
+            self.assertIn("dh-faces", block)
+            self.assertIn("Matriz 5x7", block)
+
+    def test_specimen_surfaces_do_not_assume_a_light_ground(self):
+        """On the round's inverted ground a transparent card with an
+        ink-derived border had no back and no edge: the sample floated on black
+        with its controls adrift."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            style = markup.split("<style>/* dh-article */")[1].split("</style>")[0]
+            for selector in (".dh-faces .dh-face{", ".dh-swatches li{"):
+                block = style.split(selector)[1].split("}")[0]
+                self.assertIn("currentColor", block, selector)
+            # Nothing inside a specimen may derive its colour from the page
+            # ink: a specimen can appear in the inverted round, where ink-on-ink
+            # is invisible. The article ROOT setting the ground is correct.
+            for rule in (".dh-swatches .dh-vals{", ".dh-swatches code{", ".dh-swatches span{",
+                         ".dh-face-head code{", ".dh-variants code{"):
+                block = style.split(rule)[1].split("}")[0]
+                self.assertNotIn("--dh-ink", block, rule)
+
+    def test_the_inverted_round_re_derives_the_rule_token(self):
+        """Anything rendered there borrows --dh-rule; ink-derived it is
+        invisible on ink."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"cover.strong"})
+            style = markup.split("<style>/* dh-article */")[1].split("</style>")[0]
+            block = style.split('.dh-zone[data-zone="round"]{')[1].split("}")[0]
+            self.assertIn("--dh-rule:", block)
+            self.assertIn("var(--dh-bg", block.split("--dh-rule:")[1])
+
     def test_antipatterns_sit_last_and_muted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

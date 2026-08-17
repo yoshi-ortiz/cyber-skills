@@ -1278,7 +1278,6 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-versus-label b.dh-now{color:var(--dh-accent,#d9482a)}
 .dh-versus .dh-fb-before{opacity:.7}
 .dh-versus .dh-fb-before:hover{opacity:1}
-.dh-zone[data-zone="round"] .dh-versus{border-color:color-mix(in srgb, var(--dh-bg,#fff) 34%, transparent)}
 /* What the round is ABOUT, in the system's own vocabulary. Without it the
    reader has to infer the domain from three unrelated rows. */
 .dh-domain{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
@@ -1358,7 +1357,10 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* This round is the only section that asks for something, so it is the only one
    that raises its voice: inverted, full bleed against everything else. */
 .dh-zone[data-zone="round"]{background:var(--dh-ink,#111);color:var(--dh-bg,#fff);
- margin:56px -24px 0;padding:44px 24px 48px;border-radius:14px}
+ margin:56px -24px 0;padding:44px 24px 48px;border-radius:14px;
+ /* The ground inverts here, so the rule token has to invert with it. Derived
+    from ink, it was ink-on-ink: every border inside this zone vanished. */
+ --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 30%, transparent)}
 .dh-zone[data-zone="round"] .dh-tag{border-color:var(--dh-bg,#fff);background:var(--dh-accent,#d9482a);
  border-color:var(--dh-accent,#d9482a);color:#fff}
 .dh-zone[data-zone="round"] .dh-note{color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
@@ -1388,21 +1390,23 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-spec{margin:0 0 22px}
 .dh-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
  gap:10px;margin:0;padding:0;list-style:none}
-.dh-swatches li{border:1px solid var(--dh-rule);border-radius:8px;overflow:hidden}
+.dh-swatches li{border:1px solid var(--dh-rule);border-radius:8px;overflow:hidden;
+ background:color-mix(in srgb, currentColor 7%, transparent)}
 .dh-swatches .dh-chip{display:block;block-size:76px}
 .dh-swatches .dh-vals{padding:9px 10px;display:flex;flex-direction:column;gap:2px;
- background:var(--dh-bg,#fff);color:var(--dh-ink,#111)}
+ color:inherit}
 .dh-swatches b{font-size:12px;font-weight:700;letter-spacing:-.01em}
 .dh-swatches code{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
+ color:color-mix(in srgb, currentColor 62%, transparent)}
 .dh-swatches span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 48%, transparent)}
+ color:color-mix(in srgb, currentColor 55%, transparent)}
 .dh-faces{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
-.dh-faces .dh-face{border:1px solid var(--dh-rule);border-radius:10px;overflow:hidden}
+.dh-faces .dh-face{border:1px solid var(--dh-rule);border-radius:10px;overflow:hidden;
+ background:color-mix(in srgb, currentColor 7%, transparent)}
 .dh-face-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 18px;
  border-block-end:1px solid var(--dh-rule)}
 .dh-face-head b{font-size:16px;font-weight:800;letter-spacing:-.02em}
-.dh-face-head code{font-size:10.5px;color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent);
+.dh-face-head code{font-size:10.5px;color:color-mix(in srgb, currentColor 58%, transparent);
  overflow-wrap:anywhere}
 /* Controls ride inside the specimen, so the thing being judged and the way to
    judge it are never in two different places. */
@@ -1424,7 +1428,7 @@ html:has(.dh-art){scroll-behavior:smooth}
  margin-inline-start:auto;flex:none}
 .dh-variants b{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
 .dh-variants code{font-size:10px;font-variant-numeric:tabular-nums;
- color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
+ color:color-mix(in srgb, currentColor 58%, transparent)}
 /* Sticky contents. The article is long by design -- four zones and every
    foundation -- so without this the reader loses which zone they are reading,
    and "is this settled or is this being asked?" is the one question the page
