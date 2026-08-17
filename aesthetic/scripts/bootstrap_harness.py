@@ -168,6 +168,7 @@ STRINGS = {
         "article-title": "Aesthetic ranking", "brand": "Cyber Yoshi: SKILLS",
         "bar-lead": "Scored what you can? Go back to your agent chat",
         "bar-hint": "give your critique and directions there \u2014 new designs follow",
+        "bar-idle": "Waiting for you \u2014 nothing running",
         "bar-left": "left to score", "done-cheer": "Marked as done",
         "credit-what": "Live companion",
         "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
@@ -221,6 +222,7 @@ STRINGS = {
         "article-title": "Aesthetic ranking", "brand": "Cyber Yoshi: SKILLS",
         "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
         "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
+        "bar-idle": "Esperándote \u2014 nada en marcha",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
         "credit-what": "Companion en vivo",
         "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
@@ -856,8 +858,8 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
   clearTimeout(tag.__dhT);
   tag.__dhT=setTimeout(function(){tag.removeAttribute('data-on')},2400);
  }
- function paint(row,s){
-  flashSaved(row);
+ function paint(row,s,live){
+  if(live)flashSaved(row);
   if(typeof s.stars==='number'){
    row.dataset.stars=String(s.stars); row.dataset.scored='yes';
    /* The readout is CSS reading attr() off the strip, so the strip needs the
@@ -892,11 +894,11 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
  /* The greeting routinely beats DOMContentLoaded, and a state applied to rows
     that do not exist yet is silently lost. Hold it until they do. */
  var ready=false, pending={};
- function applyState(st){
+ function applyState(st,live){
   Object.keys(st).forEach(function(el){
    var s=st[el]; if(!s)return;
    if(!ready){pending[el]=s; return}
-   var row=rowFor(el); if(row)paint(row,s);});}
+   var row=rowFor(el); if(row)paint(row,s,live);});}
  function boot(){ready=true; var q=pending; pending={}; applyState(q);}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
  else boot();
@@ -908,7 +910,7 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
   if('sentiment' in ev)s.sentiment=ev.sentiment;
   if(ev.verdict==='completed'||ev.verdict==='approved')s.verdict='completed';
   else if(ev.verdict==='proposed'||ev.verdict==='rejected')s.verdict=null;
-  var one={}; one[ev.element]=s; applyState(one);}
+  var one={}; one[ev.element]=s; applyState(one,true);}
  /* Ranks and thumbs are the companion's to send, and the server echoes them
     back here. The completed toggle is NOT: a companion that only recognises
     its own verdict words drops the click before anything is sent -- no DOM
@@ -988,7 +990,10 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
    down sets the same property on `.dh-fb.dh-fb`, and a container rule that only
    ties on specificity loses to it by source order -- which is why the narrow
    layout silently never applied. */
-@container dh-row (max-width: 560px){
+/* 980, not 560. The old number asked "is the row narrow?"; the question that
+   matters is "does the text still have a measure?" -- 96px of thumbnail plus
+   360px of controls plus gaps leaves under 30ch of text until about here. */
+@container dh-row (max-width: 980px){
  .dh-fb.dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
  .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-start;flex-wrap:wrap}
 }
@@ -1788,7 +1793,9 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-temp a span{font-size:8px;font-weight:800;line-height:1;color:var(--dh-bg,#fff)}
 /* The round's own items are marked in the strip, so "what am I being asked?"
    is answerable from the sticky bar without scrolling to find out. */
-.dh-temp a[data-asked]{outline-color:var(--dh-ink,#111);min-inline-size:11px;flex-grow:1.6}
+/* This round, findable in a strip of sixty: a full ring, not a hairline. */
+.dh-temp a[data-asked]{outline:2.5px solid var(--dh-ink,#111);outline-offset:2px;
+ min-inline-size:13px;flex-grow:2;border-radius:2px;z-index:1}
 .dh-temp-sticky{block-size:11px;margin:0}
 .dh-key{display:flex;flex-wrap:wrap;gap:4px 16px;margin:7px 0 0;padding:0 0 8px;
  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
@@ -2141,17 +2148,31 @@ body > .brand,.brand{display:none}
 /* Stage: the graphic, and to its side the argument that was made for it. On a
    narrow pane the argument drops under the graphic rather than squeezing it. */
 .dh-lb-stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);
- gap:clamp(var(--s3),4vw,var(--s5));align-items:center;min-block-size:0}
+ gap:clamp(var(--s3),4vw,var(--s5));align-items:stretch;min-block-size:0}
+/* Top-aligned. Centred, a 140px argument floated in the middle of a 2000px
+   row with 928px of dead space beneath it. */
+.dh-lb-side{align-self:start}
 @media (max-width:820px){.dh-lb-stage{grid-template-columns:minmax(0,1fr);
  grid-template-rows:minmax(0,1fr) auto;overflow-y:auto}}
 .dh-lb-frame{position:relative;block-size:100%;min-block-size:0;display:grid;
  grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--s3)}
-.dh-lb-art{block-size:100%;min-block-size:0;display:grid;place-items:center;overflow:hidden}
 /* The thumbnail's own markup, re-scaled. `--dh-shot-w` is what sizes a shot,
    so the slide sets it to the frame height rather than restyling the node. */
-.dh-lb-art .dh-shot{--dh-shot-w:min(62vh, 100%);inline-size:auto;block-size:min(78vh,100%);
- aspect-ratio:8.5/11;background:#fff;border-radius:4px;
- box-shadow:0 18px 60px rgba(0,0,0,.45)}
+/* Sized by its BOX, never by the viewport. `62vh` against a tall pane made the
+   drawing 1238px wide inside a 540px frame -- it overflowed to x=-309 and hung
+   off both edges. The grid row already knows how much height there is; the
+   aspect ratio turns that into a width. */
+/* Fit inside the cell on BOTH axes. `block-size:100%` alone let the height
+   grow while the width clamped at max-inline-size, so a tall window stretched
+   the page to a 0.28 aspect instead of 0.77. Container units say the whole
+   rule in one line: take the smaller of the cell's height and the height its
+   width allows. */
+.dh-lb-art{container-type:size;block-size:100%;min-block-size:0;
+ display:grid;place-items:center;overflow:hidden}
+.dh-lb-art .dh-shot{--dh-shot-w:auto;aspect-ratio:8.5/11;inline-size:auto;
+ block-size:min(100cqh, 100cqw * 11 / 8.5);
+ max-inline-size:100%;max-block-size:100%;
+ background:#fff;border-radius:4px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
 .dh-lb-nav{flex:none;inline-size:40px;block-size:40px;border-radius:999px;cursor:pointer;
  border:1px solid var(--dh-rule);background:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
  color:inherit;font:inherit;font-size:18px;line-height:1}
@@ -2216,6 +2237,10 @@ body > .brand,.brand{display:none}
  font-size:12px;letter-spacing:.02em;opacity:.92}
 .dh-live::before{content:"";inline-size:7px;block-size:7px;border-radius:999px;
  background:#7fd18f;flex:none;animation:dh-pulse 1.4s ease-in-out infinite}
+/* Idle is a state, not an absence: orange and still, so "is it working?"
+   is answerable without reading the words. */
+.dh-live[data-state="idle"]{opacity:.72}
+.dh-live[data-state="idle"]::before{background:#e0902a;animation:none}
 @keyframes dh-pulse{0%,100%{opacity:.35}50%{opacity:1}}
 .dh-bar span{opacity:.78}
 .dh-bar em{font-style:normal;margin-inline-start:auto;flex:none;font-size:11px;
@@ -2896,14 +2921,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
                      f'{html_escape(txt[f"zone-{z}"])}<em>{tally}</em></a></li>')
     out.append('<nav class="dh-toc" aria-label="' + html_escape(txt["article-title"])
                + '"><p class="dh-toc-title">' + html_escape(txt["article-title"]) + "</p>"
-               + '<ol>' + "".join(links) + "</ol>"
-               + f'<div class="dh-temp dh-temp-sticky" role="group" '
-                 f'aria-label="{html_escape(txt["temp-alt"])}">{bars}</div>'
-               # A key, not a paragraph. Two lines of grey prose under a sticky
-               # bar is a caption nobody reads twice, and it said in sentences
-               # what four swatches say at a glance.
-               # Read in the order the work moves: what is being asked, then
-               # finished, well drawn, weak, untouched, and set aside last.
+               # Legend, then the chart it explains, then the sections it indexes.
                + '<p class="dh-key">'
                + f'<span><b>?</b>{html_escape(txt["key-asked"])}</span>'
                + f'<span><i class="dh-tdone"></i>{html_escape(txt["key-done"])}</span>'
@@ -2911,7 +2929,10 @@ def render_article(project_root: Path, decisions: dict[str, object],
                + f'<span><i class="dh-t1"></i>{html_escape(txt["key-weak"])}</span>'
                + f'<span><i class="dh-tnone"></i>{html_escape(txt["key-unscored"])}</span>'
                + f'<span><i class="dh-tanti"></i>{html_escape(txt["key-anti"])}</span>'
-               + "</p></nav>")
+                              + "</p>"
+               + f'<div class="dh-temp dh-temp-sticky" role="group" '
+                 f'aria-label="{html_escape(txt["temp-alt"])}">{bars}</div>'
+               + '<ol>' + "".join(links) + "</ol></nav>")
     for zone in ZONES:
         members = sorted((e for e in live if zone_of(e, cohort) == zone), key=rank)
         if not members and zone != "round":
@@ -3020,11 +3041,11 @@ def render_article(project_root: Path, decisions: dict[str, object],
         "</footer>",
         "</div>",
         '<aside class="dh-bar" role="complementary">'
-        + (f'<i class="dh-live" role="status">{html_escape(status.strip())}</i>'
-           if status.strip() else "")
+        + f'<i class="dh-live" role="status" data-state="'
+        + ("working" if status.strip() else "idle") + '">'
+        + html_escape(status.strip() or txt["bar-idle"]) + "</i>"
         + f'<b>{html_escape(txt["bar-lead"])}</b>'
         + f'<span>{html_escape(txt["bar-hint"])}</span>'
-        + (f'<em>{unscored_now} {html_escape(txt["bar-left"])}</em>' if unscored_now else "")
         + "</aside>",
     ]
     return "\n".join(part for part in out if part) + "\n"

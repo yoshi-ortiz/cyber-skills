@@ -270,10 +270,13 @@ class TheArticleSpeaksToADesigner(unittest.TestCase):
                       "strips the controls wrapper, so it rides on the article root")
         script = re.search(r"<script>/\* dh-rehydrate \*/(.*?)</script>", markup, re.S).group(1)
         self.assertIn("function flashSaved", script)
-        paint = script.split("function paint(row,s){", 1)[1][:120]
-        self.assertIn("flashSaved(row)", paint,
-                      "the confirmation must be raised by paint(), which only runs "
-                      "when the companion echoes the write back")
+        paint = script.split("function paint(row,s,live){", 1)[1][:120]
+        self.assertIn("if(live)flashSaved(row)", paint,
+                      "the confirmation must be raised by paint(), and only for a live "
+                      "signal -- `dh-state` is the bootstrap the server sends on connect, "
+                      "so flashing on it announced every row as saved on every page load")
+        self.assertIn("applyState(one,true)", script,
+                      "a real user signal is the only thing that flashes")
         # and never from a raw click handler
         for handler in re.findall(r"addEventListener\('click'.*?\n", script):
             self.assertNotIn("flashSaved", handler)
@@ -465,6 +468,78 @@ class DoneLooksLikeDone(unittest.TestCase):
         self.assertIn("completed", labels)
         self.assertIn("on shape", labels)
         self.assertNotIn("approved", labels)
+
+
+class TheSlideshowFitsItsCell(unittest.TestCase):
+    def test_the_drawing_is_bounded_on_both_axes(self):
+        """`block-size:100%` alone let the height grow while the width clamped,
+        so a tall window stretched the page to a 0.28 aspect. Measured: 1238px
+        of drawing inside a 540px frame, hanging off both edges."""
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.")
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
+        rule = re.search(r"\.dh-lb-art \.dh-shot\{([^}]*)\}", style).group(1)
+        self.assertIn("100cqh", rule, "height must be capped by the cell")
+        self.assertIn("100cqw", rule, "and by the height its width allows")
+        self.assertNotIn("vh", rule, "never size the drawing off the viewport")
+        art = re.search(r"\.dh-lb-art\{([^}]*)\}", style).group(1)
+        self.assertIn("container-type:size", art,
+                      "container units need the cell declared as the container")
+
+
+class TheTextOutranksTheControls(unittest.TestCase):
+    def test_the_controls_wrap_before_the_text_loses_its_measure(self):
+        """The strip is 360px of fixed touch targets and was winning the space
+        fight: at an 802px row the description got 282px and its provenance
+        column 196px, so it wrapped every four words. The breakpoint has to ask
+        "does the text still have a measure?", not "is the row narrow?" -- 96px
+        of thumbnail plus 360px of controls leaves under 30ch until ~980px."""
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.")
+        style = re.search(r"<style>/\* dh-controls \*/(.*?)</style>", markup, re.S).group(1)
+        widths = [int(w) for w in re.findall(
+            r"@container dh-row \(max-width: (\d+)px\)", style)]
+        self.assertTrue(widths, "the row lost its container queries")
+        self.assertGreaterEqual(
+            max(widths), 900,
+            "the controls must drop to their own row well before the text is "
+            f"crushed; widest breakpoint is only {max(widths)}px")
+
+
+class TheBarReportsTheAgent(unittest.TestCase):
+    def test_idle_is_a_state_not_an_absence(self):
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.")
+        self.assertIn('data-state="idle"', markup)
+        working = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.", "Redrawing the cover")
+        self.assertIn('data-state="working"', working)
+        self.assertIn("Redrawing the cover", working)
+
+    def test_the_bar_does_not_report_a_todo_count(self):
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.")
+        bar = markup.split('class="dh-bar"')[1].split("</aside>")[0]
+        self.assertNotIn("left to score", bar,
+                         "the bar reports the agent, not a to-do tally")
+
+
+class TheStickyBarReadsTopDown(unittest.TestCase):
+    def test_title_then_legend_then_chart_then_sections(self):
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.")
+        nav = markup.split('class="dh-toc"')[1].split("</nav>")[0]
+        order = [nav.index(x) for x in
+                 ('dh-toc-title', 'dh-key', 'dh-temp', '<ol>')]
+        self.assertEqual(order, sorted(order),
+                         "legend belongs above the chart it explains, and the "
+                         "chart above the sections it indexes")
 
 
 if __name__ == "__main__":
