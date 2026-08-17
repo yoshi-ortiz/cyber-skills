@@ -2103,8 +2103,11 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px}
 .dh-lb-count{font-size:11px;font-weight:700;letter-spacing:.16em;font-variant-numeric:tabular-nums;
  opacity:.75;flex:none}
-.dh-lb-id{font-size:13px;font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere;
+.dh-lb-name{display:flex;flex-direction:column;gap:2px;min-inline-size:0;flex:1 1 auto}
+.dh-lb-id{font-size:15px;font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere;
  min-inline-size:0}
+.dh-lb-token{font-size:9.5px;letter-spacing:.04em;opacity:.5;overflow-wrap:anywhere}
+.dh-lb-token::before{content:"#";opacity:.6;margin-inline-end:1px}
 .dh-lb-state{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
  padding:3px 9px;border-radius:999px;border:1px solid var(--dh-rule);flex:none;opacity:.8}
 .dh-lb-x{margin-inline-start:auto;flex:none;inline-size:34px;block-size:34px;border-radius:8px;
@@ -2132,8 +2135,12 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-lb-nav[disabled]{opacity:.25;cursor:default}
 /* The argument: what was claimed for this drawing, and the strip that answers
    it. Judging without the claim in view is what "score this" kept meaning. */
+/* The argument is a column of prose, so it gets a measure and the controls sit
+   at its foot rather than floating wherever the text happened to end. */
 .dh-lb-side{display:flex;flex-direction:column;gap:var(--s2);max-block-size:100%;
- overflow-y:auto;font-size:13px;line-height:1.5}
+ overflow-y:auto;font-size:13px;line-height:1.55;padding-inline-end:var(--s1);
+ max-inline-size:46ch}
+.dh-lb-side .dh-lb-score{margin-block-start:auto}
 .dh-lb-side .dh-lb-why{margin:0;opacity:.92}
 .dh-lb-side .dh-lb-sub{margin:0;font-size:11.5px;opacity:.68}
 .dh-lb-side .dh-lb-sub b{font-weight:700;letter-spacing:.1em;text-transform:uppercase;
@@ -2316,7 +2323,9 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   lb.setAttribute('role','dialog'); lb.setAttribute('aria-modal','true');
   lb.innerHTML=
    '<div class="dh-lb-bar"><span class="dh-lb-count"></span>'+
-   '<span class="dh-lb-id"></span><span class="dh-lb-state"></span>'+
+   '<span class="dh-lb-name"><b class="dh-lb-id"></b>'+
+   '<code class="dh-lb-token"></code></span>'+
+   '<span class="dh-lb-state"></span>'+
    '<button class="dh-lb-x" type="button" aria-label="Cerrar">&#10005;</button></div>'+
    '<div class="dh-lb-stage"><div class="dh-lb-frame">'+
    '<button class="dh-lb-nav" data-step="-1" type="button" aria-label="Anterior">&#8249;</button>'+
@@ -2350,7 +2359,11 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   var row=slides[at]; if(!row)return;
   var id=row.getAttribute('data-element');
   lb.querySelector('.dh-lb-count').textContent=(at+1)+' / '+slides.length;
-  lb.querySelector('.dh-lb-id').textContent=id;
+  /* The slideshow headed itself with the dotted id while the card beside it
+     already used a real name. Same rule here: read the row's own title. */
+  var titled=row.querySelector('.dh-id');
+  lb.querySelector('.dh-lb-id').textContent=titled?titled.textContent.trim():id;
+  lb.querySelector('.dh-lb-token').textContent=id;
   lb.querySelector('.dh-lb-state').textContent=txt(row,'.dh-state');
   var shot=row.querySelector('.dh-shot');
   var art=lb.querySelector('.dh-lb-art'); art.innerHTML='';

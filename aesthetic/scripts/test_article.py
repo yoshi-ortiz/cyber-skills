@@ -409,5 +409,23 @@ class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
                          "the zero must not also sit in the verdict row")
 
 
+class TheSlideshowHeadsItselfWithAName(unittest.TestCase):
+    """It headed itself with the dotted id while the card beside it already
+    used a real name. Same rule in both places: read the row's own title."""
+
+    def script(self) -> str:
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.")
+        return re.search(r"<script>/\* dh-lightbox \*/(.*?)</script>", markup, re.S).group(1)
+
+    def test_the_header_reads_the_rows_title_not_the_id(self):
+        body = self.script()
+        self.assertIn(".dh-id", body,
+                      "the slideshow must take its heading from the row's name")
+        self.assertIn("dh-lb-token", body,
+                      "the id still ships, demoted under the name")
+
+
 if __name__ == "__main__":
     unittest.main()
