@@ -696,7 +696,7 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             h1 = markup.split("<h1>")[1].split("</h1>")[0]
             project = markup.split('class="dh-project">')[1].split("</p>")[0]
             designing = markup.split('class="dh-designing">')[1].split("</p>")[0]
-            self.assertEqual(eyebrow, "Cyber Yoshi: SKILLS")
+            self.assertEqual(eyebrow, "Design Agent")
             self.assertEqual(h1, "Aesthetic ranking")
             self.assertIn("Fichas de performance", project)
             self.assertNotIn("cover-furniture-redraw", h1)

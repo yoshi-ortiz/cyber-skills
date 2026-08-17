@@ -165,7 +165,7 @@ STRINGS = {
         "voice": "Copy & voice", "motion": "Motion",
         "unscored": "not yet scored", "proposed-by": "Proposed", "built": "Built",
         "no-graphic": "no graphic",
-        "article-title": "Aesthetic ranking", "brand": "Cyber Yoshi: SKILLS",
+        "article-title": "Aesthetic ranking", "brand": "Design Agent",
         "bar-lead": "Scored what you can? Go back to your agent chat",
         "bar-hint": "give your critique and directions there \u2014 new designs follow",
         "bar-idle": "Waiting for you \u2014 nothing running",
@@ -219,7 +219,7 @@ STRINGS = {
         "voice": "Texto y voz", "motion": "Movimiento",
         "unscored": "sin puntuar", "proposed-by": "Propuesto", "built": "Implementado",
         "no-graphic": "sin gráfico",
-        "article-title": "Aesthetic ranking", "brand": "Cyber Yoshi: SKILLS",
+        "article-title": "Aesthetic ranking", "brand": "Design Agent",
         "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
         "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
         "bar-idle": "Esperándote \u2014 nada en marcha",
@@ -995,7 +995,7 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
    360px of controls plus gaps leaves under 30ch of text until about here. */
 @container dh-row (max-width: 980px){
  .dh-fb.dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
- .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-start;flex-wrap:wrap}
+ .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-end;flex-wrap:wrap}
 }
 @container dh-row (max-width: 380px){
  .dh-fb.dh-fb.dh-fb{grid-template-columns:minmax(0,1fr)}
@@ -1184,7 +1184,7 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  font-size:9px;opacity:.6;block-size:100%}
 @container (max-width: 780px){
  .dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
- .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-start}
+ .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-end}
 }
 @media (prefers-reduced-motion:reduce){.dh-fb *{transition:none!important}}
 </style>"""
@@ -1808,13 +1808,27 @@ html:has(.dh-art){scroll-behavior:smooth}
    project's, not the tool's -- and the credit already sits in our footer, so
    the bar is a second, louder copy of it. Hidden from here rather than by
    patching another skill's server, which an update would overwrite. */
-body > .brand,.brand{display:none}
+/* The companion draws its own brand above our page. Hiding it left an empty
+   dark strip, so the text is replaced in place instead: the owner leads, the
+   engine stays a credit, and the bar keeps its height because it keeps text. */
+.brand-logo{display:none}
+.brand-copy{font-size:0}
+.brand-copy::after{content:"Cyber Yoshi: SKILLS";font-size:.85rem;font-weight:700;
+ letter-spacing:.02em}
+.brand a::after{content:"Live companion · Jesse Vincent · Superpowers";
+ font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;opacity:.55}
 .dh-toc{padding-block-end:0}
 /* The sticky bar names itself. Scrolled deep into the page, a row of pills
    with no title does not say what the page is or what it is collecting. */
-.dh-toc-title{margin:0;padding:9px 0 0;font-size:10px;font-weight:700;
- letter-spacing:.2em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
+/* Always on, bold. A fade tied to scroll state cost three debugging rounds and
+   its failure mode is the title never appearing at all -- strictly worse than
+   the redundancy it was avoiding. */
+.dh-toc-title{margin:0;padding:9px 0 0;font-size:12px;font-weight:800;
+ letter-spacing:.16em;text-transform:uppercase;color:var(--dh-ink,#111)}
+/* Going well on one side, waiting on you on the other, with air between. */
+.dh-key{justify-content:flex-start}
+.dh-key-good,.dh-key-bad{display:flex;flex-wrap:wrap;gap:4px 16px}
+.dh-key-bad{margin-inline-start:auto}
 .dh-temp i{flex:1 1 0;border-radius:1px;background:currentColor;min-inline-size:2px}
 .dh-t0{color:#b00020}.dh-t1{color:#c2451c}.dh-t2{color:#cf7a12}
 .dh-t3{color:#b98b07}.dh-t4{color:#6f9430}.dh-t5{color:#1c8b4b}
@@ -2448,6 +2462,8 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   }
   strip+='<button type="button" class="dh-lb-zero" data-proxy=\\'[data-rank="0"]\\'>0</button>';
   strip+='</div>';
+  var lblHost=document.querySelector('[data-done-label]');
+  var doneLabel=(lblHost&&lblHost.getAttribute('data-done-label'))||'completed';
   var sent=row.querySelector('[data-sentiment="like"].on')?'like':
            (row.querySelector('[data-sentiment="dislike"].on')?'dislike':'');
   var done=row.querySelector('[data-verdict="completed"].on')?' class="on"':'';
@@ -2456,7 +2472,7 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
      (sent==='like'?' class="on"':'')+'>&#128077;</button>'+
    '<button type="button" data-proxy=\\'[data-sentiment="dislike"]\\''+
      (sent==='dislike'?' class="on"':'')+'>&#128078;</button>'+
-   '<button type="button" data-proxy=\\'[data-verdict="completed"]\\''+done+'>&#10003;</button>'+
+   '<button type="button" data-proxy=\\'[data-verdict="completed"]\\''+done+' title="'+doneLabel+'">&#10003;</button>'+
    '</div>';
   box.innerHTML=strip; side.appendChild(box);
   var st=lb.querySelector('.dh-lb-strip'); st.innerHTML='';
@@ -2890,7 +2906,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
            TOC_SCRIPT, LIGHTBOX_SCRIPT,
            f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
-           f'data-cheer-text="{html_escape(txt["done-cheer"])}"{root_style}>',
+           f'data-cheer-text="{html_escape(txt["done-cheer"])}" '
+           f'data-done-label="{html_escape(txt["completed"])}"{root_style}>',
            '<header class="dh-hero">',
            # Read by a graphic designer, not by whoever built the harness: who
            # is asking, what this page is, which project, and what is on the
@@ -2924,12 +2941,16 @@ def render_article(project_root: Path, decisions: dict[str, object],
                # Legend, then the chart it explains, then the sections it indexes.
                + '<p class="dh-key">'
                + f'<span><b>?</b>{html_escape(txt["key-asked"])}</span>'
+               + '<span class="dh-key-good">'
                + f'<span><i class="dh-tdone"></i>{html_escape(txt["key-done"])}</span>'
                + f'<span><i class="dh-thigh"></i>{html_escape(txt["key-open"])}</span>'
+               + "</span>"
+               + '<span class="dh-key-bad">'
                + f'<span><i class="dh-t1"></i>{html_escape(txt["key-weak"])}</span>'
                + f'<span><i class="dh-tnone"></i>{html_escape(txt["key-unscored"])}</span>'
                + f'<span><i class="dh-tanti"></i>{html_escape(txt["key-anti"])}</span>'
-                              + "</p>"
+               + "</span>"
+               + "</p>"
                + f'<div class="dh-temp dh-temp-sticky" role="group" '
                  f'aria-label="{html_escape(txt["temp-alt"])}">{bars}</div>'
                + '<ol>' + "".join(links) + "</ol></nav>")

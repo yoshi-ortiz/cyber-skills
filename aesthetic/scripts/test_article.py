@@ -204,7 +204,9 @@ class TheArticleSpeaksToADesigner(unittest.TestCase):
 
     def test_the_hero_answers_who_what_which_project_and_what_now(self):
         markup = self.article()
-        self.assertIn(">Cyber Yoshi: SKILLS<", markup)
+        # "Cyber Yoshi: SKILLS" brands the COMPANION one level up;
+        # the article's eyebrow names who is asking for the ranks.
+        self.assertIn(">Design Agent<", markup)
         self.assertIn("<h1>Aesthetic ranking</h1>", markup)
         project = markup.split('class="dh-project">')[1].split("</p>")[0]
         self.assertIn("Project", project)
@@ -452,13 +454,17 @@ class DoneLooksLikeDone(unittest.TestCase):
         self.assertIn("\U0001F3C1", rule.group(1))
         self.assertNotIn("\\1F3C1", rule.group(1))
 
-    def test_the_companions_brand_bar_is_hidden(self):
-        # The companion draws its own brand above our page; the credit already
-        # sits in our footer, so the bar is a second louder copy. Hidden from
-        # here because patching another skill's server gets overwritten.
+    def test_the_companions_brand_is_rebranded_not_blanked(self):
+        # Hiding it left an empty dark strip where the bar had been. The text is
+        # replaced in place instead, so the bar keeps its height and the owner
+        # leads. Done from here because patching another skill's server would be
+        # overwritten by its next update.
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
                           self.markup(), re.S).group(1)
-        self.assertRegex(style, r"\.brand\{display:none\}")
+        self.assertIn("Cyber Yoshi: SKILLS", style)
+        self.assertIn("Jesse Vincent", style)
+        self.assertNotIn(".brand{display:none}", style,
+                         "blanking the bar leaves an empty strip")
 
     def test_only_completed_work_reads_as_finished(self):
         # A thumb up is not a finish. `approved` said "approved", which read as
