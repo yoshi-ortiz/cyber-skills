@@ -203,11 +203,18 @@ if [[ "$FOREGROUND" == "true" ]]; then
   exit $?
 fi
 
-# Start server, capturing output to log file
-# Use nohup to survive shell exit; disown to remove from job table
-nohup env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" node server.cjs "--brainstorm-server-id=$SERVER_ID" > "$LOG_FILE" 2>&1 &
+# Start server, capturing output to log file.
+# --background must outlive the agent turn that started it. Two traps:
+# 1. OWNER_PID is the starter's grandparent — often an ephemeral Cursor/Claude
+#    wrapper. 60s later the watchdog shuts us down and the open tab refuses.
+# 2. Aborting that turn SIGKILLs the starter's process group. nohup+disown
+#    still share the group; a new session does not.
+OWNER_PID=""
+unset BRAINSTORM_OWNER_PID || true
+export BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST"
+python3 -c 'import os, sys; os.setsid(); os.execvp("node", ["node", "server.cjs"] + sys.argv[1:])' \
+  "--brainstorm-server-id=$SERVER_ID" >"$LOG_FILE" 2>&1 < /dev/null &
 SERVER_PID=$!
-disown "$SERVER_PID" 2>/dev/null
 echo "$SERVER_PID" > "$PID_FILE"
 [[ -n "$OWNER_PID_FILE" ]] && echo "$SERVER_PID" > "$OWNER_PID_FILE"
 
