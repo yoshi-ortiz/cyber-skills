@@ -795,6 +795,15 @@ class PreviewsPreferHtmlComps(unittest.TestCase):
             self.assertIn("Hi", out)
             self.assertNotIn(".png", out.lower())
 
+    def test_comp_css_is_scoped_and_cannot_shrink_the_frame_body(self):
+        raw = ("<html><head><style>body{width:510px;min-height:660px;background:#f00}"
+               "p{color:blue}</style></head><body><p>Hi</p></body></html>")
+        frag, width, _ = bh.html_comp_fragment(raw)
+        self.assertEqual(width, 510.0)
+        self.assertIn(bh.COMP_SCOPE_CLASS, frag)
+        self.assertNotRegex(frag, r"(?<![\w-])body\s*\{")
+        self.assertIn("Hi", frag)
+
 
 class TheArticleDoesNotOverflowTheFrame(unittest.TestCase):
     def test_wide_charts_scroll_and_the_article_stays_full_width(self):

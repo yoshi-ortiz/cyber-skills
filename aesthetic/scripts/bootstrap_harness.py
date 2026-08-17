@@ -869,7 +869,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "22"
+CONTROLS_VERSION = "23"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -1470,6 +1470,22 @@ def preferred_preview_path(project_root: Path, preview_path: Path, element: str)
     return preview_path
 
 
+COMP_SCOPE_CLASS = "dh-comp-scope"
+
+
+def scope_comp_css(css: str) -> str:
+    """Rewrite comp CSS so it cannot restyle the companion frame.
+
+    Comps are drawn as standalone HTML pages with `body { width: 510px }`.
+    Inlined verbatim, every thumbnail overwrites the frame's body and the
+    whole page shrinks to one comp width -- exactly the broken layout.
+    """
+    css = re.sub(r":root\b", f".{COMP_SCOPE_CLASS}", css)
+    css = re.sub(r"\bhtml\b", f".{COMP_SCOPE_CLASS}", css)
+    css = re.sub(r"\bbody\b", f".{COMP_SCOPE_CLASS}", css)
+    return css
+
+
 def html_comp_fragment(raw: str) -> tuple[str, float, float]:
     """Body + styles from a comp file, and its declared page size."""
     width, height = 850.0, 1100.0
@@ -1483,7 +1499,9 @@ def html_comp_fragment(raw: str) -> tuple[str, float, float]:
             width = float(width_match.group(1))
         if height_match:
             height = float(height_match.group(1))
-        return f"<style>{styles}</style>{body}", width, height
+        scoped = scope_comp_css(styles)
+        return (f"<style>{scoped}</style>"
+                f'<div class="{COMP_SCOPE_CLASS}">{body}</div>'), width, height
     return raw, width, height
 
 
