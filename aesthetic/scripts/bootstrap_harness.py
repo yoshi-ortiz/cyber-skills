@@ -1750,8 +1750,15 @@ html:has(.dh-art){scroll-behavior:smooth}
  text-transform:uppercase;padding:4px 9px;border-radius:999px;flex:none;
  border:1px solid var(--dh-rule);
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-.dh-designing span{background:var(--dh-accent,#d9482a);border-color:var(--dh-accent,#d9482a);
- color:#fff}
+/* A label, not a badge: the round already shouts from its own section, so this
+   line just says what is on the table and lets the tag recede. */
+.dh-designing span{background:none;border-color:transparent;padding-inline:0;
+ font-weight:400;letter-spacing:.14em;
+ color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
+/* `.dh-hero` prefix: a bare `.dh-designing b` merely ties with the shared
+   `.dh-project b,.dh-designing b` rule below and loses on source order. */
+.dh-hero .dh-designing b{font-weight:400;
+ color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
 .dh-project b,.dh-designing b{font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere}
 /* The instruction is the point of the page: it tells a designer what to do
    here AND what to do next. It reads at body size, not as fine print. */
@@ -1848,10 +1855,8 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-brand-name{display:inline-block}
 .dh-brand-agent{display:flex;align-items:center;gap:.45rem;
  font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;opacity:.85}
-.dh-brand-agent::before{content:"";inline-size:7px;block-size:7px;border-radius:999px;
- background:#e0902a}
-.dh-brand-agent[data-state="working"]::before{background:#7fd18f;
- animation:dh-pulse 1.4s ease-in-out infinite}
+/* No dot here. The connection pill below already carries one, and two dots
+   reading different things is the ambiguity this row was meant to remove. */
 .dh-toc{padding-block-end:0}
 /* The sticky bar names itself. Scrolled deep into the page, a row of pills
    with no title does not say what the page is or what it is collecting. */

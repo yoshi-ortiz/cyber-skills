@@ -215,6 +215,20 @@ class TheArticleSpeaksToADesigner(unittest.TestCase):
         self.assertIn("Designing", designing)
         self.assertIn("tab-por-color", designing)
 
+    def test_designing_is_a_label_not_a_badge(self):
+        """The round already shouts. This line just names what is on the table:
+        regular weight, no fill, the tag faded. A bare `.dh-designing b` ties
+        with the shared project rule and loses on source order -- the hero
+        prefix is the whole point of the selector."""
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.article(), re.S).group(1)
+        labels = re.findall(r"\.dh-designing span\{([^}]+)\}", style)
+        self.assertTrue(any("font-weight:400" in r and "background:none" in r
+                            for r in labels), labels)
+        tag = re.search(r"\.dh-hero \.dh-designing b\{([^}]+)\}", style)
+        self.assertIsNotNone(tag, "without .dh-hero the tag stays bold")
+        self.assertIn("font-weight:400", tag.group(1))
+
     def test_the_lede_tells_the_designer_what_to_do_next(self):
         # Scoring is half the job; going back to the chat is the other half,
         # and nothing else on the page says so.
@@ -533,6 +547,17 @@ class TheBarReportsTheAgent(unittest.TestCase):
             set(), "", "en", None, "F", "Ask.", "Redrawing the cover")
         self.assertIn('data-state="working"', working)
         self.assertIn("Redrawing the cover", working)
+
+    def test_the_agent_name_carries_no_dot(self):
+        """Two dots on the right side of the header, reading different things,
+        was the ambiguity the name row was meant to remove. The connection
+        pill already has one."""
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.")
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
+        self.assertNotIn(".dh-brand-agent::before", style)
+        self.assertNotIn(".dh-brand-agent[data-state", style)
 
     def test_the_bar_does_not_report_a_todo_count(self):
         markup = bh.render_article(
