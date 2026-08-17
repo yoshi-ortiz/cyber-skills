@@ -804,6 +804,48 @@ class PreviewsPreferHtmlComps(unittest.TestCase):
         self.assertNotRegex(frag, r"(?<![\w-])body\s*\{")
         self.assertIn("Hi", frag)
 
+    def test_versus_rows_survive_nested_divs_inside_html_comps(self):
+        """Row extraction must not stop at the first </div> inside a preview."""
+        raw = ("<html><head><style>body{width:510px;min-height:660px;background:#f00}"
+               "</style></head><body><div class='wrap'><div class='inner'>Hi</div></div>"
+               "</body></html>")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            comp = root / "content" / "pages.inventory.archivador.posiciones.html"
+            comp.parent.mkdir(parents=True)
+            comp.write_text(raw, encoding="utf-8")
+            decisions = {
+                "version": bh.VERSION, "state": "draft", "supersededCount": 0,
+                "elements": [
+                    {"element": "pages.inventory.archivador.posiciones", "stars": 2,
+                     "sentiment": "like", "state": "proposed", "scored": True,
+                     "source": "user",
+                     "preview": {"path": comp.relative_to(root).as_posix(), "sha256": "abc"}},
+                    {"element": "pages.inventory.archivador.posiciones.secuencia", "stars": 0,
+                     "sentiment": None, "state": "proposed", "scored": False,
+                     "source": "agent",
+                     "preview": {"path": comp.relative_to(root).as_posix(), "sha256": "abc"}},
+                ],
+            }
+            markup = bh.render_article(
+                root, decisions,
+                {"pages.inventory.archivador.posiciones.secuencia"},
+                "posiciones", "es", None, "T", "Ask.")
+            before = re.search(
+                r'<div class="dh-fb dh-fb-before"[^>]*data-element="pages\.inventory\.archivador\.posiciones"[^>]*>(.*?)</div>\s*<p class="dh-versus-label"><b class="dh-now">',
+                markup, re.S)
+            self.assertIsNotNone(before, "the incumbent row must close before the proposal label")
+            chunk = before.group(0)
+            self.assertIn('<span class="dh-meta">', chunk,
+                            "a truncated row loses its title and evidence")
+            self.assertIn('<span class="dh-signals">', chunk,
+                            "a truncated row loses its scoring strip")
+            self.assertIn("Hi", chunk, "the comp preview must still render inside the row")
+            proposal = re.search(
+                r'id="dh-el-pages\.inventory\.archivador\.posiciones\.secuencia"[^>]*data-scored="no"',
+                markup)
+            self.assertIsNotNone(proposal, "the proposal row must sit outside the incumbent preview")
+
 
 class TheArticleDoesNotOverflowTheFrame(unittest.TestCase):
     def test_wide_charts_scroll_and_the_article_stays_full_width(self):

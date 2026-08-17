@@ -869,7 +869,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "23"
+CONTROLS_VERSION = "24"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -1620,6 +1620,29 @@ def display_names(entries: list[dict[str, object]]) -> dict[str, str]:
         taken.setdefault(name, element)
         names[element] = name
     return names
+
+
+def extract_feedback_rows(markup: str) -> dict[str, str]:
+    """Pull complete `.dh-fb` rows out of generated controls markup.
+
+    A naive `.*?\\n</div>` stops at the first closing tag inside an inlined
+    HTML comp preview, which truncates versus-pair rows and nests the rest of
+    the round zone inside a thumbnail.
+    """
+    rows: dict[str, str] = {}
+    for opening in re.finditer(r'<div class="dh-fb" data-element="([^"]+)"[^>]*>', markup):
+        element = opening.group(1)
+        depth = 1
+        end = opening.end()
+        for tag in re.finditer(r"<(/?)div\b[^>]*>", markup[opening.end():]):
+            depth += -1 if tag.group(1) else 1
+            if depth == 0:
+                end = opening.end() + tag.end()
+                break
+        else:
+            raise HarnessError(f"unbalanced <div> in feedback row for {element}")
+        rows[element] = markup[opening.start():end]
+    return rows
 
 
 def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str] | None = None,
@@ -2480,6 +2503,8 @@ html:has(.dh-art){scroll-behavior:smooth}
  cursor:pointer;font-size:21px}
 .dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
 .dh-lb-score .dh-stars{display:flex;gap:4px;align-items:center}
+.dh-lb-score .dh-stars[data-scored="no"]::after{content:"--";
+ color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
 /* The zero is a rank, so it sits with the ranks instead of exiled to the
    verdict row where it read as a fourth verdict. */
 .dh-lb-zero{margin-inline-start:6px;cursor:pointer;font:inherit;font-size:13px;
@@ -3212,8 +3237,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
             "not a round. Narrow it to one surface or one problem, or say what they share "
             "with --asks \"<one sentence>\" so the screen can state it.")
     generated = render_feedback_controls(decisions, theme, project_root, cohort, language)
-    rows = {m.group(1): m.group(0) for m in re.finditer(
-        r'<div class="dh-fb" data-element="([^"]+)".*?\n</div>', generated, re.S)}
+    rows = extract_feedback_rows(generated)
     style = re.search(r"<style>/\* dh-controls \*/.*?</style>", generated, re.S)
     script = re.search(r"<script>/\* dh-rehydrate \*/.*?</script>", generated, re.S)
     live = [e for e in decisions["elements"] if e["state"] in GROUP_OF]
@@ -3510,8 +3534,7 @@ def embed_controls(project_root: Path, screen: Path, theme: dict[str, str] | Non
     txt = strings_for(language)
     generated = render_feedback_controls(load_decisions(output), theme, project_root,
                                          pinned, language)
-    rows = {m.group(1): m.group(0) for m in re.finditer(
-        r'<div class="dh-fb" data-element="([^"]+)".*?\n</div>', generated, re.S)}
+    rows = extract_feedback_rows(generated)
     style_match = re.search(r"<style>.*?</style>", generated, re.S)
     style = style_match.group(0) if style_match else ""
     script_match = re.search(r"<script>/\* dh-rehydrate \*/.*?</script>", generated, re.S)
