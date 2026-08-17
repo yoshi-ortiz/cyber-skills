@@ -238,6 +238,89 @@ class TheArticleAsRendered(unittest.TestCase):
                              "a var() with no declaration silently computes to 0")
 
 
+class AnAgentPlaceholderIsNotAScore(unittest.TestCase):
+    """`decide --source agent --stars 1` used to write `scored: True`.
+
+    The row then painted a gold star on a proposal the user had never seen,
+    suppressed the "sin puntuar" marker, and made a brand-new round read as one
+    already judged badly. `anti-slop.md` says the rank reflects the user, not
+    the agent -- so the placeholder must be visible as a starting position and
+    never as a judgement.
+    """
+
+    def harness(self, root: Path) -> Path:
+        output = root / "spec" / "design-harness"
+        output.mkdir(parents=True)
+        bh.write_json(output / "decisions.json", bh.empty_decisions())
+        bh.write_json(output / "project.json", {"version": bh.VERSION, "state": "draft"})
+        (output / "DECISIONS.md").write_text("", encoding="utf-8")
+        return output
+
+    def test_an_agent_decision_is_not_recorded_as_scored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.harness(root)
+            bh.record_decision(root, "x.agent", "proposed", 1, "evidencia", [],
+                               source="agent")
+            entry = bh.load_decisions(output)["elements"][0]
+            self.assertFalse(entry["scored"],
+                             "an agent placeholder recorded as scored becomes a rank "
+                             "the user never set")
+
+    def test_a_user_decision_is_recorded_as_scored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.harness(root)
+            bh.record_decision(root, "x.user", "proposed", 3, "evidencia", [],
+                               source="user")
+            self.assertTrue(bh.load_decisions(output)["elements"][0]["scored"])
+
+    def test_the_user_ranking_it_later_turns_it_into_a_real_score(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.harness(root)
+            bh.record_decision(root, "x", "proposed", 1, "evidencia", [], source="agent")
+            bh.record_decision(root, "x", "proposed", 4, "me gusta", [], source="user")
+            entry = bh.load_decisions(output)["elements"][0]
+            self.assertEqual((entry["stars"], entry["scored"], entry["source"]),
+                             (4, True, "user"))
+
+    def test_re_proposing_as_the_agent_still_does_not_score_it(self):
+        # The second `decide` for the same id takes the UPDATE path, which had
+        # its own `scored = True` and would have quietly re-scored the row.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.harness(root)
+            bh.record_decision(root, "x", "proposed", 1, "primera", [], source="agent")
+            bh.record_decision(root, "x", "proposed", 1, "segunda", [], source="agent")
+            entry = bh.load_decisions(output)["elements"][0]
+            self.assertFalse(entry["scored"])
+
+    def test_the_row_paints_no_star_the_user_did_not_set(self):
+        # Legacy rows carry scored=True from before the write path was fixed,
+        # so the ROW must decide from who ranked it, not from the stale flag.
+        decisions = {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
+                     "elements": [
+                         {"element": "a.placeholder", "stars": 1, "sentiment": None,
+                          "state": "proposed", "scored": True, "source": "agent"},
+                         {"element": "b.ranked", "stars": 3, "sentiment": "like",
+                          "state": "proposed", "scored": True, "source": "user"}]}
+        markup = bh.render_feedback_controls(decisions, None, None, None, "es")
+        for element, expected in (("a.placeholder", 0), ("b.ranked", 3)):
+            row = re.search(r'<div class="dh-fb" data-element="%s".*?\n</div>'
+                            % re.escape(element), markup, re.S).group(0)
+            lit = len(re.findall(r'<span data-rank="\d" [^>]*class="on"', row))
+            self.assertEqual(lit, expected,
+                             f"{element} painted {lit} star(s), expected {expected}")
+            self.assertRegex(row, r'data-stars="%d"' % expected)
+            # And it must SAY so. Without the marker an agent placeholder just
+            # looks like a row someone scored zero.
+            marked = "puntuar" in row.lower() or "unscored" in row.lower()
+            self.assertEqual(marked, expected == 0,
+                             f"{element} should{'' if expected == 0 else ' not'} carry "
+                             "the unscored marker")
+
+
 class PreviewsMustBeVisible(unittest.TestCase):
     """The gate that replaces hand-authored SVG with something checkable.
 
@@ -308,6 +391,52 @@ class PreviewsMustBeVisible(unittest.TestCase):
             target.write_bytes(blank.read_bytes())
             with self.assertRaises(bh.HarnessError):
                 bh.preview_reference(root, "shots/x.png")
+
+    def test_a_letterboxed_render_is_cropped_back_to_the_comp(self):
+        """QuickLook returns a SQUARE thumbnail with the page anchored top-left.
+
+        A letter-shaped comp came back as 171x221 of drawing inside 510x510 of
+        white -- 85% empty -- and the article then fitted that whole square into
+        a 96px portrait frame, so the comp rendered about 32px across and read
+        as a blank card. Cropping restores its own aspect.
+        """
+        from PIL import Image, ImageDraw
+        image = Image.new("RGB", (510, 510), (255, 255, 255))
+        draw = ImageDraw.Draw(image)
+        draw.rectangle([3, 3, 173, 223], fill=(255, 215, 229))   # the comp, inset
+        # QuickLook pads with white and anchors the page top-left, so the
+        # corner pixel is the letterbox and not the comp's own ground.
+        draw.rectangle([23, 23, 153, 43], fill=(17, 17, 17))     # some ink on it
+        path = self.tmp / "letterboxed.png"
+        image.save(path)
+        bh.trim_to_content(path, 510)
+        with Image.open(path) as out:
+            width, height = out.size
+        self.assertEqual(width, 510, "the crop must scale back to the target width")
+        self.assertAlmostEqual(width / height, 171 / 221, places=1,
+                               msg="the comp's own aspect must survive the crop")
+
+    def test_the_renderer_actually_calls_the_crop(self):
+        # The crop is correct in isolation and useless if the render path stops
+        # calling it -- which is a whole class of half-change this repo has
+        # shipped before. Driving qlmanage from a unit test is not worth it, so
+        # assert the wiring directly.
+        import inspect
+        source = inspect.getsource(bh.render_html_preview)
+        self.assertIn("trim_to_content", source,
+                      "the fallback renderer must crop its letterboxed output")
+
+    def test_cropping_a_full_bleed_render_changes_nothing(self):
+        # Chrome output has no margin: its bounding box is the whole image, so
+        # the crop must be a no-op rather than shaving a row of pixels.
+        from PIL import Image, ImageDraw
+        image = Image.new("RGB", (510, 660), (255, 215, 229))
+        ImageDraw.Draw(image).rectangle([0, 0, 509, 40], fill=(17, 17, 17))
+        path = self.tmp / "fullbleed.png"
+        image.save(path)
+        bh.trim_to_content(path, 510)
+        with Image.open(path) as out:
+            self.assertEqual(out.size, (510, 660))
 
     def test_the_measurement_is_reported_as_numbers(self):
         # The refusal quotes a figure so a borderline comp can be argued about

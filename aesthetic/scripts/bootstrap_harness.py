@@ -446,7 +446,12 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
         elif e["element"] == element:
             e["state"], e["stars"], e["evidence"] = verdict, stars, evidence
             e["source"] = source
-            e["scored"] = True
+            # `scored` means THE USER ranked it. An agent placeholder is a
+            # starting position, not a judgement -- recording it as scored
+            # painted a gold star on every brand-new proposal, suppressed
+            # the "sin puntuar" marker, and made a round the user had not
+            # looked at yet read as one they had already judged badly.
+            e["scored"] = source == "user"
             if implemented is not None:
                 e["implemented"] = implemented
             if description is not None:
@@ -465,7 +470,9 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
         decisions["elements"].append({
             "element": element, "state": verdict, "stars": stars,
             "evidence": evidence, "supersededBy": None, "preview": preview,
-            "source": source, "scored": True,
+            # Same rule on the create path as on the update path: an agent
+            # placeholder is a starting position, never a score.
+            "source": source, "scored": source == "user",
             "sentiment": None if sentiment is KEEP_SENTIMENT else sentiment, "tokens": None,
             "implemented": implemented, "description": description,
         })
@@ -1155,14 +1162,61 @@ def render_html_preview(html: Path, out: Path, width: int = PREVIEW_WIDTH,
         raise HarnessError(f"could not render {html.name}: {detail}, and qlmanage "
                            "is unavailable. Install Chrome or render the PNG yourself.")
     with tempfile.TemporaryDirectory() as staging:
-        subprocess.run(["qlmanage", "-t", "-s", str(width), "-o", staging, str(html)],
+        # Render LARGER than the target: QuickLook fits the page inside a square
+        # and anchors it top-left, so the comp comes back small in a big empty
+        # frame. Oversampling means the crop below still has pixels to keep.
+        subprocess.run(["qlmanage", "-t", "-s", str(width * 3), "-o", staging, str(html)],
                        capture_output=True, timeout=timeout)
         made = list(Path(staging).glob("*.png"))
         if not made:
             raise HarnessError(f"could not render {html.name}: {detail}, and QuickLook "
                                "produced nothing either.")
         shutil.copyfile(made[0], out)
+    trim_to_content(out, width)
     return "qlmanage"
+
+
+def trim_to_content(png: Path, width: int) -> None:
+    """Crop a render down to what was actually drawn, then scale it to width.
+
+    QuickLook returns a SQUARE thumbnail with the page anchored top-left: a
+    letter-shaped comp arrived as 171x221 of drawing inside 510x510 of white --
+    85% empty. The article then fitted that whole square into a 96px portrait
+    frame, so the comp itself rendered about 32px across and read as a blank
+    card. Cropping to the content restores the comp's own aspect, and the frame
+    fills the way it does for a Chrome render.
+
+    A no-op on Chrome output, whose bounding box is already the whole image.
+    """
+    try:
+        from PIL import Image, ImageChops
+    except ImportError:
+        return
+    target = 1 / PREVIEW_RATIO          # width/height of the page we asked for
+    with Image.open(png) as handle:
+        image = handle.convert("RGB")
+        # The corner pixel is the letterbox on a padded render -- but on a
+        # FULL-BLEED one it is the comp's own ground, and cropping to "what
+        # differs from it" then eats the design down to its ink. A test caught
+        # that shaving 41px off a correct 510x660 render.
+        #
+        # So crop only when doing so RECOVERS the shape we asked for: the
+        # padded square moves from 1.00 toward 0.77, while a full-bleed render
+        # is already there and any crop takes it further away.
+        ground = image.getpixel((0, 0))
+        box = ImageChops.difference(
+            image, Image.new("RGB", image.size, ground)).getbbox()
+        if box:
+            cropped_w, cropped_h = box[2] - box[0], box[3] - box[1]
+            if cropped_w and cropped_h:
+                before = abs(image.width / image.height - target)
+                after = abs(cropped_w / cropped_h - target)
+                if after < before:
+                    image = image.crop(box)
+        if image.width != width and image.width:
+            height = max(1, round(image.height * width / image.width))
+            image = image.resize((width, height), Image.LANCZOS)
+        image.save(png)
 
 
 def preview_ink(png: Path) -> dict[str, float]:
@@ -1332,15 +1386,21 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
             tally = sum(1 for e in live if group_of(e) == group_key)
             lines.append(f'<h4 class="dh-group" data-group="{group_key}">{label}<span class="dh-count">{tally}</span></h4>')
         element, stars = entry["element"], entry["stars"]
+        # The strip already greys an unscored bar; the ROW painted its
+        # stars straight from the number regardless of who put it there.
+        user_ranked = entry.get("source") == "user" and bool(entry.get("scored"))
         lines.append(
-            f'<div class="dh-fb" data-element="{element}" data-stars="{stars}" '
-            f'data-scored="{"yes" if entry.get("scored") else "no"}" '
+            f'<div class="dh-fb" data-element="{element}" data-stars="{stars if user_ranked else 0}" '
+            f'data-scored="{"yes" if user_ranked else "no"}" '
             f'data-group="{GROUP_OF[entry["state"]]}" data-foundation="{foundation_of(element)}" '
             f'data-label="{element}">'
         )
         lines.append(render_preview(project_root, entry.get("preview"), element, txt))
         lines.append('<span class="dh-meta">')
-        unscored = "" if entry.get("scored") else f' &middot; {txt["unscored"]}'
+        # Legacy rows carry scored=True from when an agent placeholder was
+        # written as a score, so the marker keys off who ranked it, not off
+        # the stale flag -- otherwise old agent rows still read as judged.
+        unscored = "" if user_ranked else f' &middot; {txt["unscored"]}'
         # The state rides beside the id instead of trailing the block as a fifth
         # line of near-identical grey text.
         lines.append(f'<span class="dh-head"><span class="dh-id">{element}</span>'
@@ -1364,7 +1424,8 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         stars_markup = "".join(
             f'<span data-rank="{n}" role="button" tabindex="0" '
             f'aria-label="{n} {txt["stars-of"]} {STAR_RANGE[1]}: {txt["execution-quality"]}"'
-            + (' class="on"' if 0 < n <= stars else "") + ">&#9733;</span>"
+            + (' class="on"' if user_ranked and 0 < n <= stars else "")
+            + ">&#9733;</span>"
             for n in range(STAR_RANGE[0], STAR_RANGE[1] + 1)
         )
         # The zero is a rank, so it rides the rank code path: it scores 0 and
@@ -1372,7 +1433,7 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         # handler that also stripped the thumb and the tick -- a score silently
         # erasing two unrelated signals, which is the one thing the contract
         # says a score must never do.
-        zero_on = ' class="on"' if entry.get("scored") and stars == ZERO_STARS else ""
+        zero_on = ' class="on"' if user_ranked and stars == ZERO_STARS else ""
         lines.append(
             f'<span class="dh-zero"><span data-rank="0" role="button" tabindex="0" '
             f'title="{txt["zero-title"]}" '
@@ -1380,8 +1441,8 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
             # data-stars is mirrored onto the strip so the numeric readout can be
             # pure CSS (attr()) and still track a click: `paint` writes it here
             # as well as on the row.
-            f'<span class="dh-stars" role="group" data-stars="{stars}" '
-            f'data-scored="{"yes" if entry.get("scored") else "no"}" '
+            f'<span class="dh-stars" role="group" data-stars="{stars if user_ranked else 0}" '
+            f'data-scored="{"yes" if user_ranked else "no"}" '
             f'aria-label="{txt["execution-of"]} {element}">'
             f'{stars_markup}</span>')
         mood = entry.get("sentiment")
