@@ -1,6 +1,6 @@
 # interpret-art.md
 
-Load only for `interpret @<art-folder>` or `continue` on a visual project. If the corpus is a knowledge index (INDEX.md / `*.md`), stop this file and load interpret-knowledge.md instead.
+Load only for `observe @/art-folder` on a visual corpus, or `continue`. If the corpus is a knowledge index (INDEX.md / `*.md`), stop this file and load interpret-knowledge.md instead.
 
 Do not open `bootstrap_harness.py`. Do not invent colours or faces the corpus does not evidence.
 

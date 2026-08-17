@@ -2,7 +2,7 @@
 name: aesthetic
 version: 0.8.0
 description: Evidence-backed design harness for durable user decisions and ranked feedback. Use for design work with an inspiration corpus, a knowledge-index text corpus, or an existing spec/design-harness/. Covers art direction, UI, product, space, copy, motion, composition, and information architecture for social sharing.
-argument-hint: "continue | critique | interpret @<art-folder> | interpret @<knowledge-index>"
+argument-hint: "continue | critique | observe @/art-folder"
 ---
 
 # Aesthetic
@@ -13,10 +13,9 @@ Great design is specific to its subject, coherent as a system, visibly refined, 
 
 - **continue** (or nothing) — `doctor`, `stats`, name the cohort. If `ia.*` stands and there is no art folder, load [continue-after-ia.md](references/continue-after-ia.md). Interview before drawing. Infographic frames, not typeset quotes. Visual is inference. Else [loop.md](references/loop.md).
 - **critique** — judge what stands. Rank nothing on the user's behalf.
-- **interpret @\<art-folder\>** — load [interpret-art.md](references/interpret-art.md). Visual corpus.
-- **interpret @\<knowledge-index\>** — load [interpret-knowledge.md](references/interpret-knowledge.md). Text corpus with INDEX.md. Propose IA. Do not draw.
+- **observe @/art-folder** — read the corpus. Routes on what is actually there: INDEX.md present → text, load [interpret-knowledge.md](references/interpret-knowledge.md), propose IA, do not draw. Images and no INDEX.md → visual, load [interpret-art.md](references/interpret-art.md).
 
-Tie-break: INDEX.md present → knowledge. Images and no INDEX.md → art. Empty `inspiration/` is not a missing corpus when `knowledge-index/` exists.
+Empty `inspiration/` is not a missing corpus when `knowledge-index/` exists.
 
 **Read disk first.** `spec/design-harness/` exists → continue. It does not → ask once for the corpus directory (read-only, never guessed) and the artistic direction, then `init`. Named directory missing or empty: say so and stop.
 
@@ -65,12 +64,12 @@ Once at the start, and once after the first ranks come back. Not between every d
 1. Ledger via verbs. Do not open `bootstrap_harness.py` from a design run.
 2. Do not edit this skill while designing.
 3. Art path writes `core.*` `palette.*` `typography.*` `illustration.*` `composition.*` `voice.*` `motion.*`. Knowledge path writes `ia.*` `social.*`. No `palette.*` on a text corpus.
-4. Knowledge interpret stops at IA. `continue` after standing `ia.*` may prototype social-size frames ([continue-after-ia.md](references/continue-after-ia.md)). Empty `inspiration/` is not a stop. Do not write `palette.*` as corpus evidence.
+4. Observing a text corpus stops at IA. `continue` after standing `ia.*` may prototype social-size frames ([continue-after-ia.md](references/continue-after-ia.md)). Empty `inspiration/` is not a stop. Do not write `palette.*` as corpus evidence.
 
-## interpret @knowledge-index
+## observe — text corpus
 
 Load [interpret-knowledge.md](references/interpret-knowledge.md). INDEX.md is the catalog. Cluster from the catalog. Open numbered files only after a cluster is named. Output: program → series → post → slide, claim ids used, files not opened. Stop.
 
-## interpret @art-folder
+## observe — art folder
 
 Load [interpret-art.md](references/interpret-art.md), then [loop.md](references/loop.md). Do not route images through interpret-knowledge.md.

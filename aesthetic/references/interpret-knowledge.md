@@ -1,6 +1,6 @@
 # interpret-knowledge.md
 
-Branch file. Load only when interpret's target is a **text corpus** (`*.md`, `*.txt`) or the user said `knowledge-index`. If the target is an art folder (images), do not load this file; use the visual interpret path.
+Branch file. Load only when `observe`'s target is a **text corpus** (`*.md`, `*.txt`) or the user said `knowledge-index`. If the target is an art folder (images), do not load this file; use the visual interpret path.
 
 Do not open `bootstrap_harness.py`. Do not hash the folder. Do not invent a palette. Do not draw.
 

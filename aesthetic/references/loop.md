@@ -58,6 +58,9 @@ Müller-Brockmann, Bringhurst, Gestalt, Peirce, movement — in
 
 ## 4 · Build
 
+Load `modern-web-guidance` before writing the comp's CSS; take the pattern it
+names instead of inventing one.
+
 **Draw the comp in HTML/CSS, then render it.** Never hand-author SVG. Authoring
 an SVG means authoring a coordinate system you never see, which is the one job
 the model is worst at -- the ledger carried 59 such previews holding 6352

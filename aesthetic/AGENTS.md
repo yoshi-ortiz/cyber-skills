@@ -32,6 +32,26 @@ Adding a file is a two-part act: write the file, and check it against the contra
 
 **Budgets are load-bearing.** `SKILL.md` reached 18,121 bytes (~4,493 tokens, loaded on *every* invocation) because nothing bounded it. It is now ~3,263 bytes (~816 tokens). Knowledge-index interpret lives in `references/interpret-knowledge.md`. Visual interpret lives in `references/interpret-art.md`. Comparators: `prototype` ~738 tokens, `modern-web-guidance` ~1,406, `ponytail` ~1,659.
 
+## Editing the article's front end
+
+`render_article` emits a real web page, so it is held to the same standard as
+one. **Load `modern-web-guidance` before changing its CSS or script** and take
+the pattern it names rather than inventing one — this file's history is a list
+of what happens otherwise: a container query put on the element that was meant
+to respond to it, a rule that tied with a legacy `@media` and lost on source
+order, an unclosed `/*` that discarded every rule after it, `opacity` used for
+de-emphasis over an inverted ground.
+
+Three habits that cost the most time here:
+
+- **Measure the rendered page, never the source.** Twice the CSS read correctly
+  and the browser had discarded it. Scroll the element into view first --
+  `content-visibility:auto` reports placeholder geometry off-screen.
+- **The controls stylesheet ships after the article's.** A bare selector there
+  merely ties and loses; name `.dh-fb` (or double it) to outrank.
+- **Anything derived from the page ground breaks in the round zone**, which
+  inverts. Build from the row's own ground, never from `transparent`.
+
 ## Two metrics, deliberately separate
 
 **Entry cost** — bytes of `SKILL.md`, paid every invocation. Bounded by the root contract.

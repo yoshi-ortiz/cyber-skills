@@ -1012,16 +1012,26 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
    beside the id instead of adding a fifth line. */
 .dh-fb .dh-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0}
 /* The id, demoted to a tag. It is the ledger's key and the designer's noise. */
-.dh-fb .dh-token{grid-column:1 / -1;justify-self:start;font-size:9.5px;letter-spacing:.06em;
- padding:2px 7px;border-radius:4px;overflow-wrap:anywhere;
- background:color-mix(in srgb, var(--dh-ink,#111) 6%, transparent);
- color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
+/* Two grey pills of the same size said two unrelated things: one is a STATUS,
+   one is a machine key. The key stops being a badge -- it is the string you
+   quote back to the agent, not a label about the work. Deleting the pill is
+   also one less thing on the card. */
+.dh-fb .dh-token{grid-column:1 / -1;justify-self:start;font-size:9.5px;letter-spacing:.04em;
+ padding:0;background:none;overflow-wrap:anywhere;
+ color:color-mix(in srgb, var(--dh-ink,#111) 42%, transparent)}
+.dh-fb .dh-token::before{content:"#";opacity:.55;margin-inline-end:1px}
 .dh-fb .dh-id{font-weight:700;font-size:15px;letter-spacing:-.01em;
  overflow-wrap:anywhere;color:var(--dh-ink,#111)}
+/* The status keeps the pill and earns a colour, so lifecycle is readable at a
+   glance instead of being one more grey rectangle to parse. */
 .dh-fb .dh-state{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
- padding:2px 6px;border-radius:3px;white-space:nowrap;
+ padding:2px 7px;border-radius:999px;white-space:nowrap;font-weight:700;
  background:color-mix(in srgb, var(--dh-ink,#111) 8%, transparent);
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-fb[data-group="developing"] .dh-state{background:color-mix(in srgb, #1c8b4b 16%, transparent);
+ color:#166b3a}
+.dh-fb[data-group="rejected"] .dh-state{background:color-mix(in srgb, #b00020 13%, transparent);
+ color:#8d1a2c}
 .dh-fb .dh-desc{font-size:13px;line-height:1.5;overflow-wrap:break-word;
  color:color-mix(in srgb, var(--dh-ink,#111) 88%, transparent)}
 /* provenance, not prose: smaller, dimmer, with a micro-label instead of a
