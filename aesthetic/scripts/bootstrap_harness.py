@@ -914,7 +914,16 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  font:500 13px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
  contain:layout style;content-visibility:auto;contain-intrinsic-size:auto 120px}
 .dh-fb.dh-fb:hover{border-color:var(--dh-ink,#111)}
-.dh-fb .dh-meta{display:flex;flex-direction:column;gap:5px;min-width:0}
+/* An invisible table, not a stack of independent rows. Each provenance line
+   used to be its own flex row, so its value began wherever its own label
+   happened to end: `PROPUESTO` is nine characters and `IMPLEMENTADO` is
+   twelve, so the two values started at different x and their wrapped lines
+   hung at different indents. One grid for the whole block puts every label
+   in a column sized to the longest of them and every value on one edge. */
+.dh-fb .dh-meta{display:grid;grid-template-columns:max-content minmax(0,1fr);
+ gap:5px 10px;align-content:start;min-width:0}
+/* The id and the description are prose, not rows of the table. */
+.dh-fb .dh-head,.dh-fb .dh-desc:not(.dh-sub){grid-column:1 / -1}
 /* Five stacked lines of near-identical grey monospace is what made the strip
    tiring to read. Hierarchy now: the id leads, the description is the line you
    actually read, provenance is demoted to a labelled aside, and the state sits
@@ -930,10 +939,14 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  color:color-mix(in srgb, var(--dh-ink,#111) 88%, transparent)}
 /* provenance, not prose: smaller, dimmer, with a micro-label instead of a
    run-on bold prefix inside the sentence */
-.dh-fb .dh-sub{font-size:11.5px;line-height:1.45;display:flex;gap:7px;
+/* `display:contents` so the label and the value become cells of the meta
+   grid directly. The element still passes inherited type and colour down --
+   it just stops generating a box that would trap them in their own row. */
+.dh-fb .dh-sub{font-size:11.5px;line-height:1.45;display:contents;
  color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
-.dh-fb .dh-sub b{font-weight:700;font-size:9px;letter-spacing:.1em;
- text-transform:uppercase;flex:none;padding-top:2px;
+.dh-fb .dh-sub > span{grid-column:2;min-inline-size:0;overflow-wrap:break-word}
+.dh-fb .dh-sub > b{grid-column:1;font-weight:700;font-size:9px;letter-spacing:.1em;
+ text-transform:uppercase;padding-top:2px;white-space:nowrap;
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
 .dh-fb .dh-signals{display:flex;gap:8px;align-items:center}
 /* One continuous strip: zero is a first-class score, not a hidden reset. */
@@ -1341,9 +1354,11 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         # "Propuesto: palette.role-groups-three" directly under the heading
         # "palette.role-groups-three" on almost every row.
         if proposed and proposed != element:
-            lines.append(f'<span class="dh-desc dh-sub"><b>{txt["proposed-by"]}</b>{proposed}</span>')
+            lines.append(f'<span class="dh-desc dh-sub"><b>{txt["proposed-by"]}</b>'
+                         f'<span>{proposed}</span></span>')
         if built:
-            lines.append(f'<span class="dh-desc dh-sub"><b>{txt["built"]}</b>{built}</span>')
+            lines.append(f'<span class="dh-desc dh-sub"><b>{txt["built"]}</b>'
+                         f'<span>{built}</span></span>')
         lines.append("</span>")
         lines.append('<span class="dh-signals">')
         stars_markup = "".join(

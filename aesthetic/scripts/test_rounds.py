@@ -89,6 +89,12 @@ class TheArticleAsRendered(unittest.TestCase):
         decisions = live(("cover.spine", 2, "like", "proposed"),
                          ("cover.spine.remaches", 0, None, "proposed"),
                          ("type.brackets", 4, "like", "approved"))
+        # Provenance is what the invisible table lays out, so the fixture has to
+        # carry some -- without it the layout tests pass by rendering nothing.
+        for entry in decisions["elements"]:
+            entry["description"] = "pestana de archivador con paso por rol"
+            entry["evidence"] = "cover.spine gusto a 2 estrellas, el dibujo no llegaba"
+            entry["implemented"] = "se removieron los grupos opacity=0.13 y la barra de lomo"
         with tempfile.TemporaryDirectory() as tmp:
             return bh.render_article(Path(tmp), decisions, {"cover.spine.remaches"},
                                      "lomo", "es", None, "Fichas", "Remaches.")
@@ -183,6 +189,44 @@ class TheArticleAsRendered(unittest.TestCase):
         floor = re.search(r"repeat\(auto-fit,\s*minmax\((\d+)px", style)
         self.assertIsNotNone(floor, "the swatch grid stopped declaring a column floor")
         self.assertGreaterEqual(int(floor.group(1)), 240)
+
+    def test_provenance_lines_are_laid_out_as_one_invisible_table(self):
+        """`PROPUESTO` and `IMPLEMENTADO` must share a label column.
+
+        As independent flex rows each value began wherever its own label ended
+        -- nine characters against twelve -- so the two values started at
+        different x and their wrapped lines hung at different indents. The meta
+        block is one grid: labels in a `max-content` column, values on a single
+        edge, and every wrapped line inherits that edge because the value is a
+        block-level grid cell rather than an inline run after the label.
+        """
+        markup = self.article()
+        style = re.search(r"<style>/\* dh-controls \*/(.*?)</style>", markup, re.S).group(1)
+        meta = re.search(r"\.dh-fb \.dh-meta\{([^}]*)\}", style)
+        self.assertIsNotNone(meta, "the meta block lost its layout rule")
+        self.assertIn("display:grid", meta.group(1),
+                      "independent rows cannot share a label column")
+        self.assertIn("max-content", meta.group(1),
+                      "the label column must size to the longest label")
+        sub = re.search(r"\.dh-fb \.dh-sub\{([^}]*)\}", style)
+        self.assertIn("display:contents", sub.group(1),
+                      "the sub-line must not generate a box, or its label and value "
+                      "are trapped in a row of their own instead of joining the grid")
+
+    def test_every_provenance_value_has_its_own_element(self):
+        # A bare text node cannot be placed in a grid column. Without this the
+        # value falls back to an anonymous item and the table silently un-aligns.
+        markup = self.article()
+        opened = markup.count('<span class="dh-desc dh-sub">')
+        self.assertTrue(opened, "the article rendered no provenance lines")
+        # Anchor on each opening tag and look at what immediately follows the
+        # label. A loose `.*?` here matched across two sub-lines and let an
+        # unwrapped value pass.
+        wrapped = re.findall(r'<span class="dh-desc dh-sub"><b>[^<]*</b><span>', markup)
+        self.assertEqual(len(wrapped), opened,
+                         f"{opened - len(wrapped)} provenance value(s) are bare text nodes; "
+                         "a text node cannot be placed in a grid column, so the table "
+                         "silently un-aligns")
 
     def test_the_spacing_scale_is_declared_before_it_is_used(self):
         markup = self.article()
