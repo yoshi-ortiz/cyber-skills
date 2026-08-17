@@ -168,6 +168,7 @@ STRINGS = {
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
         "bar-lead": "Scored what you can? Go back to your agent chat",
         "bar-hint": "give your critique and directions there \u2014 new designs follow",
+        "agent-working": "Agent running", "agent-idle": "Agent idle",
         "bar-idle": "Waiting for you \u2014 nothing running",
         "bar-left": "left to score", "done-cheer": "Marked as done",
         "credit-what": "Live companion",
@@ -222,6 +223,7 @@ STRINGS = {
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
         "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
         "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
+        "agent-working": "Agente trabajando", "agent-idle": "Agente en pausa",
         "bar-idle": "Esperándote \u2014 nada en marcha",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
         "credit-what": "Companion en vivo",
@@ -1023,7 +1025,8 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
    tiring to read. Hierarchy now: the id leads, the description is the line you
    actually read, provenance is demoted to a labelled aside, and the state sits
    beside the id instead of adding a fifth line. */
-.dh-fb .dh-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0}
+.dh-fb .dh-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0;
+ padding-inline-end:96px}
 /* The id, demoted to a tag. It is the ledger's key and the designer's noise. */
 /* Two grey pills of the same size said two unrelated things: one is a STATUS,
    one is a machine key. The key stops being a badge -- it is the string you
@@ -1037,7 +1040,10 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  overflow-wrap:anywhere;color:var(--dh-ink,#111)}
 /* The status keeps the pill and earns a colour, so lifecycle is readable at a
    glance instead of being one more grey rectangle to parse. */
-.dh-fb .dh-state{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+/* The status is about the card, so it sits on the card -- corner, not inline
+   after the title where it competed with the name for the reading line. */
+.dh-fb .dh-state{position:absolute;inset-block-start:8px;inset-inline-end:10px;z-index:2;
+ font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
  padding:2px 7px;border-radius:999px;white-space:nowrap;font-weight:700;
  background:color-mix(in srgb, var(--dh-ink,#111) 8%, transparent);
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
@@ -1061,7 +1067,11 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-fb .dh-signals{display:flex;gap:8px;align-items:center}
 /* The confirmation. Takes no layout when idle, so a row does not reflow the
    moment a score lands -- and it is announced, so it is not colour-only. */
-.dh-fb .dh-saved{flex:none;font-size:10px;font-weight:700;letter-spacing:.12em;
+/* Out of flow, top-right. In the flex line it pushed the controls sideways
+   every time a score landed. */
+.dh-fb{position:relative}
+.dh-fb .dh-saved{position:absolute;inset-block-start:8px;inset-inline-end:10px;z-index:3;
+ font-size:10px;font-weight:700;letter-spacing:.12em;
  text-transform:uppercase;white-space:nowrap;padding:3px 8px;border-radius:999px;
  opacity:0;transform:translateY(2px);pointer-events:none;
  transition:opacity .18s ease,transform .18s ease;
@@ -1794,8 +1804,12 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* The round's own items are marked in the strip, so "what am I being asked?"
    is answerable from the sticky bar without scrolling to find out. */
 /* This round, findable in a strip of sixty: a full ring, not a hairline. */
-.dh-temp a[data-asked]{outline:2.5px solid var(--dh-ink,#111);outline-offset:2px;
- min-inline-size:13px;flex-grow:2;border-radius:2px;z-index:1}
+/* Inside the bar, not around it. `outline-offset` pushed a ring into the gaps
+   either side, so the marked bars read as two loose boxes sitting on top of the
+   strip instead of as bars within it. */
+.dh-temp a[data-asked]{box-shadow:inset 0 0 0 2px var(--dh-bg,#fff),
+ inset 0 0 0 4px var(--dh-ink,#111);outline:0;
+ min-inline-size:15px;flex-grow:2;border-radius:2px;z-index:1}
 .dh-temp-sticky{block-size:11px;margin:0}
 .dh-key{display:flex;flex-wrap:wrap;gap:4px 16px;margin:7px 0 0;padding:0 0 8px;
  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
@@ -1808,15 +1822,27 @@ html:has(.dh-art){scroll-behavior:smooth}
    project's, not the tool's -- and the credit already sits in our footer, so
    the bar is a second, louder copy of it. Hidden from here rather than by
    patching another skill's server, which an update would overwrite. */
-/* The companion draws its own brand above our page. Hiding it left an empty
-   dark strip, so the text is replaced in place instead: the owner leads, the
-   engine stays a credit, and the bar keeps its height because it keeps text. */
-.brand-logo{display:none}
-.brand-copy{font-size:0}
-.brand-copy::after{content:"Cyber Yoshi: SKILLS";font-size:.85rem;font-weight:700;
- letter-spacing:.02em}
-.brand a::after{content:"Live companion · Jesse Vincent · Superpowers";
- font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;opacity:.55}
+/* The companion's own header, restyled. Its contents are REPLACED by script
+   rather than papered over with `content:` -- the CSS version left the server's
+   own "Superpowers vunknown" still showing beside ours, and pseudo-elements
+   cannot carry the hyperlinks this header needs. */
+/* `box-sizing` explicitly: both of these live OUTSIDE `.dh-art`, so neither
+   inherits its border-box and their padding was adding to a 100% width --
+   24px of horizontal overflow on the whole page. */
+.dh-brand,.dh-bar{box-sizing:border-box;max-inline-size:100%}
+.dh-brand{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;flex:1 1 auto;
+ min-inline-size:0}
+.dh-brand a{text-decoration:none;color:inherit}
+.dh-brand-name{font-size:.9rem;font-weight:800;letter-spacing:.02em;color:#f2f2f2}
+.dh-brand-name:hover{text-decoration:underline}
+.dh-brand-credit{font-size:.68rem;letter-spacing:.06em;opacity:.62}
+.dh-brand-credit a{text-decoration:underline;text-underline-offset:2px}
+.dh-brand-agent{margin-inline-start:auto;display:flex;align-items:center;gap:.45rem;
+ font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;opacity:.85}
+.dh-brand-agent::before{content:"";inline-size:7px;block-size:7px;border-radius:999px;
+ background:#e0902a}
+.dh-brand-agent[data-state="working"]::before{background:#7fd18f;
+ animation:dh-pulse 1.4s ease-in-out infinite}
 .dh-toc{padding-block-end:0}
 /* The sticky bar names itself. Scrolled deep into the page, a row of pills
    with no title does not say what the page is or what it is collecting. */
@@ -1892,8 +1918,16 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-zone[data-zone="round"] > header .dh-tag,
 .dh-zone[data-zone="round"] > header .dh-domain{margin-inline:auto}
 .dh-zone[data-zone="round"] > header .dh-domain{justify-content:center}
-.dh-ask{margin:var(--s4) auto 0;max-inline-size:34ch;padding:0 var(--s3);
- font-size:clamp(21px,2.9vw,30px);line-height:1.28;font-weight:700;
+.dh-round-icon{inline-size:34px;block-size:34px;display:block;margin:0 auto var(--s2);
+ color:var(--dh-accent,#d9482a)}
+/* The section name is the label; the round's own topic is the subject, so it
+   reads larger. The question below is the ask, weighted just under it. */
+.dh-zone[data-zone="round"] > header h2{font-weight:900;letter-spacing:-.03em}
+.dh-round-topic{margin:var(--s1) 0 0;font-size:clamp(26px,3.6vw,40px);line-height:1.06;
+ font-weight:800;letter-spacing:-.03em;text-wrap:balance;
+ color:color-mix(in srgb, var(--dh-bg,#fff) 96%, transparent)}
+.dh-ask{margin:var(--s3) auto 0;max-inline-size:34ch;padding:0 var(--s3);
+ font-size:clamp(17px,2.1vw,22px);line-height:1.4;font-weight:600;
  letter-spacing:-.02em;text-wrap:balance;
  color:color-mix(in srgb, var(--dh-bg,#fff) 96%, transparent)}
 /* Group headings carry two different ranks. In the critical components the
@@ -2257,6 +2291,11 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-live[data-state="idle"]::before{background:#e0902a;animation:none}
 @keyframes dh-pulse{0%,100%{opacity:.35}50%{opacity:1}}
 .dh-bar span{opacity:.78}
+/* One place to go when you are done here. */
+.dh-bar-go{margin-inline-start:auto;flex:none;font-weight:800;letter-spacing:.12em;
+ font-size:12px;padding:5px 12px;border-radius:8px;text-decoration:none;
+ background:var(--dh-bg,#fff);color:var(--dh-ink,#111)}
+.dh-bar-go:hover{filter:brightness(.94)}
 .dh-bar em{font-style:normal;margin-inline-start:auto;flex:none;font-size:11px;
  font-weight:700;letter-spacing:.14em;text-transform:uppercase;
  padding:4px 10px;border-radius:999px;
@@ -2284,9 +2323,50 @@ html:has(.dh-art){scroll-behavior:smooth}
 
 # Stroke icon, not an emoji: emoji ignore `color`, so a bin glyph could never
 # take the bar's ink or invert with the active pill.
+# The round's own mark: a target, because the round is the one thing being aimed
+# at. Stroke, not emoji -- emoji ignore `color` and cannot invert with the zone.
+ROUND_ICON = ('<svg class="dh-round-icon" viewBox="0 0 24 24" fill="none" '
+              'stroke="currentColor" stroke-width="1.6" aria-hidden="true">'
+              '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>'
+              '<circle cx="12" cy="12" r="1" fill="currentColor"/></svg>')
+
 TRASH_ICON = ('<svg class="dh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               'stroke-width="2" stroke-linecap="round" aria-hidden="true">'
               '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>')
+
+BRAND_SCRIPT = """<script>/* dh-brand */
+(function(){
+ if(window.__dhBrand)return; window.__dhBrand=1;
+ function go(){
+  var host=document.querySelector('[data-agent-state]'); if(!host)return;
+  var brand=document.querySelector('.brand'); if(!brand)return;
+  var url=host.getAttribute('data-agent-url')||'';
+  var label=host.getAttribute('data-agent-label')||'';
+  var state=host.getAttribute('data-agent-state')||'idle';
+  brand.className='brand dh-brand';
+  brand.textContent='';
+  var name=document.createElement('a');
+  name.className='dh-brand-name';
+  name.href='https://github.com/yoshi-ortiz/cyber-skills';
+  name.textContent='CYBER YOSHI: SKILLS';
+  var credit=document.createElement('span');
+  credit.className='dh-brand-credit';
+  credit.innerHTML='Companion powered by '
+   +'<a href="https://github.com/obra">Jesse Vincent</a> '
+   +'<a href="https://github.com/obra/superpowers">obra/Superpowers</a>';
+  /* A link only when we were given one: inventing a URL scheme for someone
+     else's desktop app is a dead click, which is worse than plain text. */
+  var agent=document.createElement(url?'a':'span');
+  agent.className='dh-brand-agent';
+  agent.setAttribute('data-state',state);
+  if(url)agent.href=url;
+  agent.textContent=label;
+  brand.appendChild(name); brand.appendChild(credit); brand.appendChild(agent);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);
+ else go();
+})();
+</script>"""
 
 TOC_SCRIPT = """<script>/* dh-toc */
 (function(){
@@ -2792,7 +2872,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
                    cohort: set[str] | None = None, cohort_name: str = "",
                    language: str | None = None,
                    theme: dict[str, str] | None = None,
-                   title: str = "", asks: str = "", status: str = "") -> str:
+                   title: str = "", asks: str = "", status: str = "",
+                   agent_url: str = "") -> str:
     """A design-system article that is also the scoring companion.
 
     The strip alone answered "what is on the list". It could not answer "what is
@@ -2904,10 +2985,14 @@ def render_article(project_root: Path, decisions: dict[str, object],
                          for prop, key in theme_vars.items() if (theme or {}).get(key))
     root_style = f' style="{declared}"' if declared else ""
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
-           TOC_SCRIPT, LIGHTBOX_SCRIPT,
+           TOC_SCRIPT, LIGHTBOX_SCRIPT, BRAND_SCRIPT,
            f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
            f'data-cheer-text="{html_escape(txt["done-cheer"])}" '
-           f'data-done-label="{html_escape(txt["completed"])}"{root_style}>',
+           f'data-done-label="{html_escape(txt["completed"])}" '
+           f'data-agent-url="{html_escape(agent_url.strip())}" '
+           f'data-agent-state="{"working" if status.strip() else "idle"}" '
+           f'data-agent-label="{html_escape(txt["agent-working"] if status.strip() else txt["agent-idle"])}"'
+           f'{root_style}>',
            '<header class="dh-hero">',
            # Read by a graphic designer, not by whoever built the harness: who
            # is asking, what this page is, which project, and what is on the
@@ -2974,9 +3059,14 @@ def render_article(project_root: Path, decisions: dict[str, object],
         heading = txt["round-heading"] if zone == "round" else txt[f"zone-{zone}"]
         note_markup = (f'<p class="dh-ask">{html_escape(note)}</p>' if zone == "round"
                        else f'<p class="dh-note">{html_escape(note)}</p>')
+        topic = (f'<p class="dh-round-topic">{html_escape(cohort_name)}</p>'
+                 if zone == "round" and cohort_name else "")
+        icon = ROUND_ICON if zone == "round" else ""
         out += [f'<section class="dh-zone" id="dh-zone-{zone}" data-zone="{zone}">', "<header>",
+                icon,
                 f'<p class="dh-tag">{len(members)} {html_escape(txt["designs"])}</p>',
                 f'<h2>{html_escape(heading)}</h2>',
+                topic,
                 domain_line,
                 note_markup, "</header>"]
         if not members:
@@ -3067,6 +3157,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
         + html_escape(status.strip() or txt["bar-idle"]) + "</i>"
         + f'<b>{html_escape(txt["bar-lead"])}</b>'
         + f'<span>{html_escape(txt["bar-hint"])}</span>'
+        + (f'<a class="dh-bar-go" href="{html_escape(agent_url)}">[OK]</a>'
+           if agent_url.strip() else '<span class="dh-bar-go">[OK]</span>')
         + "</aside>",
     ]
     return "\n".join(part for part in out if part) + "\n"
@@ -3900,6 +3992,10 @@ def parser() -> argparse.ArgumentParser:
     article.add_argument("--out", required=True, type=Path, help="screen to write (then `publish` it)")
     article.add_argument("--cohort", default="", help="element ids this round asks about")
     article.add_argument("--cohort-name", default="", help="what to call this round, e.g. cover-furniture")
+    article.add_argument("--agent-url", default="",
+                         help="deep link back to the agent's desktop app. Left empty "
+                              "the header and the bottom bar render as plain text "
+                              "rather than guessing a URL scheme.")
     article.add_argument("--status", default="",
                          help="what the agent is doing right now, in the user's language, "
                               "e.g. 'Redibujando la portada'. Shown live in the bottom bar.")
@@ -4015,7 +4111,8 @@ def main() -> int:
                 write_json(path, stored)
             markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
                                     cohort, args.cohort_name, args.lang or None, theme or None,
-                                    args.title, args.asks, args.status)
+                                    args.title, args.asks, args.status,
+                                    args.agent_url)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(markup, encoding="utf-8")
             print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "

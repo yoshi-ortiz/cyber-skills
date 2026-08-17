@@ -454,17 +454,25 @@ class DoneLooksLikeDone(unittest.TestCase):
         self.assertIn("\U0001F3C1", rule.group(1))
         self.assertNotIn("\\1F3C1", rule.group(1))
 
-    def test_the_companions_brand_is_rebranded_not_blanked(self):
-        # Hiding it left an empty dark strip where the bar had been. The text is
-        # replaced in place instead, so the bar keeps its height and the owner
-        # leads. Done from here because patching another skill's server would be
-        # overwritten by its next update.
-        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
-                          self.markup(), re.S).group(1)
-        self.assertIn("Cyber Yoshi: SKILLS", style)
-        self.assertIn("Jesse Vincent", style)
-        self.assertNotIn(".brand{display:none}", style,
+    def test_the_companions_brand_is_replaced_not_papered_over(self):
+        """Hiding it left an empty dark strip; a `content:` overlay left the
+        server's own "Superpowers vunknown" still showing beside ours. The node
+        is rebuilt by script, which also carries the hyperlinks the header needs
+        and which no pseudo-element can."""
+        markup = self.markup()
+        script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>", markup, re.S)
+        self.assertIsNotNone(script, "the brand rewrite was not emitted")
+        body = script.group(1)
+        self.assertIn("CYBER YOSHI: SKILLS", body)
+        self.assertIn("github.com/obra/superpowers", body)
+        self.assertNotIn(".brand{display:none}", markup,
                          "blanking the bar leaves an empty strip")
+
+    def test_the_agent_link_is_omitted_rather_than_invented(self):
+        # Guessing a URL scheme for someone else's desktop app is a dead click.
+        script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>",
+                           self.markup(), re.S).group(1)
+        self.assertIn("createElement(url?'a':'span')", script)
 
     def test_only_completed_work_reads_as_finished(self):
         # A thumb up is not a finish. `approved` said "approved", which read as
