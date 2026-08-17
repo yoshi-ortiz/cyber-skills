@@ -17,7 +17,7 @@
      */
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
+    html, body { height: 100%; overflow: hidden; overflow-x: clip; }
 
     /* ===== THEME VARIABLES ===== */
     :root {
@@ -71,10 +71,19 @@
       .brand-logo { filter: none; }
     }
     .status { font-size: 0.7rem; color: var(--status-color, var(--success)); display: flex; align-items: center; gap: 0.4rem; justify-self: end; white-space: nowrap; line-height: 1; }
-    .status::before { content: ''; width: 6px; height: 6px; background: var(--status-color, var(--success)); border-radius: 50%; }
+    .status::before {
+      content: '';
+      width: 14px;
+      height: 11px;
+      flex: none;
+      border-radius: 2px;
+      background: var(--status-color, var(--success));
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
 
-    .main { flex: 1; overflow-y: auto; }
-    #frame-content { padding: 2rem; min-height: 100%; }
+    .main { flex: 1; overflow-y: auto; overflow-x: auto; min-width: 0; }
+    #frame-content { padding: 2rem; min-height: 100%; min-width: 0; width: 100%; overflow-x: clip; }
 
     .header {
       background: var(--bg-secondary);

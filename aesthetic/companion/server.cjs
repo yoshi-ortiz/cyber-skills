@@ -683,6 +683,7 @@ function startServer() {
 
   function shutdown(reason) {
     console.log(JSON.stringify({ type: 'server-stopped', reason }));
+    try { broadcast({ type: 'dh-agent', text: '', state: 'idle' }); } catch (e) { /* best effort */ }
     const infoFile = path.join(STATE_DIR, 'server-info');
     if (fs.existsSync(infoFile)) fs.unlinkSync(infoFile);
     fs.writeFileSync(

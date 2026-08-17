@@ -869,7 +869,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "21"
+CONTROLS_VERSION = "22"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -937,6 +937,8 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
           t.textContent=(h&&h.getAttribute('data-cheer-text'))||t.textContent;}
    }
   }
+  try{document.dispatchEvent(new CustomEvent('dh-row-painted',
+    {detail:{element:row.getAttribute('data-element')}}));}catch(e){}
  }
  function rowFor(el){
   var all=document.querySelectorAll('.dh-fb[data-element]');
@@ -1899,7 +1901,8 @@ html:has(.dh-art){scroll-behavior:smooth}
  --dh-rule:color-mix(in srgb, var(--dh-ink,#111) 16%, transparent);
  background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
  font:400 15px/1.55 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
- max-inline-size:1180px;margin:0 auto;padding:0 24px var(--s6);box-sizing:border-box;
+ inline-size:100%;max-inline-size:min(1180px,100%);margin:0 auto;padding:0 24px var(--s6);
+ box-sizing:border-box;
  /* A short article left the rest of the viewport unpainted -- the host page's
     canvas, which is black in a dark viewer, showing under the last section. */
  min-block-size:100dvh}
@@ -1962,7 +1965,8 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* The signature: one bar per standing element, coloured by its own score, worst
    to best. The whole system's temperature in a single line -- real data, no
    decoration, and it reads before a single word is read. */
-.dh-temp-wrap{margin:26px 0 0}
+.dh-temp-wrap{margin:26px 0 0;max-inline-size:100%;overflow-x:auto;
+ -webkit-overflow-scrolling:touch}
 .dh-temp{display:flex;gap:2px;block-size:12px}
 .dh-temp-wrap figcaption{margin:9px 0 0;font-size:10.5px;
  color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
@@ -2442,6 +2446,11 @@ html:has(.dh-art){scroll-behavior:smooth}
  max-inline-size:46ch}
 .dh-lb-side .dh-lb-score{margin-block-start:auto}
 .dh-lb-side .dh-lb-score .dh-signals{margin:0}
+/* The lightbox clones the row strip outside `.dh-fb`, so give it a shell the
+   scoring CSS already knows. */
+.dh-lb-fb.dh-fb{display:block;grid-template-columns:unset;padding:0;margin:0;
+ border:0;background:transparent;box-shadow:none}
+.dh-lb-fb .dh-signals{position:static}
 .dh-lb-side .dh-lb-why{margin:0;opacity:.92}
 .dh-lb-side .dh-lb-sub{margin:0;font-size:11.5px;opacity:.68}
 .dh-lb-side .dh-lb-sub b{font-weight:700;letter-spacing:.1em;text-transform:uppercase;
@@ -2477,7 +2486,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
 /* Floating action bar: one place to return to the agent, not a full-width footer. */
 .dh-bar{position:fixed;inset-block-end:16px;inset-inline-end:16px;inset-inline-start:auto;
- z-index:50;max-inline-size:min(420px,calc(100vw - 32px));
+ z-index:50;max-inline-size:min(420px,calc(100dvw - 32px));
  display:flex;flex-direction:column;align-items:stretch;gap:8px;
  padding:12px 14px;border-radius:14px;
  font:500 13px/1.4 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
@@ -2614,10 +2623,12 @@ BRAND_SCRIPT = """<script>/* dh-brand */
 LIVE_SCRIPT = """<script>/* dh-live */
 (function(){
  if(window.__dhLive)return; window.__dhLive=1;
+ var lastAt=Date.now(), idleMs=90000;
  function apply(text,state){
   var el=document.querySelector('.dh-live'); if(!el)return;
   el.setAttribute('data-state',state||'working');
   if(text)el.textContent=text;
+  lastAt=Date.now();
  }
  function connect(){
   var key=''; try{key=sessionStorage.getItem('brainstorm-session-key')||'';}catch(e){}
@@ -2627,6 +2638,11 @@ LIVE_SCRIPT = """<script>/* dh-live */
    if(d.type==='dh-agent')apply(d.text,d.state);
   };
  }
+ setInterval(function(){
+  var el=document.querySelector('.dh-live'); if(!el)return;
+  if(el.getAttribute('data-state')!=='working')return;
+  if(Date.now()-lastAt>=idleMs)el.setAttribute('data-state','idle');
+ },15000);
  connect();
 })();
 </script>"""
@@ -2741,6 +2757,7 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   var sig=row.querySelector('.dh-signals');
   if(!sig)return;
   var box=document.createElement('div'); box.className='dh-lb-score';
+  var shell=document.createElement('div'); shell.className='dh-fb dh-lb-fb';
   var c=sig.cloneNode(true);
   c.querySelectorAll('[data-rank]').forEach(function(n){
    wireProxy(n, '.dh-stars [data-rank="'+n.getAttribute('data-rank')+'"]');
@@ -2751,7 +2768,7 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   c.querySelectorAll('[data-verdict]').forEach(function(n){
    wireProxy(n, '[data-verdict="'+n.getAttribute('data-verdict')+'"]');
   });
-  box.appendChild(c); side.appendChild(box);
+  shell.appendChild(c); box.appendChild(shell); side.appendChild(box);
  }
  // Resolve an id against the SLIDE set, never against the document: the first
  // `.dh-fb` for a palette id in document order is the specimen's controls-only
@@ -2869,6 +2886,11 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
    if(bar){e.preventDefault(); open(bar.getAttribute('data-el'))}
   });
   chartCard();
+  document.addEventListener('dh-row-painted',function(e){
+   if(lb.hidden||!e.detail||!e.detail.element)return;
+   var row=slides[at]; if(!row||row.getAttribute('data-element')!==e.detail.element)return;
+   paint();
+  });
  }
  /* Hovering a bar shows the drawing it stands for. The old tooltip said
     `family.tab.spine-step.grupo-color -- 1/5 -- proposed`, which is a
@@ -3150,7 +3172,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
                    theme: dict[str, str] | None = None,
                    title: str = "", asks: str = "", status: str = "",
                    agent_url: str = "", agent_name: str = "",
-                   round_label: str = "") -> str:
+                   round_label: str = "", agent_working: bool = False) -> str:
     """A design-system article that is also the scoring companion.
 
     The strip alone answered "what is on the list". It could not answer "what is
@@ -3261,13 +3283,14 @@ def render_article(project_root: Path, decisions: dict[str, object],
     declared = "; ".join(f"{prop}: {theme[key]}"
                          for prop, key in theme_vars.items() if (theme or {}).get(key))
     root_style = f' style="{declared}"' if declared else ""
+    agent_state = "working" if agent_working else "idle"
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
            TOC_SCRIPT, LIGHTBOX_SCRIPT, BRAND_SCRIPT, LIVE_SCRIPT,
            f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
            f'data-cheer-text="{html_escape(txt["done-cheer"])}" '
            f'data-done-label="{html_escape(txt["completed"])}" '
            f'data-agent-url="{html_escape(agent_url.strip())}" '
-           f'data-agent-state="{"working" if status.strip() else "idle"}" '
+           f'data-agent-state="{agent_state}" '
            f'data-agent-label="{html_escape(agent_name.strip())}"'
            f'{root_style}>',
            '<header class="dh-hero">',
@@ -3435,8 +3458,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
         "</footer>",
         "</div>",
         '<aside class="dh-bar" role="complementary">'
-        + f'<i class="dh-live" role="status" data-state="'
-        + ("working" if status.strip() else "idle") + '">'
+        + f'<i class="dh-live" role="status" data-state="{agent_state}">'
         + html_escape(status.strip() or txt["bar-idle"]) + "</i>"
         + '<div class="dh-bar-foot"><p class="dh-bar-copy"><b>'
         + html_escape(txt["bar-lead"]) + "</b> <span>"
@@ -4304,8 +4326,11 @@ def parser() -> argparse.ArgumentParser:
                               "the header and the bottom bar render as plain text "
                               "rather than guessing a URL scheme.")
     article.add_argument("--status", default="",
-                         help="what the agent is doing right now, in the user's language, "
+                        help="what the agent is doing right now, in the user's language, "
                               "e.g. 'Redibujando la portada'. Shown live in the bottom bar.")
+    article.add_argument("--working", action="store_true",
+                         help="green pulsing dot while the agent is drawing; omit when waiting "
+                              "on the user (idle text + orange dot)")
     article.add_argument("--asks", default="",
                          help="one sentence: what this round asks the user to judge. "
                               "Required when the cohort spans more than two foundations")
@@ -4431,7 +4456,8 @@ def main() -> int:
             markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
                                     cohort, args.cohort_name, args.lang or None, theme or None,
                                     args.title, args.asks, args.status,
-                                    args.agent_url, args.agent, args.round_label)
+                                    args.agent_url, args.agent, args.round_label,
+                                    args.working)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(markup, encoding="utf-8")
             print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "

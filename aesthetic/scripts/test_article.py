@@ -573,16 +573,22 @@ class OpenPutsTheUrlInChat(unittest.TestCase):
 
 
 class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
-    def markup(self, status: str = "") -> str:
+    def markup(self, status: str = "", working: bool = False) -> str:
         return bh.render_article(
             Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.", status)
+            set(), "", "en", None, "F", "Ask.", status, agent_working=working)
 
     def test_a_status_line_lands_in_the_live_bar(self):
-        markup = self.markup("Redrawing the cover")
+        markup = self.markup("Redrawing the cover", working=True)
         live = markup.split('class="dh-live"')[1].split("</i>")[0]
         self.assertIn("working", live)
         self.assertIn("Redrawing the cover", live)
+
+    def test_idle_copy_does_not_force_a_working_dot(self):
+        markup = self.markup("Ready to score")
+        live = markup.split('class="dh-live"')[1].split("</i>")[0]
+        self.assertIn("idle", live)
+        self.assertIn("Ready to score", live)
 
     def test_the_page_listens_for_a_live_status_push(self):
         """`--status` is baked at publish time. Without a listener the bar
@@ -610,6 +616,8 @@ class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
         script = re.search(r"<script>/\* dh-lightbox \*/(.*?)</script>", markup, re.S).group(1)
         self.assertIn("cloneSignals", script,
                       "the lightbox must clone the row's .dh-signals strip")
+        self.assertIn("dh-lb-fb", script,
+                      "cloned strips need a .dh-fb shell so scoring CSS applies")
         self.assertNotIn("dh-lb-zero", script,
                          "rebuilt stars drift from the card; clone the row instead")
         self.assertIn('data-zone="round"', script,
@@ -728,7 +736,8 @@ class TheBarReportsTheAgent(unittest.TestCase):
         self.assertIn('data-state="idle"', markup)
         working = bh.render_article(
             Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.", "Redrawing the cover")
+            set(), "", "en", None, "F", "Ask.", "Redrawing the cover",
+            agent_working=True)
         self.assertIn('data-state="working"', working)
         self.assertIn("Redrawing the cover", working)
 
@@ -785,6 +794,17 @@ class PreviewsPreferHtmlComps(unittest.TestCase):
             out = bh.render_preview(root, preview, "x", bh.STRINGS["en"])
             self.assertIn("Hi", out)
             self.assertNotIn(".png", out.lower())
+
+
+class TheArticleDoesNotOverflowTheFrame(unittest.TestCase):
+    def test_wide_charts_scroll_and_the_article_stays_full_width(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          bh.render_article(Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+                                            set(), "", "en", None, "F", "Ask."),
+                          re.S).group(1)
+        self.assertIn("inline-size:100%", style)
+        self.assertIn("overflow-x:auto", style.replace(" ", ""))
+        self.assertIn("100dvw", style)
 
 
 class TheFloatingBarLinksBack(unittest.TestCase):

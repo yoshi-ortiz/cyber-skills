@@ -36,7 +36,7 @@ Load [loop.md](references/loop.md) only after the URL is in chat. Do not read DE
 
 **Heartbeat.** Before a step longer than a minute: one chat sentence + `status --text`. After every `shoot`: paste the PNG in chat before `publish`. Silence reads as a hang.
 
-**Agent on the page.** Pass `article --agent` your model name and `--agent-url` the deep link to this session. Pass `--round-label` the object name (e.g. Micrófono), not a slug like `objeto`.
+**Agent on the page.** Pass `article --agent` your model name and `--agent-url` the deep link to this session. Pass `--round-label` the object name (e.g. Micrófono), not a slug like `objeto`. Add `--working` only while drawing; otherwise the bottom bar stays orange idle. Push `status --idle` when you stop.
 
 **New proposals stay unscored.** `decide --source agent --stars 0 --preview content/<element>.html`. The row and slideshow show blank stars until the user ranks. Never pass a PNG when the HTML comp exists.
 
