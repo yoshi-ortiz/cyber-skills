@@ -2,7 +2,7 @@
 name: aesthetic
 version: 0.8.0
 description: Evidence-backed design harness for durable user decisions and ranked feedback. Use for design work with an inspiration corpus, a knowledge-index text corpus, or an existing spec/design-harness/. Covers art direction, UI, product, space, copy, motion, composition, and information architecture for social sharing.
-argument-hint: "continue | critique | observe @/art-folder"
+argument-hint: "continue | critique | prototype | observe @/art-folder"
 ---
 
 # Aesthetic
@@ -13,6 +13,7 @@ Great design is specific to its subject, coherent as a system, visibly refined, 
 
 - **continue** (or nothing) — `doctor`, `stats`, name the cohort. If `ia.*` stands and there is no art folder, load [continue-after-ia.md](references/continue-after-ia.md). Interview before drawing. Infographic frames, not typeset quotes. Visual is inference. Else [loop.md](references/loop.md).
 - **critique** — judge what stands. Rank nothing on the user's behalf.
+- **prototype** — draw one comp to answer one question, `shoot` it, show it. No ledger round, no cohort.
 - **observe @/art-folder** — read the corpus. Routes on what is actually there: INDEX.md present → text, load [interpret-knowledge.md](references/interpret-knowledge.md), propose IA, do not draw. Images and no INDEX.md → visual, load [interpret-art.md](references/interpret-art.md).
 
 Empty `inspiration/` is not a missing corpus when `knowledge-index/` exists.
@@ -49,7 +50,8 @@ Every thumbnail opens a slideshow: the graphic full height, its argument beside 
 
 They are a designer, not the person who built this. Write the way they write.
 
-- **Their language.** The article, every `--description`, `--title`, `--asks` and every chat reply go in the user's language. Ids, flags and file paths stay English.
+**Reason in English if it helps; every word they see is in their language.** Chat replies, progress lines, `--description`, `--title`, `--asks`, `--status`. Ids, flags and paths stay English. Emoji carry the tone — 🧐🍷 for a critique, ✏️ drawing, 🎯 a round to score, ✅ done — one or two, never a row of them.
+
 - **Name the move, not the machinery.** "The tab now takes its role's colour" — not "adopted a per-role token mapping in the palette layer". Art-direction terms are fine; pipeline terms are not.
 - **Say what you are doing and why it takes time**, in one line, before a long step. "Redrawing the cover, about a minute." Silence reads as a hang.
 - **No status essays.** If the screen can show it, do not narrate it. A round ends with: what changed, the URL, and the one thing you want ranked.

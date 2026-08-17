@@ -386,10 +386,14 @@ class TheTwoChipsAreNotTheSameThing(unittest.TestCase):
                 style, r'\.dh-fb\[data-group="%s"\] \.dh-state\{' % group,
                 f"{group} rows must not look identical to every other state")
 
-class TheSkillIsInvokedWithThreeVerbs(unittest.TestCase):
+class TheSkillIsInvokedWithFourVerbs(unittest.TestCase):
     def test_the_argument_hint_matches_the_documented_verbs(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn('argument-hint: "continue | critique | observe @/art-folder"', skill)
+        self.assertIn('argument-hint: "continue | critique | prototype | observe @/art-folder"',
+                      skill)
+        for verb in ("continue", "critique", "prototype", "observe"):
+            self.assertIn(f"- **{verb}", skill,
+                          f"{verb} is advertised but never documented")
         self.assertNotIn("interpret @", skill,
                          "an old `interpret @` invocation survived in SKILL.md")
 
@@ -425,6 +429,42 @@ class TheSlideshowHeadsItselfWithAName(unittest.TestCase):
                       "the slideshow must take its heading from the row's name")
         self.assertIn("dh-lb-token", body,
                       "the id still ships, demoted under the name")
+
+
+class DoneLooksLikeDone(unittest.TestCase):
+    def markup(self) -> str:
+        return bh.render_article(
+            Path("/tmp"), live(("core.idea", 5, "like", "completed"),
+                               ("core.other", 2, "like", "approved")),
+            set(), "", "en", None, "F", "Ask.")
+
+    def test_the_finish_flag_is_a_glyph_not_a_hex_escape(self):
+        # This file learned it once already: a CSS hex escape came back out of
+        # the browser as literal text. It did it again -- `\1F3C1` computed to
+        # "\1 F3C1" and drew that string instead of a flag.
+        style = re.search(r"<style>/\* dh-controls \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        rule = re.search(r"\[data-verdict\]\.on > span::after\{([^}]*)\}", style)
+        self.assertIsNotNone(rule, "completed lost its finish flag")
+        self.assertIn("\U0001F3C1", rule.group(1))
+        self.assertNotIn("\\1F3C1", rule.group(1))
+
+    def test_the_companions_brand_bar_is_hidden(self):
+        # The companion draws its own brand above our page; the credit already
+        # sits in our footer, so the bar is a second louder copy. Hidden from
+        # here because patching another skill's server gets overwritten.
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        self.assertRegex(style, r"\.brand\{display:none\}")
+
+    def test_only_completed_work_reads_as_finished(self):
+        # A thumb up is not a finish. `approved` said "approved", which read as
+        # done to anyone who had merely liked something.
+        markup = self.markup()
+        labels = re.findall(r'<span class="dh-state">([^<]*)</span>', markup)
+        self.assertIn("completed", labels)
+        self.assertIn("on shape", labels)
+        self.assertNotIn("approved", labels)
 
 
 if __name__ == "__main__":

@@ -200,7 +200,10 @@ STRINGS = {
         "before": "what stands now", "after": "proposed instead", "brand-new": "new, nothing to beat",
         "empty-zone": "Nothing here yet.", "zone-count": "elements",
         "execution-of": "execution of", "stars-of": "of", "execution-quality": "execution quality",
-        "like": "like it", "dislike": "do not like it", "completed": "done",
+        "state-proposed": "proposed", "state-approved": "on shape",
+        "state-completed": "completed", "state-superseded": "replaced",
+        "state-rejected": "set aside",
+        "like": "like it", "dislike": "do not like it", "completed": "completed",
         "zero-title": "zero stars: terrible, but it still stands",
         "zero-label": "zero stars for {element}: terrible execution",
     },
@@ -251,6 +254,9 @@ STRINGS = {
                      "indicaciones \u2014 generaremos nuevos diseños y mejoras.",
         "empty-zone": "Todavía no hay nada aquí.", "zone-count": "elementos",
         "execution-of": "ejecución de", "stars-of": "de", "execution-quality": "calidad de ejecución",
+        "state-proposed": "propuesto", "state-approved": "en forma",
+        "state-completed": "terminado", "state-superseded": "reemplazado",
+        "state-rejected": "descartado",
         "like": "me gusta", "dislike": "no me gusta", "completed": "completado",
         "zero-title": "cero estrellas: pésimo, pero sigue en pie",
         "zero-label": "cero estrellas para {element}: pésima ejecución",
@@ -871,6 +877,8 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
    /* Marking something done is the one act on this page that feels final, so
       it says so louder than a rank does. */
    if(s.verdict==='completed'){
+    row.setAttribute('data-done','1');
+    setTimeout(function(){row.removeAttribute('data-done')},800);
     var t=row.querySelector('.dh-saved'), h=document.querySelector('[data-cheer-text]');
     if(t){t.setAttribute('data-cheer','1');
           t.textContent=(h&&h.getAttribute('data-cheer-text'))||t.textContent;}
@@ -1071,6 +1079,9 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
    cannot distinguish from a zero.
    The figure runs red at 0 to green at 5, so a column of them reads as a
    temperature before it reads as digits. */
+/* A zero scored showed twice -- the control on the left and the readout on
+   the right. The control is the one you press, so it keeps the digit. */
+.dh-fb .dh-stars[data-stars="0"]::after{content:""}
 .dh-fb .dh-stars::after{content:attr(data-stars);margin-inline-start:9px;min-inline-size:1.4ch;
  font:700 13px/1 var(--dh-font,ui-monospace,monospace);font-variant-numeric:tabular-nums;
  color:#b00020}
@@ -1132,6 +1143,13 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-fb [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
 /* Approve reads as done: green fill, white tick, unmistakable. */
 .dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
+/* Completed is the one final act on the page: the tick becomes a finish flag,
+   and the card itself flashes once so the change is felt, not just seen. */
+.dh-fb [data-verdict].on > span{font-size:0}
+.dh-fb [data-verdict].on > span::after{content:"🏁";font-size:15px}
+@keyframes dh-flash{0%{background:color-mix(in srgb, #1c8b4b 26%, var(--dh-bg,#fff))}
+ 100%{background:var(--dh-bg,#fff)}}
+.dh-fb[data-done]{animation:dh-flash .75s ease-out}
 .dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible,
 .dh-fb [data-verdict]:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
 /* A foundation heading opens a section of a design system, so it is sized like
@@ -1556,7 +1574,7 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         # not have to read a namespace to learn what they are scoring.
         lines.append(f'<span class="dh-head"><span class="dh-id">'
                      f'{html_escape(names.get(element) or display_name(entry))}</span>'
-                     f'<span class="dh-state">{entry["state"]}{unscored}</span></span>')
+                     f'<span class="dh-state">{html_escape(txt.get("state-" + str(entry["state"]), str(entry["state"])))}{unscored}</span></span>')
         lines.append(f'<code class="dh-token">{element}</code>')
         what = str(entry.get("description") or "").strip()
         proposed = str(entry.get("evidence") or "").strip()
@@ -1779,6 +1797,11 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-key i{inline-size:11px;block-size:8px;border-radius:1px;background:currentColor;flex:none}
 .dh-key b{font-size:9px;line-height:1;padding:1px 4px;border-radius:2px;
  border:1px solid currentColor}
+/* The companion draws its own brand bar above our page. This article is the
+   project's, not the tool's -- and the credit already sits in our footer, so
+   the bar is a second, louder copy of it. Hidden from here rather than by
+   patching another skill's server, which an update would overwrite. */
+body > .brand,.brand{display:none}
 .dh-toc{padding-block-end:0}
 /* The sticky bar names itself. Scrolled deep into the page, a row of pills
    with no title does not say what the page is or what it is collecting. */
@@ -2094,7 +2117,8 @@ html:has(.dh-art){scroll-behavior:smooth}
    that, and arrows walk the whole set without going back to the scroll. */
 .dh-lb[hidden]{display:none}
 .dh-lb{position:fixed;inset:0;z-index:100;display:grid;
- grid-template-rows:auto minmax(0,1fr) auto;gap:var(--s2);padding:var(--s2);
+ grid-template-rows:auto minmax(0,1fr) auto;gap:var(--s3);
+ padding:var(--s3) clamp(var(--s3),4vw,var(--s5)) var(--s3);
  background:color-mix(in srgb, var(--dh-ink,#111) 92%, transparent);
  color:var(--dh-bg,#fff);
  /* The overlay inverts, so anything derived from ink would be ink-on-ink --
@@ -2116,12 +2140,12 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-lb-x:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 14%, transparent)}
 /* Stage: the graphic, and to its side the argument that was made for it. On a
    narrow pane the argument drops under the graphic rather than squeezing it. */
-.dh-lb-stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,340px);
- gap:var(--s3);align-items:center;min-block-size:0}
+.dh-lb-stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);
+ gap:clamp(var(--s3),4vw,var(--s5));align-items:center;min-block-size:0}
 @media (max-width:820px){.dh-lb-stage{grid-template-columns:minmax(0,1fr);
  grid-template-rows:minmax(0,1fr) auto;overflow-y:auto}}
 .dh-lb-frame{position:relative;block-size:100%;min-block-size:0;display:grid;
- grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--s2)}
+ grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--s3)}
 .dh-lb-art{block-size:100%;min-block-size:0;display:grid;place-items:center;overflow:hidden}
 /* The thumbnail's own markup, re-scaled. `--dh-shot-w` is what sizes a shot,
    so the slide sets it to the frame height rather than restyling the node. */
@@ -2186,6 +2210,13 @@ html:has(.dh-art){scroll-behavior:smooth}
  border-block-start:1px solid color-mix(in srgb, var(--dh-bg,#fff) 22%, transparent);
  backdrop-filter:blur(10px)}
 .dh-bar b{font-weight:700;letter-spacing:-.01em}
+/* What the agent is doing, when it says so. A pulsing dot because the one
+   question a waiting user has is whether anything is still happening. */
+.dh-live{font-style:normal;flex:0 0 100%;display:flex;align-items:center;gap:8px;
+ font-size:12px;letter-spacing:.02em;opacity:.92}
+.dh-live::before{content:"";inline-size:7px;block-size:7px;border-radius:999px;
+ background:#7fd18f;flex:none;animation:dh-pulse 1.4s ease-in-out infinite}
+@keyframes dh-pulse{0%,100%{opacity:.35}50%{opacity:1}}
 .dh-bar span{opacity:.78}
 .dh-bar em{font-style:normal;margin-inline-start:auto;flex:none;font-size:11px;
  font-weight:700;letter-spacing:.14em;text-transform:uppercase;
@@ -2720,7 +2751,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
                    cohort: set[str] | None = None, cohort_name: str = "",
                    language: str | None = None,
                    theme: dict[str, str] | None = None,
-                   title: str = "", asks: str = "") -> str:
+                   title: str = "", asks: str = "", status: str = "") -> str:
     """A design-system article that is also the scoring companion.
 
     The strip alone answered "what is on the list". It could not answer "what is
@@ -2989,8 +3020,10 @@ def render_article(project_root: Path, decisions: dict[str, object],
         "</footer>",
         "</div>",
         '<aside class="dh-bar" role="complementary">'
-        f'<b>{html_escape(txt["bar-lead"])}</b>'
-        f'<span>{html_escape(txt["bar-hint"])}</span>'
+        + (f'<i class="dh-live" role="status">{html_escape(status.strip())}</i>'
+           if status.strip() else "")
+        + f'<b>{html_escape(txt["bar-lead"])}</b>'
+        + f'<span>{html_escape(txt["bar-hint"])}</span>'
         + (f'<em>{unscored_now} {html_escape(txt["bar-left"])}</em>' if unscored_now else "")
         + "</aside>",
     ]
@@ -3825,6 +3858,9 @@ def parser() -> argparse.ArgumentParser:
     article.add_argument("--out", required=True, type=Path, help="screen to write (then `publish` it)")
     article.add_argument("--cohort", default="", help="element ids this round asks about")
     article.add_argument("--cohort-name", default="", help="what to call this round, e.g. cover-furniture")
+    article.add_argument("--status", default="",
+                         help="what the agent is doing right now, in the user's language, "
+                              "e.g. 'Redibujando la portada'. Shown live in the bottom bar.")
     article.add_argument("--asks", default="",
                          help="one sentence: what this round asks the user to judge. "
                               "Required when the cohort spans more than two foundations")
@@ -3937,7 +3973,7 @@ def main() -> int:
                 write_json(path, stored)
             markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
                                     cohort, args.cohort_name, args.lang or None, theme or None,
-                                    args.title, args.asks)
+                                    args.title, args.asks, args.status)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(markup, encoding="utf-8")
             print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "
