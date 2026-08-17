@@ -210,12 +210,11 @@ class TheArticleSpeaksToADesigner(unittest.TestCase):
         # the article's eyebrow names who is asking for the ranks.
         self.assertIn(">Design Agent<", markup)
         self.assertIn("<h1>Aesthetic ranking</h1>", markup)
-        project = markup.split('class="dh-project">')[1].split("</p>")[0]
-        self.assertIn("Project", project)
-        self.assertIn("Fichas", project)
-        designing = markup.split('class="dh-designing">')[1].split("</p>")[0]
-        self.assertIn("Designing", designing)
-        self.assertIn("tab-por-color", designing)
+        meta = markup.split('class="dh-hero-meta">')[1].split("</div>")[0]
+        self.assertIn("Project", meta)
+        self.assertIn("Fichas", meta)
+        self.assertIn("Designing", meta)
+        self.assertIn("tab-por-color", meta)
 
     def test_designing_is_a_label_not_a_badge(self):
         """The round already shouts. This line just names what is on the table:
@@ -224,11 +223,11 @@ class TheArticleSpeaksToADesigner(unittest.TestCase):
         prefix is the whole point of the selector."""
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
                           self.article(), re.S).group(1)
-        labels = re.findall(r"\.dh-designing span\{([^}]+)\}", style)
+        labels = re.findall(r"\.dh-designing-label\{([^}]+)\}", style)
         self.assertTrue(any("font-weight:400" in r and "background:none" in r
                             for r in labels), labels)
-        tag = re.search(r"\.dh-hero \.dh-designing b\{([^}]+)\}", style)
-        self.assertIsNotNone(tag, "without .dh-hero the tag stays bold")
+        tag = re.search(r"\.dh-hero-meta \.dh-designing-value\{([^}]+)\}", style)
+        self.assertIsNotNone(tag, "without .dh-hero-meta the tag stays bold")
         self.assertIn("font-weight:400", tag.group(1))
 
     def test_the_lede_tells_the_designer_what_to_do_next(self):
@@ -602,19 +601,19 @@ class DoctorCanStayQuiet(unittest.TestCase):
         self.assertIn("ok", doctor.line_for("ok", "server answering", quiet=False))
 
 class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
-    def test_zero_sits_in_the_star_row_not_the_verdict_row(self):
-        # A zero is a rank. In the verdict row it read as a fourth verdict.
+    def test_the_slideshow_clones_row_signals_instead_of_rebuilding_stars(self):
         markup = bh.render_article(
             Path("/tmp"), {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
                            "elements": [{"element": "core.idea", "stars": 2, "sentiment": None,
                                          "state": "proposed", "scored": True, "source": "user"}]},
             set(), "", "en", None, "F", "Ask.")
         script = re.search(r"<script>/\* dh-lightbox \*/(.*?)</script>", markup, re.S).group(1)
-        stars_block = script.split("dh-lb-acts")[0]
-        self.assertIn("dh-lb-zero", stars_block,
-                      "the zero must be emitted with the stars")
-        self.assertNotIn('data-rank="0"', script.split("dh-lb-acts")[1],
-                         "the zero must not also sit in the verdict row")
+        self.assertIn("cloneSignals", script,
+                      "the lightbox must clone the row's .dh-signals strip")
+        self.assertNotIn("dh-lb-zero", script,
+                         "rebuilt stars drift from the card; clone the row instead")
+        self.assertIn('data-zone="round"', script,
+                      "slideshow navigation must stay inside the round zone")
 
 
 class TheSlideshowHeadsItselfWithAName(unittest.TestCase):
@@ -751,6 +750,53 @@ class TheBarReportsTheAgent(unittest.TestCase):
         bar = markup.split('class="dh-bar"')[1].split("</aside>")[0]
         self.assertNotIn("left to score", bar,
                          "the bar reports the agent, not a to-do tally")
+
+
+class PreviewsPreferHtmlComps(unittest.TestCase):
+    """When a PNG thumbnail and an HTML comp both exist, embed the comp."""
+
+    def test_preferred_preview_path_picks_content_html(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shots = root / "shots"
+            shots.mkdir(parents=True)
+            content = root / "content"
+            content.mkdir()
+            png = shots / "pages.inventory.archivador.png"
+            png.write_bytes(b"\x89PNG\r\n\x1a\n")
+            html = content / "pages.inventory.archivador.html"
+            html.write_text("<html><body><p>comp</p></body></html>", encoding="utf-8")
+            chosen = bh.preferred_preview_path(root, png, "pages.inventory.archivador")
+            self.assertEqual(chosen, html)
+
+    def test_render_preview_embeds_html_not_png(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shots = root / "shots"
+            shots.mkdir(parents=True)
+            content = root / "content"
+            content.mkdir()
+            png = shots / "x.png"
+            png.write_bytes(b"\x89PNG\r\n\x1a\n")
+            html = content / "x.html"
+            html.write_text("<style>.c{color:red}</style><div class='c'>Hi</div>",
+                            encoding="utf-8")
+            preview = {"path": png.relative_to(root).as_posix(), "sha256": "abc"}
+            out = bh.render_preview(root, preview, "x", bh.STRINGS["en"])
+            self.assertIn("Hi", out)
+            self.assertNotIn(".png", out.lower())
+
+
+class TheFloatingBarLinksBack(unittest.TestCase):
+    def test_the_bar_says_return_not_ok(self):
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.", agent_url="https://agent.test/chat")
+        bar = markup.split('class="dh-bar"')[1].split("</aside>")[0]
+        self.assertIn("Return", bar)
+        self.assertNotIn("[OK]", bar)
+        self.assertIn('class="dh-bar-agent"', bar)
+        self.assertIn("https://agent.test/chat", bar)
 
 
 class TheStickyBarReadsTopDown(unittest.TestCase):

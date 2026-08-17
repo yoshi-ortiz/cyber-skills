@@ -213,6 +213,7 @@ STRINGS = {
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
         "bar-lead": "Scored what you can? Go back to your agent chat",
         "bar-hint": "give your critique and directions there \u2014 new designs follow",
+        "bar-return": "Return",
         "agent-working": "Agent running", "agent-idle": "Agent idle",
         "bar-idle": "Waiting for you \u2014 nothing running",
         "bar-left": "left to score", "done-cheer": "Marked as done",
@@ -268,6 +269,7 @@ STRINGS = {
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
         "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
         "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
+        "bar-return": "Volver",
         "agent-working": "Agente trabajando", "agent-idle": "Agente en pausa",
         "bar-idle": "Esperándote \u2014 nada en marcha",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
@@ -511,6 +513,8 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             f"agent-set rank is capped at {AGENT_MAX_STARS} star. A higher rank must come from a "
             "user click, adopted with `adopt` -- typing the number yourself is the failure this "
             "cap exists to prevent.")
+    if source == "agent":
+        stars = ZERO_STARS
     decisions = load_decisions(output)
     known = {e["element"] for e in decisions["elements"]}
     missing = [s for s in supersedes if s not in known]
@@ -865,7 +869,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "19"
+CONTROLS_VERSION = "21"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -1451,6 +1455,42 @@ def check_preview_legible(png: Path) -> None:
             "read at thumbnail size, so a score would be a score of nothing.")
 
 
+def preferred_preview_path(project_root: Path, preview_path: Path, element: str) -> Path:
+    """Prefer the drawn HTML comp over a raster thumbnail when both exist."""
+    if preview_path.suffix.lower() == ".html":
+        return preview_path
+    for candidate in (
+        project_root / "content" / f"{element}.html",
+        project_root / "content" / f"{preview_path.stem}.html",
+    ):
+        if candidate.is_file():
+            return candidate
+    return preview_path
+
+
+def html_comp_fragment(raw: str) -> tuple[str, float, float]:
+    """Body + styles from a comp file, and its declared page size."""
+    width, height = 850.0, 1100.0
+    if re.search(r"<html", raw, re.I):
+        styles = "".join(re.findall(r"<style[^>]*>(.*?)</style>", raw, re.S | re.I))
+        body_match = re.search(r"<body[^>]*>(.*)</body>", raw, re.S | re.I)
+        body = body_match.group(1) if body_match else raw
+        width_match = re.search(r"width:\s*(\d+(?:\.\d+)?)px", styles)
+        height_match = re.search(r"min-height:\s*(\d+(?:\.\d+)?)px", styles)
+        if width_match:
+            width = float(width_match.group(1))
+        if height_match:
+            height = float(height_match.group(1))
+        return f"<style>{styles}</style>{body}", width, height
+    return raw, width, height
+
+
+def preview_inner_style(comp_width: float) -> str:
+    return ("position:absolute;inset-block-start:0;inset-inline-start:0;"
+            f"inline-size:{comp_width}px;transform-origin:0 0;"
+            f"transform:scale(calc(var(--dh-shot-w,96px) / {comp_width}));pointer-events:none")
+
+
 def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
     """Resolve and hash a preview graphic for a design element.
 
@@ -1494,7 +1534,7 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
     if project_root is None:
         return f'{tag}<span class="dh-shot-missing">{preview["path"]}</span></span>'
 
-    path = (project_root / preview["path"])
+    path = preferred_preview_path(project_root, project_root / preview["path"], element)
     if not path.is_file():
         return (f'{tag}<span class="dh-shot-missing">gráfico ausente<br>'
                 f'{preview["path"]}</span></span>')
@@ -1504,15 +1544,14 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
         encoded = base64.b64encode(path.read_bytes()).decode("ascii")
         body = f'<img alt="" src="data:{media};base64,{encoded}">'
         return f"{tag}{body}</span>"
-    # svg / html fragment: scaled inside a clipped frame rather than reflowed
     fragment = path.read_text(encoding="utf-8")
     if suffix == ".svg":
-        # Force the root <svg> to fill the frame regardless of its own width/height attrs.
         fragment = re.sub(r"<svg\b", '<svg preserveAspectRatio="xMidYMid meet" '
                           'style="width:100%;height:100%;display:block"', fragment, count=1)
         return f"{tag}{fragment}</span>"
-    return (f'{tag}<span class="dh-shot-inner" style="{SHOT_INNER_INLINE}">'
-            f'{fragment}</span></span>')
+    body, comp_width, _ = html_comp_fragment(fragment)
+    return (f'{tag}<span class="dh-shot-inner" style="{preview_inner_style(comp_width)}">'
+            f'{body}</span></span>')
 
 
 def display_name(entry: dict[str, object]) -> str:
@@ -1897,24 +1936,20 @@ html:has(.dh-art){scroll-behavior:smooth}
  padding:4px 9px;border-radius:999px;background:var(--dh-accent,#d9482a);color:#fff;flex:none}
 .dh-round code{font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--dh-ink,#111)}
 .dh-round span{font-size:12px;color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
-/* Project and what is being designed: two labelled facts, not headings. The
-   reader has to know which project this is before they score anything. */
-.dh-project,.dh-designing{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
- margin:14px 0 0;font-size:15px}
-.dh-project span,.dh-designing span{font-size:9.5px;font-weight:700;letter-spacing:.18em;
- text-transform:uppercase;padding:4px 9px;border-radius:999px;flex:none;
- border:1px solid var(--dh-rule);
+/* Project and what is being designed: one two-column grid so the labels line up. */
+.dh-hero-meta{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 12px;
+ align-items:baseline;margin:16px 0 0;max-inline-size:52ch}
+.dh-hero-meta .dh-label{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+ padding:4px 9px;border-radius:999px;flex:none;border:1px solid var(--dh-rule);
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-/* A label, not a badge: the round already shouts from its own section, so this
-   line just says what is on the table and lets the tag recede. */
-.dh-designing span{background:none;border-color:transparent;padding-inline:0;
+.dh-hero-meta .dh-value{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;
+ overflow-wrap:anywhere}
+.dh-hero-meta .dh-designing-label{background:none;border-color:transparent;padding-inline:0;
  font-weight:400;letter-spacing:.14em;
  color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
-/* `.dh-hero` prefix: a bare `.dh-designing b` merely ties with the shared
-   `.dh-project b,.dh-designing b` rule below and loses on source order. */
-.dh-hero .dh-designing b{font-weight:400;
+.dh-hero-meta .dh-designing-value{font-weight:400;
  color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
-.dh-project b,.dh-designing b{font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere}
+.dh-project,.dh-designing{display:none}
 /* The instruction is the point of the page: it tells a designer what to do
    here AND what to do next. It reads at body size, not as fine print. */
 .dh-hero .dh-lede{margin:24px 0 0;max-inline-size:62ch;font-size:16px;line-height:1.6;
@@ -2367,7 +2402,8 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* Stage: the graphic, and to its side the argument that was made for it. On a
    narrow pane the argument drops under the graphic rather than squeezing it. */
 .dh-lb-stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);
- gap:clamp(var(--s3),4vw,var(--s5));align-items:stretch;min-block-size:0}
+ gap:clamp(var(--s3),4vw,var(--s5));align-items:stretch;min-block-size:min(62vh,520px);
+ padding-block:var(--s2)}
 /* Top-aligned. Centred, a 140px argument floated in the middle of a 2000px
    row with 928px of dead space beneath it. */
 .dh-lb-side{align-self:start}
@@ -2405,6 +2441,7 @@ html:has(.dh-art){scroll-behavior:smooth}
  overflow-y:auto;font-size:13px;line-height:1.55;padding-inline-end:var(--s1);
  max-inline-size:46ch}
 .dh-lb-side .dh-lb-score{margin-block-start:auto}
+.dh-lb-side .dh-lb-score .dh-signals{margin:0}
 .dh-lb-side .dh-lb-why{margin:0;opacity:.92}
 .dh-lb-side .dh-lb-sub{margin:0;font-size:11.5px;opacity:.68}
 .dh-lb-side .dh-lb-sub b{font-weight:700;letter-spacing:.1em;text-transform:uppercase;
@@ -2438,18 +2475,22 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* A thumbnail that opens something must say so before it is clicked. */
 .dh-art .dh-shot[data-el]{cursor:zoom-in}
 .dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
-/* The action bar. A designer who has just scored a page has no idea what
-   happens next -- the whole loop lives in a chat window they are not looking
-   at. It stays put, says where to go, and counts what is still unscored. */
-.dh-bar{position:fixed;inset-inline:0;inset-block-end:0;z-index:50;
- display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap;
- padding:11px clamp(16px,4vw,32px);
+/* Floating action bar: one place to return to the agent, not a full-width footer. */
+.dh-bar{position:fixed;inset-block-end:16px;inset-inline-end:16px;inset-inline-start:auto;
+ z-index:50;max-inline-size:min(420px,calc(100vw - 32px));
+ display:flex;flex-direction:column;align-items:stretch;gap:8px;
+ padding:12px 14px;border-radius:14px;
  font:500 13px/1.4 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
  background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
  color:var(--dh-bg,#fff);
- border-block-start:1px solid color-mix(in srgb, var(--dh-bg,#fff) 22%, transparent);
- backdrop-filter:blur(10px)}
+ border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 22%, transparent);
+ box-shadow:0 14px 44px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
 .dh-bar b{font-weight:700;letter-spacing:-.01em}
+.dh-bar-copy{margin:0;opacity:.88}
+.dh-bar-copy span{opacity:.78}
+.dh-bar-agent{align-self:flex-start;font-size:12px;font-weight:600;letter-spacing:.01em;
+ text-decoration:none;color:inherit;opacity:.92}
+.dh-bar-agent:hover{text-decoration:underline}
 /* What the agent is doing, when it says so. A pulsing dot because the one
    question a waiting user has is whether anything is still happening. */
 .dh-live{font-style:normal;flex:0 0 100%;display:flex;align-items:center;gap:8px;
@@ -2462,17 +2503,20 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-live[data-state="idle"]::before{background:#e0902a;animation:none}
 @keyframes dh-pulse{0%,100%{opacity:.35}50%{opacity:1}}
 .dh-bar span{opacity:.78}
+.dh-bar-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;
+ flex-wrap:wrap}
 /* One place to go when you are done here. */
-.dh-bar-go{margin-inline-start:auto;flex:none;font-weight:800;letter-spacing:.12em;
- font-size:12px;padding:5px 12px;border-radius:8px;text-decoration:none;
+.dh-bar-go{flex:none;font-weight:800;letter-spacing:.08em;
+ font-size:12px;padding:6px 12px;border-radius:8px;text-decoration:none;
  background:var(--dh-bg,#fff);color:var(--dh-ink,#111)}
 .dh-bar-go:hover{filter:brightness(.94)}
+.dh-bar-go[aria-disabled="true"]{opacity:.45;pointer-events:none}
 .dh-bar em{font-style:normal;margin-inline-start:auto;flex:none;font-size:11px;
  font-weight:700;letter-spacing:.14em;text-transform:uppercase;
  padding:4px 10px;border-radius:999px;
  background:var(--dh-accent,#d9482a);color:#fff}
 /* The bar is fixed, so the last section needs room to clear it. */
-.dh-art{padding-block-end:calc(var(--s6) + 64px)}
+.dh-art{padding-block-end:calc(var(--s6) + 96px)}
 /* Credit, de-protagonised: this page is the project's, not the tool's. */
 .dh-credit{margin-block-start:var(--s6);padding-block-start:var(--s3);
  border-block-start:1px solid var(--dh-rule);
@@ -2664,16 +2708,50 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   var seen={},out=[];
   [].forEach.call(document.querySelectorAll('.dh-art .dh-fb[data-element]'),function(r){
    var id=r.getAttribute('data-element');
-   // A `before` row is the same element shown again for comparison, and a
-   // specimen carries a controls-only copy of the row with the graphic
-   // deliberately stripped. Either one taken as the slide for an id gives a
-   // blank stage -- six of fifty-eight slides showed nothing at all, and the
-   // counter disagreed with the filmstrip because of it.
    if(seen[id]||r.classList.contains('dh-fb-before'))return;
    if(r.closest('.dh-spec-score')||!r.querySelector('.dh-shot'))return;
    seen[id]=1; out.push(r);
   });
   return out;
+ }
+ function findRow(id){
+  var nodes=document.querySelectorAll('.dh-art .dh-fb[data-element="'+CSS.escape(id)+'"]');
+  for(var i=0;i<nodes.length;i++){
+   if(!nodes[i].closest('.dh-spec-score'))return nodes[i];
+  }
+  return null;
+ }
+ function slidesFor(id){
+  var row=findRow(id);
+  var zone=row&&row.closest('.dh-zone[data-zone="round"]');
+  if(!zone)return rows();
+  var out=[];
+  zone.querySelectorAll('.dh-fb[data-element]').forEach(function(r){
+   if(r.closest('.dh-spec-score')||!r.querySelector('.dh-shot'))return;
+   out.push(r);
+  });
+  return out;
+ }
+ function wireProxy(node, sel){
+  node.setAttribute('data-proxy', sel);
+  node.setAttribute('role','button');
+  node.setAttribute('tabindex','0');
+ }
+ function cloneSignals(row, side){
+  var sig=row.querySelector('.dh-signals');
+  if(!sig)return;
+  var box=document.createElement('div'); box.className='dh-lb-score';
+  var c=sig.cloneNode(true);
+  c.querySelectorAll('[data-rank]').forEach(function(n){
+   wireProxy(n, '.dh-stars [data-rank="'+n.getAttribute('data-rank')+'"]');
+  });
+  c.querySelectorAll('[data-sentiment]').forEach(function(n){
+   wireProxy(n, '[data-sentiment="'+n.getAttribute('data-sentiment')+'"]');
+  });
+  c.querySelectorAll('[data-verdict]').forEach(function(n){
+   wireProxy(n, '[data-verdict="'+n.getAttribute('data-verdict')+'"]');
+  });
+  box.appendChild(c); side.appendChild(box);
  }
  // Resolve an id against the SLIDE set, never against the document: the first
  // `.dh-fb` for a palette id in document order is the specimen's controls-only
@@ -2752,28 +2830,7 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
      d.textContent.replace(b?b.textContent:'','').trim()));
    side.appendChild(p);
   });
-  var stars=+(row.getAttribute('data-stars')||0);
-  var box=document.createElement('div'); box.className='dh-lb-score';
-  var strip='<div class="dh-stars" role="group">';
-  for(var n=1;n<=5;n++){
-   strip+='<span data-proxy=\\'.dh-stars [data-rank="'+n+'"]\\' role="button" tabindex="0"'+
-          (n<=stars?' class="on"':'')+'>&#9733;</span>';
-  }
-  strip+='<button type="button" class="dh-lb-zero" data-proxy=\\'[data-rank="0"]\\'>0</button>';
-  strip+='</div>';
-  var lblHost=document.querySelector('[data-done-label]');
-  var doneLabel=(lblHost&&lblHost.getAttribute('data-done-label'))||'completed';
-  var sent=row.querySelector('[data-sentiment="like"].on')?'like':
-           (row.querySelector('[data-sentiment="dislike"].on')?'dislike':'');
-  var done=row.querySelector('[data-verdict="completed"].on')?' class="on"':'';
-  strip+='<div class="dh-lb-acts">'+
-      '<button type="button" data-proxy=\\'[data-sentiment="like"]\\''+
-     (sent==='like'?' class="on"':'')+'>&#128077;</button>'+
-   '<button type="button" data-proxy=\\'[data-sentiment="dislike"]\\''+
-     (sent==='dislike'?' class="on"':'')+'>&#128078;</button>'+
-   '<button type="button" data-proxy=\\'[data-verdict="completed"]\\''+done+' title="'+doneLabel+'">&#10003;</button>'+
-   '</div>';
-  box.innerHTML=strip; side.appendChild(box);
+  cloneSignals(row, side);
   var st=lb.querySelector('.dh-lb-strip'); st.innerHTML='';
   slides.forEach(function(r,i){
    var s=r.querySelector('.dh-shot'); if(!s)return;
@@ -2789,7 +2846,7 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
  }
  function go(i){ if(i<0||i>=slides.length)return; at=i; paint() }
  function open(id){
-  slides=rows(); var i=indexOf(id);
+  slides=slidesFor(id); var i=indexOf(id);
   if(i<0)return;
   lastFocus=document.activeElement;
   at=i; lb.hidden=false; paint();
@@ -3219,10 +3276,13 @@ def render_article(project_root: Path, decisions: dict[str, object],
            # table right now -- in that order, before any number.
            f'<p class="dh-eyebrow">{html_escape(txt["brand"])}</p>',
            f'<h1>{html_escape(txt["article-title"])}</h1>',
-           f'<p class="dh-project"><span>{html_escape(txt["project-label"])}</span>'
-           f'<b>{headline}</b></p>',
-           (f'<p class="dh-designing"><span>{html_escape(txt["designing"])}</span>'
-            f'<b>{html_escape(cohort_name)}</b></p>' if cohort_name else ""),
+           '<div class="dh-hero-meta">',
+           f'<span class="dh-label">{html_escape(txt["project-label"])}</span>',
+           f'<b class="dh-value">{headline}</b>',
+           *([f'<span class="dh-label dh-designing-label">{html_escape(txt["designing"])}</span>',
+              f'<b class="dh-value dh-designing-value">{html_escape(cohort_name)}</b>']
+             if cohort_name else []),
+           "</div>",
            f'<p class="dh-lede">{html_escape(txt["hero-lede"])}</p>',
            '<div class="dh-figures">',
            f'<div><b>{better}</b><span>{html_escape(txt["hero-asking"])}</span></div>',
@@ -3378,10 +3438,18 @@ def render_article(project_root: Path, decisions: dict[str, object],
         + f'<i class="dh-live" role="status" data-state="'
         + ("working" if status.strip() else "idle") + '">'
         + html_escape(status.strip() or txt["bar-idle"]) + "</i>"
-        + f'<b>{html_escape(txt["bar-lead"])}</b>'
-        + f'<span>{html_escape(txt["bar-hint"])}</span>'
-        + (f'<a class="dh-bar-go" href="{html_escape(agent_url)}">[OK]</a>'
-           if agent_url.strip() else '<span class="dh-bar-go">[OK]</span>')
+        + '<div class="dh-bar-foot"><p class="dh-bar-copy"><b>'
+        + html_escape(txt["bar-lead"]) + "</b> <span>"
+        + html_escape(txt["bar-hint"]) + "</span></p>"
+        + (f'<a class="dh-bar-go" href="{html_escape(agent_url)}">'
+           f'{html_escape(txt["bar-return"])}</a>'
+           if agent_url.strip()
+           else f'<span class="dh-bar-go" aria-disabled="true">'
+           f'{html_escape(txt["bar-return"])}</span>')
+        + "</div>"
+        + (f'<a class="dh-bar-agent" href="{html_escape(agent_url)}">'
+           f'{html_escape(agent_name.strip() or txt["agent-working"])}</a>'
+           if agent_url.strip() else "")
         + "</aside>",
     ]
     return "\n".join(part for part in out if part) + "\n"
@@ -4016,6 +4084,8 @@ def self_test() -> None:
         ledger_now = {e["element"]: e for e in json.loads((output / "decisions.json").read_text(encoding="utf-8"))["elements"]}
         if ledger_now["agent.guess"]["source"] != "agent":
             raise HarnessError("self-test: provenance not recorded")
+        if ledger_now["agent.guess"]["stars"] != ZERO_STARS:
+            raise HarnessError("self-test: agent proposals must store 0 stars until the user ranks")
         if ledger_now["cover.layout.two-column"]["source"] != "user":
             raise HarnessError("self-test: user provenance lost")
 
@@ -4173,7 +4243,9 @@ def parser() -> argparse.ArgumentParser:
     decide.add_argument("--project-root", required=True, type=Path)
     decide.add_argument("--element", required=True, help="stable dotted id, e.g. cover.layout.two-column")
     decide.add_argument("--verdict", required=True, choices=DECISION_STATES)
-    decide.add_argument("--stars", required=True, type=int, help=f"{STAR_RANGE[0]}-{STAR_RANGE[1]}, set by the user")
+    decide.add_argument("--stars", required=True, type=int,
+                        help=f"{ZERO_STARS} for agent proposals (blank until the user ranks); "
+                             f"{STAR_RANGE[0]}-{STAR_RANGE[1]} when the user set the rank")
     decide.add_argument("--evidence", required=True, help="verbatim user excerpt, not a paraphrase")
     decide.add_argument("--supersedes", default="", help="comma-separated element ids this replaces")
     decide.add_argument("--preview", default="", help="project-relative graphic of the element being ranked")
@@ -4186,7 +4258,7 @@ def parser() -> argparse.ArgumentParser:
     decide.add_argument("--implemented", default="",
                         help="what was actually built for it this time")
     decide.add_argument("--source", default="agent", choices=SOURCES,
-                        help="agent (capped at 1 star) or user (only via adopt)")
+                        help="agent (proposals store 0★ until the user ranks) or user (only via adopt)")
     describe = subcommands.add_parser(
         "describe", help="label an element without touching its verdict or rank")
     describe.add_argument("--project-root", required=True, type=Path)
@@ -4318,8 +4390,9 @@ def main() -> int:
                                         implemented=args.implemented or None,
                                         description=args.description or None,
                                         title=args.title or None)
+            stored = next(e for e in decisions["elements"] if e["element"] == args.element)
             live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
-            print(f"Recorded {args.element} ({args.verdict}, {args.stars}★). "
+            print(f"Recorded {args.element} ({args.verdict}, {stored['stars']}★). "
                   f"{len(live)} element(s) standing, state={decisions['state']}.")
         elif args.command == "describe":
             entry = describe_element(args.project_root, args.element,

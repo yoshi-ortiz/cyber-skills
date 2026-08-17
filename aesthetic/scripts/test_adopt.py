@@ -694,13 +694,12 @@ class TheArticleIsADesignSystem(unittest.TestCase):
                                        title="Fichas de performance")
             eyebrow = markup.split('class="dh-eyebrow">')[1].split("</p>")[0]
             h1 = markup.split("<h1>")[1].split("</h1>")[0]
-            project = markup.split('class="dh-project">')[1].split("</p>")[0]
-            designing = markup.split('class="dh-designing">')[1].split("</p>")[0]
+            meta = markup.split('class="dh-hero-meta">')[1].split("</div>")[0]
             self.assertEqual(eyebrow, "Design Agent")
             self.assertEqual(h1, "Aesthetic ranking")
-            self.assertIn("Fichas de performance", project)
+            self.assertIn("Fichas de performance", meta)
             self.assertNotIn("cover-furniture-redraw", h1)
-            self.assertIn("cover-furniture-redraw", designing)
+            self.assertIn("cover-furniture-redraw", meta)
 
     def test_a_proposal_is_shown_beside_what_it_replaces(self):
         """"Is this good?" has no answer. "Is this better than what stands?"

@@ -136,4 +136,4 @@ Run `adopt` (see `commands.md`) in the same turn the feedback arrives. Feedback 
 
 ## Provenance
 
-Everything `adopt` ingests is recorded `source: user`. Anything the agent types with `decide` is `source: agent`, capped at 1 star. That distinction is the point: before it existed, a user's click and an agent's guess were indistinguishable in the ledger.
+Everything `adopt` ingests is recorded `source: user`. Anything the agent types with `decide` is `source: agent`, stored at 0★ until the user ranks. That distinction is the point: before it existed, a user's click and an agent's guess were indistinguishable in the ledger.

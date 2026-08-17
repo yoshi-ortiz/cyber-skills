@@ -1,6 +1,6 @@
 ---
 name: aesthetic
-version: 0.8.2
+version: 0.8.3
 description: Ranked design work on a live page. Use to continue a round, critique what stands, prototype one idea, or observe a folder of references — art, UI, product, space, copy, motion, or social posts.
 argument-hint: "continue | critique | prototype | observe @/art-folder"
 ---
@@ -37,6 +37,8 @@ Load [loop.md](references/loop.md) only after the URL is in chat. Do not read DE
 **Heartbeat.** Before a step longer than a minute: one chat sentence + `status --text`. After every `shoot`: paste the PNG in chat before `publish`. Silence reads as a hang.
 
 **Agent on the page.** Pass `article --agent` your model name and `--agent-url` the deep link to this session. Pass `--round-label` the object name (e.g. Micrófono), not a slug like `objeto`.
+
+**New proposals stay unscored.** `decide --source agent --stars 0 --preview content/<element>.html`. The row and slideshow show blank stars until the user ranks. Never pass a PNG when the HTML comp exists.
 
 Look at the last graphic and references at the same scale. Name the one move. Draw HTML/CSS, `shoot`, look at the PNG. Redraw once if you would not pin it.
 

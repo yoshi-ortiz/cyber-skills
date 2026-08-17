@@ -108,6 +108,8 @@ class AnAgentPlaceholderIsNotAScore(unittest.TestCase):
             self.assertFalse(entry["scored"],
                              "an agent placeholder recorded as scored becomes a rank "
                              "the user never set")
+            self.assertEqual(entry["stars"], 0,
+                             "agent proposals must store 0 stars until the user ranks")
 
     def test_a_user_decision_is_recorded_as_scored(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -13,9 +13,10 @@ Prints the URL. Starts the companion if it is down. First command of every conti
 ## Recording decisions
 
 ```bash
-# agent inference -- the tool caps this at 1 star, always
+# agent proposal -- stored at 0★ until the user ranks; pass the HTML comp, not the PNG
 python3 scripts/bootstrap_harness.py decide --project-root . \
-  --element cover.ring.kicker --verdict proposed --stars 1 --source agent \
+  --element cover.ring.kicker --verdict proposed --stars 0 --source agent \
+  --preview content/cover.ring.kicker.html \
   --description "anillo con el antetítulo alrededor del objeto" \
   --evidence "user: 'kinda fine'" \
   --implemented "anillo a 96px sobre la retícula"
