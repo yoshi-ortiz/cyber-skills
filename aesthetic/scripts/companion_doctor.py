@@ -140,7 +140,7 @@ def push_status(project: Path, text: str, *, idle: bool = False) -> None:
     port, key = info["port"], info["url"].split("key=")[-1]
     payload = json.dumps({
         "text": text.strip(),
-        "state": "idle" if idle or not text.strip() else "working",
+        "state": "idle" if idle or not text.strip() else "active",
     }).encode()
     conn = http.client.HTTPConnection("127.0.0.1", port, timeout=4)
     try:

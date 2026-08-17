@@ -430,7 +430,7 @@ function handleRequest(req, res) {
       let data = {};
       try { data = JSON.parse(body || '{}'); } catch (e) { data = {}; }
       const text = String(data.text || '').slice(0, 200);
-      const state = data.state === 'idle' ? 'idle' : 'working';
+      const state = data.state === 'idle' ? 'idle' : 'active';
       broadcast({ type: 'dh-agent', text, state });
       res.writeHead(204, securityHeaders());
       res.end();

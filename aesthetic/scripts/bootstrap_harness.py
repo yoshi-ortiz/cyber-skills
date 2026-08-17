@@ -211,11 +211,13 @@ STRINGS = {
         "unscored": "not yet scored", "proposed-by": "Proposed", "built": "Built",
         "no-graphic": "no graphic",
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
+        "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
         "bar-lead": "Scored what you can? Go back to your agent chat",
         "bar-hint": "give your critique and directions there \u2014 new designs follow",
         "bar-return": "Return",
         "agent-working": "Agent running", "agent-idle": "Agent idle",
-        "bar-idle": "Waiting for you \u2014 nothing running",
+        "bar-idle": "Chat awaiting your scoring and direction",
+        "bar-active-prefix": "Designing:",
         "bar-left": "left to score", "done-cheer": "Marked as done",
         "credit-what": "Live companion",
         "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
@@ -267,11 +269,13 @@ STRINGS = {
         "unscored": "sin puntuar", "proposed-by": "Propuesto", "built": "Implementado",
         "no-graphic": "sin gráfico",
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
+        "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
         "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
         "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
         "bar-return": "Volver",
         "agent-working": "Agente trabajando", "agent-idle": "Agente en pausa",
-        "bar-idle": "Esperándote \u2014 nada en marcha",
+        "bar-idle": "Chat esperando tu puntuación y dirección",
+        "bar-active-prefix": "Diseñando:",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
         "credit-what": "Companion en vivo",
         "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
@@ -335,6 +339,37 @@ def project_language(project_root: Path | None) -> str:
         return json.loads(path.read_text(encoding="utf-8")).get("language") or DEFAULT_LANGUAGE
     except (OSError, ValueError):
         return DEFAULT_LANGUAGE
+
+
+def companion_agent(project_root: Path | None) -> tuple[str, str]:
+    """Agent name and deep link stored by `open` for header and bottom bar."""
+    if project_root is None:
+        return "", ""
+    path = project_root / "spec" / "design-harness" / "project.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "", ""
+    return (str(data.get("companionAgentUrl") or "").strip(),
+            str(data.get("companionAgentName") or "").strip())
+
+
+def save_companion_agent(project_root: Path, url: str = "", name: str = "") -> None:
+    path = project_root / "spec" / "design-harness" / "project.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if url.strip():
+        data["companionAgentUrl"] = url.strip()
+    if name.strip():
+        data["companionAgentName"] = name.strip()
+    write_json(path, data)
+
+
+def agent_context_from_env() -> tuple[str, str]:
+    """Best-effort agent identity when the CLI did not pass one."""
+    url = (os.environ.get("CURSOR_AGENT_URL") or os.environ.get("AGENT_URL") or "").strip()
+    name = (os.environ.get("CURSOR_AGENT_NAME") or os.environ.get("AGENT_NAME")
+            or os.environ.get("CURSOR_MODEL") or "").strip()
+    return url, name
 # companion_doctor sends a click on this synthetic element to prove the socket
 # reaches the ledger, then strips its rows back out. An `adopt` racing that
 # cleanup used to fold the probe in as a real element, and adopt never removes.
@@ -869,7 +904,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "26"
+CONTROLS_VERSION = "30"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -1237,8 +1272,11 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-group[data-group="pinned"]{border-block-end-color:var(--dh-accent,#d9482a);
  color:var(--dh-accent,#d9482a)}
 .dh-group[data-group="rejected"]{color:#b00020;opacity:.85}
-.dh-fb[data-group="rejected"]{opacity:.62}
-.dh-fb[data-group="rejected"]:hover{opacity:1}
+/* Rejected rows recede only in the graveyard zone. Superseded rows in a versus
+   pair carry `data-group="rejected"` for lifecycle grouping but must stay fully
+   readable -- dimming them made incumbent/proposal pairs look randomly broken. */
+.dh-zone[data-zone="antipattern"] .dh-fb[data-group="rejected"]{opacity:.62}
+.dh-zone[data-zone="antipattern"] .dh-fb[data-group="rejected"]:hover{opacity:1}
 .dh-shot{display:block;inline-size:var(--dh-shot-w,96px);aspect-ratio:8.5/11;overflow:hidden;
  position:relative;border:1px solid rgba(0,0,0,.25);border-radius:4px;background:#fff;isolation:isolate}
 .dh-shot svg{inline-size:100%;block-size:100%;display:block}
@@ -1704,6 +1742,7 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         lines.append(
             f'<div class="dh-fb" data-element="{element}" data-stars="{stars if user_ranked else 0}" '
             f'data-scored="{"yes" if user_ranked else "no"}" '
+            f'data-state="{entry["state"]}" '
             f'data-group="{GROUP_OF[entry["state"]]}" data-foundation="{foundation_of(element)}" '
             f'data-label="{element}">'
         )
@@ -1912,9 +1951,15 @@ def start_companion(project_root: Path) -> str:
     raise HarnessError((proc.stderr or proc.stdout or "companion did not start").strip())
 
 
-def open_board(project_root: Path, status: str = "") -> str:
+def open_board(project_root: Path, status: str = "",
+               agent_url: str = "", agent_name: str = "") -> str:
     """Bring the companion up and return its URL. Stdout of the verb is this string."""
     project_root = project_root.resolve()
+    env_url, env_name = agent_context_from_env()
+    agent_url = agent_url.strip() or env_url
+    agent_name = agent_name.strip() or env_name
+    if agent_url or agent_name:
+        save_companion_agent(project_root, agent_url, agent_name)
     url = read_board_url(project_root)
     if not url or not board_is_up(url):
         url = start_companion(project_root)
@@ -1989,11 +2034,6 @@ html:has(.dh-art){scroll-behavior:smooth}
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
 .dh-hero-meta .dh-value{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;
  overflow-wrap:anywhere}
-.dh-hero-meta .dh-designing-label{background:none;border-color:transparent;padding-inline:0;
- font-weight:400;letter-spacing:.14em;
- color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
-.dh-hero-meta .dh-designing-value{font-weight:400;
- color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
 .dh-project,.dh-designing{display:none}
 /* The instruction is the point of the page: it tells a designer what to do
    here AND what to do next. It reads at body size, not as fine print. */
@@ -2077,25 +2117,21 @@ html:has(.dh-art){scroll-behavior:smooth}
    inherits its border-box and their padding was adding to a 100% width --
    24px of horizontal overflow on the whole page. */
 .dh-brand,.dh-bar{box-sizing:border-box;max-inline-size:100%}
-.dh-brand{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;
- gap:.25rem 1.25rem;width:100%;flex:1 1 auto;min-inline-size:0}
-.dh-brand-side{display:flex;flex-direction:column;gap:.2rem;min-inline-size:0}
-.dh-brand-right{align-items:flex-end;text-align:end;flex:none}
+/* Companion header: brand, agent (linked), connection — three tight lines. */
+.dh-brand{display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;
+ width:100%;flex:1 1 auto;min-inline-size:0;text-align:end;line-height:1.2}
 .dh-brand a{text-decoration:none;color:inherit}
-.dh-brand-name{font-size:.9rem;font-weight:800;letter-spacing:.02em;color:#f2f2f2}
-.dh-brand-name:hover{text-decoration:underline}
-.dh-brand-credit{font-size:.68rem;letter-spacing:.06em;opacity:.62;white-space:nowrap}
-/* The companion styles `.brand a{display:flex}`, which makes each anchor a
-   block box -- the credit came out as four stacked lines. */
-.dh-brand-credit a{display:inline;text-decoration:underline;text-underline-offset:2px}
-.dh-brand-name{display:inline-block}
-.dh-brand-agent{display:block;font-size:.78rem;font-weight:600;letter-spacing:.01em;
- text-transform:none;opacity:.92;max-inline-size:24ch;overflow:hidden;text-overflow:ellipsis;
+.dh-brand-name{font-size:.68rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+ color:color-mix(in srgb, #f2f2f2 78%, transparent);display:block}
+.dh-brand-name:hover{text-decoration:underline;color:#fff}
+.dh-brand-agent{display:block;font-size:.86rem;font-weight:700;letter-spacing:.01em;
+ text-transform:none;max-inline-size:min(36ch,100%);overflow:hidden;text-overflow:ellipsis;
  white-space:nowrap}
 .dh-brand-agent:hover{text-decoration:underline}
-/* Once the article script rebuilds the header, it owns the full bar width. */
+.dh-brand .status{margin:0;justify-self:end;font-size:.68rem}
 .header:has(.dh-brand){display:block;padding:.55rem 1.25rem}
 .header:has(.dh-brand) .brand{width:100%}
+.header:has(.dh-brand) .status{position:static}
 /* No dot here. The connection pill below already carries one, and two dots
    reading different things is the ambiguity this row was meant to remove. */
 .dh-toc{padding-block-end:0}
@@ -2423,18 +2459,19 @@ html:has(.dh-art){scroll-behavior:smooth}
    full height with its argument beside it and its own scoring strip under
    that, and arrows walk the whole set without going back to the scroll. */
 dialog.dh-lb:not([open]){display:none}
-dialog.dh-lb{position:fixed;inset:0;z-index:100;display:grid;
- grid-template-rows:auto minmax(0,1fr) auto;gap:var(--s3);
- padding:var(--s3) clamp(var(--s3),4vw,var(--s5)) var(--s3);
- margin:0;border:none;max-inline-size:none;max-block-size:none;
- inline-size:100%;block-size:100%;
- background:color-mix(in srgb, var(--dh-ink,#111) 92%, transparent);
- color:var(--dh-bg,#fff);
- /* The overlay inverts, so anything derived from ink would be ink-on-ink --
-    the same trap the round zone hit three times. Re-point the token. */
+/* Transparent dialog + opaque shell: clicks on the dimmed margin close the modal. */
+dialog.dh-lb{position:fixed;inset:0;z-index:100;margin:0;padding:clamp(12px,3vw,28px);
+ border:none;max-inline-size:none;max-block-size:none;inline-size:100%;block-size:100%;
+ background:transparent;color:var(--dh-bg,#fff);overflow:hidden}
+dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-lb-shell{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:var(--s2);
+ inline-size:min(1080px,100%);block-size:auto;max-block-size:min(920px,calc(100dvh - 48px));
+ margin:0 auto;padding:clamp(var(--s3),3vw,var(--s4));
+ background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
+ border-radius:14px;border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
+ box-shadow:0 28px 80px rgba(0,0,0,.55);
  --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 32%, transparent)}
-dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
-.dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px}
+.dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px;flex-wrap:wrap}
 .dh-lb-count{font-size:11px;font-weight:700;letter-spacing:.16em;font-variant-numeric:tabular-nums;
  opacity:.75;flex:none}
 .dh-lb-name{display:flex;flex-direction:column;gap:2px;min-inline-size:0;flex:1 1 auto}
@@ -2445,21 +2482,23 @@ dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 55%, tra
 .dh-lb-state{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
  padding:3px 9px;border-radius:999px;border:1px solid var(--dh-rule);flex:none;opacity:.8}
 .dh-lb-x{margin-inline-start:auto;flex:none;inline-size:34px;block-size:34px;border-radius:8px;
- border:1px solid var(--dh-rule);background:transparent;color:inherit;font:inherit;font-size:17px;
- line-height:1;cursor:pointer}
-.dh-lb-x:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 14%, transparent)}
-/* Stage: the graphic, and to its side the argument that was made for it. On a
-   narrow pane the argument drops under the graphic rather than squeezing it. */
-.dh-lb-stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);
- gap:clamp(var(--s3),4vw,var(--s5));align-items:stretch;min-block-size:min(62vh,520px);
- padding-block:var(--s2)}
-/* Top-aligned. Centred, a 140px argument floated in the middle of a 2000px
-   row with 928px of dead space beneath it. */
-.dh-lb-side{align-self:start}
-@media (max-width:820px){.dh-lb-stage{grid-template-columns:minmax(0,1fr);
- grid-template-rows:minmax(0,1fr) auto;overflow-y:auto}}
-.dh-lb-frame{position:relative;block-size:100%;min-block-size:0;display:grid;
- grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--s3)}
+ border:1px solid var(--dh-rule);background:color-mix(in srgb, var(--dh-bg,#fff) 8%, transparent);
+ color:inherit;font:inherit;font-size:17px;line-height:1;cursor:pointer;
+ appearance:none;-webkit-appearance:none;padding:0}
+.dh-lb-x:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 16%, transparent)}
+.dh-lb-x:focus{outline:none}
+.dh-lb-x:focus-visible{outline:2px solid var(--dh-rule);outline-offset:2px}
+/* Body: image on top, copy and scoring in a footer row -- never a side column
+   that floats over the drawing in a narrow companion pane. */
+.dh-lb-body{display:flex;flex-direction:column;gap:var(--s2);min-block-size:0;overflow:hidden}
+.dh-lb-frame{position:relative;flex:1 1 auto;min-block-size:min(42vh,400px);
+ display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
+ gap:var(--s2);padding-block:var(--s1)}
+.dh-lb-copy{font-size:13px;line-height:1.55;max-block-size:18vh;overflow-y:auto;
+ padding-inline:var(--s1)}
+.dh-lb-foot{display:flex;justify-content:flex-end;align-items:center;gap:var(--s2);
+ padding-block-start:var(--s2);border-block-start:1px solid var(--dh-rule);flex-wrap:wrap}
+.dh-lb-score-wrap{flex:none;max-inline-size:100%}
 /* The thumbnail's own markup, re-scaled. `--dh-shot-w` is what sizes a shot,
    so the slide sets it to the frame height rather than restyling the node. */
 /* Sized by its BOX, never by the viewport. `62vh` against a tall pane made the
@@ -2484,25 +2523,32 @@ dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 55%, tra
  color:inherit;font:inherit;font-size:18px;line-height:1}
 .dh-lb-nav:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent)}
 .dh-lb-nav[disabled]{opacity:.25;cursor:default}
-/* The argument: what was claimed for this drawing, and the strip that answers
-   it. Judging without the claim in view is what "score this" kept meaning. */
-/* The argument is a column of prose, so it gets a measure and the controls sit
-   at its foot rather than floating wherever the text happened to end. */
-.dh-lb-side{display:flex;flex-direction:column;gap:var(--s2);max-block-size:100%;
- overflow-y:auto;font-size:13px;line-height:1.55;padding-inline-end:var(--s1);
- max-inline-size:46ch}
-.dh-lb-side .dh-lb-score{margin-block-start:auto}
-.dh-lb-side .dh-lb-score .dh-signals{margin:0}
+.dh-lb-score-wrap .dh-lb-score{margin:0}
+.dh-lb-score-wrap .dh-lb-score .dh-signals{margin:0;flex-wrap:wrap;justify-content:flex-end}
 /* The lightbox clones the row strip outside `.dh-fb`, so give it a shell the
    scoring CSS already knows. */
 .dh-lb-fb.dh-fb{display:block;grid-template-columns:unset;padding:0;margin:0;
- border:0;background:transparent;box-shadow:none}
-.dh-lb-fb .dh-signals{position:static}
-.dh-lb-side .dh-lb-why{margin:0;opacity:.92}
-.dh-lb-side .dh-lb-sub{margin:0;font-size:11.5px;opacity:.68}
-.dh-lb-side .dh-lb-sub b{font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+ border:0;background:transparent!important;box-shadow:none!important;color:inherit!important}
+.dh-lb-fb .dh-signals{position:static;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+dialog.dh-lb .dh-lb-score .dh-stars > *{
+ color:color-mix(in srgb, var(--dh-bg,#fff) 36%, transparent)}
+dialog.dh-lb .dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
+dialog.dh-lb .dh-lb-score [data-sentiment],
+dialog.dh-lb .dh-lb-score [data-verdict]{
+ border-color:var(--dh-rule);
+ background:color-mix(in srgb, var(--dh-ink,#111) 28%, transparent);color:inherit}
+dialog.dh-lb .dh-lb-score [data-sentiment="like"].on,
+dialog.dh-lb .dh-lb-score [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff}
+dialog.dh-lb .dh-lb-score [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
+dialog.dh-lb .dh-lb-score .dh-stars::after{
+ color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
+dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
+ color:color-mix(in srgb, var(--dh-bg,#fff) 52%, transparent)}
+.dh-lb-copy .dh-lb-why{margin:0;opacity:.92}
+.dh-lb-copy .dh-lb-sub{margin:var(--s1) 0 0;font-size:11.5px;opacity:.68}
+.dh-lb-copy .dh-lb-sub b{font-weight:700;letter-spacing:.1em;text-transform:uppercase;
  font-size:9.5px;display:block;margin-block-end:2px;opacity:.8}
-.dh-lb-score{padding-block-start:var(--s2);border-block-start:1px solid var(--dh-rule)}
+.dh-lb-score{padding:0;border:0}
 /* The strip is a live proxy: clicking here clicks the row's own control, so
    the ledger has exactly one write path and the lightbox never holds state. */
 .dh-lb-score .dh-stars > *{color:color-mix(in srgb, currentColor 38%, transparent);
@@ -2524,8 +2570,8 @@ dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 55%, tra
  background:color-mix(in srgb, var(--dh-accent,#d9482a) 30%, transparent)}
 .dh-lb-acts button:hover{border-color:currentColor}
 /* Filmstrip: where you are in the set, and one click to anywhere else. */
-.dh-lb-strip{display:flex;gap:5px;overflow-x:auto;padding-block:4px;scrollbar-width:thin;
- --dh-shot-w:42px}
+.dh-lb-strip{display:flex;gap:8px;overflow-x:auto;padding-block:8px;scrollbar-width:thin;
+ --dh-shot-w:72px;min-block-size:calc(var(--dh-shot-w) * 11 / 8.5 + 10px)}
 .dh-lb-strip .dh-shot{cursor:pointer;opacity:.5;outline:2px solid transparent;
  border-radius:2px;background:#fff;transition:opacity .12s}
 .dh-lb-strip .dh-shot:hover{opacity:.85}
@@ -2546,29 +2592,32 @@ dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 55%, tra
 .dh-bar b{font-weight:700;letter-spacing:-.01em}
 .dh-bar-copy{margin:0;opacity:.88}
 .dh-bar-copy span{opacity:.78}
-.dh-bar-agent{align-self:flex-start;font-size:12px;font-weight:600;letter-spacing:.01em;
- text-decoration:none;color:inherit;opacity:.92}
+.dh-bar-agent{display:block;font-size:12px;font-weight:700;letter-spacing:.01em;
+ text-decoration:none;color:inherit;opacity:.95}
 .dh-bar-agent:hover{text-decoration:underline}
+.dh-bar-links{display:flex;flex-wrap:wrap;gap:8px 12px;font-size:11px;opacity:.82}
+.dh-bar-links a{color:inherit}
 /* What the agent is doing, when it says so. A pulsing dot because the one
    question a waiting user has is whether anything is still happening. */
-.dh-live{font-style:normal;flex:0 0 100%;display:flex;align-items:center;gap:8px;
- font-size:12px;letter-spacing:.02em;opacity:.92}
-.dh-live::before{content:"";inline-size:7px;block-size:7px;border-radius:999px;
- background:#7fd18f;flex:none;animation:dh-pulse 1.4s ease-in-out infinite}
-/* Idle is a state, not an absence: orange and still, so "is it working?"
-   is answerable without reading the words. */
-.dh-live[data-state="idle"]{opacity:.72}
+.dh-live{font-style:normal;flex:0 0 100%;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+ font-size:12px;letter-spacing:.02em;opacity:.92;list-style:none}
+.dh-live-text{flex:1 1 12ch;min-inline-size:0}
+/* State is colour, not text: green pulse = active, orange still = idle. */
+.dh-live::before{content:"";inline-size:7px;block-size:7px;border-radius:999px;flex:none}
+.dh-live[data-state="active"]::before{background:#7fd18f;animation:dh-pulse 1.4s ease-in-out infinite}
+.dh-live[data-state="active"]{opacity:.95}
+.dh-live[data-state="idle"]{opacity:.78}
 .dh-live[data-state="idle"]::before{background:#e0902a;animation:none}
 @keyframes dh-pulse{0%,100%{opacity:.35}50%{opacity:1}}
 .dh-bar span{opacity:.78}
-.dh-bar-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;
- flex-wrap:wrap}
-/* One place to go when you are done here. */
-.dh-bar-go{flex:none;font-weight:800;letter-spacing:.08em;
- font-size:12px;padding:6px 12px;border-radius:8px;text-decoration:none;
- background:var(--dh-bg,#fff);color:var(--dh-ink,#111)}
+/* One return action: chat icon and label, hyperlinked to the agent session. */
+.dh-bar-go{display:inline-flex;align-items:center;gap:8px;flex:none;font-weight:800;
+ letter-spacing:.06em;font-size:12px;padding:8px 14px;border-radius:999px;text-decoration:none;
+ background:var(--dh-bg,#fff);color:var(--dh-ink,#111);margin-block-start:6px}
 .dh-bar-go:hover{filter:brightness(.94)}
 .dh-bar-go[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.dh-bar-ico{inline-size:15px;block-size:15px;flex:none;opacity:.88}
+.dh-bar-go span{opacity:1}
 .dh-bar em{font-style:normal;margin-inline-start:auto;flex:none;font-size:11px;
  font-weight:700;letter-spacing:.14em;text-transform:uppercase;
  padding:4px 10px;border-radius:999px;
@@ -2625,6 +2674,10 @@ TRASH_ICON = ('<svg class="dh-ico" viewBox="0 0 24 24" fill="none" stroke="curre
               'stroke-width="2" stroke-linecap="round" aria-hidden="true">'
               '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>')
 
+CHAT_ICON = ('<svg class="dh-bar-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+             'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+             '<path d="M21 11.5a8.38 8.38 0 0 1-1.9 5.4 8.5 8.5 0 0 1-6.6 3.3 8.38 8.38 0 0 1-3.4-.7L3 21l1.5-5.4a8.38 8.38 0 0 1-.7-3.4 8.5 8.5 0 0 1 3.3-6.6 8.38 8.38 0 0 1 5.4-1.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>')
+
 BRAND_SCRIPT = """<script>/* dh-brand */
 (function(){
  if(window.__dhBrand)return; window.__dhBrand=1;
@@ -2633,36 +2686,20 @@ BRAND_SCRIPT = """<script>/* dh-brand */
   var brand=document.querySelector('.brand'); if(!brand)return;
   var url=host.getAttribute('data-agent-url')||'';
   var label=host.getAttribute('data-agent-label')||'';
-  var state=host.getAttribute('data-agent-state')||'idle';
   brand.className='brand dh-brand';
   brand.textContent='';
-  var name=document.createElement('a');
-  name.className='dh-brand-name';
-  name.href='https://github.com/yoshi-ortiz/cyber-skills';
-  name.textContent='CYBER YOSHI: SKILLS';
-  var credit=document.createElement('span');
-  credit.className='dh-brand-credit';
-  credit.innerHTML='Companion powered by '
-   +'<a href="https://github.com/obra">Jesse Vincent</a> \u2022 '
-   +'<a href="https://github.com/obra/superpowers">obra/Superpowers</a>';
-  /* A link only when we were given one: inventing a URL scheme for someone
-     else's desktop app is a dead click, which is worse than plain text. */
+  var title=document.createElement('a');
+  title.className='dh-brand-name';
+  title.href='https://github.com/yoshi-ortiz/cyber-skills';
+  title.textContent='CYBER YOSHI: SKILLS';
   var agent=document.createElement(url?'a':'span');
   agent.className='dh-brand-agent';
-  agent.setAttribute('data-state',state);
   if(url)agent.href=url;
-  agent.textContent=label;
-  if(!label)agent.style.display='none';
-  /* Two lines a side. The companion's own connection pill lives outside this
-     element, so it is moved in under the agent rather than left dangling on a
-     third line beside it. */
-  var left=document.createElement('span'); left.className='dh-brand-side';
-  left.appendChild(name); left.appendChild(credit);
-  var right=document.createElement('span'); right.className='dh-brand-side dh-brand-right';
-  right.appendChild(agent);
+  agent.textContent=label||'Cyber Yoshi';
+  brand.appendChild(title);
+  brand.appendChild(agent);
   var pill=document.querySelector('.status');
-  if(pill)right.appendChild(pill);
-  brand.appendChild(left); brand.appendChild(right);
+  if(pill)brand.appendChild(pill);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);
  else go();
@@ -2675,8 +2712,15 @@ LIVE_SCRIPT = """<script>/* dh-live */
  var lastAt=Date.now(), idleMs=90000;
  function apply(text,state){
   var el=document.querySelector('.dh-live'); if(!el)return;
-  el.setAttribute('data-state',state||'working');
-  if(text)el.textContent=text;
+  var body=el.querySelector('.dh-live-text');
+  var st=state||'active';
+  el.setAttribute('data-state',st);
+  var idle=el.getAttribute('data-idle-text')||'';
+  var prefix=el.getAttribute('data-active-prefix')||'';
+  if(body){
+   if(st==='idle') body.textContent=idle;
+   else body.textContent=text?(prefix+' '+text).trim():prefix;
+  }
   lastAt=Date.now();
  }
  function connect(){
@@ -2684,13 +2728,20 @@ LIVE_SCRIPT = """<script>/* dh-live */
   var ws=new WebSocket('ws://'+location.host+(key?'/?key='+encodeURIComponent(key):''));
   ws.onmessage=function(ev){
    try{var d=JSON.parse(ev.data);}catch(e){return;}
-   if(d.type==='dh-agent')apply(d.text,d.state);
+   if(d.type==='dh-agent'){
+    var st=d.state==='idle'?'idle':'active';
+    apply(d.text,st);
+   }
   };
  }
  setInterval(function(){
   var el=document.querySelector('.dh-live'); if(!el)return;
-  if(el.getAttribute('data-state')!=='working')return;
-  if(Date.now()-lastAt>=idleMs)el.setAttribute('data-state','idle');
+  if(el.getAttribute('data-state')!=='active')return;
+  if(Date.now()-lastAt>=idleMs){
+   el.setAttribute('data-state','idle');
+   var body=el.querySelector('.dh-live-text');
+   if(body)body.textContent=el.getAttribute('data-idle-text')||'';
+  }
  },15000);
  connect();
 })();
@@ -2833,21 +2884,22 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
  }
  function slidesFor(id){
   var row=findRow(id);
-  var zone=row&&row.closest('.dh-zone[data-zone="round"]');
-  if(!zone)return rows();
+  if(!row)return rows();
+  var zone=row.closest('.dh-zone[data-zone]');
+  if(!zone)return [row];
   var out=[];
   zone.querySelectorAll('.dh-fb[data-element]').forEach(function(r){
    if(r.closest('.dh-spec-score')||!r.querySelector('.dh-shot'))return;
    out.push(r);
   });
-  return out;
+  return out.length?out:[row];
  }
  function wireProxy(node, sel){
   node.setAttribute('data-proxy', sel);
   node.setAttribute('role','button');
   node.setAttribute('tabindex','0');
  }
- function cloneSignals(row, side){
+ function cloneSignals(row, wrap){
   var sig=row.querySelector('.dh-signals');
   if(!sig)return;
   var box=document.createElement('div'); box.className='dh-lb-score';
@@ -2862,7 +2914,7 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   c.querySelectorAll('[data-verdict]').forEach(function(n){
    wireProxy(n, '[data-verdict="'+n.getAttribute('data-verdict')+'"]');
   });
-  shell.appendChild(c); box.appendChild(shell); side.appendChild(box);
+  shell.appendChild(c); box.appendChild(shell); wrap.appendChild(box);
  }
  function indexOf(id){
   for(var i=0;i<slides.length;i++){
@@ -2886,23 +2938,26 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   if('closedBy' in HTMLDialogElement.prototype) lb.setAttribute('closedby','any');
   lb.setAttribute('aria-labelledby','dh-lb-title');
   lb.innerHTML=
+   '<div class="dh-lb-shell">'+
    '<div class="dh-lb-bar"><span class="dh-lb-count"></span>'+
    '<span class="dh-lb-name"><b class="dh-lb-id" id="dh-lb-title"></b>'+
    '<code class="dh-lb-token"></code></span>'+
    '<span class="dh-lb-state"></span>'+
    '<button class="dh-lb-x" type="button" aria-label="Cerrar">&#10005;</button></div>'+
-   '<div class="dh-lb-stage"><div class="dh-lb-frame">'+
+   '<div class="dh-lb-body"><div class="dh-lb-frame">'+
    '<button class="dh-lb-nav" data-step="-1" type="button" aria-label="Anterior">&#8249;</button>'+
    '<div class="dh-lb-art"></div>'+
    '<button class="dh-lb-nav" data-step="1" type="button" aria-label="Siguiente">&#8250;</button>'+
-   '</div><div class="dh-lb-side"></div></div>'+
-   '<div class="dh-lb-strip"></div>';
+   '</div><div class="dh-lb-copy"></div></div>'+
+   '<div class="dh-lb-foot"><div class="dh-lb-score-wrap"></div></div>'+
+   '<div class="dh-lb-strip"></div></div>';
   document.body.appendChild(lb);
   lb.querySelector('.dh-lb-x').addEventListener('click',close);
   lb.addEventListener('close',function(){
    if(lastFocus&&lastFocus.focus)lastFocus.focus();
   });
   lb.addEventListener('click',function(e){
+   if(!e.target.closest('.dh-lb-shell')){close();return}
    var nav=e.target.closest('.dh-lb-nav'); if(nav){go(at+ +nav.getAttribute('data-step'));return}
    var th=e.target.closest('.dh-lb-strip .dh-shot');
    if(th){go(indexOf(th.getAttribute('data-el')));return}
@@ -2913,7 +2968,6 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
     if(real){real.click(); setTimeout(function(){paint()},0)}
     return;
    }
-   if(e.target===lb||!(e.target.closest('.dh-lb-bar,.dh-lb-stage,.dh-lb-strip'))) close();
   });
   document.addEventListener('keydown',function(e){
    if(!lb.open)return;
@@ -2933,7 +2987,7 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   var shot=row.querySelector('.dh-shot');
   var art=lb.querySelector('.dh-lb-art'); art.innerHTML='';
   if(shot){var c=prepShotClone(shot); art.appendChild(c); fitShotInner(c)}
-  var side=lb.querySelector('.dh-lb-side'); side.innerHTML='';
+  var side=lb.querySelector('.dh-lb-copy'); side.innerHTML='';
   var why=row.querySelector('.dh-desc:not(.dh-sub)');
   if(why){var p=document.createElement('p'); p.className='dh-lb-why';
           p.textContent=why.textContent.trim(); side.appendChild(p)}
@@ -2945,7 +2999,8 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
      d.textContent.replace(b?b.textContent:'','').trim()));
    side.appendChild(p);
   });
-  cloneSignals(row, side);
+  var scoreWrap=lb.querySelector('.dh-lb-score-wrap'); scoreWrap.innerHTML='';
+  cloneSignals(row, scoreWrap);
   var st=lb.querySelector('.dh-lb-strip'); st.innerHTML='';
   slides.forEach(function(r,i){
    var s=r.querySelector('.dh-shot'); if(!s)return;
@@ -3273,6 +3328,9 @@ def render_article(project_root: Path, decisions: dict[str, object],
     the faces as type -- and the scoring row sits against the thing it judges.
     """
     txt = strings_for(language or project_language(project_root))
+    stored_url, stored_name = companion_agent(project_root)
+    agent_url = agent_url.strip() or stored_url
+    agent_name = agent_name.strip() or stored_name or txt["companion-agent"]
     cohort = cohort or set()
     # A cohort is one surface or one problem. Three elements drawn from three
     # different foundations, under a name that claims a shared surface, is a
@@ -3374,15 +3432,23 @@ def render_article(project_root: Path, decisions: dict[str, object],
     declared = "; ".join(f"{prop}: {theme[key]}"
                          for prop, key in theme_vars.items() if (theme or {}).get(key))
     root_style = f' style="{declared}"' if declared else ""
-    agent_state = "working" if agent_working else "idle"
+    agent_state = "active" if agent_working else "idle"
+    live_status = status.strip()
+    if agent_state == "idle":
+        live_body = txt["bar-idle"]
+    elif live_status:
+        live_body = f'{txt["bar-active-prefix"]} {live_status}'
+    else:
+        live_body = txt["bar-active-prefix"]
+    designing_display = (round_label or cohort_name).strip()
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
            TOC_SCRIPT, SHOT_FIT_SCRIPT, LIGHTBOX_SCRIPT, BRAND_SCRIPT, LIVE_SCRIPT,
            f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
            f'data-cheer-text="{html_escape(txt["done-cheer"])}" '
            f'data-done-label="{html_escape(txt["completed"])}" '
-           f'data-agent-url="{html_escape(agent_url.strip())}" '
+           f'data-agent-url="{html_escape(agent_url)}" '
            f'data-agent-state="{agent_state}" '
-           f'data-agent-label="{html_escape(agent_name.strip())}"'
+           f'data-agent-label="{html_escape(agent_name)}"'
            f'{root_style}>',
            '<header class="dh-hero">',
            # Read by a graphic designer, not by whoever built the harness: who
@@ -3393,9 +3459,9 @@ def render_article(project_root: Path, decisions: dict[str, object],
            '<div class="dh-hero-meta">',
            f'<span class="dh-label">{html_escape(txt["project-label"])}</span>',
            f'<b class="dh-value">{headline}</b>',
-           *([f'<span class="dh-label dh-designing-label">{html_escape(txt["designing"])}</span>',
-              f'<b class="dh-value dh-designing-value">{html_escape(cohort_name)}</b>']
-             if cohort_name else []),
+           *([f'<span class="dh-label">{html_escape(txt["designing"])}</span>',
+              f'<b class="dh-value">{html_escape(designing_display)}</b>']
+             if designing_display else []),
            "</div>",
            f'<p class="dh-lede">{html_escape(txt["hero-lede"])}</p>',
            '<div class="dh-figures">',
@@ -3549,20 +3615,15 @@ def render_article(project_root: Path, decisions: dict[str, object],
         "</footer>",
         "</div>",
         '<aside class="dh-bar" role="complementary">'
-        + f'<i class="dh-live" role="status" data-state="{agent_state}">'
-        + html_escape(status.strip() or txt["bar-idle"]) + "</i>"
-        + '<div class="dh-bar-foot"><p class="dh-bar-copy"><b>'
-        + html_escape(txt["bar-lead"]) + "</b> <span>"
-        + html_escape(txt["bar-hint"]) + "</span></p>"
+        + f'<i class="dh-live" role="status" data-state="{agent_state}" '
+        + f'data-idle-text="{html_escape(txt["bar-idle"])}" '
+        + f'data-active-prefix="{html_escape(txt["bar-active-prefix"])}">'
+        + f'<span class="dh-live-text">{html_escape(live_body)}</span></i>'
         + (f'<a class="dh-bar-go" href="{html_escape(agent_url)}">'
-           f'{html_escape(txt["bar-return"])}</a>'
+           f'{CHAT_ICON}<span>{html_escape(txt["bar-return"])}</span></a>'
            if agent_url.strip()
            else f'<span class="dh-bar-go" aria-disabled="true">'
-           f'{html_escape(txt["bar-return"])}</span>')
-        + "</div>"
-        + (f'<a class="dh-bar-agent" href="{html_escape(agent_url)}">'
-           f'{html_escape(agent_name.strip() or txt["agent-working"])}</a>'
-           if agent_url.strip() else "")
+           f'{CHAT_ICON}<span>{html_escape(txt["bar-return"])}</span></span>')
         + "</aside>",
     ]
     return "\n".join(part for part in out if part) + "\n"
@@ -4342,6 +4403,8 @@ def parser() -> argparse.ArgumentParser:
     opened.add_argument("--project-root", required=True, type=Path)
     opened.add_argument("--status", default="",
                         help="what you are doing, in the user's language")
+    opened.add_argument("--agent", default="", help="agent name for header and bottom bar")
+    opened.add_argument("--agent-url", default="", help="deep link back to the agent chat")
     init = subcommands.add_parser("init")
     init.add_argument("--project-root", required=True, type=Path)
     init.add_argument("--source-root", required=True, type=Path)
@@ -4479,7 +4542,7 @@ def main() -> int:
     args = parser().parse_args()
     try:
         if args.command == "open":
-            print(open_board(args.project_root, args.status))
+            print(open_board(args.project_root, args.status, args.agent_url, args.agent))
         elif args.command == "init":
             output = init_harness(args.project_root, args.source_root,
                               parse_profiles(args.profiles), args.language)
@@ -4543,6 +4606,8 @@ def main() -> int:
                 stored = json.loads(path.read_text(encoding="utf-8"))
                 stored["title"] = args.title
                 write_json(path, stored)
+            if args.agent_url.strip() or args.agent.strip():
+                save_companion_agent(root, args.agent_url, args.agent)
             markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
                                     cohort, args.cohort_name, args.lang or None, theme or None,
                                     args.title, args.asks, args.status,
