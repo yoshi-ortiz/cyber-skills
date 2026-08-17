@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import http.client
 import json
 import mimetypes
 import os
@@ -18,6 +19,7 @@ import tempfile
 from html import escape as html_escape
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 VERSION = 1
@@ -1688,6 +1690,116 @@ def newest_session_dir(project_root: Path) -> Path:
     if not sessions:
         raise HarnessError("no companion session found; start the companion first")
     return max(sessions, key=lambda d: d.stat().st_mtime)
+
+
+def companion_dir() -> Path:
+    return Path(__file__).resolve().parent.parent / "companion"
+
+
+def read_board_url(project_root: Path) -> str | None:
+    """The live companion URL, or None if this project has never started one."""
+    root = project_root / ".superpowers" / "brainstorm"
+    infos = list(root.glob("*/state/server-info")) if root.is_dir() else []
+    if infos:
+        newest = max(infos, key=lambda p: p.stat().st_mtime)
+        try:
+            url = json.loads(newest.read_text(encoding="utf-8")).get("url")
+            if isinstance(url, str) and url.startswith("http"):
+                return url
+        except (ValueError, OSError, AttributeError):
+            pass
+    last, token = root / ".last-port", root / ".last-token"
+    if last.is_file() and token.is_file():
+        port = last.read_text(encoding="utf-8").strip()
+        key = token.read_text(encoding="utf-8").strip()
+        if port.isdigit() and key:
+            return f"http://localhost:{port}/?key={key}"
+    return None
+
+
+def board_is_up(url: str) -> bool:
+    parsed = urlparse(url)
+    host, port = parsed.hostname, parsed.port
+    if not host or not port:
+        return False
+    path = parsed.path or "/"
+    if parsed.query:
+        path += "?" + parsed.query
+    try:
+        conn = http.client.HTTPConnection(host, port, timeout=1.5)
+        try:
+            conn.request("GET", path)
+            response = conn.getresponse()
+            response.read()
+            return response.status < 500
+        finally:
+            conn.close()
+    except OSError:
+        return False
+
+
+def latest_screen(project_root: Path) -> Path | None:
+    root = project_root / ".superpowers" / "brainstorm"
+    htmls = list(root.glob("*/content/*.html")) if root.is_dir() else []
+    return max(htmls, key=lambda p: p.stat().st_mtime) if htmls else None
+
+
+def ensure_a_screen(project_root: Path) -> None:
+    """If the live session has no HTML, copy the newest screen from an older one."""
+    try:
+        session = newest_session_dir(project_root)
+    except HarnessError:
+        return
+    content = session / "content"
+    if any(content.glob("*.html")):
+        return
+    source = latest_screen(project_root)
+    if source is not None:
+        publish_screen(project_root, source)
+
+
+def start_companion(project_root: Path) -> str:
+    script = companion_dir() / "start-server.sh"
+    if not script.is_file():
+        raise HarnessError("companion/start-server.sh missing; run companion/install.sh")
+    proc = subprocess.run(
+        [str(script), "--project-dir", str(project_root.resolve()), "--background"],
+        capture_output=True, text=True, timeout=25,
+        cwd=str(companion_dir()),
+    )
+    text = f"{proc.stdout or ''}\n{proc.stderr or ''}"
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            data = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(data.get("url"), str):
+            return data["url"]
+        if data.get("error"):
+            raise HarnessError(str(data["error"]))
+    url = read_board_url(project_root)
+    if url and board_is_up(url):
+        return url
+    raise HarnessError((proc.stderr or proc.stdout or "companion did not start").strip())
+
+
+def open_board(project_root: Path, status: str = "") -> str:
+    """Bring the companion up and return its URL. Stdout of the verb is this string."""
+    project_root = project_root.resolve()
+    url = read_board_url(project_root)
+    if not url or not board_is_up(url):
+        url = start_companion(project_root)
+    ensure_a_screen(project_root)
+    if status.strip():
+        try:
+            from companion_doctor import push_status
+            push_status(project_root, status)
+        except Exception:
+            pass
+    return url
 
 
 ARTICLE_STYLE = """<style>/* dh-article */
@@ -3973,6 +4085,11 @@ def self_test() -> None:
 def parser() -> argparse.ArgumentParser:
     command = argparse.ArgumentParser(description=__doc__)
     subcommands = command.add_subparsers(dest="command", required=True)
+    opened = subcommands.add_parser(
+        "open", help="start the companion if needed and print its URL")
+    opened.add_argument("--project-root", required=True, type=Path)
+    opened.add_argument("--status", default="",
+                        help="what you are doing, in the user's language")
     init = subcommands.add_parser("init")
     init.add_argument("--project-root", required=True, type=Path)
     init.add_argument("--source-root", required=True, type=Path)
@@ -4101,7 +4218,9 @@ def parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = parser().parse_args()
     try:
-        if args.command == "init":
+        if args.command == "open":
+            print(open_board(args.project_root, args.status))
+        elif args.command == "init":
             output = init_harness(args.project_root, args.source_root,
                               parse_profiles(args.profiles), args.language)
             print(output)

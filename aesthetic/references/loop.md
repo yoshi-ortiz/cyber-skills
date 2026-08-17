@@ -104,15 +104,14 @@ legible, revise before showing it.
 
 ## 6 · Capture
 
-Give the user the companion URL with its `?key=`, once, when the page first
-opens. If `publish` reports a different session directory it has already moved
-the screen there -- the companion restarts into a new one and no caller can
-guess it.
+`open` already put the URL in chat. If `publish` reports a different session
+directory it has already moved the screen there -- the companion restarts into
+a new one and no caller can guess it.
 
 Record what changed, embed each graphic beside its controls, `publish`, and ask
-for ranks in the same turn. Run `doctor --quiet` after the first proposal, in
-the background -- it is a health check, not an opening act, and its ok/FAIL
-lines do not belong in chat. Feedback that is not adopted in the
+for ranks in the same turn. After the first proposal this session, run
+`doctor --quiet` in the background -- it is a health check, not an opening act,
+and its ok/FAIL lines do not belong in chat. Feedback that is not adopted in the
 turn it arrives is lost at the next session boundary.
 
 Next round, improve liked-but-low-scoring (`polish`) work first. A low star with

@@ -20,6 +20,6 @@ consecutive runs read empty arguments as licence to improvise, and spent their
 turns editing this skill's own scripts instead of designing. Neither rule can be
 enforced by a tool the run is free to ignore, so both have to be in context on
 every invocation. The six-step loop moved to `references/loop.md` to help pay for
-them. `## Open the page first` exists because every continue run started with a
-doctor dump instead of a page. This is a ceiling, not an allowance: the next
-addition displaces something.
+them. `## First tool call` exists because every continue run started with
+`loop.md` and a doctor dump instead of `open`. This is a ceiling, not an
+allowance: the next addition displaces something.

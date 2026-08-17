@@ -5,10 +5,12 @@ check the emitted markup and stylesheet, never the source string: two of the
 worst defects here were CSS the browser silently discarded while the source
 looked correct.
 """
+import json
 import re
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import bootstrap_harness as bh
 
@@ -431,14 +433,77 @@ class TheSkillIsInvokedWithFourVerbs(unittest.TestCase):
     def test_continue_opens_the_page_before_running_doctor(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
         continue_line = [ln for ln in skill.splitlines() if ln.startswith("- **continue")][0]
-        doctor_at = continue_line.find("`doctor`")
-        self.assertTrue(doctor_at < 0 or "page" in continue_line[:doctor_at].lower()
-                        or "companion" in continue_line[:doctor_at].lower(),
-                        "continue still leads with doctor: " + continue_line)
-        start = skill.split("## Start")[1].split("## ")[0] if "## Start" in skill \
-            else skill.split("## Open")[1].split("## ")[0]
-        self.assertNotRegex(start, r"(?i)existing:.*\bdoctor\b",
-                            "Start still tells the agent to doctor before showing a page")
+        self.assertIn("`open`", continue_line)
+        self.assertNotIn("doctor", continue_line)
+        self.assertNotIn("stats", continue_line)
+        self.assertNotIn("loop.md", continue_line,
+                         "loop.md in the continue bullet is loaded before the page opens")
+
+    def test_the_first_named_command_is_open(self):
+        """A continue run read loop.md, DECISIONS.md and doctor before the
+        server bound a port, because 'open the page' was a three-step recipe
+        sitting under 'Read disk first'. One verb, first, is the seam."""
+        skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
+        body = skill.split("---", 2)[2]
+        named = re.search(r"`([a-z][a-z0-9-]*)`", body)
+        self.assertIsNotNone(named)
+        self.assertEqual(named.group(1), "open",
+                         f"first command is {named.group(1)!r}, not open")
+        read_at = body.find("Read disk first")
+        open_at = body.find("`open`")
+        self.assertTrue(read_at < 0 or open_at < read_at,
+                        "Read disk first still precedes open")
+
+    def test_the_always_loaded_file_does_not_name_doctor_or_stats(self):
+        skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("`doctor`", skill)
+        self.assertNotIn("`stats`", skill)
+        self.assertNotIn("Do not open `bootstrap_harness.py`", skill,
+                         "forbidding the file makes agents read it instead of running verbs")
+
+
+class OpenPutsTheUrlInChat(unittest.TestCase):
+    def board(self, tmp: str, url: str = "http://localhost:49830/?key=abc") -> Path:
+        root = Path(tmp)
+        session = root / ".superpowers" / "brainstorm" / "s1"
+        (session / "state").mkdir(parents=True)
+        (session / "content").mkdir()
+        (session / "state" / "server-info").write_text(
+            json.dumps({"type": "server-started", "url": url, "port": 49830}),
+            encoding="utf-8")
+        return root
+
+    def test_a_standing_board_yields_only_the_url(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            url = "http://localhost:49830/?key=abc"
+            root = self.board(tmp, url)
+            self.assertEqual(bh.read_board_url(root), url)
+
+    def test_open_prints_only_the_url(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            url = "http://localhost:49830/?key=abc"
+            root = self.board(tmp, url)
+            with patch.object(bh, "board_is_up", return_value=True), \
+                 patch.object(bh, "start_companion") as start:
+                got = bh.open_board(root)
+            start.assert_not_called()
+            self.assertEqual(got, url)
+            for word in ("ok", "FAIL", "standing", "polish", "doctor", "ledger"):
+                self.assertNotIn(word, got)
+
+    def test_open_starts_when_the_board_is_down(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.board(tmp)
+            fresh = "http://localhost:49830/?key=fresh"
+            with patch.object(bh, "board_is_up", return_value=False), \
+                 patch.object(bh, "start_companion", return_value=fresh) as start:
+                got = bh.open_board(root)
+            start.assert_called_once()
+            self.assertEqual(got, fresh)
+
+    def test_open_is_a_verb(self):
+        args = bh.parser().parse_args(["open", "--project-root", "."])
+        self.assertEqual(args.command, "open")
 
 
 class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):

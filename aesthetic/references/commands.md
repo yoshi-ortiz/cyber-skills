@@ -2,6 +2,14 @@
 
 Every verb takes `--project-root` and answers `--help`. Read `--help` before asking the user anything about flags.
 
+## Opening the page
+
+```bash
+python3 scripts/bootstrap_harness.py open --project-root .
+```
+
+Prints the URL. Starts the companion if it is down. First command of every continue. Chat replies with that URL; nothing else from this verb belongs there.
+
 ## Recording decisions
 
 ```bash
