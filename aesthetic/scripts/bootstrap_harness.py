@@ -1313,14 +1313,17 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* Its own tooltip, not the browser's: `title` waits a second, renders in the
    OS font at the pointer, and never appears at all on a keyboard focus. This
    one is instant, legible, and follows focus too. */
-.dh-temp a::after{content:attr(data-tip);position:absolute;inset-block-start:18px;
- inset-inline-start:0;z-index:40;padding:6px 9px;border-radius:6px;pointer-events:none;
- background:var(--dh-ink,#111);color:var(--dh-bg,#fff);white-space:nowrap;
- font:600 10.5px/1.3 var(--dh-font,ui-monospace,monospace);letter-spacing:.02em;
- opacity:0;transition:opacity .1s}
+/* `display:none`, not `opacity:0`. An absolutely positioned box still counts
+   toward scrollable overflow while invisible, so forty nowrap tooltips made the
+   companion's pane 162px wider than itself -- and it opened scrolled, with the
+   headline and the left edge of every card cut off. */
+.dh-temp a::after{content:attr(data-tip);display:none;position:absolute;
+ inset-block-start:18px;inset-inline-start:0;z-index:40;padding:6px 9px;border-radius:6px;
+ pointer-events:none;background:var(--dh-ink,#111);color:var(--dh-bg,#fff);white-space:nowrap;
+ font:600 10.5px/1.3 var(--dh-font,ui-monospace,monospace);letter-spacing:.02em}
 .dh-temp{position:relative}
 .dh-temp a{position:relative}
-.dh-temp a:hover::after,.dh-temp a:focus-visible::after{opacity:1}
+.dh-temp a:hover::after,.dh-temp a:focus-visible::after{display:block}
 /* The last bars would push their tooltip off the right edge. */
 .dh-temp a:nth-last-child(-n+8)::after{inset-inline-start:auto;inset-inline-end:0}
 .dh-temp a span{font-size:8px;font-weight:800;line-height:1;color:var(--dh-bg,#fff)}
@@ -1357,7 +1360,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* This round is the only section that asks for something, so it is the only one
    that raises its voice: inverted, full bleed against everything else. */
 .dh-zone[data-zone="round"]{background:var(--dh-ink,#111);color:var(--dh-bg,#fff);
- margin:56px -24px 0;padding:44px 24px 48px;border-radius:14px;
+ margin:56px 0 0;padding:40px 28px 44px;border-radius:14px;
  /* The ground inverts here, so the rule token has to invert with it. Derived
     from ink, it was ink-on-ink: every border inside this zone vanished. */
  --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 30%, transparent)}
@@ -1372,7 +1375,7 @@ html:has(.dh-art){scroll-behavior:smooth}
    thumbs inside them hard to read, and those controls are the only way a
    rejection gets undone -- so the ground goes quiet and the rows stay at full
    contrast on top of it. */
-.dh-zone[data-zone="antipattern"]{margin:72px -24px 0;padding:38px 24px 44px;border-radius:14px;
+.dh-zone[data-zone="antipattern"]{margin:72px 0 0;padding:34px 28px 40px;border-radius:14px;
  background:color-mix(in srgb, var(--dh-ink,#111) 6%, var(--dh-bg,#fff));
  border:1px solid var(--dh-rule)}
 .dh-zone[data-zone="antipattern"] > header h2{font-size:clamp(19px,2.4vw,25px);font-weight:700;
@@ -1433,7 +1436,7 @@ html:has(.dh-art){scroll-behavior:smooth}
    foundation -- so without this the reader loses which zone they are reading,
    and "is this settled or is this being asked?" is the one question the page
    exists to answer. */
-.dh-toc{position:sticky;inset-block-start:0;z-index:20;margin:0 -24px;padding:0 24px;
+.dh-toc{position:sticky;inset-block-start:0;z-index:20;margin:0;padding:0;
  background:color-mix(in srgb, var(--dh-bg,#fff) 92%, transparent);
  backdrop-filter:blur(8px);border-block-end:1px solid var(--dh-rule)}
 .dh-toc ol{display:flex;gap:4px;margin:0;padding:9px 0;list-style:none;
@@ -1481,7 +1484,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-art .dh-fb{scroll-margin-block-start:112px}
 @media (max-width:640px){
  .dh-art{padding-inline:16px}
- .dh-zone[data-zone="round"],.dh-zone[data-zone="antipattern"]{margin-inline:-16px;padding-inline:16px}
+ .dh-zone[data-zone="round"],.dh-zone[data-zone="antipattern"]{padding-inline:16px}
  .dh-faces .dh-sample{font-size:30px}
 }
 @media (prefers-reduced-motion:reduce){.dh-art *{transition:none!important}}

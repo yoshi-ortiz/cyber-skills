@@ -814,6 +814,20 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             self.assertIn("--dh-rule:", block)
             self.assertIn("var(--dh-bg", block.split("--dh-rule:")[1])
 
+    def test_nothing_bleeds_outside_the_article(self):
+        """The article does not own the viewport: the companion nests it in a
+        padded wrapper inside an overflow-x:auto pane. A negative margin made
+        that pane scrollable, and it sat scrolled -- clipping the headline and
+        the left edge of every card."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root), {"cover.strong"})
+            style = markup.split("<style>/* dh-article */")[1].split("</style>")[0]
+            offenders = [line.strip() for line in style.splitlines()
+                         if re.search(r"margin[^:]*:[^;}]*(-\d|calc\(-)", line)
+                         or "margin-inline:-" in line]
+            self.assertEqual(offenders, [])
+
     def test_antipatterns_sit_last_and_muted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
