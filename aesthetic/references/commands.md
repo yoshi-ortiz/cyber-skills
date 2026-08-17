@@ -57,9 +57,12 @@ Place a placeholder naming the elements a section scores:
 <div data-dh-controls="cover.layout.two-column,cover.spine.right"></div>
 ```
 
-Fill it and serve it — two commands, never by hand:
+Fill it and serve it — three commands, never by hand:
 
 ```bash
+python3 scripts/bootstrap_harness.py article --project-root . \
+  --out <screen>.html --cohort "..." --round-label "Micrófono" \
+  --agent "Composer" --agent-url "<deep link to this session>"
 python3 scripts/bootstrap_harness.py embed --project-root . --screen <screen>.html \
   --bg "#ffebb8" --ink "#111" --accent "#d9482a" --pin cover.spine.right
 python3 scripts/bootstrap_harness.py publish --project-root . --screen <screen>.html

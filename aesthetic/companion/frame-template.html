@@ -79,16 +79,13 @@
     .header {
       background: var(--bg-secondary);
       border-bottom: 1px solid var(--border);
-      padding: 0.5rem 1.5rem;
+      padding: 0.55rem 1.5rem;
       flex-shrink: 0;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 1rem;
+      display: block;
       min-height: 42px;
     }
-    .header .brand { justify-self: start; width: 100%; font-size: 0.75rem; line-height: 1; }
-    .header .status { grid-column: 2; line-height: 1; }
+    .header .brand { width: 100%; font-size: 0.75rem; line-height: 1.2; }
+    .header .status { font-size: 0.7rem; color: var(--status-color, var(--success)); display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; line-height: 1; }
     .header span {
       font-size: 0.75rem;
       color: var(--text-secondary);

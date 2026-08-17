@@ -134,6 +134,49 @@ FOUNDATIONS = (
 )
 FOUNDATION_OF_WORD = {word: key for key, words in FOUNDATIONS for word in words}
 FOUNDATION_ORDER = {key: n for n, (key, _) in enumerate(FOUNDATIONS)}
+GENERIC_ROUND_SLUGS = frozenset({
+    "objeto", "object", "cover", "round", "ronda", "redraw", "furniture", "tab",
+})
+
+
+def primary_foundation(cohort: set[str]) -> str:
+    """Which foundation this round is really about -- one topic, not a batch."""
+    if not cohort:
+        return "core"
+    counts: dict[str, int] = {}
+    for element in cohort:
+        key = foundation_of(element)
+        counts[key] = counts.get(key, 0) + 1
+    return min(counts, key=lambda k: (-counts[k], FOUNDATION_ORDER.get(k, 99)))
+
+
+def round_tag_label(cohort: set[str], decisions: dict[str, object],
+                      cohort_name: str = "", round_label: str = "") -> str:
+    """What the round header names. Slugs like `objeto` become the object name."""
+    if round_label.strip():
+        return round_label.strip()
+    slug = cohort_name.strip().lower().replace("-", " ")
+    if slug and slug not in GENERIC_ROUND_SLUGS and len(slug.split()) <= 3:
+        return cohort_name.strip()
+    by_id = {e["element"]: e for e in decisions["elements"]}
+    ordered = sorted(cohort, key=lambda e: (
+        0 if by_id.get(e, {}).get("state") == "proposed" else 1, e))
+    if not ordered:
+        return cohort_name.strip() or "Round"
+    entry = by_id.get(ordered[0], {"element": ordered[0]})
+    desc = str(entry.get("description") or "")
+    for pattern in (r"\b(?:es el|es la|es un|es una)\s+([^,.;]+)",
+                    r"\b(?:the|a|an)\s+([^,.;]+)"):
+        match = re.search(pattern, desc, re.I)
+        if match:
+            phrase = match.group(1).strip()
+            words = phrase.split()
+            if words:
+                label = words[0] if len(words) == 1 else " ".join(words[:2])
+                return label[0].upper() + label[1:]
+    name = display_name(entry)
+    words = name.split()
+    return " ".join(words[:3]) if len(words) > 4 else name
 
 
 def foundation_of(element: str) -> str:
@@ -1953,9 +1996,9 @@ html:has(.dh-art){scroll-behavior:smooth}
    inherits its border-box and their padding was adding to a 100% width --
    24px of horizontal overflow on the whole page. */
 .dh-brand,.dh-bar{box-sizing:border-box;max-inline-size:100%}
-.dh-brand{display:flex;align-items:center;justify-content:space-between;gap:1rem;
- flex:1 1 auto;min-inline-size:0}
-.dh-brand-side{display:flex;flex-direction:column;gap:.15rem;min-inline-size:0}
+.dh-brand{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;
+ gap:.25rem 1.25rem;width:100%;flex:1 1 auto;min-inline-size:0}
+.dh-brand-side{display:flex;flex-direction:column;gap:.2rem;min-inline-size:0}
 .dh-brand-right{align-items:flex-end;text-align:end;flex:none}
 .dh-brand a{text-decoration:none;color:inherit}
 .dh-brand-name{font-size:.9rem;font-weight:800;letter-spacing:.02em;color:#f2f2f2}
@@ -1965,8 +2008,13 @@ html:has(.dh-art){scroll-behavior:smooth}
    block box -- the credit came out as four stacked lines. */
 .dh-brand-credit a{display:inline;text-decoration:underline;text-underline-offset:2px}
 .dh-brand-name{display:inline-block}
-.dh-brand-agent{display:flex;align-items:center;gap:.45rem;
- font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;opacity:.85}
+.dh-brand-agent{display:block;font-size:.78rem;font-weight:600;letter-spacing:.01em;
+ text-transform:none;opacity:.92;max-inline-size:24ch;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.dh-brand-agent:hover{text-decoration:underline}
+/* Once the article script rebuilds the header, it owns the full bar width. */
+.header:has(.dh-brand){display:block;padding:.55rem 1.25rem}
+.header:has(.dh-brand) .brand{width:100%}
 /* No dot here. The connection pill below already carries one, and two dots
    reading different things is the ambiguity this row was meant to remove. */
 .dh-toc{padding-block-end:0}
@@ -2451,6 +2499,25 @@ ROUND_ICON = ('<svg class="dh-round-icon" viewBox="0 0 24 24" fill="none" '
               'stroke="currentColor" stroke-width="1.6" aria-hidden="true">'
               '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>'
               '<circle cx="12" cy="12" r="1" fill="currentColor"/></svg>')
+
+def _round_icon(path: str) -> str:
+    return ('<svg class="dh-round-icon" viewBox="0 0 24 24" fill="none" '
+            'stroke="currentColor" stroke-width="1.6" aria-hidden="true">' + path + '</svg>')
+
+ROUND_ICONS = {
+    "core": ROUND_ICON,
+    "palette": _round_icon('<rect x="4" y="4" width="7" height="7" rx="1"/>'
+                           '<rect x="13" y="4" width="7" height="7" rx="1"/>'
+                           '<rect x="4" y="13" width="7" height="7" rx="1"/>'
+                           '<rect x="13" y="13" width="7" height="7" rx="1"/>'),
+    "typography": _round_icon('<path d="M6 18V6h4l4 8 4-8h4v12"/>'),
+    "illustration": _round_icon('<path d="M4 20l5-7 4 5 3-4 4 6"/>'
+                                '<circle cx="9" cy="8" r="2"/>'),
+    "composition": _round_icon('<rect x="4" y="4" width="16" height="16" rx="1"/>'
+                               '<path d="M4 10h16M10 4v16"/>'),
+    "voice": _round_icon('<path d="M5 8h14M5 12h10M5 16h12"/>'),
+    "motion": _round_icon('<path d="M5 12h3l2-4 2 8 2-5 3 1"/>'),
+}
 
 TRASH_ICON = ('<svg class="dh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               'stroke-width="2" stroke-linecap="round" aria-hidden="true">'
@@ -3025,7 +3092,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
                    language: str | None = None,
                    theme: dict[str, str] | None = None,
                    title: str = "", asks: str = "", status: str = "",
-                   agent_url: str = "", agent_name: str = "") -> str:
+                   agent_url: str = "", agent_name: str = "",
+                   round_label: str = "") -> str:
     """A design-system article that is also the scoring companion.
 
     The strip alone answered "what is on the list". It could not answer "what is
@@ -3200,22 +3268,24 @@ def render_article(project_root: Path, decisions: dict[str, object],
         if zone == "round":
             if asks.strip():
                 note = asks.strip()
-            if domains:
+            topic = primary_foundation(cohort) if cohort else ""
+            if topic:
                 domain_line = ('<p class="dh-domain">'
-                               + "".join(f'<span>{html_escape(txt.get(d, d))}</span>'
-                                         for d in domains)
-                               + "</p>")
+                               f'<span>{html_escape(txt.get(topic, topic))}</span>'
+                               "</p>")
         # The round is the only section that ASKS, so its own question is the
         # protagonist of the page -- set large and centred rather than filed as
         # a grey note under a heading, which is where nobody read it.
         heading = txt["round-heading"] if zone == "round" else txt[f"zone-{zone}"]
         note_markup = (f'<p class="dh-ask">{html_escape(note)}</p>' if zone == "round"
                        else f'<p class="dh-note">{html_escape(note)}</p>')
-        # The round's tag names the ROUND, not a count the nav already carries.
-        # A separate display line for the topic made three headings stacked.
-        tag = (html_escape(cohort_name) if zone == "round" and cohort_name
-               else f'{len(members)} {html_escape(txt["designs"])}')
-        icon = ROUND_ICON if zone == "round" else ""
+        # The round tag names the OBJECT being judged, not a slug like `objeto`.
+        tag = (html_escape(round_tag_label(cohort, decisions, cohort_name, round_label))
+               if zone == "round" and cohort
+               else (html_escape(cohort_name) if zone == "round" and cohort_name
+                     else f'{len(members)} {html_escape(txt["designs"])}'))
+        icon = (ROUND_ICONS.get(primary_foundation(cohort), ROUND_ICON)
+                if zone == "round" and cohort else "")
         out += [f'<section class="dh-zone" id="dh-zone-{zone}" data-zone="{zone}">', "<header>",
                 icon,
                 f'<p class="dh-tag">{tag}</p>',
@@ -4150,6 +4220,9 @@ def parser() -> argparse.ArgumentParser:
     article.add_argument("--out", required=True, type=Path, help="screen to write (then `publish` it)")
     article.add_argument("--cohort", default="", help="element ids this round asks about")
     article.add_argument("--cohort-name", default="", help="what to call this round, e.g. cover-furniture")
+    article.add_argument("--round-label", default="",
+                         help="object name for the round header, e.g. Micrófono. "
+                              "Inferred from the cohort when omitted.")
     article.add_argument("--agent", default="",
                          help="the agent's own name for the companion header, e.g. "
                               "'Claude Opus 5'. Empty hides the line rather than "
@@ -4285,7 +4358,7 @@ def main() -> int:
             markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
                                     cohort, args.cohort_name, args.lang or None, theme or None,
                                     args.title, args.asks, args.status,
-                                    args.agent_url, args.agent)
+                                    args.agent_url, args.agent, args.round_label)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(markup, encoding="utf-8")
             print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "

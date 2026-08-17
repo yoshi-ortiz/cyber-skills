@@ -407,6 +407,73 @@ class TheTwoChipsAreNotTheSameThing(unittest.TestCase):
                 style, r'\.dh-fb\[data-group="%s"\] \.dh-state\{' % group,
                 f"{group} rows must not look identical to every other state")
 
+class TheRoundHeaderNamesTheObject(unittest.TestCase):
+    def test_a_slug_like_objeto_becomes_the_object_name(self):
+        decisions = live(("cover.object.character-drawn", 1, None, "proposed"))
+        decisions["elements"][0]["description"] = (
+            "El objeto de portada es el micrófono de Open Mic, dibujado como personaje")
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = bh.render_article(
+                Path(tmp), decisions, {"cover.object.character-drawn"},
+                "objeto", "es", None, "Performance Ejecutivo",
+                "¿Se lee como personaje?")
+            tag = markup.split('class="dh-tag">')[1].split("</p>")[0]
+            self.assertIn("Micrófono", tag)
+            self.assertNotEqual(tag.lower(), "objeto")
+
+    def test_the_round_shows_one_topic_not_two(self):
+        decisions = live(
+            ("cover.object.character-drawn", 1, None, "proposed"),
+            ("cover.layout.two-column", 2, "like", "proposed"))
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = bh.render_article(
+                Path(tmp), decisions,
+                {"cover.object.character-drawn", "cover.layout.two-column"},
+                "objeto", "es")
+            domain = markup.split('class="dh-domain">')[1].split("</p>")[0]
+            self.assertEqual(domain.count("<span>"), 1,
+                             "two foundation pills stacked topics the round does not have")
+
+    def test_the_round_icon_matches_the_primary_foundation(self):
+        decisions = live(("artsource.pixel.trama", 1, None, "proposed"))
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = bh.render_article(
+                Path(tmp), decisions, {"artsource.pixel.trama"}, "objeto", "es")
+            round_zone = markup.split('id="dh-zone-round"')[1].split("</section>")[0]
+            self.assertIn("dh-round-icon", round_zone)
+            self.assertIn("<circle cx=\"9\" cy=\"8\" r=\"2\"/>", round_zone,
+                          "illustration rounds use the drawing icon, not the core target")
+
+
+class TheCompanionHeaderIsTwoByTwo(unittest.TestCase):
+    def test_the_brand_bar_is_a_two_column_grid(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          bh.render_article(Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+                                            set(), "", "en", None, "F", "Ask."),
+                          re.S).group(1)
+        self.assertIn("grid-template-columns", style)
+        self.assertRegex(style, r"\.dh-brand-agent\{[^}]*text-transform:none")
+        script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>",
+                           bh.render_article(Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+                                             set(), "", "en", None, "F", "Ask.",
+                                             agent_url="cursor://x", agent_name="Composer"),
+                           re.S).group(1)
+        self.assertIn("dh-brand-side", script)
+        self.assertIn("right.appendChild(agent)", script)
+        self.assertIn("right.appendChild(pill)", script)
+
+
+class TheSkillKeepsTheUserInformed(unittest.TestCase):
+    def test_continue_demands_project_language_and_chat_pngs(self):
+        skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("project.json", skill)
+        self.assertIn("language", skill)
+        self.assertIn("paste the PNG", skill)
+        self.assertIn("--round-label", skill)
+        self.assertNotIn("load [loop.md]", skill.split("## First tool call")[1].split("## While")[0],
+                         "loop.md must not appear before the URL is in chat")
+
+
 class TheSkillIsInvokedWithFourVerbs(unittest.TestCase):
     def test_the_argument_hint_matches_the_documented_verbs(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
