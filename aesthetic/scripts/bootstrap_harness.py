@@ -1841,8 +1841,11 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-brand a{text-decoration:none;color:inherit}
 .dh-brand-name{font-size:.9rem;font-weight:800;letter-spacing:.02em;color:#f2f2f2}
 .dh-brand-name:hover{text-decoration:underline}
-.dh-brand-credit{font-size:.68rem;letter-spacing:.06em;opacity:.62}
-.dh-brand-credit a{text-decoration:underline;text-underline-offset:2px}
+.dh-brand-credit{font-size:.68rem;letter-spacing:.06em;opacity:.62;white-space:nowrap}
+/* The companion styles `.brand a{display:flex}`, which makes each anchor a
+   block box -- the credit came out as four stacked lines. */
+.dh-brand-credit a{display:inline;text-decoration:underline;text-underline-offset:2px}
+.dh-brand-name{display:inline-block}
 .dh-brand-agent{display:flex;align-items:center;gap:.45rem;
  font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;opacity:.85}
 .dh-brand-agent::before{content:"";inline-size:7px;block-size:7px;border-radius:999px;
@@ -2363,6 +2366,7 @@ BRAND_SCRIPT = """<script>/* dh-brand */
   agent.setAttribute('data-state',state);
   if(url)agent.href=url;
   agent.textContent=label;
+  if(!label)agent.style.display='none';
   /* Two lines a side. The companion's own connection pill lives outside this
      element, so it is moved in under the agent rather than left dangling on a
      third line beside it. */
@@ -2884,7 +2888,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
                    language: str | None = None,
                    theme: dict[str, str] | None = None,
                    title: str = "", asks: str = "", status: str = "",
-                   agent_url: str = "") -> str:
+                   agent_url: str = "", agent_name: str = "") -> str:
     """A design-system article that is also the scoring companion.
 
     The strip alone answered "what is on the list". It could not answer "what is
@@ -3002,7 +3006,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
            f'data-done-label="{html_escape(txt["completed"])}" '
            f'data-agent-url="{html_escape(agent_url.strip())}" '
            f'data-agent-state="{"working" if status.strip() else "idle"}" '
-           f'data-agent-label="{html_escape(txt["agent-working"] if status.strip() else txt["agent-idle"])}"'
+           f'data-agent-label="{html_escape(agent_name.strip())}"'
            f'{root_style}>',
            '<header class="dh-hero">',
            # Read by a graphic designer, not by whoever built the harness: who
@@ -4004,6 +4008,10 @@ def parser() -> argparse.ArgumentParser:
     article.add_argument("--out", required=True, type=Path, help="screen to write (then `publish` it)")
     article.add_argument("--cohort", default="", help="element ids this round asks about")
     article.add_argument("--cohort-name", default="", help="what to call this round, e.g. cover-furniture")
+    article.add_argument("--agent", default="",
+                         help="the agent's own name for the companion header, e.g. "
+                              "'Claude Opus 5'. Empty hides the line rather than "
+                              "inventing one.")
     article.add_argument("--agent-url", default="",
                          help="deep link back to the agent's desktop app. Left empty "
                               "the header and the bottom bar render as plain text "
@@ -4124,7 +4132,7 @@ def main() -> int:
             markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
                                     cohort, args.cohort_name, args.lang or None, theme or None,
                                     args.title, args.asks, args.status,
-                                    args.agent_url)
+                                    args.agent_url, args.agent)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(markup, encoding="utf-8")
             print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "
