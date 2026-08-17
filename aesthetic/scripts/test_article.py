@@ -66,7 +66,7 @@ class TheArticleAsRendered(unittest.TestCase):
         # The slideshow addresses a slide by id. A thumbnail without one is a
         # picture that leads nowhere -- which is what all 95 of them were.
         markup = self.article()
-        shots = re.findall(r'<span class="dh-shot"([^>]*)>', markup)
+        shots = re.findall(r'<div class="dh-shot"([^>]*)>', markup)
         self.assertTrue(shots, "the article rendered no thumbnails at all")
         for attrs in shots:
             self.assertIn("data-el=", attrs,
@@ -622,6 +622,25 @@ class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
                          "rebuilt stars drift from the card; clone the row instead")
         self.assertIn('data-zone="round"', script,
                       "slideshow navigation must stay inside the round zone")
+        self.assertIn("fitShotInner", script,
+                      "HTML comps must be re-scaled in the slideshow cell")
+        self.assertIn("createElement('dialog')", script,
+                      "the slideshow must use a native dialog for escape and focus")
+
+
+class CardThumbnailsScaleOnLoad(unittest.TestCase):
+    def test_html_comps_get_a_shot_fit_script_before_the_lightbox(self):
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.")
+        self.assertIn("/* dh-shot-fit */", markup,
+                      "card thumbnails need the same scale math as the slideshow")
+        fit = markup.index("/* dh-shot-fit */")
+        lb = markup.index("/* dh-lightbox */")
+        self.assertLess(fit, lb,
+                        "shot-fit must run before the lightbox so __dhFitShotInner exists")
+        self.assertIn("__dhFitShotInner", markup)
+        self.assertIn("ResizeObserver", markup)
 
 
 class TheSlideshowHeadsItselfWithAName(unittest.TestCase):
@@ -794,6 +813,24 @@ class PreviewsPreferHtmlComps(unittest.TestCase):
             out = bh.render_preview(root, preview, "x", bh.STRINGS["en"])
             self.assertIn("Hi", out)
             self.assertNotIn(".png", out.lower())
+            self.assertIn('class="dh-shot-inner"', out)
+            self.assertIn("block-size:", out)
+
+    def test_html_comp_preview_uses_div_not_span(self):
+        raw = ("<html><head><style>body{width:510px;min-height:660px;background:#f00}"
+               "p{color:blue}</style></head><body><p>Hi</p></body></html>")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            comp = root / "content" / "demo.html"
+            comp.parent.mkdir(parents=True)
+            comp.write_text(raw, encoding="utf-8")
+            out = bh.render_preview(root, {"path": "content/demo.html", "sha256": "x"},
+                                    "demo", bh.STRINGS["en"])
+            self.assertIn('<div class="dh-shot"', out)
+            self.assertIn('<div class="dh-shot-inner"', out)
+            self.assertNotIn('<span class="dh-shot-inner"', out)
+            self.assertIn('data-comp-w="510.0"', out)
+            self.assertIn('data-comp-h="660.0"', out)
 
     def test_comp_css_is_scoped_and_cannot_shrink_the_frame_body(self):
         raw = ("<html><head><style>body{width:510px;min-height:660px;background:#f00}"

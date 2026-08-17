@@ -869,7 +869,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "24"
+CONTROLS_VERSION = "26"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -1033,7 +1033,7 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  align-items:start;padding:13px 15px;border:1px solid rgba(0,0,0,.14);
  border-radius:10px;background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
  font:500 13px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
- contain:layout style;content-visibility:auto;contain-intrinsic-size:auto 120px}
+ contain:layout style}
 /* Below ~560px of ROW there is no honest three-column layout: the controls
    wrap onto their own line under the text instead of crushing it. Container
    query, because the same row renders in a 1180px article and in a companion
@@ -1240,7 +1240,7 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 .dh-fb[data-group="rejected"]{opacity:.62}
 .dh-fb[data-group="rejected"]:hover{opacity:1}
 .dh-shot{display:block;inline-size:var(--dh-shot-w,96px);aspect-ratio:8.5/11;overflow:hidden;
- position:relative;border:1px solid rgba(0,0,0,.25);border-radius:4px;background:#fff;contain:strict}
+ position:relative;border:1px solid rgba(0,0,0,.25);border-radius:4px;background:#fff;isolation:isolate}
 .dh-shot svg{inline-size:100%;block-size:100%;display:block}
 .dh-shot img{inline-size:100%;block-size:100%;object-fit:contain;display:block}
 .dh-shot-missing{display:grid;place-items:center;text-align:center;padding:6px;
@@ -1505,9 +1505,9 @@ def html_comp_fragment(raw: str) -> tuple[str, float, float]:
     return raw, width, height
 
 
-def preview_inner_style(comp_width: float) -> str:
+def preview_inner_style(comp_width: float, comp_height: float) -> str:
     return ("position:absolute;inset-block-start:0;inset-inline-start:0;"
-            f"inline-size:{comp_width}px;transform-origin:0 0;"
+            f"inline-size:{comp_width}px;block-size:{comp_height}px;transform-origin:0 0;"
             f"transform:scale(calc(var(--dh-shot-w,96px) / {comp_width}));pointer-events:none")
 
 
@@ -1547,31 +1547,32 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
     # element's slide wherever the thumbnail sits -- in a row, in a folded
     # backlog strip, or beside a specimen. Without the id the folded strips
     # were 95 pictures that led nowhere.
-    tag = f'<span class="dh-shot" data-el="{html_escape(element)}" style="{SHOT_INLINE}">'
+    tag = f'<div class="dh-shot" data-el="{html_escape(element)}" style="{SHOT_INLINE}">'
     if not preview:
         return (f'{tag}<span class="dh-shot-missing" data-dh-no-graphic="1">{txt["no-graphic"]}'
-                '<br>--preview</span></span>')
+                '<br>--preview</span></div>')
     if project_root is None:
-        return f'{tag}<span class="dh-shot-missing">{preview["path"]}</span></span>'
+        return f'{tag}<span class="dh-shot-missing">{preview["path"]}</span></div>'
 
     path = preferred_preview_path(project_root, project_root / preview["path"], element)
     if not path.is_file():
         return (f'{tag}<span class="dh-shot-missing">gráfico ausente<br>'
-                f'{preview["path"]}</span></span>')
+                f'{preview["path"]}</span></div>')
     suffix = path.suffix.lower()
     if suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
         media = "image/jpeg" if suffix in {".jpg", ".jpeg"} else f"image/{suffix.lstrip('.')}"
         encoded = base64.b64encode(path.read_bytes()).decode("ascii")
         body = f'<img alt="" src="data:{media};base64,{encoded}">'
-        return f"{tag}{body}</span>"
+        return f"{tag}{body}</div>"
     fragment = path.read_text(encoding="utf-8")
     if suffix == ".svg":
         fragment = re.sub(r"<svg\b", '<svg preserveAspectRatio="xMidYMid meet" '
                           'style="width:100%;height:100%;display:block"', fragment, count=1)
-        return f"{tag}{fragment}</span>"
-    body, comp_width, _ = html_comp_fragment(fragment)
-    return (f'{tag}<span class="dh-shot-inner" style="{preview_inner_style(comp_width)}">'
-            f'{body}</span></span>')
+        return f"{tag}{fragment}</div>"
+    body, comp_width, comp_height = html_comp_fragment(fragment)
+    return (f'{tag}<div class="dh-shot-inner" data-comp-w="{comp_width}" '
+            f'data-comp-h="{comp_height}" style="{preview_inner_style(comp_width, comp_height)}">'
+            f'{body}</div></div>')
 
 
 def display_name(entry: dict[str, object]) -> str:
@@ -2421,15 +2422,18 @@ html:has(.dh-art){scroll-behavior:smooth}
    what the page is asking for. So every thumbnail opens the same graphic at
    full height with its argument beside it and its own scoring strip under
    that, and arrows walk the whole set without going back to the scroll. */
-.dh-lb[hidden]{display:none}
-.dh-lb{position:fixed;inset:0;z-index:100;display:grid;
+dialog.dh-lb:not([open]){display:none}
+dialog.dh-lb{position:fixed;inset:0;z-index:100;display:grid;
  grid-template-rows:auto minmax(0,1fr) auto;gap:var(--s3);
  padding:var(--s3) clamp(var(--s3),4vw,var(--s5)) var(--s3);
+ margin:0;border:none;max-inline-size:none;max-block-size:none;
+ inline-size:100%;block-size:100%;
  background:color-mix(in srgb, var(--dh-ink,#111) 92%, transparent);
  color:var(--dh-bg,#fff);
  /* The overlay inverts, so anything derived from ink would be ink-on-ink --
     the same trap the round zone hit three times. Re-point the token. */
  --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 32%, transparent)}
+dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
 .dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px}
 .dh-lb-count{font-size:11px;font-weight:700;letter-spacing:.16em;font-variant-numeric:tabular-nums;
  opacity:.75;flex:none}
@@ -2473,6 +2477,8 @@ html:has(.dh-art){scroll-behavior:smooth}
  block-size:min(100cqh, 100cqw * 11 / 8.5);
  max-inline-size:100%;max-block-size:100%;
  background:#fff;border-radius:4px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+.dh-lb-art .dh-shot-inner{position:absolute;inset-block-start:0;inset-inline-start:0;
+ transform-origin:0 0;pointer-events:none}
 .dh-lb-nav{flex:none;inline-size:40px;block-size:40px;border-radius:999px;cursor:pointer;
  border:1px solid var(--dh-rule);background:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
  color:inherit;font:inherit;font-size:18px;line-height:1}
@@ -2759,6 +2765,51 @@ TOC_SCRIPT = """<script>/* dh-toc */
 # write path and the companion's own rehydrator stays the only thing that
 # decides what a click means. Duplicating that logic per language is exactly
 # how the JS and Python rules drifted apart before.
+SHOT_FIT_SCRIPT = """<script>/* dh-shot-fit */
+(function(){
+ if(window.__dhShotFit)return; window.__dhShotFit=1;
+ /* Card thumbnails use the same scale math as the slideshow. Pure CSS
+    `transform:scale(calc(var(--dh-shot-w)/510))` on a 510×660 absolutely
+    positioned inner gets clipped by `overflow:hidden` before the transform
+    is accounted for -- grey boxes in the row, full drawings in the modal. */
+ function fitShotInner(shot){
+  var inner=shot.querySelector('.dh-shot-inner');
+  if(!inner)return;
+  var cw=parseFloat(inner.getAttribute('data-comp-w'))||510;
+  var ch=parseFloat(inner.getAttribute('data-comp-h'))||660;
+  function apply(){
+   var w=shot.clientWidth;
+   if(w<1)return;
+   var s=w/cw;
+   inner.style.transform='scale('+s+')';
+   inner.style.inlineSize=cw+'px';
+   inner.style.blockSize=ch+'px';
+   inner.style.transformOrigin='0 0';
+   inner.style.position='absolute';
+   inner.style.insetBlockStart='0';
+   inner.style.insetInlineStart='0';
+   inner.style.pointerEvents='none';
+  }
+  apply();
+  if(shot._dhRo)shot._dhRo.disconnect();
+  if(typeof ResizeObserver!=='undefined'){
+   var ro=new ResizeObserver(apply);
+   ro.observe(shot);
+   shot._dhRo=ro;
+  }
+ }
+ window.__dhFitShotInner=fitShotInner;
+ function fitAll(root){
+  (root||document).querySelectorAll('.dh-shot-inner').forEach(function(inner){
+   var shot=inner.closest('.dh-shot');
+   if(shot)fitShotInner(shot);
+  });
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){fitAll()});
+ else fitAll();
+})();
+</script>"""
+
 LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
 (function(){
  if(window.__dhLb)return; window.__dhLb=1;
@@ -2813,10 +2864,6 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   });
   shell.appendChild(c); box.appendChild(shell); side.appendChild(box);
  }
- // Resolve an id against the SLIDE set, never against the document: the first
- // `.dh-fb` for a palette id in document order is the specimen's controls-only
- // copy, so a document query returned a node that is not a slide and the
- // lightbox silently refused to open on exactly the swatches it was built for.
  function indexOf(id){
   for(var i=0;i<slides.length;i++){
    if(slides[i].getAttribute('data-element')===id)return i;
@@ -2824,13 +2871,23 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   return -1;
  }
  function txt(el,sel){var n=el.querySelector(sel);return n?n.textContent.trim():''}
+ function prepShotClone(node){
+  var c=node.cloneNode(true);
+  c.removeAttribute('style');
+  c.className='dh-shot';
+  return c;
+ }
+ function fitShotInner(shot){
+  if(window.__dhFitShotInner) return window.__dhFitShotInner(shot);
+ }
  function build(){
-  lb=document.createElement('div');
-  lb.className='dh-lb'; lb.hidden=true;
-  lb.setAttribute('role','dialog'); lb.setAttribute('aria-modal','true');
+  lb=document.createElement('dialog');
+  lb.className='dh-lb';
+  if('closedBy' in HTMLDialogElement.prototype) lb.setAttribute('closedby','any');
+  lb.setAttribute('aria-labelledby','dh-lb-title');
   lb.innerHTML=
    '<div class="dh-lb-bar"><span class="dh-lb-count"></span>'+
-   '<span class="dh-lb-name"><b class="dh-lb-id"></b>'+
+   '<span class="dh-lb-name"><b class="dh-lb-id" id="dh-lb-title"></b>'+
    '<code class="dh-lb-token"></code></span>'+
    '<span class="dh-lb-state"></span>'+
    '<button class="dh-lb-x" type="button" aria-label="Cerrar">&#10005;</button></div>'+
@@ -2842,23 +2899,26 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
    '<div class="dh-lb-strip"></div>';
   document.body.appendChild(lb);
   lb.querySelector('.dh-lb-x').addEventListener('click',close);
+  lb.addEventListener('close',function(){
+   if(lastFocus&&lastFocus.focus)lastFocus.focus();
+  });
   lb.addEventListener('click',function(e){
-   if(e.target===lb){close();return}
    var nav=e.target.closest('.dh-lb-nav'); if(nav){go(at+ +nav.getAttribute('data-step'));return}
    var th=e.target.closest('.dh-lb-strip .dh-shot');
    if(th){go(indexOf(th.getAttribute('data-el')));return}
-   // Proxy: click the row's own control and let the existing handler run.
    var prox=e.target.closest('[data-proxy]');
    if(prox){
     var row=slides[at]; if(!row)return;
     var real=row.querySelector(prox.getAttribute('data-proxy'));
     if(real){real.click(); setTimeout(function(){paint()},0)}
+    return;
    }
+   if(e.target===lb||!(e.target.closest('.dh-lb-bar,.dh-lb-stage,.dh-lb-strip'))) close();
   });
   document.addEventListener('keydown',function(e){
-   if(lb.hidden)return;
-   if(e.key==='Escape'){close()}
-   else if(e.key==='ArrowLeft'){go(at-1)}
+   if(!lb.open)return;
+   if(e.key==='Escape'){close();return}
+   if(e.key==='ArrowLeft'){go(at-1)}
    else if(e.key==='ArrowRight'){go(at+1)}
   });
  }
@@ -2866,18 +2926,13 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   var row=slides[at]; if(!row)return;
   var id=row.getAttribute('data-element');
   lb.querySelector('.dh-lb-count').textContent=(at+1)+' / '+slides.length;
-  /* The slideshow headed itself with the dotted id while the card beside it
-     already used a real name. Same rule here: read the row's own title. */
   var titled=row.querySelector('.dh-id');
   lb.querySelector('.dh-lb-id').textContent=titled?titled.textContent.trim():id;
   lb.querySelector('.dh-lb-token').textContent=id;
   lb.querySelector('.dh-lb-state').textContent=txt(row,'.dh-state');
   var shot=row.querySelector('.dh-shot');
   var art=lb.querySelector('.dh-lb-art'); art.innerHTML='';
-  if(shot){var c=shot.cloneNode(true); c.removeAttribute('style'); c.className='dh-shot';
-           art.appendChild(c)}
-  // The argument for this drawing: what it claims, what evidence was cited,
-  // what was actually built. Scoring without it in view is scoring a picture.
+  if(shot){var c=prepShotClone(shot); art.appendChild(c); fitShotInner(c)}
   var side=lb.querySelector('.dh-lb-side'); side.innerHTML='';
   var why=row.querySelector('.dh-desc:not(.dh-sub)');
   if(why){var p=document.createElement('p'); p.className='dh-lb-why';
@@ -2894,9 +2949,9 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   var st=lb.querySelector('.dh-lb-strip'); st.innerHTML='';
   slides.forEach(function(r,i){
    var s=r.querySelector('.dh-shot'); if(!s)return;
-   var c=s.cloneNode(true); c.removeAttribute('style'); c.className='dh-shot';
-   c.setAttribute('data-el',r.getAttribute('data-element'));
+   var c=prepShotClone(s); c.setAttribute('data-el',r.getAttribute('data-element'));
    if(i===at)c.setAttribute('aria-current','true');
+   fitShotInner(c);
    st.appendChild(c);
   });
   var cur=st.querySelector('[aria-current="true"]');
@@ -2909,18 +2964,16 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   slides=slidesFor(id); var i=indexOf(id);
   if(i<0)return;
   lastFocus=document.activeElement;
-  at=i; lb.hidden=false; paint();
+  at=i; paint();
+  if(typeof lb.showModal==='function') lb.showModal();
   lb.querySelector('.dh-lb-x').focus();
  }
  function close(){
-  lb.hidden=true;
-  // The row keeps the score; put the reader back where they clicked from.
+  if(lb.open) lb.close();
   if(lastFocus&&lastFocus.focus)lastFocus.focus();
  }
  function start(){
   build();
-  /* One opener, used by the thumbnails AND by the chart, so a bar and a
-     thumbnail cannot drift into showing different things. */
   window.__dhOpenSlide=open;
   document.addEventListener('click',function(e){
    var s=e.target.closest('.dh-art .dh-shot[data-el]');
@@ -2930,14 +2983,11 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   });
   chartCard();
   document.addEventListener('dh-row-painted',function(e){
-   if(lb.hidden||!e.detail||!e.detail.element)return;
+   if(!lb.open||!e.detail||!e.detail.element)return;
    var row=slides[at]; if(!row||row.getAttribute('data-element')!==e.detail.element)return;
    paint();
   });
  }
- /* Hovering a bar shows the drawing it stands for. The old tooltip said
-    `family.tab.spine-step.grupo-color -- 1/5 -- proposed`, which is a
-    namespace, a fraction and a lifecycle word: nothing a designer can judge. */
  function chartCard(){
   var card=document.createElement('div');
   card.className='dh-chartcard'; card.setAttribute('aria-hidden','true');
@@ -2951,8 +3001,7 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
    }
    var shot=row&&row.querySelector('.dh-shot');
    card.innerHTML='';
-   if(shot){var c=shot.cloneNode(true); c.removeAttribute('style'); c.className='dh-shot';
-            card.appendChild(c)}
+   if(shot){var c=prepShotClone(shot); card.appendChild(c); fitShotInner(c)}
    var name=document.createElement('b');
    name.textContent=bar.getAttribute('data-name')||id;
    card.appendChild(name);
@@ -3327,7 +3376,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
     root_style = f' style="{declared}"' if declared else ""
     agent_state = "working" if agent_working else "idle"
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
-           TOC_SCRIPT, LIGHTBOX_SCRIPT, BRAND_SCRIPT, LIVE_SCRIPT,
+           TOC_SCRIPT, SHOT_FIT_SCRIPT, LIGHTBOX_SCRIPT, BRAND_SCRIPT, LIVE_SCRIPT,
            f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
            f'data-cheer-text="{html_escape(txt["done-cheer"])}" '
            f'data-done-label="{html_escape(txt["completed"])}" '
