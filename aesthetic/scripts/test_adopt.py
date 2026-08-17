@@ -645,7 +645,13 @@ class TheArticleIsADesignSystem(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             markup = bh.render_article(root, self.system(root))
-            self.assertIn('title="palette.family', markup)
+            # The strip draws its own tooltip from `data-tip` and names the bar
+            # with `aria-label`. It must NOT also carry `title`: the browser
+            # then draws a second tooltip, in the OS font, at its own position
+            # -- two overlapping labels sitting on top of the key row.
+            self.assertIn('data-tip="palette.family', markup)
+            self.assertIn('aria-label="palette.family', markup)
+            self.assertNotIn('title="palette.family', markup)
 
     def test_a_missing_translation_falls_back_instead_of_crashing(self):
         """Falling back only on an unknown LANGUAGE left a gap: forget one

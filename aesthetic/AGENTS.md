@@ -30,7 +30,7 @@ Each directory carries a `CONTEXT.md` with `purpose`, `admits`, `refuses` and `m
 
 Adding a file is a two-part act: write the file, and check it against the contract of the directory you put it in. If it does not fit, the answer is usually a different directory, not a wider contract.
 
-**Budgets are load-bearing.** `SKILL.md` reached 12,907 bytes (~3,226 tokens, loaded on *every* invocation) because nothing bounded it. It is now ~5,200. The reference skills for comparison: `prototype` ~738 tokens, `modern-web-guidance` ~1,406, `ponytail` ~1,659, `frontend-design` ~2,065.
+**Budgets are load-bearing.** `SKILL.md` reached 18,121 bytes (~4,493 tokens, loaded on *every* invocation) because nothing bounded it. It is now ~3,263 bytes (~816 tokens). Knowledge-index interpret lives in `references/interpret-knowledge.md`. Visual interpret lives in `references/interpret-art.md`. Comparators: `prototype` ~738 tokens, `modern-web-guidance` ~1,406, `ponytail` ~1,659.
 
 ## Two metrics, deliberately separate
 

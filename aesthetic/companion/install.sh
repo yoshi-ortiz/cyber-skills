@@ -35,7 +35,7 @@ if [[ -z "$TARGET" || ! -d "$TARGET/scripts" ]]; then
 fi
 
 STAMP="$(date +%Y%m%d-%H%M%S)"
-for f in server.cjs start-server.sh; do
+for f in server.cjs start-server.sh frame-template.html; do
   if [[ -f "$TARGET/scripts/$f" ]] && ! cmp -s "$HERE/$f" "$TARGET/scripts/$f"; then
     cp "$TARGET/scripts/$f" "$TARGET/scripts/$f.bak-$STAMP"
     echo "backed up $f -> $f.bak-$STAMP"

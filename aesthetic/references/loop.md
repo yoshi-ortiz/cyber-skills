@@ -58,6 +58,25 @@ Müller-Brockmann, Bringhurst, Gestalt, Peirce, movement — in
 
 ## 4 · Build
 
+**Draw the comp in HTML/CSS, then render it.** Never hand-author SVG. Authoring
+an SVG means authoring a coordinate system you never see, which is the one job
+the model is worst at -- the ledger carried 59 such previews holding 6352
+`<rect>` and 15 `<path>`, 34 of them with a near-zero opacity somewhere, and a
+session once shipped a comp wrapped in a nested `opacity="0.13"` so the whole
+of the next round went on repairing it instead of improving the design.
+
+```bash
+python3 scripts/bootstrap_harness.py shoot --html comp.html --out shots/<element>.png
+python3 scripts/bootstrap_harness.py decide --element <id> --preview shots/<element>.png ...
+```
+
+`shoot` renders at 510px wide (Chrome, falling back to QuickLook) and **refuses
+a comp that is blank or has no contrast against its own ground** -- measured on
+the pixels, so "nearly invisible" cannot reach the ledger. `decide --preview`
+re-checks every PNG for the same reason. If QuickLook is doing the rendering it
+fits the page into a square, so the comp must read without depending on its own
+aspect ratio.
+
 Real content, never lorem and never emoji standing in for ranked artwork.
 Preserve every standing element outside this round's cohort — an element the user
 ranked is not yours to restyle because it happened to be nearby.
@@ -89,3 +108,11 @@ turn it arrives is lost at the next session boundary.
 Next round, improve liked-but-low-scoring (`polish`) work first. A low star with
 a thumb up is the clearest instruction the ledger can carry: the idea is right
 and the drawing is not there yet. Never replace it.
+
+`article` now **refuses** a round that ignores this, because for six sessions it
+was a sentence here and nothing else: eighteen liked-and-low elements sat
+untouched while eleven fresh siblings were proposed over them, and the mean
+score fell to 1.56. It also refuses two redraws of the same incumbent in one
+round — a second variant is wallpaper, not a second option. Redraw as
+`<liked-low-id>.<slug>` so the pair is scored together, or name the id itself to
+re-ask.

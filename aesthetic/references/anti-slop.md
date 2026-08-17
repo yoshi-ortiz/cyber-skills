@@ -13,6 +13,10 @@ The failure mode is statistical defaults: familiar sans-serif, purple-to-cyan gr
 - Reach for the corpus before reaching for a default. "Looks fine" is the symptom, not the goal.
 - `controls` never hardcodes colour: it emits `var(--dh-*)` with fallbacks so the project palette wins.
 
+- Comps are drawn in HTML/CSS and rendered by `shoot`, never hand-written as
+  SVG. A drawing the model cannot see is a drawing nobody reviewed, which is
+  the definition at the top of this file.
+
 **Check:** would this read as this product with the logo removed?
 
 ## 2. Maintenance debt behind a convincing surface

@@ -1033,6 +1033,157 @@ FEEDBACK_STYLE = FEEDBACK_STYLE.replace(
     STYLE_MARKER, f"{STYLE_MARKER}\n/* dh-controls-version: {CONTROLS_VERSION} */", 1)
 
 
+# Drawing a comp as raw SVG is the one job the model is worst at: it authors a
+# coordinate system it never sees. The ledger recorded the cost -- 59 previews
+# holding 6352 <rect> and 15 <path>, and 34 of them carrying a near-zero opacity
+# somewhere. One session shipped a comp wrapped in a nested `opacity="0.13"` and
+# the NEXT session's entire round was spent repairing it, not improving it.
+#
+# So a preview is drawn in HTML/CSS -- which the model is good at, and which the
+# browser lays out instead of the model -- rendered to a small PNG, and gated on
+# its own PIXELS before it can be recorded. "Nearly invisible" stops being a
+# thing a session can discover one score later.
+CHROME_CANDIDATES = (
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+)
+# 8.5x11 at a deliberately cheap resolution. The thumbnail is read at 96px and
+# the slideshow at roughly 700px tall, so this is already generous, and every
+# preview is base64-inlined into the article -- a 2x render would triple a page
+# that is already over a megabyte for nothing the reader can see.
+PREVIEW_WIDTH = 510
+PREVIEW_RATIO = 11 / 8.5
+# Below this fraction of non-background pixels the comp is not "minimal", it is
+# absent. Deliberately loose: coverage is a blank-page check and nothing more.
+# Measured on real renders, a faded comp and a good one sit only 2.5x apart on
+# coverage (1.26% against 3.11%) but 7x apart on contrast (94 against 699), so a
+# coverage threshold tight enough to catch fading would start refusing sparse
+# comps that are perfectly legible. Contrast is the discriminator; this only
+# catches a page with nothing on it at all.
+MIN_INK_COVERAGE = 0.005
+# And ink that IS there has to be distinguishable from the ground it sits on.
+# This is the threshold that actually catches the opacity failure: a comp faded
+# to 13% still covers a THIRD of the page in pixels that differ from the ground,
+# so coverage alone waves it through -- it is not blank, it is weak. What
+# separates it is that its strongest mark reaches only ~60/765 of contrast,
+# where a real comp (even a deliberately sparse one) puts something at 650+.
+# Coverage answers "is anything there"; contrast answers "can any of it be seen".
+MIN_INK_CONTRAST = 180
+
+
+def find_chrome() -> str:
+    for candidate in CHROME_CANDIDATES:
+        if Path(candidate).is_file():
+            return candidate
+    for name in ("chromium", "google-chrome", "google-chrome-stable", "chrome"):
+        found = shutil.which(name)
+        if found:
+            return found
+    return ""
+
+
+def render_html_preview(html: Path, out: Path, width: int = PREVIEW_WIDTH,
+                        timeout: int = 45) -> str:
+    """Rasterise a comp. Returns the renderer used, or raises.
+
+    Chrome is preferred because it honours the CSS the comp was written in.
+    `qlmanage` is the fallback that needs nothing installed, but QuickLook fits
+    the page into a square thumbnail, so the comp must not depend on its own
+    aspect ratio to read.
+    """
+    html = html.resolve(strict=True)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    height = int(round(width * PREVIEW_RATIO))
+    chrome = find_chrome()
+    if chrome:
+        profile = tempfile.mkdtemp(prefix="dh-shot-")
+        try:
+            result = subprocess.run(
+                [chrome, "--headless=new", "--disable-gpu", "--no-first-run",
+                 "--no-default-browser-check", "--disable-extensions", "--disable-sync",
+                 f"--user-data-dir={profile}", "--hide-scrollbars",
+                 "--force-device-scale-factor=1", "--virtual-time-budget=3000",
+                 f"--window-size={width},{height}",
+                 f"--screenshot={out}", html.as_uri()],
+                capture_output=True, timeout=timeout)
+            if out.is_file() and out.stat().st_size:
+                return "chrome"
+            detail = (result.stderr or b"").decode("utf-8", "replace").strip()[:200]
+        except subprocess.TimeoutExpired:
+            detail = "timed out"
+        finally:
+            shutil.rmtree(profile, ignore_errors=True)
+    else:
+        detail = "no chrome/chromium found"
+    if not shutil.which("qlmanage"):
+        raise HarnessError(f"could not render {html.name}: {detail}, and qlmanage "
+                           "is unavailable. Install Chrome or render the PNG yourself.")
+    with tempfile.TemporaryDirectory() as staging:
+        subprocess.run(["qlmanage", "-t", "-s", str(width), "-o", staging, str(html)],
+                       capture_output=True, timeout=timeout)
+        made = list(Path(staging).glob("*.png"))
+        if not made:
+            raise HarnessError(f"could not render {html.name}: {detail}, and QuickLook "
+                               "produced nothing either.")
+        shutil.copyfile(made[0], out)
+    return "qlmanage"
+
+
+def preview_ink(png: Path) -> dict[str, float]:
+    """Measure what a rendered comp actually puts on the page.
+
+    Reported as numbers rather than a verdict so the caller can say WHY it is
+    refusing, and so a legitimately sparse comp can be argued about against a
+    figure instead of an opinion.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        return {}
+    with Image.open(png) as handle:
+        image = handle.convert("RGB")
+        if max(image.size) > 400:  # measuring does not need full resolution
+            image.thumbnail((400, 400))
+        # `getdata` is deprecated in Pillow 12 and gone in 14; `getpixel` over a
+        # thumbnailed image is small enough that the loop costs nothing.
+        width, height = image.size
+        pixels = [image.getpixel((x, y)) for y in range(height) for x in range(width)]
+    if not pixels:
+        return {"coverage": 0.0, "contrast": 0.0}
+    counts: dict[tuple, int] = {}
+    for pixel in pixels:
+        counts[pixel] = counts.get(pixel, 0) + 1
+    ground = max(counts, key=counts.get)
+
+    def distance(pixel: tuple) -> int:
+        return sum(abs(a - b) for a, b in zip(pixel, ground))
+
+    ink = [p for p in pixels if distance(p) > 40]
+    return {"coverage": len(ink) / len(pixels),
+            "contrast": float(max((distance(p) for p in ink), default=0)),
+            "ground": ground}
+
+
+def check_preview_legible(png: Path) -> None:
+    """Refuse a comp the user would be asked to score without being able to see it."""
+    ink = preview_ink(png)
+    if not ink:  # no Pillow: measuring is unavailable, not failing
+        return
+    if ink["coverage"] < MIN_INK_COVERAGE:
+        raise HarnessError(
+            f"{png.name} renders essentially blank -- {ink['coverage'] * 100:.2f}% of the "
+            f"page differs from its own ground. This is the `opacity=0.13` failure: the "
+            "markup is there and the drawing is not. Open the HTML, fix what is hiding it, "
+            "and shoot it again. Do not record a preview the user cannot see.")
+    if ink["contrast"] < MIN_INK_CONTRAST:
+        raise HarnessError(
+            f"{png.name} has ink but no contrast -- the strongest mark is only "
+            f"{ink['contrast']:.0f}/765 away from the ground. Nothing on this page can be "
+            "read at thumbnail size, so a score would be a score of nothing.")
+
+
 def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
     """Resolve and hash a preview graphic for a design element.
 
@@ -1049,6 +1200,10 @@ def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
     if candidate.suffix.lower() not in PREVIEW_SUFFIXES:
         raise HarnessError(f"unsupported preview type '{candidate.suffix}'; use one of "
                            + ", ".join(sorted(PREVIEW_SUFFIXES)))
+    # A rendered comp can be checked; hand-authored SVG cannot be, which is
+    # exactly why it is no longer the way to draw one.
+    if candidate.suffix.lower() == ".png":
+        check_preview_legible(candidate)
     return {"path": candidate.relative_to(project_root).as_posix(), "sha256": sha256_file(candidate)}
 
 
@@ -1061,32 +1216,36 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
     quietly disabled the check that every row shows what is being judged.
     """
     txt = txt or strings_for(DEFAULT_LANGUAGE)
+    # Every thumbnail names the element it draws. A click can then open that
+    # element's slide wherever the thumbnail sits -- in a row, in a folded
+    # backlog strip, or beside a specimen. Without the id the folded strips
+    # were 95 pictures that led nowhere.
+    tag = f'<span class="dh-shot" data-el="{html_escape(element)}" style="{SHOT_INLINE}">'
     if not preview:
-        return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
-                f'<span class="dh-shot-missing" data-dh-no-graphic="1">{txt["no-graphic"]}'
+        return (f'{tag}<span class="dh-shot-missing" data-dh-no-graphic="1">{txt["no-graphic"]}'
                 '<br>--preview</span></span>')
     if project_root is None:
-        return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
-                f'<span class="dh-shot-missing">{preview["path"]}</span></span>')
+        return f'{tag}<span class="dh-shot-missing">{preview["path"]}</span></span>'
+
     path = (project_root / preview["path"])
     if not path.is_file():
-        return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
-                f'<span class="dh-shot-missing">gráfico ausente<br>{preview["path"]}</span></span>')
+        return (f'{tag}<span class="dh-shot-missing">gráfico ausente<br>'
+                f'{preview["path"]}</span></span>')
     suffix = path.suffix.lower()
     if suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
         media = "image/jpeg" if suffix in {".jpg", ".jpeg"} else f"image/{suffix.lstrip('.')}"
         encoded = base64.b64encode(path.read_bytes()).decode("ascii")
         body = f'<img alt="" src="data:{media};base64,{encoded}">'
-        return f'<span class="dh-shot" style="{SHOT_INLINE}">{body}</span>'
+        return f"{tag}{body}</span>"
     # svg / html fragment: scaled inside a clipped frame rather than reflowed
     fragment = path.read_text(encoding="utf-8")
     if suffix == ".svg":
         # Force the root <svg> to fill the frame regardless of its own width/height attrs.
         fragment = re.sub(r"<svg\b", '<svg preserveAspectRatio="xMidYMid meet" '
                           'style="width:100%;height:100%;display:block"', fragment, count=1)
-        return f'<span class="dh-shot" style="{SHOT_INLINE}">{fragment}</span>'
-    return (f'<span class="dh-shot" style="{SHOT_INLINE}">'
-            f'<span class="dh-shot-inner" style="{SHOT_INNER_INLINE}">{fragment}</span></span>')
+        return f"{tag}{fragment}</span>"
+    return (f'{tag}<span class="dh-shot-inner" style="{SHOT_INNER_INLINE}">'
+            f'{fragment}</span></span>')
 
 
 def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str] | None = None,
@@ -1253,10 +1412,18 @@ ARTICLE_STYLE = """<style>/* dh-article */
    var() the screen already sets, and the harness supplies only structure. */
 html:has(.dh-art){scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html:has(.dh-art){scroll-behavior:auto}}
-.dh-art{--dh-rule:color-mix(in srgb, var(--dh-ink,#111) 16%, transparent);
+/* One spacing scale, used everywhere. Before this the page carried a dozen
+   hand-typed gaps -- zones at 56/40/44, 0/60/0 and 72/34/40, groups at 32/12,
+   specimens at 22 -- so nothing lined up with anything and the eye read the
+   rhythm as noise. Empty space only reads as design when it repeats. */
+.dh-art{--s1:8px;--s2:14px;--s3:24px;--s4:40px;--s5:64px;--s6:104px;
+ --dh-rule:color-mix(in srgb, var(--dh-ink,#111) 16%, transparent);
  background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
  font:400 15px/1.55 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
- max-inline-size:1180px;margin:0 auto;padding:0 24px 96px;box-sizing:border-box}
+ max-inline-size:1180px;margin:0 auto;padding:0 24px var(--s6);box-sizing:border-box;
+ /* A short article left the rest of the viewport unpainted -- the host page's
+    canvas, which is black in a dark viewer, showing under the last section. */
+ min-block-size:100dvh}
 .dh-art *,.dh-art *::before,.dh-art *::after{box-sizing:inherit}
 /* Hero. The thesis is the QUESTION this round asks -- not a stat block, which
    would say what has been counted rather than what is wanted. */
@@ -1270,14 +1437,16 @@ html:has(.dh-art){scroll-behavior:smooth}
    the count. Not a headline. */
 /* A proposal shown beside what it replaces. "Is this good?" has no answer;
    "is this better than what stands?" does. */
-.dh-versus{display:flex;flex-direction:column;gap:7px;margin:0 0 22px;padding:16px;
- border:1px solid var(--dh-rule);border-radius:12px}
+.dh-versus{display:flex;flex-direction:column;gap:var(--s1);margin:0 0 var(--s3);padding:var(--s3);
+ border:1px solid var(--dh-rule);border-radius:14px}
 .dh-versus-label{margin:0}
 .dh-versus-label b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
  color:color-mix(in srgb, currentColor 58%, transparent)}
 .dh-versus-label b.dh-now{color:var(--dh-accent,#d9482a)}
-.dh-versus .dh-fb-before{opacity:.7}
-.dh-versus .dh-fb-before:hover{opacity:1}
+/* Not `opacity`. A light card at 70% over the round zone's dark ground blends
+   toward it and comes out muddy olive -- the "before" row looked broken rather
+   than recessed. An opaque tint recedes on any ground. */
+.dh-versus .dh-fb-before{background:color-mix(in srgb, var(--dh-ink,#111) 10%, var(--dh-bg,#fff))}
 /* What the round is ABOUT, in the system's own vocabulary. Without it the
    reader has to infer the domain from three unrelated rows. */
 .dh-domain{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
@@ -1348,11 +1517,15 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-thigh{color:#9ec78a}
 .dh-tanti{color:#9c7078}
 .dh-tnone{color:color-mix(in srgb, var(--dh-ink,#111) 18%, transparent)}
-/* Zones. Four, and the reader must never wonder which one they are in. */
-.dh-zone{padding:60px 0 0}
-.dh-zone > header{margin:0 0 26px}
-.dh-zone h2{margin:0;font-size:clamp(24px,3.4vw,36px);font-weight:800;letter-spacing:-.028em}
-.dh-zone .dh-note{margin:8px 0 0;max-inline-size:52ch;font-size:13px;
+/* Zones. Four, and the reader must never wonder which one they are in.
+   The gap BETWEEN zones is what says "this is a different question" -- it was
+   60px, barely more than the 40px inside a group, so the sections ran into one
+   another and the page read as one undifferentiated scroll. */
+.dh-zone{padding:var(--s6) 0 0}
+.dh-zone > header{margin:0 0 var(--s4);max-inline-size:60ch}
+.dh-zone h2{margin:0;font-size:clamp(24px,3.4vw,36px);font-weight:800;letter-spacing:-.028em;
+ text-wrap:balance}
+.dh-zone .dh-note{margin:var(--s1) 0 0;max-inline-size:52ch;font-size:13px;
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
 .dh-zone .dh-tag{display:inline-block;margin:0 0 12px;padding:4px 10px;border-radius:999px;
  font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
@@ -1360,7 +1533,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* This round is the only section that asks for something, so it is the only one
    that raises its voice: inverted, full bleed against everything else. */
 .dh-zone[data-zone="round"]{background:var(--dh-ink,#111);color:var(--dh-bg,#fff);
- margin:56px 0 0;padding:40px 28px 44px;border-radius:14px;
+ margin:var(--s5) 0 0;padding:var(--s4) var(--s4) var(--s5);border-radius:16px;
  /* The ground inverts here, so the rule token has to invert with it. Derived
     from ink, it was ink-on-ink: every border inside this zone vanished. */
  --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 30%, transparent)}
@@ -1375,7 +1548,7 @@ html:has(.dh-art){scroll-behavior:smooth}
    thumbs inside them hard to read, and those controls are the only way a
    rejection gets undone -- so the ground goes quiet and the rows stay at full
    contrast on top of it. */
-.dh-zone[data-zone="antipattern"]{margin:72px 0 0;padding:34px 28px 40px;border-radius:14px;
+.dh-zone[data-zone="antipattern"]{margin:var(--s5) 0 0;padding:var(--s4);border-radius:16px;
  background:color-mix(in srgb, var(--dh-ink,#111) 6%, var(--dh-bg,#fff));
  border:1px solid var(--dh-rule)}
 .dh-zone[data-zone="antipattern"] > header h2{font-size:clamp(19px,2.4vw,25px);font-weight:700;
@@ -1390,9 +1563,21 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* Specimens: the section shows the actual material before it shows the rows.
    A palette section that lists ids is a list; one that shows the colours is a
    design system. */
-.dh-spec{margin:0 0 22px}
-.dh-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));
- gap:10px;margin:0;padding:0;list-style:none}
+/* `align-items:start`, or the grid stretches every card to the tallest and a
+   swatch with no controls carries the void where they would have been. Two of
+   three palette cards were 47% empty beige -- measured at 131px of nothing --
+   which reads as a broken layout, not as breathing room. */
+/* `auto-fit`, not `auto-fill`: auto-fill keeps the empty tracks it can fit, so
+   three swatches in a 1052px row sat in a five-column grid with 426px of dead
+   grid beside them. auto-fit collapses the empty tracks and the cards fill the
+   row they are given. */
+.dh-swatches{display:grid;/* 248px, not the 196 this grid was given before the scoring strip moved into
+      the card. The strip is five 30px stars, a zero and three verdict buttons --
+      216px of fixed touch targets that cannot shrink -- so a 196px column made
+      the grid overflow its own card by 42px at the narrow end. The card floor
+      is now whatever the controls actually need. */
+ grid-template-columns:repeat(auto-fit,minmax(248px,1fr));
+ align-items:start;gap:var(--s2);margin:0;padding:0;list-style:none}
 .dh-swatches li{border:1px solid var(--dh-rule);border-radius:8px;overflow:hidden;
  background:color-mix(in srgb, currentColor 7%, transparent)}
 .dh-swatches .dh-chip{display:block;block-size:76px}
@@ -1445,10 +1630,24 @@ html:has(.dh-art){scroll-behavior:smooth}
  color:color-mix(in srgb, currentColor 70%, transparent)}
 .dh-spec-score .dh-fb [data-sentiment]:hover,
 .dh-spec-score .dh-fb [data-verdict]:hover{border-color:currentColor}
-/* A swatch column is far narrower than a control strip, so the strip was cut
-   off mid-way: two stars and nothing else. It wraps here instead. */
+/* A swatch column is far narrower than a control strip. Wrapping was the first
+   answer and it only moved the failure: the strip measures 328px of controls in
+   a 319px column, so it overflowed by NINE pixels and stranded the tick alone
+   on a second line -- and at the grid's 196px minimum not even the stars fit.
+   There is no width at which one line works, so the break is made on purpose:
+   a three-column grid, ranks on the first row, verdicts on the second. */
 .dh-swatches .dh-spec-score{inline-size:100%}
-.dh-swatches .dh-spec-score .dh-signals{flex-wrap:wrap;gap:4px}
+.dh-swatches .dh-spec-score .dh-signals{display:grid;grid-template-columns:auto auto auto;
+ justify-content:start;align-items:center;gap:6px 8px;flex-wrap:initial}
+.dh-swatches .dh-spec-score .dh-zero{grid-column:1}
+.dh-swatches .dh-spec-score .dh-stars{grid-column:2 / -1}
+/* The zero's trailing rule separated it from the stars on one line. Wrapped to
+   its own cell it became a bar dangling in empty space. */
+.dh-swatches .dh-spec-score .dh-zero{border-inline-end:0;padding-inline-end:0}
+/* No type-size override here. Shrinking the glyph does not shrink the control:
+   each star is a 30px touch target from the controls stylesheet and the strip
+   is 170px whatever the font does, so the rule was dead weight hiding the real
+   constraint -- which is the COLUMN, fixed below. */
 .dh-swatches li{display:flex;flex-direction:column}
 .dh-swatches .dh-spec-score{margin:0;padding:8px 10px 10px;border-block-start:1px solid var(--dh-rule)}
 .dh-face-head .dh-face-use{margin-inline-start:auto;font-size:9.5px;font-weight:700;
@@ -1517,7 +1716,12 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-group{scroll-margin-block-start:104px}
 /* Collapsible, and legible while collapsed. */
 .dh-acc{margin:0 0 6px}
-.dh-acc > summary{cursor:pointer;list-style:none;align-items:center}
+/* `flex-wrap`, or the thumb strip's `flex-basis:100%` is ignored on a nowrap
+   row: an 800px strip then shared a single line with the heading and crushed it
+   until "Ilustración y textura" broke across two lines in a 200px column. The
+   name gets its own line; the strip gets the full width under it. */
+.dh-acc > summary{cursor:pointer;list-style:none;align-items:center;flex-wrap:wrap;
+ gap:var(--s1) var(--s2)}
 .dh-acc > summary::-webkit-details-marker{display:none}
 /* The glyph itself, not a hex escape: the escape came back out of the browser
    as U+0015 and drew the literal text "B8" beside every group. */
@@ -1533,12 +1737,127 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* Jumped-to rows must clear the sticky bars, or the bar lands on top of the
    row it just took you to. */
 .dh-art .dh-fb{scroll-margin-block-start:112px}
+/* Fifty-four rows of the same height, abutting at zero margin, is a wall --
+   measured: 8100px of near-identical 150px bands with no gap anywhere in it.
+   Nothing tells the eye where one judgement ends and the next begins, which is
+   the whole of "chaotic" in a page whose individual rows are fine.
+   A row paints the page's own ground, so with no gap and no edge it was not
+   even visible as an object -- the wall had no seams at all. Each row becomes
+   a card: hairline edge, real gap, and a hover the pointer can confirm.
+   Borders rather than alternating bands, because these rows share a container
+   with specimens and versus-blocks, so any nth-of-type banding would drift.
+   `+` and not a blanket margin, so the first row still sits tight under its
+   own heading -- a heading and its first row are one unit. */
+.dh-art .dh-fb + .dh-fb{margin-block-start:var(--s1)}
+.dh-art .dh-fb{border:1px solid var(--dh-rule);border-radius:10px;
+ padding-inline:var(--s2);transition:border-color .12s,background .12s}
+.dh-art .dh-fb:hover{border-color:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
+ background:color-mix(in srgb, var(--dh-ink,#111) 4%, var(--dh-bg,#fff))}
+/* No round-zone override. The rule above mixes ink INTO bg, so it stays
+   opaque and is already correct on both grounds -- an override built from
+   `transparent` let the inverted zone show through a row that keeps its own
+   light ground and its own dark ink, which is how hovering a proposal turned
+   it into dark text on a near-black card. This is the inverted-zone token trap
+   for the fourth time: anything here derived from the PAGE ground rather than
+   the ROW's own ground breaks the moment the section inverts. */
+/* The group heading is the hierarchy step the wall was missing: it was 12px
+   from its rows and 32px from the group above, a four-point difference the eye
+   cannot resolve. Now the step is 64 against 8, and it carries a rule.
+   The `.dh-art` prefix is load-bearing: the controls stylesheet is emitted
+   AFTER this one and sets `.dh-group` itself, so a bare selector here would
+   merely tie on specificity and lose. */
+.dh-art .dh-group{margin:var(--s5) 0 var(--s2);padding-block-end:var(--s1);
+ border-block-end:1px solid var(--dh-rule);
+ /* 20px bold put the group name in the same voice as the 25px section title,
+    so the page read as one long run of headings with no rank between them.
+    A group is a LABEL on a set, not a section -- it steps down decisively. */
+ font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-art .dh-group .dh-count{font-size:11px;letter-spacing:0;opacity:.7}
+.dh-zone[data-zone="round"] .dh-group{
+ color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
+.dh-art .dh-spec + .dh-fb,.dh-art .dh-group + .dh-fb{margin-block-start:0}
+.dh-art .dh-spec{margin:0 0 var(--s4)}
 @media (max-width:640px){
  .dh-art{padding-inline:16px}
  .dh-zone[data-zone="round"],.dh-zone[data-zone="antipattern"]{padding-inline:16px}
  .dh-faces .dh-sample{font-size:30px}
 }
-@media (prefers-reduced-motion:reduce){.dh-art *{transition:none!important}}
+/* The slideshow. A thumbnail is 96px of an 8.5x11 sheet -- enough to recognise
+   a drawing you have already seen, nowhere near enough to JUDGE one, which is
+   what the page is asking for. So every thumbnail opens the same graphic at
+   full height with its argument beside it and its own scoring strip under
+   that, and arrows walk the whole set without going back to the scroll. */
+.dh-lb[hidden]{display:none}
+.dh-lb{position:fixed;inset:0;z-index:100;display:grid;
+ grid-template-rows:auto minmax(0,1fr) auto;gap:var(--s2);padding:var(--s2);
+ background:color-mix(in srgb, var(--dh-ink,#111) 92%, transparent);
+ color:var(--dh-bg,#fff);
+ /* The overlay inverts, so anything derived from ink would be ink-on-ink --
+    the same trap the round zone hit three times. Re-point the token. */
+ --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 32%, transparent)}
+.dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px}
+.dh-lb-count{font-size:11px;font-weight:700;letter-spacing:.16em;font-variant-numeric:tabular-nums;
+ opacity:.75;flex:none}
+.dh-lb-id{font-size:13px;font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere;
+ min-inline-size:0}
+.dh-lb-state{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+ padding:3px 9px;border-radius:999px;border:1px solid var(--dh-rule);flex:none;opacity:.8}
+.dh-lb-x{margin-inline-start:auto;flex:none;inline-size:34px;block-size:34px;border-radius:8px;
+ border:1px solid var(--dh-rule);background:transparent;color:inherit;font:inherit;font-size:17px;
+ line-height:1;cursor:pointer}
+.dh-lb-x:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 14%, transparent)}
+/* Stage: the graphic, and to its side the argument that was made for it. On a
+   narrow pane the argument drops under the graphic rather than squeezing it. */
+.dh-lb-stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,340px);
+ gap:var(--s3);align-items:center;min-block-size:0}
+@media (max-width:820px){.dh-lb-stage{grid-template-columns:minmax(0,1fr);
+ grid-template-rows:minmax(0,1fr) auto;overflow-y:auto}}
+.dh-lb-frame{position:relative;block-size:100%;min-block-size:0;display:grid;
+ grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--s2)}
+.dh-lb-art{block-size:100%;min-block-size:0;display:grid;place-items:center;overflow:hidden}
+/* The thumbnail's own markup, re-scaled. `--dh-shot-w` is what sizes a shot,
+   so the slide sets it to the frame height rather than restyling the node. */
+.dh-lb-art .dh-shot{--dh-shot-w:min(62vh, 100%);inline-size:auto;block-size:min(78vh,100%);
+ aspect-ratio:8.5/11;background:#fff;border-radius:4px;
+ box-shadow:0 18px 60px rgba(0,0,0,.45)}
+.dh-lb-nav{flex:none;inline-size:40px;block-size:40px;border-radius:999px;cursor:pointer;
+ border:1px solid var(--dh-rule);background:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
+ color:inherit;font:inherit;font-size:18px;line-height:1}
+.dh-lb-nav:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent)}
+.dh-lb-nav[disabled]{opacity:.25;cursor:default}
+/* The argument: what was claimed for this drawing, and the strip that answers
+   it. Judging without the claim in view is what "score this" kept meaning. */
+.dh-lb-side{display:flex;flex-direction:column;gap:var(--s2);max-block-size:100%;
+ overflow-y:auto;font-size:13px;line-height:1.5}
+.dh-lb-side .dh-lb-why{margin:0;opacity:.92}
+.dh-lb-side .dh-lb-sub{margin:0;font-size:11.5px;opacity:.68}
+.dh-lb-side .dh-lb-sub b{font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+ font-size:9.5px;display:block;margin-block-end:2px;opacity:.8}
+.dh-lb-score{padding-block-start:var(--s2);border-block-start:1px solid var(--dh-rule)}
+/* The strip is a live proxy: clicking here clicks the row's own control, so
+   the ledger has exactly one write path and the lightbox never holds state. */
+.dh-lb-score .dh-stars > *{color:color-mix(in srgb, currentColor 38%, transparent);
+ cursor:pointer;font-size:21px}
+.dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
+.dh-lb-score .dh-stars{display:flex;gap:4px;align-items:center}
+.dh-lb-acts{display:flex;gap:var(--s1);margin-block-start:var(--s2);flex-wrap:wrap}
+.dh-lb-acts button{cursor:pointer;font:inherit;font-size:15px;line-height:1;padding:7px 11px;
+ border-radius:8px;border:1px solid var(--dh-rule);background:transparent;color:inherit}
+.dh-lb-acts button.on{border-color:var(--dh-accent,#d9482a);
+ background:color-mix(in srgb, var(--dh-accent,#d9482a) 30%, transparent)}
+.dh-lb-acts button:hover{border-color:currentColor}
+/* Filmstrip: where you are in the set, and one click to anywhere else. */
+.dh-lb-strip{display:flex;gap:5px;overflow-x:auto;padding-block:4px;scrollbar-width:thin;
+ --dh-shot-w:42px}
+.dh-lb-strip .dh-shot{cursor:pointer;opacity:.5;outline:2px solid transparent;
+ border-radius:2px;background:#fff;transition:opacity .12s}
+.dh-lb-strip .dh-shot:hover{opacity:.85}
+.dh-lb-strip .dh-shot[aria-current="true"]{opacity:1;outline-color:var(--dh-accent,#d9482a)}
+/* A thumbnail that opens something must say so before it is clicked. */
+.dh-art .dh-shot[data-el]{cursor:zoom-in}
+.dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.dh-art *,.dh-lb *{transition:none!important}}
 </style>"""
 
 
@@ -1594,6 +1913,164 @@ TOC_SCRIPT = """<script>/* dh-toc */
   document.addEventListener('DOMContentLoaded',function(){measure();start()});
  else {measure();start()}
  window.addEventListener('resize',measure);
+})();
+</script>"""
+
+
+# The slideshow. A 96px thumbnail is a reminder of a drawing, not a view of
+# one -- so the page was asking for a judgement it never showed enough to make.
+#
+# The strip here holds NO state of its own. Every control is a proxy: it finds
+# the element's real row and clicks its real control, so the ledger keeps one
+# write path and the companion's own rehydrator stays the only thing that
+# decides what a click means. Duplicating that logic per language is exactly
+# how the JS and Python rules drifted apart before.
+LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
+(function(){
+ if(window.__dhLb)return; window.__dhLb=1;
+ var lb,slides=[],at=0,lastFocus=null;
+ function rows(){
+  var seen={},out=[];
+  [].forEach.call(document.querySelectorAll('.dh-art .dh-fb[data-element]'),function(r){
+   var id=r.getAttribute('data-element');
+   // A `before` row is the same element shown again for comparison, and a
+   // specimen carries a controls-only copy of the row with the graphic
+   // deliberately stripped. Either one taken as the slide for an id gives a
+   // blank stage -- six of fifty-eight slides showed nothing at all, and the
+   // counter disagreed with the filmstrip because of it.
+   if(seen[id]||r.classList.contains('dh-fb-before'))return;
+   if(r.closest('.dh-spec-score')||!r.querySelector('.dh-shot'))return;
+   seen[id]=1; out.push(r);
+  });
+  return out;
+ }
+ // Resolve an id against the SLIDE set, never against the document: the first
+ // `.dh-fb` for a palette id in document order is the specimen's controls-only
+ // copy, so a document query returned a node that is not a slide and the
+ // lightbox silently refused to open on exactly the swatches it was built for.
+ function indexOf(id){
+  for(var i=0;i<slides.length;i++){
+   if(slides[i].getAttribute('data-element')===id)return i;
+  }
+  return -1;
+ }
+ function txt(el,sel){var n=el.querySelector(sel);return n?n.textContent.trim():''}
+ function build(){
+  lb=document.createElement('div');
+  lb.className='dh-lb'; lb.hidden=true;
+  lb.setAttribute('role','dialog'); lb.setAttribute('aria-modal','true');
+  lb.innerHTML=
+   '<div class="dh-lb-bar"><span class="dh-lb-count"></span>'+
+   '<span class="dh-lb-id"></span><span class="dh-lb-state"></span>'+
+   '<button class="dh-lb-x" type="button" aria-label="Cerrar">&#10005;</button></div>'+
+   '<div class="dh-lb-stage"><div class="dh-lb-frame">'+
+   '<button class="dh-lb-nav" data-step="-1" type="button" aria-label="Anterior">&#8249;</button>'+
+   '<div class="dh-lb-art"></div>'+
+   '<button class="dh-lb-nav" data-step="1" type="button" aria-label="Siguiente">&#8250;</button>'+
+   '</div><div class="dh-lb-side"></div></div>'+
+   '<div class="dh-lb-strip"></div>';
+  document.body.appendChild(lb);
+  lb.querySelector('.dh-lb-x').addEventListener('click',close);
+  lb.addEventListener('click',function(e){
+   if(e.target===lb){close();return}
+   var nav=e.target.closest('.dh-lb-nav'); if(nav){go(at+ +nav.getAttribute('data-step'));return}
+   var th=e.target.closest('.dh-lb-strip .dh-shot');
+   if(th){go(indexOf(th.getAttribute('data-el')));return}
+   // Proxy: click the row's own control and let the existing handler run.
+   var prox=e.target.closest('[data-proxy]');
+   if(prox){
+    var row=slides[at]; if(!row)return;
+    var real=row.querySelector(prox.getAttribute('data-proxy'));
+    if(real){real.click(); setTimeout(function(){paint()},0)}
+   }
+  });
+  document.addEventListener('keydown',function(e){
+   if(lb.hidden)return;
+   if(e.key==='Escape'){close()}
+   else if(e.key==='ArrowLeft'){go(at-1)}
+   else if(e.key==='ArrowRight'){go(at+1)}
+  });
+ }
+ function paint(){
+  var row=slides[at]; if(!row)return;
+  var id=row.getAttribute('data-element');
+  lb.querySelector('.dh-lb-count').textContent=(at+1)+' / '+slides.length;
+  lb.querySelector('.dh-lb-id').textContent=id;
+  lb.querySelector('.dh-lb-state').textContent=txt(row,'.dh-state');
+  var shot=row.querySelector('.dh-shot');
+  var art=lb.querySelector('.dh-lb-art'); art.innerHTML='';
+  if(shot){var c=shot.cloneNode(true); c.removeAttribute('style'); c.className='dh-shot';
+           art.appendChild(c)}
+  // The argument for this drawing: what it claims, what evidence was cited,
+  // what was actually built. Scoring without it in view is scoring a picture.
+  var side=lb.querySelector('.dh-lb-side'); side.innerHTML='';
+  var why=row.querySelector('.dh-desc:not(.dh-sub)');
+  if(why){var p=document.createElement('p'); p.className='dh-lb-why';
+          p.textContent=why.textContent.trim(); side.appendChild(p)}
+  [].forEach.call(row.querySelectorAll('.dh-desc.dh-sub'),function(d){
+   var p=document.createElement('p'); p.className='dh-lb-sub';
+   var b=d.querySelector('b');
+   p.innerHTML='<b></b>'; p.querySelector('b').textContent=b?b.textContent.trim():'';
+   p.appendChild(document.createTextNode(
+     d.textContent.replace(b?b.textContent:'','').trim()));
+   side.appendChild(p);
+  });
+  var stars=+(row.getAttribute('data-stars')||0);
+  var box=document.createElement('div'); box.className='dh-lb-score';
+  var strip='<div class="dh-stars" role="group">';
+  for(var n=1;n<=5;n++){
+   strip+='<span data-proxy=\\'.dh-stars [data-rank="'+n+'"]\\' role="button" tabindex="0"'+
+          (n<=stars?' class="on"':'')+'>&#9733;</span>';
+  }
+  strip+='</div>';
+  var sent=row.querySelector('[data-sentiment="like"].on')?'like':
+           (row.querySelector('[data-sentiment="dislike"].on')?'dislike':'');
+  var done=row.querySelector('[data-verdict="completed"].on')?' class="on"':'';
+  strip+='<div class="dh-lb-acts">'+
+   '<button type="button" data-proxy=\\'[data-rank="0"]\\'>0</button>'+
+   '<button type="button" data-proxy=\\'[data-sentiment="like"]\\''+
+     (sent==='like'?' class="on"':'')+'>&#128077;</button>'+
+   '<button type="button" data-proxy=\\'[data-sentiment="dislike"]\\''+
+     (sent==='dislike'?' class="on"':'')+'>&#128078;</button>'+
+   '<button type="button" data-proxy=\\'[data-verdict="completed"]\\''+done+'>&#10003;</button>'+
+   '</div>';
+  box.innerHTML=strip; side.appendChild(box);
+  var st=lb.querySelector('.dh-lb-strip'); st.innerHTML='';
+  slides.forEach(function(r,i){
+   var s=r.querySelector('.dh-shot'); if(!s)return;
+   var c=s.cloneNode(true); c.removeAttribute('style'); c.className='dh-shot';
+   c.setAttribute('data-el',r.getAttribute('data-element'));
+   if(i===at)c.setAttribute('aria-current','true');
+   st.appendChild(c);
+  });
+  var cur=st.querySelector('[aria-current="true"]');
+  if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:'nearest',inline:'center'});
+  lb.querySelector('[data-step="-1"]').disabled = at<=0;
+  lb.querySelector('[data-step="1"]').disabled = at>=slides.length-1;
+ }
+ function go(i){ if(i<0||i>=slides.length)return; at=i; paint() }
+ function open(id){
+  slides=rows(); var i=indexOf(id);
+  if(i<0)return;
+  lastFocus=document.activeElement;
+  at=i; lb.hidden=false; paint();
+  lb.querySelector('.dh-lb-x').focus();
+ }
+ function close(){
+  lb.hidden=true;
+  // The row keeps the score; put the reader back where they clicked from.
+  if(lastFocus&&lastFocus.focus)lastFocus.focus();
+ }
+ function start(){
+  build();
+  document.addEventListener('click',function(e){
+   var s=e.target.closest('.dh-art .dh-shot[data-el]');
+   if(!s)return;
+   e.preventDefault(); open(s.getAttribute('data-el'));
+  });
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
+ else start();
 })();
 </script>"""
 
@@ -1736,6 +2213,60 @@ def incumbent_of(element: str, known: set[str]) -> str:
     return ""
 
 
+def check_round_earns_its_place(decisions: dict[str, object], cohort: set[str]) -> None:
+    """Refuse a round that sprays new ideas instead of improving ranked ones.
+
+    `loop.md` says polish liked-but-low-scoring work first, and says it in
+    prose, so every session drifted past it. The ledger shows what that cost:
+    eighteen elements the user liked and scored 1-2 sat untouched while the
+    agent proposed eleven fresh siblings, and the mean score FELL to 1.56. A
+    thumb up on a two-star drawing is the clearest instruction the ledger can
+    carry -- the idea is right, the drawing is not there yet -- and answering
+    it with a brand-new idea throws the instruction away.
+
+    Two refusals, both satisfiable by doing the right thing rather than by
+    passing a flag:
+
+    1. A round of nothing but new ids, while liked-and-low work is waiting.
+       Redrawing one of them (`<parent>.<slug>`) satisfies this, because the
+       redraw's incumbent is the element being polished.
+    2. Two new drawings of the SAME incumbent in one round. That is the
+       `anti-slop` wallpaper tell: a second variant is not a second option,
+       and the user cannot say which of two guesses is better when neither
+       improves on what already stands.
+    """
+    live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
+    known = {e["element"] for e in decisions["elements"]}
+    polish = {e["element"] for e in live
+              if e.get("sentiment") == "like" and int(e.get("stars") or 0) <= 2}
+
+    # A cohort member is "new" when the ledger has never seen it. Its incumbent
+    # is the standing element it redraws, read off its own dotted id.
+    incumbents = {c: incumbent_of(c, known - {c}) for c in cohort}
+    doubled = sorted({inc for inc in incumbents.values() if inc
+                      and sum(1 for v in incumbents.values() if v == inc) > 1})
+    if doubled:
+        raise HarnessError(
+            "this round draws " + ", ".join(doubled) + " twice over. A second variant of the "
+            "same element is wallpaper, not an option -- the user can only say which guess they "
+            "prefer, not whether either beat what stands. Keep the stronger one and drop the rest.")
+
+    if not polish:
+        return
+    touches_polish = any(c in polish or incumbents.get(c) in polish for c in cohort)
+    if touches_polish:
+        return
+    waiting = sorted(polish)
+    raise HarnessError(
+        f"{len(waiting)} element(s) carry a thumb up and a low score -- the user said the idea is "
+        "right and the drawing is not there yet -- and this round improves none of them:\n  "
+        + "\n  ".join(waiting[:8])
+        + (f"\n  ... and {len(waiting) - 8} more" if len(waiting) > 8 else "")
+        + "\nRedraw one as `<that-id>.<slug>` so it is scored against what it replaces, or put the "
+          "element itself in the cohort to re-ask. New ideas proposed over unanswered feedback are "
+          "why the ledger is growing and the scores are not.")
+
+
 ZONES = ("round", "fundamentals", "backlog", "antipattern")
 # Only the backlog earns a second level of navigation: it is the long one, and
 # the reader arrives at it looking for a particular surface.
@@ -1820,7 +2351,10 @@ def render_article(project_root: Path, decisions: dict[str, object],
             tip = f'{txt["zone-round"]}: {tip}'
         return (f'<a class="{bar_class(entry)}" href="#dh-el-{html_escape(entry["element"])}"'
                 f'{" data-asked=\"1\"" if asked else ""} data-tip="{html_escape(tip)}" '
-                f'title="{html_escape(tip)}">'
+                # `aria-label`, never `title`: the strip draws its own tooltip,
+                # and a `title` made the browser draw a SECOND one beside it in
+                # the OS font -- two overlapping labels on top of the key row.
+                f'aria-label="{html_escape(tip)}">'
                 f'<span>{"?" if asked else ""}</span></a>')
 
     def bar_order(entry: dict[str, object]) -> tuple:
@@ -1856,7 +2390,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
                          for prop, key in theme_vars.items() if (theme or {}).get(key))
     root_style = f' style="{declared}"' if declared else ""
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
-           TOC_SCRIPT,
+           TOC_SCRIPT, LIGHTBOX_SCRIPT,
            f'<div class="dh-art"{root_style}>',
            '<header class="dh-hero">',
            f'<p class="dh-eyebrow">{html_escape(txt["article-title"])}</p>',
@@ -2795,6 +3329,12 @@ def parser() -> argparse.ArgumentParser:
     adopt.add_argument("--project-root", required=True, type=Path)
     adopt.add_argument("--companion-ledger", required=True, type=Path,
                        help="path to the companion's durable decisions.jsonl")
+    shoot = subcommands.add_parser(
+        "shoot", help="render an HTML comp to a small PNG preview, and refuse it if it is blank")
+    shoot.add_argument("--html", required=True, type=Path, help="the comp, drawn in HTML/CSS")
+    shoot.add_argument("--out", required=True, type=Path, help="PNG to write, e.g. shots/<element>.png")
+    shoot.add_argument("--width", type=int, default=PREVIEW_WIDTH)
+
     article = subcommands.add_parser(
         "article", help="generate the design-system article that is also the scoring companion")
     article.add_argument("--project-root", required=True, type=Path)
@@ -2886,6 +3426,14 @@ def main() -> int:
             entry = retire_element(args.project_root, args.element, args.winner, args.evidence)
             print(f"Retired {args.element} in favour of {args.winner}. "
                   f"{args.winner} was not written -- its rank and source are untouched.")
+        elif args.command == "shoot":
+            renderer = render_html_preview(args.html, args.out, args.width)
+            check_preview_legible(args.out)
+            ink = preview_ink(args.out)
+            size = args.out.stat().st_size
+            print(f"Wrote {args.out} via {renderer} ({size // 1024}KB, "
+                  + (f"{ink['coverage'] * 100:.1f}% ink" if ink else "ink unmeasured")
+                  + "). Record it with `decide --preview`.")
         elif args.command == "article":
             root = args.project_root.resolve(strict=True)
             theme = {k: getattr(args, k) for k in ("bg", "ink", "accent", "font") if getattr(args, k)}
@@ -2894,6 +3442,7 @@ def main() -> int:
             unknown = sorted(cohort - known)
             if unknown:
                 raise HarnessError("cohort names element(s) not in the ledger: " + ", ".join(unknown))
+            check_round_earns_its_place(load_decisions(root / "spec" / "design-harness"), cohort)
             if args.title:
                 # Remembered, so the next run does not have to be told again --
                 # and so a forgotten flag cannot silently rename the artefact.
