@@ -514,6 +514,21 @@ def validate_tokens(value: object) -> dict[str, object]:
     for swatch in value.get("colors", []):
         if not str(swatch.get("value", "")).strip():
             raise HarnessError("every colour token needs a `value` (the hex the design uses)")
+    # Either every colour in a set is separately rankable or none is. A set
+    # where only the first carries an `element` renders one swatch with a
+    # star strip and the rest without -- which reads as a broken page, and
+    # is how a three-colour palette came to show scoring under `amarillo`
+    # alone. Half-linked is not a state the ledger should be able to hold.
+    linked = [bool(str(c.get("element", "")).strip()) for c in value.get("colors", [])]
+    if len(linked) > 1 and any(linked) and not all(linked):
+        named = [str(c.get("name") or c.get("value"))
+                 for c, has in zip(value.get("colors", []), linked) if not has]
+        raise HarnessError(
+            "these colours carry no `element`, but others in the same set do: "
+            + ", ".join(named)
+            + ". Give every colour its own element id so each is rankable, or give none of "
+            "them one so the set is ranked by its own row. A set where only some are "
+            "rankable renders as a palette that half failed to draw.")
     for face in value.get("fonts", []):
         if not str(face.get("name", "")).strip():
             raise HarnessError("every font token needs a `name` (the face that was chosen)")
@@ -888,7 +903,13 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
    `overflow-wrap:anywhere` broke every word mid-syllable -- "cover.sp / ine.righ
    / t" -- and the strip became unreadable while every control still worked. */
 .dh-fb.dh-fb{display:grid;grid-template-columns:var(--dh-shot-w,96px) minmax(26ch,1fr) auto;
- gap:16px;align-items:center;padding:13px 15px;border:1px solid rgba(0,0,0,.14);
+ gap:16px;
+ /* `start`, not `center`. Centring the graphic, the text and the controls
+    independently gave each a different top -- 14/25/59 on one row, 14/66/59
+    on the next -- so nothing shared an edge and the misalignment MOVED with
+    the length of the description. Top-aligned, the three columns begin
+    together on every row whatever the text does. */
+ align-items:start;padding:13px 15px;border:1px solid rgba(0,0,0,.14);
  border-radius:10px;background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
  font:500 13px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
  contain:layout style;content-visibility:auto;contain-intrinsic-size:auto 120px}
@@ -2082,11 +2103,16 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str],
     colors, fonts = [], []
     for entry in entries:
         tokens = entry.get("tokens") or {}
-        colors += list(tokens.get("colors") or [])
-        fonts += list(tokens.get("fonts") or [])
+        # Carry the OWNING element with each token: a token whose id is
+        # just its owner's is not separately rankable, and pretending it is
+        # was the whole of the palette defect.
+        owner = str(entry["element"])
+        colors += [(owner, c) for c in (tokens.get("colors") or [])]
+        fonts += [(owner, f) for f in (tokens.get("fonts") or [])]
     rows = rows or {}
 
-    def scoreable(token: dict[str, object]) -> str:
+    def scoreable(token: dict[str, object], owner: str = "",
+                  is_set_header: bool = False) -> str:
         """A specimen the user cannot rank is a picture of a decision.
 
         Point a token at an element id and its own controls ride beside it, so
@@ -2095,6 +2121,14 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str],
         """
         linked = str(token.get("element") or "").strip()
         if linked not in rows:
+            return ""
+        # A control on a set HEADER ranks the set, which is what it looks
+        # like. The same control hung on ONE MEMBER of a set claims to rank
+        # that member -- so a palette whose first colour happened to carry
+        # the family's id showed a star strip under `amarillo` and nothing
+        # under `menta` or `rosa`, as if two thirds of the palette had
+        # failed to render. A swatch earns controls by having its OWN id.
+        if linked == owner and not is_set_header:
             return ""
         row = rows[linked]
         # Only the controls. The full row keeps the id, the state and the
@@ -2120,12 +2154,12 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str],
             f'<span class="dh-vals"><b>{html_escape(str(c.get("name") or c["value"]))}</b>'
             f'<code>{html_escape(str(c["value"]))}</code>'
             + (f'<span>{html_escape(str(c["role"]))}</span>' if c.get("role") else "")
-            + "</span>" + scoreable(c) + "</li>"
-            for c in colors)
+            + "</span>" + scoreable(c, owner) + "</li>"
+            for owner, c in colors)
         out.append(f'<div class="dh-spec"><ul class="dh-swatches">{items}</ul></div>')
     if fonts:
         items = []
-        for f in fonts:
+        for owner, f in fonts:
             stack = html_escape(str(f.get("stack") or "inherit"))
             # A family, then every weight it is actually used at, each labelled
             # with the job it does. One sample line and a name is a caption: it
@@ -2153,14 +2187,14 @@ def _specimens(entries: list[dict[str, object]], txt: dict[str, str],
                     f'<span class="dh-var-meta">'
                     f'<b>{html_escape(str(v.get("use") or ""))}</b>'
                     + (f'<code>{html_escape(spec)}</code>' if spec else "")
-                    + "</span>" + scoreable(v) + "</li>")
+                    + "</span>" + scoreable(v, owner) + "</li>")
             items.append(
                 f'<li class="dh-face"><div class="dh-face-head">'
                 f'<b>{html_escape(str(f["name"]))}</b>'
                 f'<code>{stack}</code>'
                 + (f'<span class="dh-face-use">{html_escape(str(f["use"]))}</span>'
                    if f.get("use") else "")
-                + scoreable(f)
+                + scoreable(f, owner, is_set_header=True)
                 + f'</div><ul class="dh-variants">{"".join(rows_out)}</ul></li>')
         out.append(f'<div class="dh-spec"><ul class="dh-faces">{"".join(items)}</ul></div>')
     return "".join(out)
