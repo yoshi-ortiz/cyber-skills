@@ -1,7 +1,7 @@
 ---
 name: aesthetic
 version: 0.8.0
-description: Evidence-backed design harness for durable user decisions and ranked feedback. Use for design work with an inspiration corpus, a knowledge-index text corpus, or an existing spec/design-harness/. Covers art direction, UI, product, space, copy, motion, composition, and information architecture for social sharing.
+description: Ranked design work on a live page. Use to continue a round, critique what stands, prototype one idea, or observe a folder of references — art, UI, product, space, copy, motion, or social posts.
 argument-hint: "continue | critique | prototype | observe @/art-folder"
 ---
 
@@ -11,7 +11,7 @@ Great design is specific to its subject, coherent as a system, visibly refined, 
 
 ## When invoked
 
-- **continue** (or nothing) — `doctor`, `stats`, name the cohort. If `ia.*` stands and there is no art folder, load [continue-after-ia.md](references/continue-after-ia.md). Interview before drawing. Infographic frames, not typeset quotes. Visual is inference. Else [loop.md](references/loop.md).
+- **continue** (or nothing) — open the page, then work. If `ia.*` stands and there is no art folder, load [continue-after-ia.md](references/continue-after-ia.md). Interview before drawing. Infographic frames, not typeset quotes. Visual is inference. Else [loop.md](references/loop.md).
 - **critique** — judge what stands. Rank nothing on the user's behalf.
 - **prototype** — draw one comp to answer one question, `shoot` it, show it. No ledger round, no cohort.
 - **observe @/art-folder** — read the corpus. Routes on what is actually there: INDEX.md present → text, load [interpret-knowledge.md](references/interpret-knowledge.md), propose IA, do not draw. Images and no INDEX.md → visual, load [interpret-art.md](references/interpret-art.md).
@@ -19,6 +19,24 @@ Great design is specific to its subject, coherent as a system, visibly refined, 
 Empty `inspiration/` is not a missing corpus when `knowledge-index/` exists.
 
 **Read disk first.** `spec/design-harness/` exists → continue. It does not → ask once for the corpus directory (read-only, never guessed) and the artistic direction, then `init`. Named directory missing or empty: say so and stop.
+
+## Open the page first
+
+The designer needs something to look at while you work. Scripts at `<skill>/scripts/`, companion at `<skill>/companion/`. Before diagnosing:
+
+1. Companion down: `companion/install.sh` if needed, then `start-server.sh --project-dir "$PWD"`. Two attempts; still down, stop.
+2. `article` from what stands, `--status` in their language, `publish`. Give the URL, `?key=` and all. An IDE preview drops the query string.
+3. Then look. Then draw. `doctor --quiet` after the first proposal this session, in the background. Do not paste it.
+
+Pass `article --agent-url` the deep link back to this session. Left empty it renders as plain text — better than a dead click.
+
+`status --text "..."` updates the bottom bar without a new round. Set it before a long step; `--idle` when you wait on ranks.
+
+## Look, then draw
+
+You are the art director. They rank. Before any new drawing: open the last graphic and the references at the same scale. Name the one move this round makes, in their language. Draw in HTML/CSS, `shoot`, look at the PNG. If you would not pin it, redraw once before showing.
+
+Load [loop.md](references/loop.md) for the full sequence. Filling a spec is not looking.
 
 ## What a design run may write
 
@@ -28,14 +46,6 @@ Empty `inspiration/` is not a missing corpus when `knowledge-index/` exists.
 | `spec/design-harness/`, through harness verbs only | the corpus; companion `decisions.jsonl` |
 
 Do not repair the harness while designing. Do not hand-write a ledger. Writes go through `adopt`, `decide`, `describe`, `supersede`.
-
-## Start
-
-Scripts at `<skill>/scripts/`, companion at `<skill>/companion/`. Existing: `bootstrap_harness.py doctor --project-root .`, then `DECISIONS.md`. New: [commands.md](references/commands.md), `init`, `doctor`. Companion dead: `companion/install.sh`, then `start-server.sh --project-dir "$PWD"`, then `doctor`. Two attempts; still red, stop.
-
-Give the user the URL `doctor` prints, `?key=` and all. An IDE preview drops the query string.
-
-Pass `article --agent-url` the deep link back to this session so the page can point at you. Left empty it renders as plain text — better than a dead click.
 
 ## What a round must be
 
@@ -55,13 +65,9 @@ They are a designer, not the person who built this. Write the way they write.
 **Reason in English if it helps; every word they see is in their language.** Chat replies, progress lines, `--description`, `--title`, `--asks`, `--status`. Ids, flags and paths stay English. Emoji carry the tone — 🧐🍷 for a critique, ✏️ drawing, 🎯 a round to score, ✅ done — one or two, never a row of them.
 
 - **Name the move, not the machinery.** "The tab now takes its role's colour" — not "adopted a per-role token mapping in the palette layer". Art-direction terms are fine; pipeline terms are not.
-- **Say what you are doing and why it takes time**, in one line, before a long step. "Redrawing the cover, about a minute." Silence reads as a hang.
-- **No status essays.** If the screen can show it, do not narrate it. A round ends with: what changed, the URL, and the one thing you want ranked.
+- **One sentence before a long step**, then the bottom bar carries it. "Redrawing the cover, about a minute." Silence reads as a hang; a status essay in chat is the hang.
+- A round ends with: what changed, the URL if it is new, and the one thing you want ranked.
 - Never explain the harness, the ledger, the zones, or your own reasoning unless asked.
-
-## When to run doctor
-
-Once at the start, and once after the first ranks come back. Not between every draw — it is a health check, not a progress bar.
 
 ## Shared
 

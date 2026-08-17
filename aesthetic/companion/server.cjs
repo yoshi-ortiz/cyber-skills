@@ -421,6 +421,20 @@ function handleRequest(req, res) {
 
     res.writeHead(200, securityHeaders({ 'Content-Type': 'text/html; charset=utf-8' }));
     res.end(html);
+  } else if (req.method === 'POST' && pathname === '/agent') {
+    // Live status for the bottom bar. Does not write a screen, so it cannot
+    // steal the newest-mtime route the way a republish would.
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 4096) req.destroy(); });
+    req.on('end', () => {
+      let data = {};
+      try { data = JSON.parse(body || '{}'); } catch (e) { data = {}; }
+      const text = String(data.text || '').slice(0, 200);
+      const state = data.state === 'idle' ? 'idle' : 'working';
+      broadcast({ type: 'dh-agent', text, state });
+      res.writeHead(204, securityHeaders());
+      res.end();
+    });
   } else if (req.method === 'GET' && pathname.startsWith('/files/')) {
     const fileName = path.basename(pathname.slice(7));
     const filePath = path.join(CONTENT_DIR, fileName);

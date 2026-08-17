@@ -2388,6 +2388,26 @@ BRAND_SCRIPT = """<script>/* dh-brand */
 })();
 </script>"""
 
+LIVE_SCRIPT = """<script>/* dh-live */
+(function(){
+ if(window.__dhLive)return; window.__dhLive=1;
+ function apply(text,state){
+  var el=document.querySelector('.dh-live'); if(!el)return;
+  el.setAttribute('data-state',state||'working');
+  if(text)el.textContent=text;
+ }
+ function connect(){
+  var key=''; try{key=sessionStorage.getItem('brainstorm-session-key')||'';}catch(e){}
+  var ws=new WebSocket('ws://'+location.host+(key?'/?key='+encodeURIComponent(key):''));
+  ws.onmessage=function(ev){
+   try{var d=JSON.parse(ev.data);}catch(e){return;}
+   if(d.type==='dh-agent')apply(d.text,d.state);
+  };
+ }
+ connect();
+})();
+</script>"""
+
 TOC_SCRIPT = """<script>/* dh-toc */
 (function(){
  if(window.__dhToc)return; window.__dhToc=1;
@@ -3005,7 +3025,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
                          for prop, key in theme_vars.items() if (theme or {}).get(key))
     root_style = f' style="{declared}"' if declared else ""
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
-           TOC_SCRIPT, LIGHTBOX_SCRIPT, BRAND_SCRIPT,
+           TOC_SCRIPT, LIGHTBOX_SCRIPT, BRAND_SCRIPT, LIVE_SCRIPT,
            f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
            f'data-cheer-text="{html_escape(txt["done-cheer"])}" '
            f'data-done-label="{html_escape(txt["completed"])}" '
@@ -4052,6 +4072,15 @@ def parser() -> argparse.ArgumentParser:
     preflight.add_argument("--missing", default="", help="comma-separated capabilities you confirmed absent")
     doctor = subcommands.add_parser("doctor", help="health-check the whole feedback path end to end")
     doctor.add_argument("--project-root", required=True, type=Path)
+    doctor.add_argument("--quiet", action="store_true",
+                        help="print the companion URL only; for a design run, not a diagnosis dump")
+    status_cmd = subcommands.add_parser(
+        "status", help="update the companion bottom bar without publishing a new round")
+    status_cmd.add_argument("--project-root", required=True, type=Path)
+    status_cmd.add_argument("--text", default="",
+                            help="what you are doing, in the user's language")
+    status_cmd.add_argument("--idle", action="store_true",
+                            help="waiting on ranks; clears the working state")
     embed = subcommands.add_parser("embed", help="fill data-dh-controls placeholders with generated rows")
     embed.add_argument("--project-root", required=True, type=Path)
     embed.add_argument("--screen", required=True, type=Path)
@@ -4189,7 +4218,14 @@ def main() -> int:
                     print(f"unscored {len(report['unscored'])}: " + ", ".join(report["unscored"][:5]))
         elif args.command == "doctor":
             script = Path(__file__).resolve().parent / "companion_doctor.py"
-            return subprocess.call([sys.executable, str(script), str(args.project_root)])
+            cmd = [sys.executable, str(script), str(args.project_root)]
+            if args.quiet:
+                cmd.append("--quiet")
+            return subprocess.call(cmd)
+        elif args.command == "status":
+            from companion_doctor import push_status
+            push_status(args.project_root, args.text, idle=args.idle)
+            print("status idle" if args.idle or not args.text.strip() else "status updated")
         elif args.command == "controls":
             output = args.project_root.resolve(strict=True) / "spec" / "design-harness"
             theme = {"bg": args.bg, "ink": args.ink, "accent": args.accent,

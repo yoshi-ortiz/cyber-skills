@@ -11,8 +11,8 @@ Stop when all are true:
 1. A cohort of 3-6 elements is named in one sentence (what they share).
 2. New drawings use new element ids, proposed at 1 star max.
 3. Standing ranked elements outside the cohort are untouched.
-4. `adopt` then `article` then `publish` then `doctor` ran once this turn.
-5. The user has the full doctor URL (`?key=` included).
+4. `adopt` then `article` then `publish` then `doctor --quiet` ran once this turn.
+5. The user has the companion URL (`?key=` included).
 
 ## Interpret a visual corpus
 
@@ -48,7 +48,7 @@ Rows group by foundation prefix. `init --language es` stores language; never har
 
 Stars 1-5 = graphic execution. 0 is a real worst score. Thumbs = direction. 👍 at 0-2 stars is polish: redraw, do not drop. Full semantics: [companion-contract.md](companion-contract.md).
 
-A round ships 3-6 redraws in one turn. Per turn: one `doctor`, one `adopt`, one `article`, one `publish`, the rest drawing.
+A round ships 3-6 redraws in one turn. Per turn: one `doctor --quiet`, one `adopt`, one `article`, one `publish`, the rest drawing.
 
 ## Do not load
 

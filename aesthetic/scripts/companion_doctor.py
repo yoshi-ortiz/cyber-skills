@@ -29,14 +29,28 @@ from bootstrap_harness import (  # noqa: E402  (sibling script)
 )
 
 PROBE = PROBE_ELEMENT
+QUIET = False
+
+
+def line_for(kind: str, msg: str, quiet: bool = False) -> str:
+    """What one check prints. Quiet mode is for a design run: the URL is the
+    signal, a wall of ok/FAIL is not."""
+    if quiet and kind == "ok":
+        return ""
+    prefix = "FAIL  " if kind == "fail" else "ok    "
+    return prefix + msg
 
 
 def fail(msg: str) -> None:
-    print(f"FAIL  {msg}")
+    text = line_for("fail", msg, QUIET)
+    if text:
+        print(text)
 
 
 def ok(msg: str) -> None:
-    print(f"ok    {msg}")
+    text = line_for("ok", msg, QUIET)
+    if text:
+        print(text)
 
 
 def newest_session(project: Path) -> Path | None:
@@ -117,8 +131,34 @@ def greeting(host: str, port: int, key: str) -> dict | None:
         return None
 
 
+def push_status(project: Path, text: str, *, idle: bool = False) -> None:
+    """Tell the open page what the agent is doing, without republishing."""
+    session = newest_session(project)
+    if session is None:
+        raise RuntimeError("no companion session found; start the companion first")
+    info = json.loads((session / "state" / "server-info").read_text())
+    port, key = info["port"], info["url"].split("key=")[-1]
+    payload = json.dumps({
+        "text": text.strip(),
+        "state": "idle" if idle or not text.strip() else "working",
+    }).encode()
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=4)
+    try:
+        conn.request("POST", f"/agent?key={key}", payload,
+                     {"Content-Type": "application/json"})
+        response = conn.getresponse()
+        response.read()
+        if response.status not in (200, 204):
+            raise RuntimeError(f"companion rejected status ({response.status})")
+    finally:
+        conn.close()
+
+
 def main() -> int:
-    project = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
+    global QUIET
+    QUIET = "--quiet" in sys.argv[1:]
+    argv = [a for a in sys.argv[1:] if a != "--quiet"]
+    project = Path(argv[0] if argv else ".").resolve()
     session = newest_session(project)
     if session is None:
         fail("no companion session found; start the companion first")
@@ -412,6 +452,11 @@ def main() -> int:
         fail("round trip: click did NOT reach the ledger -- feedback is being dropped")
         bad += 1
 
+    if QUIET:
+        if bad:
+            print(f"FEEDBACK PATH BROKEN ({bad} problem(s))")
+        print(info["url"])
+        return 1 if bad else 0
     print(f"\n{'FEEDBACK PATH BROKEN' if bad else 'feedback path healthy'} ({bad} problem(s))")
     # The key is the whole address. An IDE preview widget shows the origin only
     # -- it strips the query string -- so a user who wants the companion in

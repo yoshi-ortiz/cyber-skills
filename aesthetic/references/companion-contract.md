@@ -1,8 +1,8 @@
 # Companion contract
 
-## Health-check first, always
+## After a proposal
 
-Run `doctor` and never claim the companion works on an earlier check. Each link fails silently:
+`doctor --quiet` confirms the path. Each link fails silently:
 
 | Link | Fails as |
 | --- | --- |

@@ -416,6 +416,59 @@ class TheSkillIsInvokedWithFourVerbs(unittest.TestCase):
         self.assertNotIn("interpret @", skill,
                          "an old `interpret @` invocation survived in SKILL.md")
 
+    def test_the_slash_description_reads_like_the_arguments(self):
+        """The description is what slash-command search shows. Four continue
+        sessions opened by dumping harness jargon because this line taught
+        'evidence-backed design harness' instead of the verbs the hint lists."""
+        skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
+        desc = re.search(r"^description:\s*(.*)$", skill, re.M).group(1).lower()
+        for jargon in ("harness", "ledger", "corpus", "knowledge-index",
+                       "spec/design-harness", "evidence-backed"):
+            self.assertNotIn(jargon, desc, f"slash search still says {jargon!r}")
+        for verb in ("continue", "critique", "prototype", "observe"):
+            self.assertIn(verb, desc)
+
+    def test_continue_opens_the_page_before_running_doctor(self):
+        skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
+        continue_line = [ln for ln in skill.splitlines() if ln.startswith("- **continue")][0]
+        doctor_at = continue_line.find("`doctor`")
+        self.assertTrue(doctor_at < 0 or "page" in continue_line[:doctor_at].lower()
+                        or "companion" in continue_line[:doctor_at].lower(),
+                        "continue still leads with doctor: " + continue_line)
+        start = skill.split("## Start")[1].split("## ")[0] if "## Start" in skill \
+            else skill.split("## Open")[1].split("## ")[0]
+        self.assertNotRegex(start, r"(?i)existing:.*\bdoctor\b",
+                            "Start still tells the agent to doctor before showing a page")
+
+
+class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
+    def markup(self, status: str = "") -> str:
+        return bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.", status)
+
+    def test_a_status_line_lands_in_the_live_bar(self):
+        markup = self.markup("Redrawing the cover")
+        live = markup.split('class="dh-live"')[1].split("</i>")[0]
+        self.assertIn("working", live)
+        self.assertIn("Redrawing the cover", live)
+
+    def test_the_page_listens_for_a_live_status_push(self):
+        """`--status` is baked at publish time. Without a listener the bar
+        cannot say what the agent is doing while the designer waits."""
+        script = re.search(r"<script>/\* dh-live \*/(.*?)</script>",
+                           self.markup(), re.S)
+        self.assertIsNotNone(script, "the article lost its live-status script")
+        self.assertIn("dh-agent", script.group(1))
+
+
+class DoctorCanStayQuiet(unittest.TestCase):
+    def test_quiet_swallows_ok_lines(self):
+        import companion_doctor as doctor
+        self.assertEqual(doctor.line_for("ok", "server answering", quiet=True), "")
+        self.assertIn("FAIL", doctor.line_for("fail", "server down", quiet=True))
+        self.assertIn("ok", doctor.line_for("ok", "server answering", quiet=False))
+
 class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
     def test_zero_sits_in_the_star_row_not_the_verdict_row(self):
         # A zero is a rank. In the verdict row it read as a fourth verdict.
