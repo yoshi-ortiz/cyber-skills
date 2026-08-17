@@ -798,7 +798,8 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             # Nothing inside a specimen may derive its colour from the page
             # ink: a specimen can appear in the inverted round, where ink-on-ink
             # is invisible. The article ROOT setting the ground is correct.
-            for rule in (".dh-swatches .dh-vals{", ".dh-swatches code{", ".dh-swatches span{",
+            for rule in (".dh-swatches .dh-vals{", ".dh-swatches .dh-vals code{",
+                         ".dh-swatches .dh-vals > span{",
                          ".dh-face-head code{", ".dh-variants code{"):
                 block = style.split(rule)[1].split("}")[0]
                 self.assertNotIn("--dh-ink", block, rule)
@@ -827,6 +828,67 @@ class TheArticleIsADesignSystem(unittest.TestCase):
                          if re.search(r"margin[^:]*:[^;}]*(-\d|calc\(-)", line)
                          or "margin-inline:-" in line]
             self.assertEqual(offenders, [])
+
+    def test_specimen_controls_take_the_zone_foreground(self):
+        """A row paints its own light ground and sets ink to match. Stripped of
+        that ground, its controls must inherit -- otherwise currentColor is
+        still ink and the strip is ink on ink in the inverted round."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            style = markup.split("<style>/* dh-article */")[1].split("</style>")[0]
+            block = style.split(".dh-spec-score .dh-fb.dh-fb{")[1].split("}")[0]
+            self.assertIn("color:inherit", block)
+            # and the overrides must outrank the controls sheet that follows
+            for rule in (".dh-spec-score .dh-fb .dh-stars > *{",
+                         ".dh-spec-score .dh-fb [data-sentiment]"):
+                self.assertIn(rule, style)
+
+    def test_swatch_captions_do_not_dim_the_controls_below_them(self):
+        """`.dh-swatches span` also matched every span in the nested scoring
+        strip, dimming currentColor again at each level until a star was ink at
+        ten percent."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            style = markup.split("<style>/* dh-article */")[1].split("</style>")[0]
+            self.assertNotIn(".dh-swatches span{", style)
+            self.assertIn(".dh-swatches .dh-vals > span{", style)
+
+    def test_the_long_zone_folds_and_shows_its_work_while_folded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.system(root)
+            bh.record_decision(root, "voice.labels", "proposed", 1, "fixture", [])
+            decisions = bh.load_decisions(root / "spec" / "design-harness")
+            markup = bh.render_article(root, decisions)
+            backlog = markup.split('id="dh-zone-backlog"')[1].split("</section>")[0]
+            self.assertIn('<details class="dh-acc"', backlog)
+            self.assertIn("dh-acc-thumbs", backlog)
+            self.assertEqual(backlog.count("<details"), backlog.count("</details>"))
+            # the round must never fold: it is the ask
+            self.assertNotIn("dh-acc", markup.split('id="dh-zone-round"')[1]
+                             .split("</section>")[0])
+
+    def test_the_second_bar_sticks_below_the_measured_first(self):
+        """47px was typed when the bar was one row tall. It grew a strip and a
+        key, and the sub-nav went on sticking underneath it."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            style = markup.split("<style>/* dh-article */")[1].split("</style>")[0]
+            block = style.split(".dh-subnav{")[1].split("}")[0]
+            self.assertIn("var(--dh-toc-h", block)
+            self.assertIn("--dh-toc-h", markup)  # the script that measures it
+
+    def test_the_fold_marker_is_a_glyph_not_an_escape(self):
+        """The hex escape came back out of the browser as U+0015 and drew the
+        literal text "B8" beside every group."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = bh.render_article(root, self.system(root))
+            self.assertIn('content:"▸"', markup)
+            self.assertNotIn("25B8", markup)
 
     def test_antipatterns_sit_last_and_muted(self):
         with tempfile.TemporaryDirectory() as tmp:

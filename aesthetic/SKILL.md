@@ -73,6 +73,8 @@ Startup is not the round. If the cohort is unnamed and no screen is on its way a
 
 `article --out <screen>.html --cohort <ids> --cohort-name <name>` writes the whole page: a sticky contents bar whose **this round** link is the one call to action, a hero whose thesis is **the question this round asks**, then four zones — **this round** (inverted, the only section asking for anything), **design fundamentals**, **backlog** (with its own second-level sticky nav, since it is the long one), **antipatterns** (last, trash-marked, on muted ground).
 
+**The backlog folds.** Each foundation there is a collapsible group that, while folded, shows a strip of its own thumbnails — so thirty-odd items read as four rows of pictures instead of a scroll. The round never folds: it is the ask.
+
 **Design fundamentals gathers the direction itself** — core ideas, palette and typography — *whatever their lifecycle state*. A type system is judged as a system: the family pairings, the scale, the faces against the palette. Scattering half of it into a backlog because it is still `proposed` makes exactly the comparison the user needs impossible. Rows run best-score-first inside each foundation. Pass the project's own `--bg/--ink/--accent`: the article is structure only and takes the palette being judged, never one of its own.
 
 **A 👍 is never an antipattern**, whatever became of that particular drawing — the thumb judges the direction, so superseded work the user still likes is held in the backlog, not condemned. Only a 👎, or work turned down without one, goes to the bottom. That section mutes its **ground**, never its rows: the stars and thumbs inside are the only way a rejection gets undone, so they stay at full contrast and stay clickable.

@@ -1391,17 +1391,20 @@ html:has(.dh-art){scroll-behavior:smooth}
    A palette section that lists ids is a list; one that shows the colours is a
    design system. */
 .dh-spec{margin:0 0 22px}
-.dh-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
+.dh-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));
  gap:10px;margin:0;padding:0;list-style:none}
 .dh-swatches li{border:1px solid var(--dh-rule);border-radius:8px;overflow:hidden;
  background:color-mix(in srgb, currentColor 7%, transparent)}
 .dh-swatches .dh-chip{display:block;block-size:76px}
 .dh-swatches .dh-vals{padding:9px 10px;display:flex;flex-direction:column;gap:2px;
  color:inherit}
-.dh-swatches b{font-size:12px;font-weight:700;letter-spacing:-.01em}
-.dh-swatches code{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+/* Scoped to the caption. `.dh-swatches span` also matched every span in the
+   scoring strip nested below -- each one dimming currentColor again, so by the
+   time a star was drawn it was ink at ten percent. */
+.dh-swatches .dh-vals b{font-size:12px;font-weight:700;letter-spacing:-.01em}
+.dh-swatches .dh-vals code{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
  color:color-mix(in srgb, currentColor 62%, transparent)}
-.dh-swatches span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+.dh-swatches .dh-vals > span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
  color:color-mix(in srgb, currentColor 55%, transparent)}
 .dh-faces{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
 .dh-faces .dh-face{border:1px solid var(--dh-rule);border-radius:10px;overflow:hidden;
@@ -1415,7 +1418,37 @@ html:has(.dh-art){scroll-behavior:smooth}
    judge it are never in two different places. */
 .dh-spec-score{flex:none;margin-inline-start:auto}
 .dh-spec-score .dh-fb.dh-fb{display:block;border:0;padding:0;background:transparent;
- contain:none;content-visibility:visible}
+ contain:none;content-visibility:visible;
+ /* A row normally paints its own light ground and sets ink to match. Stripped
+    of that ground, it must take the zone's foreground instead -- otherwise
+    currentColor is still ink, and every rule derived from it is ink on ink. */
+ color:inherit}
+/* A row paints its own light background, so its controls may key off the page
+   ink. A specimen's controls do not: they sit directly on the zone's ground,
+   which the round inverts. Ink at 30% on ink was a star strip nobody could
+   see, on the one row the round is asking about. */
+/* The controls stylesheet is emitted after this one, and a bare
+   `.dh-spec-score .dh-stars > *` merely ties with its `.dh-fb .dh-stars > *`
+   -- so the later rule won and the strip stayed invisible. Naming .dh-fb too
+   outranks it. */
+.dh-spec-score .dh-fb .dh-stars > *{color:color-mix(in srgb, currentColor 34%, transparent)}
+.dh-spec-score .dh-fb .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
+.dh-spec-score .dh-fb .dh-stars:hover [data-rank]{
+ color:color-mix(in srgb, currentColor 30%, transparent)}
+.dh-spec-score .dh-fb .dh-stars[data-scored="no"]::after{
+ color:color-mix(in srgb, currentColor 45%, transparent)}
+.dh-spec-score .dh-fb [data-rank="0"]{color:color-mix(in srgb, currentColor 48%, transparent)}
+.dh-spec-score .dh-fb .dh-zero{
+ border-inline-end-color:color-mix(in srgb, currentColor 26%, transparent)}
+.dh-spec-score .dh-fb [data-sentiment],.dh-spec-score .dh-fb [data-verdict]{
+ border-color:color-mix(in srgb, currentColor 30%, transparent);
+ color:color-mix(in srgb, currentColor 70%, transparent)}
+.dh-spec-score .dh-fb [data-sentiment]:hover,
+.dh-spec-score .dh-fb [data-verdict]:hover{border-color:currentColor}
+/* A swatch column is far narrower than a control strip, so the strip was cut
+   off mid-way: two stars and nothing else. It wraps here instead. */
+.dh-swatches .dh-spec-score{inline-size:100%}
+.dh-swatches .dh-spec-score .dh-signals{flex-wrap:wrap;gap:4px}
 .dh-swatches li{display:flex;flex-direction:column}
 .dh-swatches .dh-spec-score{margin:0;padding:8px 10px 10px;border-block-start:1px solid var(--dh-rule)}
 .dh-face-head .dh-face-use{margin-inline-start:auto;font-size:9.5px;font-weight:700;
@@ -1463,7 +1496,10 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-toc ol a:focus-visible,.dh-subnav a:focus-visible{
  outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
 /* Second level: sticks directly under the first, never over it. */
-.dh-subnav{position:sticky;inset-block-start:47px;z-index:15;margin:0 0 20px;
+/* Offset comes from the measured bar, not a number typed when it was one row
+   tall. The bar grew a strip and a key -- 47px to 93px -- and the second level
+   went on sticking underneath it, which reads as "the sub-nav disappeared". */
+.dh-subnav{position:sticky;inset-block-start:var(--dh-toc-h,47px);z-index:15;margin:0 0 20px;
  background:color-mix(in srgb, var(--dh-bg,#fff) 92%, transparent);backdrop-filter:blur(8px);
  border-block-end:1px solid var(--dh-rule)}
 .dh-subnav ol{display:flex;gap:14px;margin:0;padding:8px 0;list-style:none;
@@ -1479,6 +1515,21 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-subnav em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.6}
 .dh-zone{scroll-margin-block-start:64px}
 .dh-group{scroll-margin-block-start:104px}
+/* Collapsible, and legible while collapsed. */
+.dh-acc{margin:0 0 6px}
+.dh-acc > summary{cursor:pointer;list-style:none;align-items:center}
+.dh-acc > summary::-webkit-details-marker{display:none}
+/* The glyph itself, not a hex escape: the escape came back out of the browser
+   as U+0015 and drew the literal text "B8" beside every group. */
+.dh-acc > summary::before{content:"▸";flex:none;font-size:13px;
+ transition:transform .12s;color:color-mix(in srgb, currentColor 55%, transparent)}
+.dh-acc[open] > summary::before{transform:rotate(90deg)}
+.dh-acc > summary:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:3px}
+.dh-acc-thumbs{display:none;gap:5px;flex-wrap:wrap;flex:1 1 100%;
+ margin:10px 0 2px;--dh-shot-w:38px}
+.dh-acc:not([open]) > summary .dh-acc-thumbs{display:flex}
+.dh-acc-thumbs .dh-shot{border-radius:2px}
+.dh-acc-thumbs .dh-shot-missing{font-size:6px;padding:2px}
 /* Jumped-to rows must clear the sticky bars, or the bar lands on top of the
    row it just took you to. */
 .dh-art .dh-fb{scroll-margin-block-start:112px}
@@ -1534,8 +1585,15 @@ TOC_SCRIPT = """<script>/* dh-toc */
   },{rootMargin:'-100px 0px -60% 0px', threshold:0});
   heads.forEach(function(h){io2.observe(h)});
  }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
- else start();
+ function measure(){
+  var bar=document.querySelector('.dh-toc'); if(!bar)return;
+  var art=document.querySelector('.dh-art'); if(!art)return;
+  art.style.setProperty('--dh-toc-h', Math.round(bar.getBoundingClientRect().height)+'px');
+ }
+ if(document.readyState==='loading')
+  document.addEventListener('DOMContentLoaded',function(){measure();start()});
+ else {measure();start()}
+ window.addEventListener('resize',measure);
 })();
 </script>"""
 
@@ -1682,6 +1740,9 @@ ZONES = ("round", "fundamentals", "backlog", "antipattern")
 # Only the backlog earns a second level of navigation: it is the long one, and
 # the reader arrives at it looking for a particular surface.
 SUBNAV_ZONES = ("backlog",)
+# The long zone folds. The round is the ask and must never be hidden; the
+# fundamentals are the system on display; antipatterns are already quiet.
+FOLDING_ZONES = ("backlog",)
 
 
 def project_title(project_root: Path | None) -> str:
@@ -1878,11 +1939,26 @@ def render_article(project_root: Path, decisions: dict[str, object],
         for entry in members:
             key = foundation_of(entry["element"])
             if key != seen_foundation:
+                if seen_foundation is not None and zone in FOLDING_ZONES:
+                    out.append("</details>")
                 seen_foundation = key
                 same = [e for e in members if foundation_of(e["element"]) == key]
-                out.append(f'<h4 class="dh-group" id="dh-{zone}-{key}" data-group="{key}">'
-                           f'{txt.get(key, key)}'
-                           f'<span class="dh-count">{len(same)}</span></h4>')
+                heading = (f'{txt.get(key, key)}<span class="dh-count">{len(same)}</span>')
+                if zone in FOLDING_ZONES:
+                    # Folded, the group still shows its work: a strip of the
+                    # graphics themselves. A collapsed section that shows only
+                    # its own name asks the reader to open every one to find
+                    # anything, which is worse than the scroll it replaced.
+                    thumbs = "".join(
+                        render_preview(project_root, e.get("preview"), e["element"], txt)
+                        for e in same)
+                    out.append(
+                        f'<details class="dh-acc" data-group="{key}">'
+                        f'<summary class="dh-group" id="dh-{zone}-{key}" data-group="{key}">'
+                        f'{heading}<span class="dh-acc-thumbs">{thumbs}</span></summary>')
+                else:
+                    out.append(f'<h4 class="dh-group" id="dh-{zone}-{key}" data-group="{key}">'
+                               f'{heading}</h4>')
                 out.append(_specimens(same, txt, rows))
             row = rows.get(entry["element"], "")
             row = row.replace('<div class="dh-fb"',
@@ -1905,6 +1981,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
                            f'{html_escape(txt["brand-new"])}</b></p>' + row + "</div>")
                 continue
             out.append(row)
+        if seen_foundation is not None and zone in FOLDING_ZONES:
+            out.append("</details>")
         out.append("</section>")
     out += ["</div>"]
     return "\n".join(part for part in out if part) + "\n"
