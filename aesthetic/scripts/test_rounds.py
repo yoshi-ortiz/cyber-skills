@@ -177,7 +177,7 @@ class TheArticleAsRendered(unittest.TestCase):
         self.assertTrue(bars, "the article rendered no strip bars")
         for attrs in bars:
             self.assertNotIn("title=", attrs.replace("aria-label=", ""))
-            self.assertIn("data-tip=", attrs)
+            self.assertIn("data-el=", attrs)
 
     def test_the_swatch_column_is_never_narrower_than_its_controls(self):
         # The scoring strip is five 30px stars, a zero and three verdict
@@ -348,7 +348,7 @@ class TheArticleSpeaksToADesigner(unittest.TestCase):
 
     def test_the_hero_answers_who_what_which_project_and_what_now(self):
         markup = self.article()
-        self.assertIn(">Design Agent<", markup)
+        self.assertIn(">Cyber Yoshi: SKILLS<", markup)
         self.assertIn("<h1>Aesthetic ranking</h1>", markup)
         project = markup.split('class="dh-project">')[1].split("</p>")[0]
         self.assertIn("Project", project)
@@ -434,6 +434,78 @@ class TheArticleSpeaksToADesigner(unittest.TestCase):
         self.assertIn("<h2>Ronda de diseño</h2>", markup)
         self.assertIn("<h2>Componentes críticos</h2>", markup)
         self.assertIn('data-saved="Preferencia guardada"', markup)
+
+
+class TheCardNamesTheDesignNotTheToken(unittest.TestCase):
+    """A designer should not have to parse a namespace to know what they score."""
+
+    def test_a_title_wins_when_one_is_given(self):
+        self.assertEqual(
+            bh.display_name({"element": "a.b.c", "title": "Pestaña de rol"}),
+            "Pestaña de rol")
+
+    def test_the_description_beats_a_humanised_id(self):
+        # "El objeto de portada dibujado grande" against "Sin colision".
+        name = bh.display_name({
+            "element": "cover.object.character-drawn.dentro-de-margen.sin-colision",
+            "description": "el objeto de portada dibujado grande, reubicado bajo el anillo"})
+        self.assertEqual(name, "El objeto de portada dibujado grande")
+
+    def test_a_redraw_never_shares_its_parents_name(self):
+        # The round view puts parent and redraw side by side as before/after.
+        # Two identical titles over two different drawings is worse than the id.
+        described = "el objeto de portada dibujado grande, reubicado"
+        names = bh.display_names([
+            {"element": "cover.object", "description": described},
+            {"element": "cover.object.sin-colision", "description": described}])
+        self.assertNotEqual(names["cover.object"], names["cover.object.sin-colision"])
+        self.assertIn("sin colision", names["cover.object.sin-colision"])
+
+    def test_the_id_is_still_emitted_as_a_tag(self):
+        # It stays the ledger's key and the thing to quote back to the agent.
+        markup = bh.render_feedback_controls(
+            {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
+             "elements": [{"element": "cover.object", "stars": 2, "sentiment": None,
+                           "state": "proposed", "scored": True, "source": "user",
+                           "description": "un objeto grande"}]},
+            None, None, None, "es")
+        self.assertIn('<code class="dh-token">cover.object</code>', markup)
+        self.assertIn('class="dh-id">Un objeto grande<', markup)
+
+
+class TheArticleFitsItsContainer(unittest.TestCase):
+    """The same row renders in a 1180px article and in a companion pane a third
+    that wide, so the layout responds to its CONTAINER, not to the viewport."""
+
+    def style(self) -> str:
+        markup = bh.render_article(
+            Path("/tmp"), {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
+                           "elements": [{"element": "core.idea", "stars": 2,
+                                         "sentiment": "like", "state": "proposed",
+                                         "scored": True, "source": "user"}]},
+            set(), "", "en", None, "Fichas", "Ask.")
+        return markup
+
+    def test_the_container_is_an_ancestor_never_the_row_itself(self):
+        # An element cannot respond to its own container query. The first
+        # attempt put `container-type` on `.dh-fb` and silently did nothing --
+        # the controls kept overflowing a narrow row by 220px.
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.style(), re.S).group(1)
+        zone = re.search(r"\.dh-zone\{([^}]*)\}", style).group(1)
+        self.assertIn("container-type:inline-size", zone)
+        self.assertIn("container-name:dh-row", zone)
+
+    def test_the_narrow_rules_outrank_the_legacy_media_query(self):
+        """A legacy `@media (max-width:780px)` sets the same property on
+        `.dh-fb.dh-fb` further down the sheet, so a container rule that only
+        ties on specificity loses to it by source order."""
+        markup = self.style()
+        style = re.search(r"<style>/\* dh-controls \*/(.*?)</style>", markup, re.S).group(1)
+        for block in re.findall(r"@container dh-row \([^)]*\)\{(.*?)\n\}", style, re.S):
+            if "grid-template-columns" in block:
+                self.assertIn(".dh-fb.dh-fb.dh-fb", block,
+                              "a container rule must outrank the legacy media query")
 
 
 class PreviewsMustBeVisible(unittest.TestCase):

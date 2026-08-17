@@ -577,11 +577,16 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             self.assertIn("<svg", toc)
             self.assertIn("currentColor", toc)
 
-    def test_the_long_zone_gets_a_second_level_of_navigation(self):
+    def test_a_zone_with_enough_groups_gets_a_second_level_of_navigation(self):
+        """Three groups is where scrolling past everything to reach one surface
+        stops being acceptable -- and it is the length, not the zone's name,
+        that decides. The critical components hit five foundations in the real
+        project and had no way in at all."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self.system(root)
             bh.record_decision(root, "voice.labels", "proposed", 1, "fixture", [])
+            bh.record_decision(root, "motion.reveal", "proposed", 1, "fixture", [])
             decisions = bh.load_decisions(root / "spec" / "design-harness")
             markup = bh.render_article(root, decisions)
             backlog = markup.split('id="dh-zone-backlog"')[1].split("</section>")[0]
@@ -589,8 +594,9 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             self.assertIn('href="#dh-backlog-composition"', backlog)
             self.assertIn('id="dh-backlog-composition"', backlog)
 
-    def test_fundamentals_gets_no_second_level(self):
-        """Only the long zone earns one; two sticky bars over a short list is
+    def test_a_short_zone_gets_no_second_level(self):
+        """A zone earns a second sticky bar only when it has three or more
+        groups to navigate between; two sticky bars over a short list is
         chrome for its own sake."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -645,12 +651,12 @@ class TheArticleIsADesignSystem(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             markup = bh.render_article(root, self.system(root))
-            # The strip draws its own tooltip from `data-tip` and names the bar
-            # with `aria-label`. It must NOT also carry `title`: the browser
-            # then draws a second tooltip, in the OS font, at its own position
-            # -- two overlapping labels sitting on top of the key row.
-            self.assertIn('data-tip="palette.family', markup)
-            self.assertIn('aria-label="palette.family', markup)
+            # A bar identifies its element by id so the chart can build a real
+            # preview card from the row's own drawing, and names it in words for
+            # assistive tech. It must NOT carry `title`: the browser then draws a
+            # second tooltip, in the OS font, on top of the key row.
+            self.assertIn('data-el="palette.family', markup)
+            self.assertIn("data-name=", markup)
             self.assertNotIn('title="palette.family', markup)
 
     def test_a_missing_translation_falls_back_instead_of_crashing(self):
@@ -690,7 +696,7 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             h1 = markup.split("<h1>")[1].split("</h1>")[0]
             project = markup.split('class="dh-project">')[1].split("</p>")[0]
             designing = markup.split('class="dh-designing">')[1].split("</p>")[0]
-            self.assertEqual(eyebrow, "Design Agent")
+            self.assertEqual(eyebrow, "Cyber Yoshi: SKILLS")
             self.assertEqual(h1, "Aesthetic ranking")
             self.assertIn("Fichas de performance", project)
             self.assertNotIn("cover-furniture-redraw", h1)
@@ -747,14 +753,22 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             self.assertEqual(labels, [words["key-asked"], words["key-done"], words["key-open"],
                                       words["key-weak"], words["key-unscored"], words["key-anti"]])
 
-    def test_every_bar_carries_its_own_tooltip_not_the_browsers(self):
-        """`title` waits a second, uses the OS font, and never fires on keyboard
-        focus."""
+    def test_the_chart_shows_the_drawing_not_a_dotted_id(self):
+        """`family.tab.spine-step.grupo-color -- 1/5 -- proposed` is a namespace,
+        a fraction and a lifecycle word. A designer needs the DRAWING and its
+        name, which a CSS `content:` tooltip cannot hold -- so the chart builds
+        a real card, and a click opens the same slideshow a thumbnail does."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             markup = bh.render_article(root, self.system(root))
-            self.assertIn("data-tip=", markup)
-            self.assertIn("content:attr(data-tip)", markup)
+            self.assertIn("dh-chartcard", markup)
+            self.assertNotIn("content:attr(data-tip)", markup)
+            script = re.search(r"<script>/\* dh-lightbox \*/(.*?)</script>",
+                               markup, re.S).group(1)
+            self.assertIn(".dh-temp a[data-el]", script,
+                          "a bar must open the slideshow, not scroll to a row")
+            self.assertIn("__dhOpenSlide", script,
+                          "the chart and the thumbnails must share one opener")
 
     def test_a_cohort_spanning_many_foundations_is_refused(self):
         """Three elements from three foundations under a name claiming a shared

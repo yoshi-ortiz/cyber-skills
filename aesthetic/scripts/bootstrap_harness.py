@@ -165,7 +165,12 @@ STRINGS = {
         "voice": "Copy & voice", "motion": "Motion",
         "unscored": "not yet scored", "proposed-by": "Proposed", "built": "Built",
         "no-graphic": "no graphic",
-        "article-title": "Aesthetic ranking", "brand": "Design Agent",
+        "article-title": "Aesthetic ranking", "brand": "Cyber Yoshi: SKILLS",
+        "bar-lead": "Scored what you can? Go back to your agent chat",
+        "bar-hint": "give your critique and directions there \u2014 new designs follow",
+        "bar-left": "left to score", "done-cheer": "Marked as done",
+        "credit-what": "Live companion",
+        "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
         "project-label": "Project", "designing": "Designing",
         "saved": "Preference saved", "designs": "designs",
         "zone-round": "This round",
@@ -181,7 +186,7 @@ STRINGS = {
         "zone-antipattern-note": "Turned down. Kept so they are not proposed again.",
         "specimen-colors": "Palette", "specimen-fonts": "Typefaces",
         "hero-standing": "standing", "hero-ranked": "you ranked",
-        "hero-asking": "well done graphics", "hero-ongoing": "to review",
+        "hero-asking": "in better shape", "hero-ongoing": "need your direction",
         "hero-improve": "rejected",
         "temp-caption": "One bar per element, worst execution to best \u2014 click one to jump to "
                         "it. Solid green is done, pale green is well drawn but still open, grey "
@@ -210,7 +215,12 @@ STRINGS = {
         "voice": "Texto y voz", "motion": "Movimiento",
         "unscored": "sin puntuar", "proposed-by": "Propuesto", "built": "Implementado",
         "no-graphic": "sin gráfico",
-        "article-title": "Aesthetic ranking", "brand": "Design Agent",
+        "article-title": "Aesthetic ranking", "brand": "Cyber Yoshi: SKILLS",
+        "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
+        "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
+        "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
+        "credit-what": "Companion en vivo",
+        "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
         "project-label": "Proyecto", "designing": "Diseñando",
         "saved": "Preferencia guardada", "designs": "diseños",
         "zone-round": "Esta ronda",
@@ -226,7 +236,7 @@ STRINGS = {
         "zone-antipattern-note": "Descartado. Queda aquí para no volver a proponerlo.",
         "specimen-colors": "Paleta", "specimen-fonts": "Tipografías",
         "hero-standing": "en pie", "hero-ranked": "puntuados por ti",
-        "hero-asking": "gráficos logrados", "hero-ongoing": "por revisar",
+        "hero-asking": "van mejor", "hero-ongoing": "esperan tu dirección",
         "hero-improve": "descartados",
         "key-done": "terminado", "key-open": "bien dibujado, abierto", "key-weak": "por mejorar",
         "key-unscored": "sin puntuar", "key-asked": "esta ronda", "key-anti": "descartado",
@@ -427,7 +437,8 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                     source: str = "agent",
                     sentiment: str | None | object = KEEP_SENTIMENT,
                     implemented: str | None = None,
-                    description: str | None = None) -> dict[str, object]:
+                    description: str | None = None,
+                    title: str | None = None) -> dict[str, object]:
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
     if verdict not in DECISION_STATES:
         raise HarnessError(f"verdict must be one of: {', '.join(DECISION_STATES)}")
@@ -468,6 +479,8 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                 e["implemented"] = implemented
             if description is not None:
                 e["description"] = description
+            if title is not None:
+                e["title"] = title
             e.setdefault("implemented", None)
             e.setdefault("description", None)
             if sentiment is not KEEP_SENTIMENT:
@@ -486,7 +499,7 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             # placeholder is a starting position, never a score.
             "source": source, "scored": source == "user",
             "sentiment": None if sentiment is KEEP_SENTIMENT else sentiment, "tokens": None,
-            "implemented": implemented, "description": description,
+            "implemented": implemented, "description": description, "title": title,
         })
     if any(e["state"] == "approved" for e in decisions["elements"]):
         decisions["state"] = "approved"
@@ -833,6 +846,7 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
            tag.setAttribute('role','status'); strip.appendChild(tag);}
   tag.textContent=(host&&host.getAttribute('data-saved'))||'Saved';
   tag.setAttribute('data-on','1');
+  tag.removeAttribute('data-cheer');
   clearTimeout(tag.__dhT);
   tag.__dhT=setTimeout(function(){tag.removeAttribute('data-on')},2400);
  }
@@ -851,8 +865,17 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
   }
   if('sentiment' in s) row.querySelectorAll('[data-sentiment]').forEach(function(b){
     b.classList.toggle('on', b.dataset.sentiment===s.sentiment);});
-  if('verdict' in s) row.querySelectorAll('[data-verdict]').forEach(function(b){
+  if('verdict' in s){
+   row.querySelectorAll('[data-verdict]').forEach(function(b){
     b.classList.toggle('on', b.dataset.verdict===s.verdict);});
+   /* Marking something done is the one act on this page that feels final, so
+      it says so louder than a rank does. */
+   if(s.verdict==='completed'){
+    var t=row.querySelector('.dh-saved'), h=document.querySelector('[data-cheer-text]');
+    if(t){t.setAttribute('data-cheer','1');
+          t.textContent=(h&&h.getAttribute('data-cheer-text'))||t.textContent;}
+   }
+  }
  }
  function rowFor(el){
   var all=document.querySelectorAll('.dh-fb[data-element]');
@@ -948,6 +971,30 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  border-radius:10px;background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
  font:500 13px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
  contain:layout style;content-visibility:auto;contain-intrinsic-size:auto 120px}
+/* Below ~560px of ROW there is no honest three-column layout: the controls
+   wrap onto their own line under the text instead of crushing it. Container
+   query, because the same row renders in a 1180px article and in a companion
+   pane a third that wide, and a viewport query cannot tell those apart.
+   Baseline since 2023; the stacked layout below is the safe default anyway. */
+/* `.dh-fb.dh-fb.dh-fb`, tripled. A legacy `@media (max-width:780px)` further
+   down sets the same property on `.dh-fb.dh-fb`, and a container rule that only
+   ties on specificity loses to it by source order -- which is why the narrow
+   layout silently never applied. */
+@container dh-row (max-width: 560px){
+ .dh-fb.dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
+ .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-start;flex-wrap:wrap}
+}
+@container dh-row (max-width: 380px){
+ .dh-fb.dh-fb.dh-fb{grid-template-columns:minmax(0,1fr)}
+ .dh-fb .dh-shot{inline-size:100%;max-inline-size:220px}
+ /* The strip is five 30px stars, a zero and three verdict buttons: 214px of
+    fixed touch targets, which is wider than the row itself down here. They
+    shrink rather than spill -- still comfortably above the 24px minimum. */
+ .dh-fb.dh-fb .dh-stars > *{inline-size:26px;min-inline-size:0;font-size:17px}
+ .dh-fb [data-sentiment],.dh-fb [data-verdict],.dh-fb .dh-zero > *{
+  min-inline-size:30px;font-size:14px}
+ .dh-fb .dh-signals{gap:4px}
+}
 .dh-fb.dh-fb:hover{border-color:var(--dh-ink,#111)}
 /* An invisible table, not a stack of independent rows. Each provenance line
    used to be its own flex row, so its value began wherever its own label
@@ -964,7 +1011,12 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
    actually read, provenance is demoted to a labelled aside, and the state sits
    beside the id instead of adding a fifth line. */
 .dh-fb .dh-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0}
-.dh-fb .dh-id{font-weight:700;font-size:14px;letter-spacing:-.01em;
+/* The id, demoted to a tag. It is the ledger's key and the designer's noise. */
+.dh-fb .dh-token{grid-column:1 / -1;justify-self:start;font-size:9.5px;letter-spacing:.06em;
+ padding:2px 7px;border-radius:4px;overflow-wrap:anywhere;
+ background:color-mix(in srgb, var(--dh-ink,#111) 6%, transparent);
+ color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
+.dh-fb .dh-id{font-weight:700;font-size:15px;letter-spacing:-.01em;
  overflow-wrap:anywhere;color:var(--dh-ink,#111)}
 .dh-fb .dh-state{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
  padding:2px 6px;border-radius:3px;white-space:nowrap;
@@ -1373,6 +1425,54 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
             f'{fragment}</span></span>')
 
 
+def display_name(entry: dict[str, object]) -> str:
+    """What to call this design in front of a designer.
+
+    The card used to be headed `cover.object.character-drawn.dentro-de-margen.
+    sin-colision`. That is a stable id for the ledger and it is unreadable as a
+    title -- the reader has to parse a namespace to find out what they are
+    looking at. A plain `--title` wins; failing that the id's last meaningful
+    segment is humanised, which at least reads as words.
+    """
+    given = str(entry.get("title") or "").strip()
+    if given:
+        return given
+    # No title set: the description already says what this is, in the user's
+    # own language, so its first clause beats a humanised id every time --
+    # "el objeto de portada dibujado grande" against "Sin colision".
+    described = str(entry.get("description") or "").strip()
+    if described:
+        clause = re.split(r"[,;:.\u2014]| -- ", described, maxsplit=1)[0].strip()
+        if 3 <= len(clause) <= 64:
+            return clause[0].upper() + clause[1:]
+    parts = [part for part in str(entry["element"]).split(".") if part]
+    tail = " ".join(parts[-2:]) if len(parts) > 2 else " ".join(parts)
+    tail = tail.replace("-", " ").replace("_", " ").replace(".", " ").strip()
+    return (tail[0].upper() + tail[1:]) if tail else str(entry["element"])
+
+
+def display_names(entries: list[dict[str, object]]) -> dict[str, str]:
+    """Names for a whole list, guaranteed distinct.
+
+    A redraw inherits its parent's description, so `cover.object.character-drawn`
+    and `...dentro-de-margen.sin-colision` both resolved to "El objeto de portada
+    dibujado grande" -- and the round view puts exactly those two side by side as
+    before and after. Two identical titles over two different drawings is worse
+    than the dotted id was. Collisions take the segment that distinguishes them.
+    """
+    names: dict[str, str] = {}
+    taken: dict[str, str] = {}
+    for entry in entries:
+        element = str(entry["element"])
+        name = display_name(entry)
+        if name in taken and taken[name] != element:
+            tail = element.split(".")[-1].replace("-", " ").replace("_", " ")
+            name = f"{name} — {tail}"
+        taken.setdefault(name, element)
+        names[element] = name
+    return names
+
+
 def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str] | None = None,
                              project_root: Path | None = None,
                              pinned: set[str] | None = None,
@@ -1415,6 +1515,7 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
                 FOUNDATION_ORDER.get(group_of(item), len(FOUNDATION_ORDER)),
                 -int(item.get("stars") or 0),
                 item["element"])
+    names = display_names(live)
     rendered_group = None
     for entry in sorted(live, key=order):
         group_key = group_of(entry)
@@ -1441,8 +1542,12 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         unscored = "" if user_ranked else f' &middot; {txt["unscored"]}'
         # The state rides beside the id instead of trailing the block as a fifth
         # line of near-identical grey text.
-        lines.append(f'<span class="dh-head"><span class="dh-id">{element}</span>'
+        # The NAME leads and the id becomes a tag under it. A designer should
+        # not have to read a namespace to learn what they are scoring.
+        lines.append(f'<span class="dh-head"><span class="dh-id">'
+                     f'{html_escape(names.get(element) or display_name(entry))}</span>'
                      f'<span class="dh-state">{entry["state"]}{unscored}</span></span>')
+        lines.append(f'<code class="dh-token">{element}</code>')
         what = str(entry.get("description") or "").strip()
         proposed = str(entry.get("evidence") or "").strip()
         built = str(entry.get("implemented") or "").strip()
@@ -1634,13 +1739,22 @@ html:has(.dh-art){scroll-behavior:smooth}
    toward scrollable overflow while invisible, so forty nowrap tooltips made the
    companion's pane 162px wider than itself -- and it opened scrolled, with the
    headline and the left edge of every card cut off. */
-.dh-temp a::after{content:attr(data-tip);display:none;position:absolute;
- inset-block-start:18px;inset-inline-start:0;z-index:40;padding:6px 9px;border-radius:6px;
- pointer-events:none;background:var(--dh-ink,#111);color:var(--dh-bg,#fff);white-space:nowrap;
- font:600 10.5px/1.3 var(--dh-font,ui-monospace,monospace);letter-spacing:.02em}
-.dh-temp{position:relative}
-.dh-temp a{position:relative}
-.dh-temp a:hover::after,.dh-temp a:focus-visible::after{display:block}
+/* A real preview card, not a line of text. The chart is the only view of the
+   whole system that fits on one line, so hovering a bar has to answer "which
+   drawing is this?" -- with the drawing. Built by script because a CSS
+   `content:` tooltip cannot hold an image. */
+.dh-chartcard{position:fixed;z-index:60;display:none;inline-size:210px;padding:10px;
+ border-radius:12px;pointer-events:none;
+ background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
+ border:1px solid color-mix(in srgb, var(--dh-ink,#111) 22%, transparent);
+ box-shadow:0 14px 44px rgba(0,0,0,.28)}
+.dh-chartcard[data-on]{display:block}
+.dh-chartcard .dh-shot{--dh-shot-w:188px;border-radius:6px;background:#fff;margin:0 0 8px}
+.dh-chartcard b{display:block;font-size:12.5px;line-height:1.3;font-weight:700;
+ letter-spacing:-.01em;text-wrap:balance}
+.dh-chartcard span{display:block;margin-block-start:4px;font-size:10px;letter-spacing:.12em;
+ text-transform:uppercase;color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+.dh-temp a{cursor:zoom-in}
 /* The last bars would push their tooltip off the right edge. */
 .dh-temp a:nth-last-child(-n+8)::after{inset-inline-start:auto;inset-inline-end:0}
 .dh-temp a span{font-size:8px;font-weight:800;line-height:1;color:var(--dh-bg,#fff)}
@@ -1674,7 +1788,10 @@ html:has(.dh-art){scroll-behavior:smooth}
    The gap BETWEEN zones is what says "this is a different question" -- it was
    60px, barely more than the 40px inside a group, so the sections ran into one
    another and the page read as one undifferentiated scroll. */
-.dh-zone{padding:var(--s6) 0 0}
+/* The rows query THIS, not themselves -- an element cannot respond to its own
+   container query, which is why the first attempt silently did nothing and the
+   controls kept overflowing a narrow row by 220px. */
+.dh-zone{padding:var(--s6) 0 0;container-type:inline-size;container-name:dh-row}
 .dh-zone > header{margin:0 0 var(--s4);max-inline-size:60ch}
 .dh-zone h2{margin:0;font-size:clamp(24px,3.4vw,36px);font-weight:800;letter-spacing:-.028em;
  text-wrap:balance}
@@ -2034,7 +2151,41 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* A thumbnail that opens something must say so before it is clicked. */
 .dh-art .dh-shot[data-el]{cursor:zoom-in}
 .dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
-@media (prefers-reduced-motion:reduce){.dh-art *,.dh-lb *{transition:none!important}}
+/* The action bar. A designer who has just scored a page has no idea what
+   happens next -- the whole loop lives in a chat window they are not looking
+   at. It stays put, says where to go, and counts what is still unscored. */
+.dh-bar{position:fixed;inset-inline:0;inset-block-end:0;z-index:50;
+ display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap;
+ padding:11px clamp(16px,4vw,32px);
+ font:500 13px/1.4 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
+ background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
+ color:var(--dh-bg,#fff);
+ border-block-start:1px solid color-mix(in srgb, var(--dh-bg,#fff) 22%, transparent);
+ backdrop-filter:blur(10px)}
+.dh-bar b{font-weight:700;letter-spacing:-.01em}
+.dh-bar span{opacity:.78}
+.dh-bar em{font-style:normal;margin-inline-start:auto;flex:none;font-size:11px;
+ font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+ padding:4px 10px;border-radius:999px;
+ background:var(--dh-accent,#d9482a);color:#fff}
+/* The bar is fixed, so the last section needs room to clear it. */
+.dh-art{padding-block-end:calc(var(--s6) + 64px)}
+/* Credit, de-protagonised: this page is the project's, not the tool's. */
+.dh-credit{margin-block-start:var(--s6);padding-block-start:var(--s3);
+ border-block-start:1px solid var(--dh-rule);
+ display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;
+ font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 45%, transparent)}
+.dh-credit b{font-weight:700}
+/* Completing something is the one irreversible-feeling act on the page, so it
+   gets a moment. Scaling the tick is enough -- confetti would be noise on a
+   page whose whole job is sober judgement. */
+@keyframes dh-pop{0%{transform:scale(1)}38%{transform:scale(1.32)}100%{transform:scale(1)}}
+.dh-fb [data-verdict].on{animation:dh-pop .34s ease-out}
+.dh-fb .dh-saved[data-cheer]{background:color-mix(in srgb, #1c8b4b 26%, transparent);
+ border-color:#1c8b4b}
+@media (prefers-reduced-motion:reduce){.dh-art *,.dh-lb *{transition:none!important;
+ animation:none!important}}
 </style>"""
 
 
@@ -2047,6 +2198,12 @@ TRASH_ICON = ('<svg class="dh-ico" viewBox="0 0 24 24" fill="none" stroke="curre
 TOC_SCRIPT = """<script>/* dh-toc */
 (function(){
  if(window.__dhToc)return; window.__dhToc=1;
+ /* Measured, never typed: the bar grew a title row and a key, so any constant
+    here goes stale and the active section is decided against the wrong band. */
+ function barHeight(){
+  var bar=document.querySelector('.dh-toc');
+  return bar?Math.round(bar.getBoundingClientRect().height)+8:64;
+ }
  function start(){
   var links=[].slice.call(document.querySelectorAll('.dh-toc a[data-zone]'));
   var zones=links.map(function(a){return document.getElementById(a.getAttribute('href').slice(1))})
@@ -2055,6 +2212,11 @@ TOC_SCRIPT = """<script>/* dh-toc */
   function mark(id){links.forEach(function(a){
    a.setAttribute('aria-current', a.getAttribute('href')==='#'+id ? 'true':'false');});}
   mark(zones[0].id);
+  /* Clicking a pill marks it AT ONCE. Leaving it to the observer meant the
+     indicator lagged the click by a scroll -- which reads as a broken nav,
+     because the thing you just pressed is not the thing lit up. */
+  links.forEach(function(a){a.addEventListener('click',function(){
+   mark(a.getAttribute('href').slice(1));});});
   /* Highest section still intersecting the top band wins. Picking the largest
      visible ratio instead makes a short section that is fully on screen beat
      the long one the reader is actually inside. */
@@ -2063,7 +2225,7 @@ TOC_SCRIPT = """<script>/* dh-toc */
   var io=new IntersectionObserver(function(entries){
    entries.forEach(function(e){visible[e.target.id]=e.isIntersecting});
    for(var i=0;i<zones.length;i++){ if(visible[zones[i].id]){ mark(zones[i].id); return } }
-  },{rootMargin:'-64px 0px -70% 0px', threshold:0});
+  },{rootMargin:'-'+barHeight()+'px 0px -68% 0px', threshold:0});
   zones.forEach(function(z){io.observe(z)});
   /* The second level tracks headings, not sections, so it needs its own
      observer -- sharing one made a heading scrolling past re-mark the zone. */
@@ -2240,11 +2402,57 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
  }
  function start(){
   build();
+  /* One opener, used by the thumbnails AND by the chart, so a bar and a
+     thumbnail cannot drift into showing different things. */
+  window.__dhOpenSlide=open;
   document.addEventListener('click',function(e){
    var s=e.target.closest('.dh-art .dh-shot[data-el]');
-   if(!s)return;
-   e.preventDefault(); open(s.getAttribute('data-el'));
+   if(s){e.preventDefault(); open(s.getAttribute('data-el')); return}
+   var bar=e.target.closest('.dh-temp a[data-el]');
+   if(bar){e.preventDefault(); open(bar.getAttribute('data-el'))}
   });
+  chartCard();
+ }
+ /* Hovering a bar shows the drawing it stands for. The old tooltip said
+    `family.tab.spine-step.grupo-color -- 1/5 -- proposed`, which is a
+    namespace, a fraction and a lifecycle word: nothing a designer can judge. */
+ function chartCard(){
+  var card=document.createElement('div');
+  card.className='dh-chartcard'; card.setAttribute('aria-hidden','true');
+  document.body.appendChild(card);
+  var hide=function(){card.removeAttribute('data-on')};
+  function show(bar){
+   var id=bar.getAttribute('data-el'); if(!id)return;
+   var row=null, all=document.querySelectorAll('.dh-art .dh-fb[data-element]');
+   for(var i=0;i<all.length;i++){
+    if(all[i].getAttribute('data-element')===id && !all[i].closest('.dh-spec-score')){row=all[i];break}
+   }
+   var shot=row&&row.querySelector('.dh-shot');
+   card.innerHTML='';
+   if(shot){var c=shot.cloneNode(true); c.removeAttribute('style'); c.className='dh-shot';
+            card.appendChild(c)}
+   var name=document.createElement('b');
+   name.textContent=bar.getAttribute('data-name')||id;
+   card.appendChild(name);
+   var meta=document.createElement('span');
+   var score=bar.getAttribute('data-score');
+   meta.textContent=(score==='--'?'':score+'/5');
+   card.appendChild(meta);
+   card.setAttribute('data-on','1');
+   var r=bar.getBoundingClientRect(), w=210;
+   var left=Math.min(Math.max(8,r.left+r.width/2-w/2), innerWidth-w-8);
+   card.style.left=left+'px';
+   card.style.top=Math.min(r.bottom+10, innerHeight-card.offsetHeight-8)+'px';
+  }
+  document.addEventListener('pointerover',function(e){
+   var bar=e.target.closest&&e.target.closest('.dh-temp a[data-el]');
+   if(bar)show(bar); else if(!e.target.closest||!e.target.closest('.dh-chartcard'))hide();
+  });
+  document.addEventListener('focusin',function(e){
+   var bar=e.target.closest&&e.target.closest('.dh-temp a[data-el]');
+   if(bar)show(bar); else hide();
+  });
+  window.addEventListener('scroll',hide,{passive:true});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
  else start();
@@ -2460,7 +2668,10 @@ def check_round_earns_its_place(decisions: dict[str, object], cohort: set[str]) 
 ZONES = ("round", "fundamentals", "backlog", "antipattern")
 # Only the backlog earns a second level of navigation: it is the long one, and
 # the reader arrives at it looking for a particular surface.
-SUBNAV_ZONES = ("backlog",)
+# Both long zones earn a second level. Only the backlog had one, so the
+# critical components -- the section a designer scrolls hardest through --
+# offered no way to reach a surface except by scrolling past every other one.
+SUBNAV_ZONES = ("fundamentals", "backlog")
 # The long zone folds. The round is the ask and must never be hidden; the
 # fundamentals are the system on display; antipatterns are already quiet.
 FOLDING_ZONES = ("backlog",)
@@ -2507,6 +2718,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
     style = re.search(r"<style>/\* dh-controls \*/.*?</style>", generated, re.S)
     script = re.search(r"<script>/\* dh-rehydrate \*/.*?</script>", generated, re.S)
     live = [e for e in decisions["elements"] if e["state"] in GROUP_OF]
+    bar_names = display_names(live)
     known_ids = {e["element"] for e in decisions["elements"]}
     stats = ledger_stats(decisions)
 
@@ -2536,15 +2748,23 @@ def render_article(project_root: Path, decisions: dict[str, object],
     def bar(entry: dict[str, object]) -> str:
         stars = "--" if not entry.get("scored") else entry["stars"]
         asked = entry["element"] in cohort
-        tip = f'{entry["element"]} — {stars}/{STAR_RANGE[1]} — {entry["state"]}'
+        # The old tooltip read `family.tab.spine-step.grupo-color -- 1/5 --
+        # proposed`: a namespace, a fraction and a lifecycle word. A designer
+        # needs to see the DRAWING and its name. The bar now carries the id so
+        # the script can build a real preview card, and a click opens the
+        # slideshow rather than scrolling to a row.
+        name = bar_names.get(entry["element"]) or display_name(entry)
+        label = f'{name} — {stars}/{STAR_RANGE[1]}'
         if asked:
-            tip = f'{txt["zone-round"]}: {tip}'
+            label = f'{txt["zone-round"]}: {label}'
         return (f'<a class="{bar_class(entry)}" href="#dh-el-{html_escape(entry["element"])}"'
-                f'{" data-asked=\"1\"" if asked else ""} data-tip="{html_escape(tip)}" '
-                # `aria-label`, never `title`: the strip draws its own tooltip,
-                # and a `title` made the browser draw a SECOND one beside it in
-                # the OS font -- two overlapping labels on top of the key row.
-                f'aria-label="{html_escape(tip)}">'
+                f'{" data-asked=\"1\"" if asked else ""} '
+                f'data-el="{html_escape(entry["element"])}" '
+                f'data-name="{html_escape(name)}" '
+                f'data-score="{stars}" '
+                # `aria-label`, never `title`: a `title` made the browser draw a
+                # SECOND tooltip in the OS font, on top of the key row.
+                f'aria-label="{html_escape(label)}">'
                 f'<span>{"?" if asked else ""}</span></a>')
 
     def bar_order(entry: dict[str, object]) -> tuple:
@@ -2562,10 +2782,18 @@ def render_article(project_root: Path, decisions: dict[str, object],
     # being asked now, what is still moving, and what is known to need another
     # pass. "Standing" and "you ranked" counted the archive instead -- both read
     # 32 of 32, which is true and tells nobody what to do next.
-    ongoing = len([e for e in live
-                   if e["element"] not in cohort and e["state"] not in ("completed",)
-                   and zone_of(e, cohort) != "antipattern"])
-    to_improve = len(stats["needsPolish"])
+    # The three figures a designer can act on, matching the words under them.
+    # "In better shape" is work they scored well; "need your direction" is work
+    # waiting on THEM -- never scored, or liked but still weak. The old figures
+    # counted the round and the archive, which told nobody what to do next.
+    def user_stars(entry: dict[str, object]) -> int:
+        return int(entry.get("stars") or 0) if entry.get("source") == "user" else -1
+    better = len([e for e in live if zone_of(e, cohort) != "antipattern"
+                  and (user_stars(e) >= 3 or e["state"] in ("approved", "completed"))])
+    ongoing = len([e for e in live if zone_of(e, cohort) != "antipattern"
+                   and user_stars(e) < 3
+                   and (e.get("source") != "user" or e["element"] in set(stats["needsPolish"]))])
+    to_improve = len([e for e in live if zone_of(e, cohort) == "antipattern"])
     # A kebab-case cohort id set at 68px is a machine label wearing a headline's
     # clothes. The hero names the artefact being designed; the round is a line
     # underneath it, which is what it actually is.
@@ -2576,7 +2804,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
     root_style = f' style="{declared}"' if declared else ""
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
            TOC_SCRIPT, LIGHTBOX_SCRIPT,
-           f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}"{root_style}>',
+           f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
+           f'data-cheer-text="{html_escape(txt["done-cheer"])}"{root_style}>',
            '<header class="dh-hero">',
            # Read by a graphic designer, not by whoever built the harness: who
            # is asking, what this page is, which project, and what is on the
@@ -2589,7 +2818,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
             f'<b>{html_escape(cohort_name)}</b></p>' if cohort_name else ""),
            f'<p class="dh-lede">{html_escape(txt["hero-lede"])}</p>',
            '<div class="dh-figures">',
-           f'<div><b>{asking}</b><span>{html_escape(txt["hero-asking"])}</span></div>',
+           f'<div><b>{better}</b><span>{html_escape(txt["hero-asking"])}</span></div>',
            f'<div><b>{ongoing}</b><span>{html_escape(txt["hero-ongoing"])}</span></div>',
            f'<div><b>{to_improve}</b><span>{html_escape(txt["hero-improve"])}</span></div>',
            "</div>",
@@ -2659,7 +2888,12 @@ def render_article(project_root: Path, decisions: dict[str, object],
                 key = foundation_of(entry["element"])
                 if key not in order_seen:
                     order_seen.append(key)
-            if len(order_seen) > 1:
+            # Three groups, not two. A second sticky bar over a short list is
+            # noise -- that judgement stands -- but the critical components now
+            # run to seventeen elements across five foundations, and a reader
+            # hunting a surface there had no way to reach it except by scrolling
+            # past every other one. The threshold is the length, not the zone.
+            if len(order_seen) >= 3:
                 out.append(
                     f'<nav class="dh-subnav" aria-label="{html_escape(txt["toc-jump"])}"><ol>'
                     + "".join(
@@ -2716,7 +2950,21 @@ def render_article(project_root: Path, decisions: dict[str, object],
         if seen_foundation is not None and zone in FOLDING_ZONES:
             out.append("</details>")
         out.append("</section>")
-    out += ["</div>"]
+    # A designer finishing a page of scores has no idea what happens next.
+    # The bar says it, stays put, and counts what is still unscored.
+    unscored_now = len([e for e in live if e.get("source") != "user"])
+    out += [
+        '<footer class="dh-credit">'
+        f'<b>{html_escape(txt["credit-what"])}</b>'
+        f'<span>{html_escape(txt["credit-who"])}</span>'
+        "</footer>",
+        "</div>",
+        '<aside class="dh-bar" role="complementary">'
+        f'<b>{html_escape(txt["bar-lead"])}</b>'
+        f'<span>{html_escape(txt["bar-hint"])}</span>'
+        + (f'<em>{unscored_now} {html_escape(txt["bar-left"])}</em>' if unscored_now else "")
+        + "</aside>",
+    ]
     return "\n".join(part for part in out if part) + "\n"
 
 
@@ -3500,6 +3748,10 @@ def parser() -> argparse.ArgumentParser:
     decide.add_argument("--evidence", required=True, help="verbatim user excerpt, not a paraphrase")
     decide.add_argument("--supersedes", default="", help="comma-separated element ids this replaces")
     decide.add_argument("--preview", default="", help="project-relative graphic of the element being ranked")
+    decide.add_argument("--title", default="",
+                        help="what to CALL this design in plain words, e.g. "
+                             "'Pestaña de rol coloreada'. The dotted id stays the "
+                             "stable key; this is what the designer reads.")
     decide.add_argument("--description", default="",
                         help="what the component IS, in plain words (shown on the scoring row)")
     decide.add_argument("--implemented", default="",
@@ -3610,7 +3862,8 @@ def main() -> int:
                                         args.stars, args.evidence, supersedes, preview,
                                         source=args.source,
                                         implemented=args.implemented or None,
-                                        description=args.description or None)
+                                        description=args.description or None,
+                                        title=args.title or None)
             live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
             print(f"Recorded {args.element} ({args.verdict}, {args.stars}★). "
                   f"{len(live)} element(s) standing, state={decisions['state']}.")
