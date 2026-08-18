@@ -10,7 +10,8 @@ Pin the subject, the audience, the artefact's single job, the real content, the
 constraints, and the user's ranked preferences. Open the last PNG of the
 incumbent and the user's last rank for this id before drawing. Infer what the
 evidence supports rather than interviewing: ask only for a missing choice that
-would change the result, and ask it once. `--asks` is that one move.
+would change the result, and ask it once. `--asks` is one plain sentence a
+designer can answer out loud, not an id and not a symbol from the drawing.
 
 An artefact with two jobs has none. If the brief names two, say which one the
 composition will serve and what the other gets instead.

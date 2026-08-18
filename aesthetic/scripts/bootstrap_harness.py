@@ -218,7 +218,7 @@ STRINGS = {
         "bar-return": "Return",
         "agent-working": "Agent running", "agent-idle": "Agent idle",
         "bar-idle": "waiting for your chat directions",
-        "prep-legend": "Rank what is still pending. Inference is still running.",
+        "prep-legend": "New designs are on the way. Rank anything still pending.",
         "bar-active-label": "Designing",
         "bar-left": "left to score", "done-cheer": "Marked as done",
         "credit-what": "Live companion",
@@ -278,7 +278,7 @@ STRINGS = {
         "bar-return": "Volver",
         "agent-working": "Agente trabajando", "agent-idle": "Agente en pausa",
         "bar-idle": "esperando tus indicaciones en el chat",
-        "prep-legend": "Puntúa lo que sigue pendiente. La inferencia sigue en curso.",
+        "prep-legend": "Están llegando diseños nuevos. Puntúa lo que sigue pendiente.",
         "bar-active-label": "Diseñando",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
         "credit-what": "Companion en vivo",
@@ -942,7 +942,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "34"
+CONTROLS_VERSION = "35"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -1572,6 +1572,15 @@ def scope_comp_css(css: str) -> str:
     return f"@scope (.{COMP_SCOPE_CLASS}) {{\n{css}\n}}\n"
 
 
+def _css_px(css: str, names: tuple[str, ...]) -> float | None:
+    """First declared px size among logical and physical properties."""
+    for name in names:
+        match = re.search(rf"(?<![\w-]){name}:\s*(\d+(?:\.\d+)?)px", css)
+        if match:
+            return float(match.group(1))
+    return None
+
+
 def html_comp_fragment(raw: str) -> tuple[str, float, float]:
     """Body + styles from a comp file, and its declared page size."""
     width, height = 850.0, 1100.0
@@ -1579,12 +1588,12 @@ def html_comp_fragment(raw: str) -> tuple[str, float, float]:
         styles = "".join(re.findall(r"<style[^>]*>(.*?)</style>", raw, re.S | re.I))
         body_match = re.search(r"<body[^>]*>(.*)</body>", raw, re.S | re.I)
         body = body_match.group(1) if body_match else raw
-        width_match = re.search(r"width:\s*(\d+(?:\.\d+)?)px", styles)
-        height_match = re.search(r"min-height:\s*(\d+(?:\.\d+)?)px", styles)
-        if width_match:
-            width = float(width_match.group(1))
-        if height_match:
-            height = float(height_match.group(1))
+        # New comps size the page with inline-size/block-size. Reading only
+        # `width`/`min-height` left those at the 850×1100 default, so the
+        # slideshow scaled a 510 drawing into the corner of a white stage.
+        width = _css_px(styles, ("inline-size", "width")) or width
+        height = (_css_px(styles, ("block-size", "min-block-size",
+                                   "min-height", "height")) or height)
         scoped = scope_comp_css(styles)
         return (f"<style>{scoped}</style>"
                 f'<div class="{COMP_SCOPE_CLASS}">{body}</div>'), width, height
@@ -2048,7 +2057,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-art *,.dh-art *::before,.dh-art *::after{box-sizing:inherit}
 /* Hero. The thesis is the QUESTION this round asks -- not a stat block, which
    would say what has been counted rather than what is wanted. */
-.dh-hero{padding:64px 0 28px;border-block-end:2px solid var(--dh-ink,#111)}
+.dh-hero{padding:40px 0 20px;border-block-end:2px solid var(--dh-ink,#111)}
 .dh-hero .dh-eyebrow{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
  color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent);margin:0 0 18px}
 .dh-hero h1{margin:0;font-size:clamp(34px,6.2vw,68px);line-height:1.02;font-weight:800;
@@ -2091,7 +2100,7 @@ html:has(.dh-art){scroll-behavior:smooth}
    here AND what to do next. It reads at body size, not as fine print. */
 .dh-hero .dh-lede{margin:24px 0 0;max-inline-size:62ch;font-size:16px;line-height:1.6;
  color:color-mix(in srgb, var(--dh-ink,#111) 82%, transparent)}
-.dh-figures{display:flex;flex-wrap:wrap;gap:34px;margin:30px 0 0;padding:0;list-style:none}
+.dh-figures{display:flex;flex-wrap:wrap;gap:34px;margin:18px 0 0;padding:0;list-style:none}
 .dh-figures div{display:flex;flex-direction:column;gap:3px}
 .dh-figures b{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .dh-figures span{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
@@ -2178,13 +2187,13 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-brand-right{align-items:flex-end;text-align:end}
 .header .brand.dh-brand a,.brand.dh-brand a{text-decoration:none;color:inherit}
 .header .brand.dh-brand .dh-brand-name,.brand.dh-brand .dh-brand-name{
- font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
- color:color-mix(in srgb, #f2f2f2 86%, transparent);display:block}
+ font-size:.8rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+ color:#f2f2f2;display:block}
 .header .brand.dh-brand .dh-brand-name:hover,.brand.dh-brand .dh-brand-name:hover{
  text-decoration:underline;color:#fff}
 .header .brand.dh-brand .dh-brand-kind,.brand.dh-brand .dh-brand-kind{
- font-size:.64rem;font-weight:500;letter-spacing:.06em;
- color:color-mix(in srgb, #f2f2f2 52%, transparent)}
+ font-size:.72rem;font-weight:500;letter-spacing:.04em;
+ color:color-mix(in srgb, #f2f2f2 70%, transparent)}
 .header .brand.dh-brand .dh-brand-agent,.brand.dh-brand .dh-brand-agent{
  font-size:.84rem;font-weight:700;letter-spacing:.01em;text-transform:none;
  max-inline-size:min(34ch,100%);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2200,7 +2209,7 @@ html:has(.dh-art){scroll-behavior:smooth}
  background:var(--status-color,#34c759);
  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat}
-.header:has(.dh-brand){display:block;padding:.55rem 1.25rem}
+.header:has(.dh-brand){display:block;padding:.85rem 1.5rem}
 .header:has(.dh-brand) .brand{width:100%}
 /* No dot here. The connection pill below already carries one, and two dots
    reading different things is the ambiguity this row was meant to remove. */
@@ -2244,7 +2253,8 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* This round is the only section that asks for something, so it is the only one
    that raises its voice: inverted, full bleed against everything else. */
 .dh-zone[data-zone="round"]{background:var(--dh-ink,#111);color:var(--dh-bg,#fff);
- margin:var(--s5) 0 0;padding:var(--s4) var(--s4) var(--s5);border-radius:16px;
+ margin:var(--s3) 0 0;padding:var(--s3) var(--s4) var(--s4);border-radius:16px;
+ position:relative;
  /* The ground inverts here, so the rule token has to invert with it. Derived
     from ink, it was ink-on-ink: every border inside this zone vanished. */
  --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 30%, transparent)}
@@ -2275,7 +2285,7 @@ html:has(.dh-art){scroll-behavior:smooth}
    under a heading it was the one sentence on the page nobody read -- and it is
    the only thing the page is actually asking. */
 .dh-zone[data-zone="round"] > header{max-inline-size:none;text-align:center;
- margin-block-end:var(--s5)}
+ margin-block-end:var(--s3)}
 .dh-zone[data-zone="round"] > header .dh-tag,
 .dh-zone[data-zone="round"] > header .dh-domain{margin-inline:auto}
 .dh-zone[data-zone="round"] > header .dh-domain{justify-content:center}
@@ -2284,7 +2294,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* The section name is the label; the round's own topic is the subject, so it
    reads larger. The question below is the ask, weighted just under it. */
 .dh-zone[data-zone="round"] > header h2{font-weight:900;letter-spacing:-.03em}
-.dh-ask{margin:var(--s3) auto 0;max-inline-size:62ch;padding:0 var(--s3);
+.dh-ask{margin:var(--s2) auto 0;max-inline-size:62ch;padding:0 var(--s3);
  font-size:clamp(20px,2.6vw,27px);line-height:1.36;font-weight:600;
  letter-spacing:-.02em;text-wrap:balance;
  color:color-mix(in srgb, var(--dh-bg,#fff) 96%, transparent)}
@@ -2552,7 +2562,7 @@ html:has(dialog.dh-lb[open]) .header{display:none}
 .dh-lb-name{display:flex;flex-direction:column;gap:2px;min-inline-size:0;flex:1 1 auto}
 .dh-lb-id{font-size:15px;font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere;
  min-inline-size:0}
-.dh-lb-token{font-size:9.5px;letter-spacing:.04em;opacity:.5;overflow-wrap:anywhere}
+.dh-lb-token{display:none}
 .dh-lb-token::before{content:"#";opacity:.6;margin-inline-end:1px}
 .dh-lb-state{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
  padding:3px 9px;border-radius:999px;border:1px solid var(--dh-rule);flex:none;opacity:.8}
@@ -2590,7 +2600,7 @@ html:has(dialog.dh-lb[open]) .header{display:none}
  display:grid;place-items:center;overflow:hidden}
 .dh-lb-art .dh-shot{--dh-shot-w:auto;aspect-ratio:8.5/11;inline-size:auto;
  block-size:min(100cqh, 100cqw * 11 / 8.5);
- max-inline-size:100%;max-block-size:100%;
+ max-inline-size:100%;max-block-size:100%;position:relative;
  background:#fff;border-radius:4px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
 .dh-lb-art .dh-shot-inner{position:absolute;inset-block-start:0;inset-inline-start:0;
  transform-origin:0 0;pointer-events:none}
@@ -2655,16 +2665,18 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 /* A thumbnail that opens something must say so before it is clicked. */
 .dh-art .dh-shot[data-el]{cursor:zoom-in}
 .dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
-/* Floating action bar: one place to return to the agent, not a full-width footer. */
-.dh-bar{position:fixed;inset-block-end:16px;inset-inline-end:16px;inset-inline-start:auto;
- z-index:50;max-inline-size:min(420px,calc(100dvw - 32px));
- display:flex;flex-direction:column;align-items:stretch;gap:8px;
- padding:12px 14px;border-radius:14px;
- font:500 13px/1.4 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
- background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
+/* Full-width footer. A corner chip sat on top of the round question and
+   made the ask look truncated. */
+.dh-bar{position:fixed;inset-inline:0;inset-block-end:0;
+ z-index:50;max-inline-size:100dvw;
+ display:flex;flex-direction:row;align-items:center;justify-content:space-between;
+ gap:16px;
+ padding:10px 20px;border-radius:0;
+ font:500 13px/1.35 var(--dh-font,ui-sans-serif,system-ui,sans-serif);
+ background:var(--dh-ink,#111);
  color:var(--dh-bg,#fff);
- border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 22%, transparent);
- box-shadow:0 14px 44px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
+ border:0;border-block-start:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
+ box-shadow:none;backdrop-filter:none}
 .dh-bar b{font-weight:700;letter-spacing:-.01em}
 .dh-bar-copy{margin:0;opacity:.88}
 /* What the agent is doing, when it says so. A pulsing dot because the one
@@ -2684,7 +2696,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 /* One return action: chat icon and label, hyperlinked to the agent session. */
 .dh-bar-go{display:inline-flex;align-items:center;gap:8px;flex:none;font-weight:800;
  letter-spacing:.06em;font-size:12px;padding:8px 14px;border-radius:999px;text-decoration:none;
- background:var(--dh-bg,#fff);color:var(--dh-ink,#111);margin-block-start:6px}
+ background:var(--dh-bg,#fff);color:var(--dh-ink,#111);margin:0}
 .dh-bar-go:hover{filter:brightness(.94)}
 .dh-bar-go[aria-disabled="true"]{opacity:.45;pointer-events:none}
 .dh-bar-ico{inline-size:15px;block-size:15px;flex:none;opacity:.88}
@@ -2694,7 +2706,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
  padding:4px 10px;border-radius:999px;
  background:var(--dh-accent,#d9482a);color:#fff}
 /* The bar is fixed, so the last section needs room to clear it. */
-.dh-art{padding-block-end:calc(var(--s6) + 96px)}
+.dh-art{padding-block-end:calc(var(--s6) + 72px)}
 /* Credit, de-protagonised: this page is the project's, not the tool's. */
 .dh-credit{margin-block-start:var(--s6);padding-block-start:var(--s3);
  border-block-start:1px solid var(--dh-rule);
@@ -2709,11 +2721,15 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-fb [data-verdict].on{animation:dh-pop .34s ease-out}
 .dh-fb .dh-saved[data-cheer]{background:var(--dh-accent,#d9482a);
  border-color:color-mix(in srgb, var(--dh-accent,#d9482a) 72%, #000)}
-.dh-zone[data-zone="round"][data-preparing]{opacity:.72;transition:none}
-.dh-prep{display:none;margin:var(--s2) auto 0;max-inline-size:46ch;font-size:13px;
- line-height:1.45;font-weight:600;letter-spacing:.01em;
- color:color-mix(in srgb, var(--dh-bg,#fff) 82%, transparent)}
-.dh-zone[data-zone="round"][data-preparing] .dh-prep{display:block}
+.dh-zone[data-zone="round"]{position:relative}
+.dh-zone[data-zone="round"][data-preparing] > :not(.dh-prep){opacity:.72;transition:none}
+.dh-prep{display:none;margin:0;max-inline-size:none;font-size:15px;
+ line-height:1.4;font-weight:700;letter-spacing:.01em;text-align:center;
+ pointer-events:none}
+.dh-zone[data-zone="round"][data-preparing] .dh-prep{display:block;
+ position:absolute;inset:12px 12px auto;z-index:2;padding:12px 16px;border-radius:10px;
+ background:color-mix(in srgb, var(--dh-ink,#111) 88%, transparent);
+ color:var(--dh-bg,#fff)}
 @media (prefers-reduced-motion:reduce){.dh-art *,.dh-lb *{transition:none!important;
  animation:none!important}}
 </style>"""
@@ -2923,16 +2939,16 @@ SHOT_FIT_SCRIPT = """<script>/* dh-shot-fit */
   var cw=parseFloat(inner.getAttribute('data-comp-w'))||510;
   var ch=parseFloat(inner.getAttribute('data-comp-h'))||660;
   function apply(){
-   var w=shot.clientWidth;
-   if(w<1)return;
-   var s=w/cw;
+   var w=shot.clientWidth, h=shot.clientHeight;
+   if(w<1||h<1)return;
+   var s=Math.min(w/cw, h/ch);
    inner.style.transform='scale('+s+')';
    inner.style.inlineSize=cw+'px';
    inner.style.blockSize=ch+'px';
    inner.style.transformOrigin='0 0';
    inner.style.position='absolute';
-   inner.style.insetBlockStart='0';
-   inner.style.insetInlineStart='0';
+   inner.style.insetBlockStart=((h-ch*s)/2)+'px';
+   inner.style.insetInlineStart=((w-cw*s)/2)+'px';
    inner.style.pointerEvents='none';
   }
   apply();
@@ -3620,7 +3636,6 @@ def render_article(project_root: Path, decisions: dict[str, object],
         # a grey note under a heading, which is where nobody read it.
         heading = txt["round-heading"] if zone == "round" else txt[f"zone-{zone}"]
         note_markup = (f'<p class="dh-ask">{html_escape(note)}</p>'
-                       f'<p class="dh-prep">{html_escape(txt["prep-legend"])}</p>'
                        if zone == "round"
                        else f'<p class="dh-note">{html_escape(note)}</p>')
         # The round tag names the OBJECT being judged, not a slug like `objeto`.
@@ -3637,6 +3652,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
                 f'<h2>{html_escape(heading)}</h2>',
                 domain_line,
                 note_markup, "</header>"]
+        if zone == "round":
+            out.append(f'<p class="dh-prep">{html_escape(txt["prep-legend"])}</p>')
         if not members:
             out.append(f'<p class="dh-empty">{html_escape(txt["empty-zone"])}</p>')
         # A second sticky level for the long zone: the reader arrives here

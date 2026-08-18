@@ -1059,6 +1059,14 @@ class ChromeFixesV34(unittest.TestCase):
             '.dh-live[data-state="idle"] .dh-live-detail{display:none}',
             style.replace(" ", ""))
 
+    def test_bottom_bar_is_a_full_width_footer(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        bar = re.search(r"(?<![,-])\.dh-bar\{([^}]+)\}", style).group(1)
+        self.assertIn("inset-inline:0", bar.replace(" ", ""))
+        self.assertNotIn("inset-inline-end:16px", bar.replace(" ", ""))
+        self.assertIn("flex-direction:row", bar.replace(" ", ""))
+
     def test_live_script_does_not_open_a_second_socket(self):
         script = re.search(r"<script>/\* dh-live \*/(.*?)</script>",
                            self.markup(), re.S).group(1)
@@ -1074,6 +1082,11 @@ class ChromeFixesV34(unittest.TestCase):
             r"\.dh-lb-score-wrap \.dh-lb-score \.dh-signals\{([^}]*)\}",
             style).group(1)
         self.assertIn("nowrap", signals)
+        shot = re.search(r"\.dh-lb-art \.dh-shot\{([^}]*)\}", style).group(1)
+        self.assertIn("position:relative", shot.replace(" ", ""))
+        script = re.search(r"<script>/\* dh-shot-fit \*/(.*?)</script>",
+                           self.markup(), re.S).group(1)
+        self.assertIn("Math.min(w/cw,h/ch)", script.replace(" ", ""))
 
     def test_preparing_round_is_static(self):
         working = bh.render_article(
@@ -1084,9 +1097,17 @@ class ChromeFixesV34(unittest.TestCase):
         self.assertIn("class=\"dh-prep\"", working)
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
                           working, re.S).group(1)
-        prep = re.search(r"\[data-preparing\]\{([^}]*)\}", style).group(1)
-        self.assertIn("opacity", prep)
-        self.assertIn("transition:none", prep.replace(" ", ""))
+        prep = re.search(
+            r"\[data-preparing\] > :not\(\.dh-prep\)\{([^}]*)\}", style)
+        self.assertIsNotNone(prep)
+        self.assertIn("opacity", prep.group(1))
+        self.assertIn("transition:none", prep.group(1).replace(" ", ""))
+        overlay = re.search(
+            r"\[data-preparing\] \.dh-prep\{([^}]*)\}", style).group(1)
+        compact = overlay.replace(" ", "")
+        self.assertIn("position:absolute", compact)
+        self.assertIn("inset:12px12pxauto", compact)
+        self.assertNotIn("opacity:.72", overlay)
 
     def test_the_ask_has_a_readable_measure(self):
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
@@ -1108,6 +1129,13 @@ class ChromeFixesV34(unittest.TestCase):
         # drawing rendered as an empty white rectangle.
         self.assertIn(":scope{width:510px;background:#e8e4d8}", compact)
         self.assertNotIn(f".{bh.COMP_SCOPE_CLASS}{{width:510px", compact)
+
+    def test_comp_logical_page_size_is_not_the_850_default(self):
+        raw = ("<html><head><style>body{inline-size:510px;block-size:660px;"
+               "background:#e8e4d8}</style></head><body><p>x</p></body></html>")
+        _, width, height = bh.html_comp_fragment(raw)
+        self.assertEqual(width, 510.0)
+        self.assertEqual(height, 660.0)
 
 
 if __name__ == "__main__":
