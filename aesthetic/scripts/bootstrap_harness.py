@@ -211,7 +211,7 @@ STRINGS = {
         "unscored": "not yet scored", "proposed-by": "Proposed", "built": "Built",
         "no-graphic": "no graphic",
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
-        "companion-brand": "Cyber Yoshi: Skills", "companion-agent": "Cyber Yoshi",
+        "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
         "companion-kind": "Agent companion",
         "bar-lead": "Scored what you can? Go back to your agent chat",
         "bar-hint": "give your critique and directions there \u2014 new designs follow",
@@ -221,7 +221,7 @@ STRINGS = {
         "bar-active-label": "Designing",
         "bar-left": "left to score", "done-cheer": "Marked as done",
         "credit-what": "Live companion",
-        "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
+        "credit-who": "Inspired from Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
         "project-label": "Project", "designing": "Designing",
         "saved": "Preference saved", "designs": "designs",
         "zone-round": "This round",
@@ -270,7 +270,7 @@ STRINGS = {
         "unscored": "sin puntuar", "proposed-by": "Propuesto", "built": "Implementado",
         "no-graphic": "sin gráfico",
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
-        "companion-brand": "Cyber Yoshi: Skills", "companion-agent": "Cyber Yoshi",
+        "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
         "companion-kind": "Companion del agente",
         "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
         "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
@@ -280,7 +280,7 @@ STRINGS = {
         "bar-active-label": "Diseñando",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
         "credit-what": "Companion en vivo",
-        "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
+        "credit-who": "Inspired from Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
         "project-label": "Proyecto", "designing": "Diseñando",
         "saved": "Preferencia guardada", "designs": "diseños",
         "zone-round": "Esta ronda",
@@ -906,7 +906,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "32"
+CONTROLS_VERSION = "33"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -2128,7 +2128,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-brand-right{align-items:flex-end;text-align:end}
 .header .brand.dh-brand a,.brand.dh-brand a{text-decoration:none;color:inherit}
 .header .brand.dh-brand .dh-brand-name,.brand.dh-brand .dh-brand-name{
- font-size:.72rem;font-weight:800;letter-spacing:.08em;
+ font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
  color:color-mix(in srgb, #f2f2f2 86%, transparent);display:block}
 .header .brand.dh-brand .dh-brand-name:hover,.brand.dh-brand .dh-brand-name:hover{
  text-decoration:underline;color:#fff}
@@ -2142,11 +2142,14 @@ html:has(.dh-art){scroll-behavior:smooth}
  text-decoration:underline}
 .header .brand.dh-brand .status,.brand.dh-brand .status,.brand.dh-brand .dh-brand-status{
  margin:0;font-size:.68rem;justify-self:end;position:static;display:flex;
+ align-items:center;gap:.4rem;
  color:color-mix(in srgb, #f2f2f2 72%, transparent)}
 .header .brand.dh-brand .status::before,.brand.dh-brand .status::before,
 .brand.dh-brand .dh-brand-status::before{
- width:7px;height:7px;border-radius:50%;flex:none;
- background:var(--status-color,#34c759);-webkit-mask:none;mask:none}
+ content:'';width:16px;height:13px;flex:none;border-radius:0;
+ background:var(--status-color,#34c759);
+ -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
+ mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat}
 .header:has(.dh-brand){display:block;padding:.55rem 1.25rem}
 .header:has(.dh-brand) .brand{width:100%}
 /* No dot here. The connection pill below already carries one, and two dots
@@ -2477,13 +2480,15 @@ html:has(.dh-art){scroll-behavior:smooth}
    that, and arrows walk the whole set without going back to the scroll. */
 dialog.dh-lb:not([open]){display:none}
 /* Transparent dialog + opaque shell: clicks on the dimmed margin close the modal. */
-dialog.dh-lb{position:fixed;inset:0;z-index:100;margin:0;padding:clamp(12px,3vw,28px);
+dialog.dh-lb{position:fixed;inset:0;z-index:200;margin:0;padding:clamp(12px,3vw,28px);
  border:none;max-inline-size:none;max-block-size:none;inline-size:100%;block-size:100%;
- background:transparent;color:var(--dh-bg,#fff);overflow:hidden}
+ background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);color:var(--dh-bg,#fff);overflow:hidden}
 dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+html:has(dialog.dh-lb[open]) .dh-bar{display:none}
 .dh-lb-shell{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:var(--s2);
- inline-size:min(1080px,100%);block-size:auto;max-block-size:min(920px,calc(100dvh - 48px));
- margin:0 auto;padding:clamp(var(--s3),3vw,var(--s4));
+ inline-size:min(960px,100%);
+ block-size:min(920px,calc(100dvh - 32px));max-block-size:calc(100dvh - 32px);
+ margin:0 auto;padding:clamp(var(--s2),2.4vw,var(--s4));
  background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
  border-radius:14px;border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
  box-shadow:0 28px 80px rgba(0,0,0,.55);
@@ -2508,12 +2513,12 @@ dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 62%, tra
 /* Body: image on top, copy and scoring in a footer row -- never a side column
    that floats over the drawing in a narrow companion pane. */
 .dh-lb-body{display:flex;flex-direction:column;gap:var(--s2);min-block-size:0;overflow:hidden}
-.dh-lb-frame{position:relative;flex:1 1 auto;min-block-size:min(42vh,400px);
+.dh-lb-frame{position:relative;flex:1 1 auto;min-block-size:0;
  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
  gap:var(--s2);padding-block:var(--s1)}
-.dh-lb-copy{font-size:13px;line-height:1.55;max-block-size:18vh;overflow-y:auto;
- padding-inline:var(--s1)}
-.dh-lb-foot{display:flex;justify-content:flex-end;align-items:center;gap:var(--s2);
+.dh-lb-copy{font-size:13px;line-height:1.55;max-block-size:12vh;overflow-y:auto;
+ padding-inline:0;align-self:center;inline-size:min(62ch,100%)}
+.dh-lb-foot{display:flex;justify-content:center;align-items:center;gap:var(--s2);
  padding-block-start:var(--s2);border-block-start:1px solid var(--dh-rule);flex-wrap:wrap}
 .dh-lb-score-wrap{flex:none;max-inline-size:100%}
 /* The thumbnail's own markup, re-scaled. `--dh-shot-w` is what sizes a shot,
@@ -2541,12 +2546,12 @@ dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 62%, tra
 .dh-lb-nav:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent)}
 .dh-lb-nav[disabled]{opacity:.25;cursor:default}
 .dh-lb-score-wrap .dh-lb-score{margin:0}
-.dh-lb-score-wrap .dh-lb-score .dh-signals{margin:0;flex-wrap:wrap;justify-content:flex-end}
+.dh-lb-score-wrap .dh-lb-score .dh-signals{margin:0;flex-wrap:wrap;justify-content:center}
 /* The lightbox clones the row strip outside `.dh-fb`, so give it a shell the
    scoring CSS already knows. */
 .dh-lb-fb.dh-fb{display:block;grid-template-columns:unset;padding:0;margin:0;
  border:0;background:transparent!important;box-shadow:none!important;color:inherit!important}
-.dh-lb-fb .dh-signals{position:static;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.dh-lb-fb .dh-signals{position:static;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 dialog.dh-lb .dh-lb-score .dh-stars > *{
  color:color-mix(in srgb, var(--dh-bg,#fff) 36%, transparent)}
 dialog.dh-lb .dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
@@ -2615,12 +2620,13 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-live-label{display:inline-flex;align-items:center;gap:7px;font-weight:800;
  letter-spacing:.04em;line-height:1.2;color:inherit}
 .dh-live-label::before{content:'';inline-size:8px;block-size:8px;border-radius:50%;flex:none}
-.dh-live[data-state="idle"] .dh-live-label::before{background:#7fd18f}
-.dh-live[data-state="active"] .dh-live-label::before{background:#e0902a}
-.dh-live-detail{font-size:11px;line-height:1.35;opacity:.88;max-inline-size:28ch;
- padding-inline-start:15px}
+.dh-live[data-state="idle"] .dh-live-label::before{background:#e0902a}
+.dh-live[data-state="active"] .dh-live-label::before{background:#7fd18f}
+.dh-live-detail{font-size:11px;line-height:1.35;opacity:.88;max-inline-size:36ch;
+ margin:0;padding:0}
 .dh-live[data-state="idle"] .dh-live-detail{display:none}
-.dh-bar span{opacity:.78}
+.dh-bar-copy span{opacity:.78}
+.dh-live-label,.dh-live-detail{opacity:1}
 /* One return action: chat icon and label, hyperlinked to the agent session. */
 .dh-bar-go{display:inline-flex;align-items:center;gap:8px;flex:none;font-weight:800;
  letter-spacing:.06em;font-size:12px;padding:8px 14px;border-radius:999px;text-decoration:none;
@@ -2704,7 +2710,9 @@ BRAND_SCRIPT = """<script>/* dh-brand */
   var title=document.createElement('a');
   title.className='dh-brand-name';
   title.href='https://github.com/yoshi-ortiz/cyber-skills';
-  title.textContent='Cyber Yoshi: Skills';
+  title.target='_blank';
+  title.rel='noopener noreferrer';
+  title.textContent='CYBER YOSHI: SKILLS';
   var sub=document.createElement('span');
   sub.className='dh-brand-kind'; sub.textContent=kind;
   left.appendChild(title); left.appendChild(sub);
@@ -3041,8 +3049,14 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   slides=slidesFor(id); var i=indexOf(id);
   if(i<0)return;
   lastFocus=document.activeElement;
-  at=i; paint();
+  at=i;
   if(typeof lb.showModal==='function') lb.showModal();
+  paint();
+  requestAnimationFrame(function(){
+   var art=lb.querySelector('.dh-lb-art .dh-shot');
+   if(art)fitShotInner(art);
+   lb.querySelectorAll('.dh-lb-strip .dh-shot').forEach(function(s){fitShotInner(s)});
+  });
   lb.querySelector('.dh-lb-x').focus();
  }
  function close(){

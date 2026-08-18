@@ -453,15 +453,18 @@ class TheCompanionHeaderIsTwoByTwo(unittest.TestCase):
         self.assertIn("grid-template-columns", style)
         self.assertIn(".header .brand.dh-brand", style)
         self.assertIn("dh-brand-kind", style)
+        self.assertIn("text-transform:uppercase", style)
+        self.assertIn("M4 6h16v9H4V6zm-2 11h20v2H2v-2z", style)
         script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>",
                            bh.render_article(Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
                                              set(), "", "en", None, "F", "Ask.",
                                              agent_url="cursor://x", agent_name="Composer"),
                            re.S).group(1)
-        self.assertIn("Cyber Yoshi: Skills", script)
+        self.assertIn("CYBER YOSHI: SKILLS", script)
         self.assertIn("dh-brand-left", script)
         self.assertIn("dh-brand-right", script)
         self.assertIn("Agent companion", script)
+        self.assertIn("target='_blank'", script)
 
 
 class TheSkillKeepsTheUserInformed(unittest.TestCase):
@@ -606,6 +609,25 @@ class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
         self.assertIsNotNone(script, "the article lost its live-status script")
         self.assertIn("dh-agent", script.group(1))
 
+    def test_waiting_is_orange_and_designing_is_green(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        idle = re.search(
+            r'\.dh-live\[data-state="idle"\] \.dh-live-label::before\{([^}]*)\}',
+            style).group(1)
+        active = re.search(
+            r'\.dh-live\[data-state="active"\] \.dh-live-label::before\{([^}]*)\}',
+            style).group(1)
+        self.assertIn("#e0902a", idle)
+        self.assertIn("#7fd18f", active)
+        detail = re.search(r"\.dh-live-detail\{([^}]*)\}", style).group(1)
+        self.assertNotIn("padding-inline-start", detail)
+
+    def test_the_footer_credits_inspiration_not_power(self):
+        markup = self.markup()
+        self.assertIn("Inspired from Jesse Vincent", markup)
+        self.assertNotIn("Powered by Jesse Vincent", markup)
+
 
 class DoctorCanStayQuiet(unittest.TestCase):
     def test_quiet_swallows_ok_lines(self):
@@ -635,6 +657,9 @@ class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
                       "HTML comps must be re-scaled in the slideshow cell")
         self.assertIn("createElement('dialog')", script,
                       "the slideshow must use a native dialog for escape and focus")
+        opener = script.split("function open")[1]
+        self.assertLess(opener.index("showModal();"), opener.index("paint();"),
+                        "fit the drawing after the dialog is open, not while it is display:none")
         self.assertIn("dh-lb-shell", script,
                       "slideshow must wrap content so outside clicks can dismiss it")
         self.assertIn("!e.target.closest('.dh-lb-shell')", script,
@@ -643,6 +668,11 @@ class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
                       "scores belong in a footer row, not a side column")
         self.assertIn("dialog.dh-lb .dh-lb-score", style,
                       "slideshow scores must inherit the dark overlay palette")
+        self.assertIn("html:has(dialog.dh-lb[open]) .dh-bar", style,
+                      "the floating aid must not sit on top of the slideshow")
+        self.assertIn("block-size:min(920px,calc(100dvh - 32px))", style,
+                      "the shell needs a definite height so the drawing cell can size")
+        self.assertIn("justify-content:center", style)
 
 
 class CardThumbnailsScaleOnLoad(unittest.TestCase):
@@ -702,9 +732,10 @@ class DoneLooksLikeDone(unittest.TestCase):
         script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>", markup, re.S)
         self.assertIsNotNone(script, "the brand rewrite was not emitted")
         body = script.group(1)
-        self.assertIn("Cyber Yoshi: Skills", body)
+        self.assertIn("CYBER YOSHI: SKILLS", body)
         self.assertIn("dh-brand-left", body)
         self.assertIn("dh-brand-right", body)
+        self.assertIn("target='_blank'", body)
         self.assertNotIn(".brand{display:none}", markup,
                          "blanking the bar leaves an empty strip")
 
