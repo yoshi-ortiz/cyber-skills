@@ -214,10 +214,10 @@ STRINGS = {
         "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
         "companion-kind": "Agent companion",
         "bar-lead": "Scored what you can? Go back to your agent chat",
-        "bar-hint": "give your critique and directions there \u2014 new designs follow",
+        "bar-hint": "Give your critique and directions there \u2014 new designs follow",
         "bar-return": "Return",
         "agent-working": "Agent running", "agent-idle": "Agent idle",
-        "bar-idle": "waiting for your chat directions",
+        "bar-idle": "Waiting for your chat directions",
         "prep-legend": "New designs are on the way. Rank anything still pending.",
         "bar-active-label": "Designing",
         "bar-left": "left to score", "done-cheer": "Marked as done",
@@ -274,10 +274,10 @@ STRINGS = {
         "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
         "companion-kind": "Companion del agente",
         "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
-        "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
+        "bar-hint": "Dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
         "bar-return": "Volver",
         "agent-working": "Agente trabajando", "agent-idle": "Agente en pausa",
-        "bar-idle": "esperando tus indicaciones en el chat",
+        "bar-idle": "Esperando tus indicaciones en el chat",
         "prep-legend": "Están llegando diseños nuevos. Puntúa lo que sigue pendiente.",
         "bar-active-label": "Diseñando",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
@@ -376,11 +376,15 @@ def agent_context_from_env() -> tuple[str, str]:
     return url, name
 
 
-def agent_display_line(name: str, url: str = "") -> str:
-    """Header reads `App | Model`. Do not invent a URL scheme."""
+def agent_display_parts(name: str, url: str = "") -> tuple[str, str]:
+    """Split the session line into app + model for balanced header type."""
     name = (name or "").strip()
     if "|" in name:
-        return " | ".join(part.strip() for part in name.split("|") if part.strip())
+        parts = [part.strip() for part in name.split("|") if part.strip()]
+        if len(parts) >= 2:
+            return parts[0], " ".join(parts[1:])
+        if parts:
+            return parts[0], ""
     app = (os.environ.get("DH_AGENT_APP") or os.environ.get("CURSOR_AGENT_APP") or "").strip()
     lower = (url or "").lower()
     if not app:
@@ -389,8 +393,16 @@ def agent_display_line(name: str, url: str = "") -> str:
         elif "claude.ai" in lower or lower.startswith("claude:"):
             app = "Claude"
     if app and name:
-        return f"{app} | {name}"
-    return app or name
+        return app, name
+    if app:
+        return app, ""
+    return name, ""
+
+
+def agent_display_line(name: str, url: str = "") -> str:
+    """Plain fallback label when the brand script cannot split app/model."""
+    app, model = agent_display_parts(name, url)
+    return " ".join(part for part in (app, model) if part).strip()
 
 
 def check_asks(asks: str, cohort: set[str], language: str | None = None) -> None:
@@ -942,7 +954,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "35"
+CONTROLS_VERSION = "37"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -2178,30 +2190,43 @@ html:has(.dh-art){scroll-behavior:smooth}
    inherits its border-box and their padding was adding to a 100% width --
    24px of horizontal overflow on the whole page. */
 .dh-brand,.dh-bar{box-sizing:border-box;max-inline-size:100%}
-/* Companion header: two columns × two rows. Left = product; right = session. */
+/* Companion header: product left, session right — sans for chrome, mono stays
+   on the article. Frame template used to cap `.brand` at 0.75rem and shrink
+   the whole bar into undifferentiated small caps. */
+.header:has(.dh-brand) .brand{font-size:inherit;line-height:inherit}
 .header .brand.dh-brand,.brand.dh-brand{display:grid!important;
  grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto;
- gap:.22rem 1rem;align-items:baseline;width:100%;flex:1 1 auto;min-inline-size:0;
- line-height:1.25;overflow:visible}
-.dh-brand-left,.dh-brand-right{display:flex;flex-direction:column;gap:.22rem;min-inline-size:0}
+ gap:.35rem 1.25rem;align-items:baseline;width:100%;flex:1 1 auto;min-inline-size:0;
+ line-height:1.2;overflow:visible;
+ font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.dh-brand-left,.dh-brand-right{display:flex;flex-direction:column;gap:.28rem;min-inline-size:0}
 .dh-brand-right{align-items:flex-end;text-align:end}
 .header .brand.dh-brand a,.brand.dh-brand a{text-decoration:none;color:inherit}
 .header .brand.dh-brand .dh-brand-name,.brand.dh-brand .dh-brand-name{
- font-size:.8rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
- color:#f2f2f2;display:block}
+ font-size:.94rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+ color:#fff;display:block;line-height:1.12}
 .header .brand.dh-brand .dh-brand-name:hover,.brand.dh-brand .dh-brand-name:hover{
  text-decoration:underline;color:#fff}
 .header .brand.dh-brand .dh-brand-kind,.brand.dh-brand .dh-brand-kind{
- font-size:.72rem;font-weight:500;letter-spacing:.04em;
- color:color-mix(in srgb, #f2f2f2 70%, transparent)}
+ font-size:.62rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+ color:color-mix(in srgb, #f2f2f2 58%, transparent)}
 .header .brand.dh-brand .dh-brand-agent,.brand.dh-brand .dh-brand-agent{
- font-size:.84rem;font-weight:700;letter-spacing:.01em;text-transform:none;
+ font-size:.82rem;letter-spacing:-.015em;text-transform:none;
+ display:flex;align-items:baseline;gap:.38em;min-inline-size:0;
  max-inline-size:min(34ch,100%);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.header .brand.dh-brand .dh-brand-app,.brand.dh-brand .dh-brand-app{
+ font-weight:600;color:color-mix(in srgb, #f2f2f2 94%, transparent)}
+.header .brand.dh-brand .dh-brand-model,.brand.dh-brand .dh-brand-model{
+ font-weight:400;color:color-mix(in srgb, #f2f2f2 72%, transparent)}
 .header .brand.dh-brand .dh-brand-agent:hover,.brand.dh-brand .dh-brand-agent:hover{
- text-decoration:underline}
+ text-decoration:none;color:#fff}
+.header .brand.dh-brand .dh-brand-agent:hover .dh-brand-app,
+.header .brand.dh-brand .dh-brand-agent:hover .dh-brand-model,
+.brand.dh-brand .dh-brand-agent:hover .dh-brand-app,
+.brand.dh-brand .dh-brand-agent:hover .dh-brand-model{color:#fff}
 .header .brand.dh-brand .status,.brand.dh-brand .status,.brand.dh-brand .dh-brand-status{
- margin:0;font-size:.68rem;justify-self:end;position:static;display:flex;
- align-items:center;gap:.4rem;
+ margin:0;font-size:.68rem;font-weight:400;letter-spacing:.04em;
+ justify-self:end;position:static;display:flex;align-items:center;gap:.45rem;
  color:var(--status-color,#34c759)}
 .header .brand.dh-brand .status::before,.brand.dh-brand .status::before,
 .brand.dh-brand .dh-brand-status::before{
@@ -2575,16 +2600,20 @@ html:has(dialog.dh-lb[open]) .header{display:none}
 .dh-lb-x:focus-visible{outline:2px solid var(--dh-rule);outline-offset:2px}
 /* Body: image on top, copy and scoring in a footer row -- never a side column
    that floats over the drawing in a narrow companion pane. */
-.dh-lb-body{display:flex;flex-direction:column;gap:var(--s2);min-block-size:0;overflow:hidden}
-.dh-lb-frame{position:relative;flex:1 1 auto;min-block-size:0;
+.dh-lb-body{display:flex;flex-direction:column;gap:var(--s2);min-block-size:0;overflow:hidden;
+ align-items:center;width:100%}
+.dh-lb-frame{position:relative;flex:1 1 auto;min-block-size:0;width:100%;
  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
  gap:var(--s2);padding-block:var(--s1)}
 .dh-lb-copy{font-size:13px;line-height:1.55;max-block-size:12vh;overflow-y:auto;
- padding-inline:0;align-self:center;inline-size:min(62ch,100%)}
-.dh-lb-foot{display:flex;justify-content:center;align-items:center;gap:var(--s2);
- padding-block-start:var(--s2);border-block-start:1px solid var(--dh-rule);flex-wrap:nowrap;
- overflow-x:auto}
-.dh-lb-score-wrap{flex:none;max-inline-size:100%}
+ padding-inline:var(--s2);align-self:center;inline-size:min(62ch,100%);
+ text-align:center;margin-inline:auto}
+.dh-lb-foot{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:var(--s2);width:100%;
+ padding-block-start:var(--s2);border-block-start:1px solid var(--dh-rule);
+ flex-wrap:nowrap;overflow-x:auto}
+.dh-lb-score-wrap{flex:none;inline-size:100%;max-inline-size:100%;
+ display:flex;justify-content:center;align-items:center}
 /* The thumbnail's own markup, re-scaled. `--dh-shot-w` is what sizes a shot,
    so the slide sets it to the frame height rather than restyling the node. */
 /* Sized by its BOX, never by the viewport. `62vh` against a tall pane made the
@@ -2609,13 +2638,17 @@ html:has(dialog.dh-lb[open]) .header{display:none}
  color:inherit;font:inherit;font-size:18px;line-height:1}
 .dh-lb-nav:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent)}
 .dh-lb-nav[disabled]{opacity:.25;cursor:default}
-.dh-lb-score-wrap .dh-lb-score{margin:0}
+.dh-lb-score-wrap .dh-lb-score{margin:0;inline-size:auto;max-inline-size:100%}
 .dh-lb-score-wrap .dh-lb-score .dh-signals{margin:0;flex-wrap:nowrap;justify-content:center}
 /* The lightbox clones the row strip outside `.dh-fb`, so give it a shell the
-   scoring CSS already knows. */
-.dh-lb-fb.dh-fb{display:block;grid-template-columns:unset;padding:0;margin:0;
+   scoring CSS already knows. Triple-class beats `.dh-fb.dh-fb{display:grid}` in
+   dh-controls, which otherwise parks `.dh-signals` in the 96px thumb column. */
+.dh-lb-score-wrap .dh-lb-fb.dh-fb{display:flex;justify-content:center;align-items:center;
+ grid-template-columns:unset;padding:0;margin:0;width:auto;max-inline-size:100%;
  border:0;background:transparent!important;box-shadow:none!important;color:inherit!important}
-.dh-lb-fb .dh-signals{position:static;display:flex;flex-wrap:nowrap;gap:8px;justify-content:center}
+.dh-lb-score-wrap .dh-lb-fb .dh-signals{position:static;display:inline-flex;flex-wrap:nowrap;
+ gap:8px;justify-content:center;align-items:center;grid-column:auto;width:auto;
+ max-inline-size:100%}
 dialog.dh-lb .dh-lb-score .dh-stars > *{
  color:color-mix(in srgb, var(--dh-bg,#fff) 36%, transparent)}
 dialog.dh-lb .dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
@@ -2657,6 +2690,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-lb-acts button:hover{border-color:currentColor}
 /* Filmstrip: where you are in the set, and one click to anywhere else. */
 .dh-lb-strip{display:flex;gap:8px;overflow-x:auto;padding-block:8px;scrollbar-width:thin;
+ justify-content:center;align-items:center;width:100%;
  --dh-shot-w:72px;min-block-size:calc(var(--dh-shot-w) * 11 / 8.5 + 10px)}
 .dh-lb-strip .dh-shot{cursor:pointer;opacity:.5;outline:2px solid transparent;
  border-radius:2px;background:#fff;transition:opacity .12s}
@@ -2665,18 +2699,16 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 /* A thumbnail that opens something must say so before it is clicked. */
 .dh-art .dh-shot[data-el]{cursor:zoom-in}
 .dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
-/* Full-width footer. A corner chip sat on top of the round question and
-   made the ask look truncated. */
-.dh-bar{position:fixed;inset-inline:0;inset-block-end:0;
- z-index:50;max-inline-size:100dvw;
- display:flex;flex-direction:row;align-items:center;justify-content:space-between;
- gap:16px;
- padding:10px 20px;border-radius:0;
- font:500 13px/1.35 var(--dh-font,ui-sans-serif,system-ui,sans-serif);
- background:var(--dh-ink,#111);
+/* Floating action bar: one place to return to the agent, not a full-width footer. */
+.dh-bar{position:fixed;inset-block-end:16px;inset-inline-end:16px;inset-inline-start:auto;
+ z-index:50;max-inline-size:min(420px,calc(100dvw - 32px));
+ display:flex;flex-direction:column;align-items:stretch;gap:8px;
+ padding:12px 14px;border-radius:14px;
+ font:500 13px/1.4 var(--dh-font,ui-sans-serif,system-ui,sans-serif);
+ background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
  color:var(--dh-bg,#fff);
- border:0;border-block-start:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
- box-shadow:none;backdrop-filter:none}
+ border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 22%, transparent);
+ box-shadow:0 14px 44px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
 .dh-bar b{font-weight:700;letter-spacing:-.01em}
 .dh-bar-copy{margin:0;opacity:.88}
 /* What the agent is doing, when it says so. A pulsing dot because the one
@@ -2696,7 +2728,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 /* One return action: chat icon and label, hyperlinked to the agent session. */
 .dh-bar-go{display:inline-flex;align-items:center;gap:8px;flex:none;font-weight:800;
  letter-spacing:.06em;font-size:12px;padding:8px 14px;border-radius:999px;text-decoration:none;
- background:var(--dh-bg,#fff);color:var(--dh-ink,#111);margin:0}
+ background:var(--dh-bg,#fff);color:var(--dh-ink,#111);margin-block-start:6px}
 .dh-bar-go:hover{filter:brightness(.94)}
 .dh-bar-go[aria-disabled="true"]{opacity:.45;pointer-events:none}
 .dh-bar-ico{inline-size:15px;block-size:15px;flex:none;opacity:.88}
@@ -2706,7 +2738,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
  padding:4px 10px;border-radius:999px;
  background:var(--dh-accent,#d9482a);color:#fff}
 /* The bar is fixed, so the last section needs room to clear it. */
-.dh-art{padding-block-end:calc(var(--s6) + 72px)}
+.dh-art{padding-block-end:calc(var(--s6) + 96px)}
 /* Credit, de-protagonised: this page is the project's, not the tool's. */
 .dh-credit{margin-block-start:var(--s6);padding-block-start:var(--s3);
  border-block-start:1px solid var(--dh-rule);
@@ -2778,7 +2810,14 @@ BRAND_SCRIPT = """<script>/* dh-brand */
   var host=document.querySelector('[data-agent-state]'); if(!host)return;
   var brand=document.querySelector('.brand'); if(!brand)return;
   var url=host.getAttribute('data-agent-url')||'';
+  var app=host.getAttribute('data-agent-app')||'';
+  var model=host.getAttribute('data-agent-model')||'';
   var label=host.getAttribute('data-agent-label')||'';
+  if(!app&&label.indexOf('|')>=0){
+   var bits=label.split('|').map(function(s){return s.trim()}).filter(Boolean);
+   app=bits[0]||''; model=bits.slice(1).join(' ')||'';
+  }
+  if(!app&&!model){app=label; model='';}
   var kind=host.getAttribute('data-companion-kind')||'Agent companion';
   brand.className='brand dh-brand';
   brand.textContent='';
@@ -2796,7 +2835,18 @@ BRAND_SCRIPT = """<script>/* dh-brand */
   var agent=document.createElement(url?'a':'span');
   agent.className='dh-brand-agent';
   if(url)agent.href=url;
-  agent.textContent=label||'Cyber Yoshi';
+  if(app){
+   var appEl=document.createElement('span');
+   appEl.className='dh-brand-app'; appEl.textContent=app;
+   agent.appendChild(appEl);
+   if(model){
+    var modelEl=document.createElement('span');
+    modelEl.className='dh-brand-model'; modelEl.textContent=model;
+    agent.appendChild(modelEl);
+   }
+  }else{
+   agent.textContent=label||'Cyber Yoshi';
+  }
   right.appendChild(agent);
   var pill=document.querySelector('.status');
   if(pill){pill.classList.add('dh-brand-status'); right.appendChild(pill);}
@@ -3446,7 +3496,9 @@ def render_article(project_root: Path, decisions: dict[str, object],
     txt = strings_for(language or project_language(project_root))
     stored_url, stored_name = companion_agent(project_root)
     agent_url = agent_url.strip() or stored_url
-    agent_name = agent_display_line(agent_name.strip() or stored_name, agent_url)
+    raw_name = agent_name.strip() or stored_name
+    agent_app, agent_model = agent_display_parts(raw_name, agent_url)
+    agent_name = agent_display_line(raw_name, agent_url)
     cohort = cohort or set()
     check_asks(asks, cohort, language or project_language(project_root))
     # A cohort is one surface or one problem. Three elements drawn from three
@@ -3566,6 +3618,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
            f'data-agent-url="{html_escape(agent_url)}" '
            f'data-agent-state="{agent_state}" '
            f'data-agent-label="{html_escape(agent_name)}" '
+           f'data-agent-app="{html_escape(agent_app)}" '
+           f'data-agent-model="{html_escape(agent_model)}" '
            f'data-companion-kind="{html_escape(txt["companion-kind"])}"'
            f'{root_style}>',
            '<header class="dh-hero">',
@@ -4595,8 +4649,10 @@ def parser() -> argparse.ArgumentParser:
                          help="object name for the round header, e.g. Micrófono. "
                               "Inferred from the cohort when omitted.")
     article.add_argument("--agent", default="",
-                         help="App | Model for the companion header, e.g. "
-                              "'Cursor | Composer'. Empty hides the model line "
+                         help="App and model for the companion header, e.g. "
+                              "'Cursor | Composer' or 'Composer' with a cursor:// URL. "
+                              "The pipe is input only — the header renders them as "
+                              "two weights with no separator. Empty hides the model line "
                               "rather than inventing one.")
     article.add_argument("--agent-url", default="",
                          help="deep link back to the agent's desktop app. Left empty "

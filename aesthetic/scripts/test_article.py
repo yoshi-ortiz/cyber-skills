@@ -597,9 +597,9 @@ class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
         markup = self.markup("Ready to score")
         live = markup.split('class="dh-live"')[1].split("</i>")[0]
         self.assertIn('data-state="idle"', live)
-        self.assertIn("waiting for your chat directions", live)
+        self.assertIn("Waiting for your chat directions", live)
         self.assertIn("dh-live-label", live)
-        self.assertIn("give your critique and directions", live)
+        self.assertIn("Give your critique and directions", live)
         self.assertNotIn("&lt;idle&gt;", live)
 
     def test_the_page_listens_for_a_live_status_push(self):
@@ -959,8 +959,8 @@ class TheLiveBarStatesItselfClearly(unittest.TestCase):
             set(), "", "en", None, "F", "Ask.")
         idle_live = idle.split('class="dh-live"')[1].split("</i>")[0]
         self.assertIn('data-state="idle"', idle_live)
-        self.assertIn("waiting for your chat directions", idle_live)
-        self.assertIn("give your critique and directions", idle_live)
+        self.assertIn("Waiting for your chat directions", idle_live)
+        self.assertIn("Give your critique and directions", idle_live)
         self.assertNotIn("&lt;idle&gt;", idle)
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
         self.assertIn('.dh-live[data-state="active"] .dh-live-label', style)
@@ -1041,10 +1041,24 @@ class ChromeFixesV34(unittest.TestCase):
         self.assertIsNotNone(rule)
         self.assertIn("--status-color", rule.group(1))
 
-    def test_agent_line_is_app_pipe_model(self):
+    def test_agent_line_splits_app_and_model(self):
         markup = self.markup()
-        self.assertIn("Cursor | Composer", markup)
-        self.assertIn('data-agent-label="Cursor | Composer"', markup)
+        self.assertIn('data-agent-app="Cursor"', markup)
+        self.assertIn('data-agent-model="Composer"', markup)
+        self.assertIn('data-agent-label="Cursor Composer"', markup)
+        self.assertNotIn("Cursor | Composer", markup)
+        script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>",
+                           markup, re.S).group(1)
+        self.assertIn("dh-brand-app", script)
+        self.assertIn("dh-brand-model", script)
+
+    def test_connected_uses_regular_weight(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        rule = re.search(
+            r"\.brand\.dh-brand \.dh-brand-status\{([^}]*)\}", style)
+        self.assertIsNotNone(rule)
+        self.assertIn("font-weight:400", rule.group(1).replace(" ", ""))
 
     def test_toc_kills_leaked_comp_bullets(self):
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
@@ -1059,13 +1073,24 @@ class ChromeFixesV34(unittest.TestCase):
             '.dh-live[data-state="idle"] .dh-live-detail{display:none}',
             style.replace(" ", ""))
 
-    def test_bottom_bar_is_a_full_width_footer(self):
+    def test_bottom_bar_is_a_corner_chip(self):
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
                           self.markup(), re.S).group(1)
         bar = re.search(r"(?<![,-])\.dh-bar\{([^}]+)\}", style).group(1)
-        self.assertIn("inset-inline:0", bar.replace(" ", ""))
-        self.assertNotIn("inset-inline-end:16px", bar.replace(" ", ""))
-        self.assertIn("flex-direction:row", bar.replace(" ", ""))
+        bar = bar.replace(" ", "")
+        self.assertIn("inset-inline-end:16px", bar)
+        self.assertIn("flex-direction:column", bar)
+        self.assertNotIn("inset-inline:0", bar)
+
+    def test_lightbox_centers_score_and_strip(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        strip = re.search(r"\.dh-lb-strip\{([^}]*)\}", style).group(1)
+        self.assertIn("justify-content:center", strip.replace(" ", ""))
+        score = re.search(r"\.dh-lb-score-wrap\{([^}]*)\}", style).group(1)
+        self.assertIn("justify-content:center", score.replace(" ", ""))
+        copy = re.search(r"\.dh-lb-copy\{([^}]*)\}", style).group(1)
+        self.assertIn("text-align:center", copy.replace(" ", ""))
 
     def test_live_script_does_not_open_a_second_socket(self):
         script = re.search(r"<script>/\* dh-live \*/(.*?)</script>",
