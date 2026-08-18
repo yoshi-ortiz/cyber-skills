@@ -211,13 +211,14 @@ STRINGS = {
         "unscored": "not yet scored", "proposed-by": "Proposed", "built": "Built",
         "no-graphic": "no graphic",
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
-        "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
+        "companion-brand": "Cyber Yoshi: Skills", "companion-agent": "Cyber Yoshi",
+        "companion-kind": "Agent companion",
         "bar-lead": "Scored what you can? Go back to your agent chat",
         "bar-hint": "give your critique and directions there \u2014 new designs follow",
         "bar-return": "Return",
         "agent-working": "Agent running", "agent-idle": "Agent idle",
-        "bar-idle": "Chat awaiting your scoring and direction",
-        "bar-active-prefix": "Designing:",
+        "bar-idle": "Waiting",
+        "bar-active-label": "Designing",
         "bar-left": "left to score", "done-cheer": "Marked as done",
         "credit-what": "Live companion",
         "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
@@ -269,13 +270,14 @@ STRINGS = {
         "unscored": "sin puntuar", "proposed-by": "Propuesto", "built": "Implementado",
         "no-graphic": "sin gráfico",
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
-        "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
+        "companion-brand": "Cyber Yoshi: Skills", "companion-agent": "Cyber Yoshi",
+        "companion-kind": "Companion del agente",
         "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
         "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
         "bar-return": "Volver",
         "agent-working": "Agente trabajando", "agent-idle": "Agente en pausa",
-        "bar-idle": "Chat esperando tu puntuación y dirección",
-        "bar-active-prefix": "Diseñando:",
+        "bar-idle": "Esperando",
+        "bar-active-label": "Diseñando",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
         "credit-what": "Companion en vivo",
         "credit-who": "Powered by Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
@@ -904,7 +906,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "30"
+CONTROLS_VERSION = "32"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -2117,21 +2119,36 @@ html:has(.dh-art){scroll-behavior:smooth}
    inherits its border-box and their padding was adding to a 100% width --
    24px of horizontal overflow on the whole page. */
 .dh-brand,.dh-bar{box-sizing:border-box;max-inline-size:100%}
-/* Companion header: brand, agent (linked), connection — three tight lines. */
-.dh-brand{display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;
- width:100%;flex:1 1 auto;min-inline-size:0;text-align:end;line-height:1.2}
-.dh-brand a{text-decoration:none;color:inherit}
-.dh-brand-name{font-size:.68rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
- color:color-mix(in srgb, #f2f2f2 78%, transparent);display:block}
-.dh-brand-name:hover{text-decoration:underline;color:#fff}
-.dh-brand-agent{display:block;font-size:.86rem;font-weight:700;letter-spacing:.01em;
- text-transform:none;max-inline-size:min(36ch,100%);overflow:hidden;text-overflow:ellipsis;
- white-space:nowrap}
-.dh-brand-agent:hover{text-decoration:underline}
-.dh-brand .status{margin:0;justify-self:end;font-size:.68rem}
+/* Companion header: two columns × two rows. Left = product; right = session. */
+.header .brand.dh-brand,.brand.dh-brand{display:grid!important;
+ grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto;
+ gap:.22rem 1rem;align-items:baseline;width:100%;flex:1 1 auto;min-inline-size:0;
+ line-height:1.25;overflow:visible}
+.dh-brand-left,.dh-brand-right{display:flex;flex-direction:column;gap:.22rem;min-inline-size:0}
+.dh-brand-right{align-items:flex-end;text-align:end}
+.header .brand.dh-brand a,.brand.dh-brand a{text-decoration:none;color:inherit}
+.header .brand.dh-brand .dh-brand-name,.brand.dh-brand .dh-brand-name{
+ font-size:.72rem;font-weight:800;letter-spacing:.08em;
+ color:color-mix(in srgb, #f2f2f2 86%, transparent);display:block}
+.header .brand.dh-brand .dh-brand-name:hover,.brand.dh-brand .dh-brand-name:hover{
+ text-decoration:underline;color:#fff}
+.header .brand.dh-brand .dh-brand-kind,.brand.dh-brand .dh-brand-kind{
+ font-size:.64rem;font-weight:500;letter-spacing:.06em;
+ color:color-mix(in srgb, #f2f2f2 52%, transparent)}
+.header .brand.dh-brand .dh-brand-agent,.brand.dh-brand .dh-brand-agent{
+ font-size:.84rem;font-weight:700;letter-spacing:.01em;text-transform:none;
+ max-inline-size:min(34ch,100%);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.header .brand.dh-brand .dh-brand-agent:hover,.brand.dh-brand .dh-brand-agent:hover{
+ text-decoration:underline}
+.header .brand.dh-brand .status,.brand.dh-brand .status,.brand.dh-brand .dh-brand-status{
+ margin:0;font-size:.68rem;justify-self:end;position:static;display:flex;
+ color:color-mix(in srgb, #f2f2f2 72%, transparent)}
+.header .brand.dh-brand .status::before,.brand.dh-brand .status::before,
+.brand.dh-brand .dh-brand-status::before{
+ width:7px;height:7px;border-radius:50%;flex:none;
+ background:var(--status-color,#34c759);-webkit-mask:none;mask:none}
 .header:has(.dh-brand){display:block;padding:.55rem 1.25rem}
 .header:has(.dh-brand) .brand{width:100%}
-.header:has(.dh-brand) .status{position:static}
 /* No dot here. The connection pill below already carries one, and two dots
    reading different things is the ambiguity this row was meant to remove. */
 .dh-toc{padding-block-end:0}
@@ -2591,24 +2608,18 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
  box-shadow:0 14px 44px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
 .dh-bar b{font-weight:700;letter-spacing:-.01em}
 .dh-bar-copy{margin:0;opacity:.88}
-.dh-bar-copy span{opacity:.78}
-.dh-bar-agent{display:block;font-size:12px;font-weight:700;letter-spacing:.01em;
- text-decoration:none;color:inherit;opacity:.95}
-.dh-bar-agent:hover{text-decoration:underline}
-.dh-bar-links{display:flex;flex-wrap:wrap;gap:8px 12px;font-size:11px;opacity:.82}
-.dh-bar-links a{color:inherit}
 /* What the agent is doing, when it says so. A pulsing dot because the one
    question a waiting user has is whether anything is still happening. */
-.dh-live{font-style:normal;flex:0 0 100%;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
- font-size:12px;letter-spacing:.02em;opacity:.92;list-style:none}
-.dh-live-text{flex:1 1 12ch;min-inline-size:0}
-/* State is colour, not text: green pulse = active, orange still = idle. */
-.dh-live::before{content:"";inline-size:7px;block-size:7px;border-radius:999px;flex:none}
-.dh-live[data-state="active"]::before{background:#7fd18f;animation:dh-pulse 1.4s ease-in-out infinite}
-.dh-live[data-state="active"]{opacity:.95}
-.dh-live[data-state="idle"]{opacity:.78}
-.dh-live[data-state="idle"]::before{background:#e0902a;animation:none}
-@keyframes dh-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+.dh-live{font-style:normal;display:flex;flex-direction:column;align-items:flex-start;
+ gap:2px;font-size:12px;letter-spacing:.02em;list-style:none;margin:0;padding:0}
+.dh-live-label{display:inline-flex;align-items:center;gap:7px;font-weight:800;
+ letter-spacing:.04em;line-height:1.2;color:inherit}
+.dh-live-label::before{content:'';inline-size:8px;block-size:8px;border-radius:50%;flex:none}
+.dh-live[data-state="idle"] .dh-live-label::before{background:#7fd18f}
+.dh-live[data-state="active"] .dh-live-label::before{background:#e0902a}
+.dh-live-detail{font-size:11px;line-height:1.35;opacity:.88;max-inline-size:28ch;
+ padding-inline-start:15px}
+.dh-live[data-state="idle"] .dh-live-detail{display:none}
 .dh-bar span{opacity:.78}
 /* One return action: chat icon and label, hyperlinked to the agent session. */
 .dh-bar-go{display:inline-flex;align-items:center;gap:8px;flex:none;font-weight:800;
@@ -2686,20 +2697,26 @@ BRAND_SCRIPT = """<script>/* dh-brand */
   var brand=document.querySelector('.brand'); if(!brand)return;
   var url=host.getAttribute('data-agent-url')||'';
   var label=host.getAttribute('data-agent-label')||'';
+  var kind=host.getAttribute('data-companion-kind')||'Agent companion';
   brand.className='brand dh-brand';
   brand.textContent='';
+  var left=document.createElement('div'); left.className='dh-brand-left';
   var title=document.createElement('a');
   title.className='dh-brand-name';
   title.href='https://github.com/yoshi-ortiz/cyber-skills';
-  title.textContent='CYBER YOSHI: SKILLS';
+  title.textContent='Cyber Yoshi: Skills';
+  var sub=document.createElement('span');
+  sub.className='dh-brand-kind'; sub.textContent=kind;
+  left.appendChild(title); left.appendChild(sub);
+  var right=document.createElement('div'); right.className='dh-brand-right';
   var agent=document.createElement(url?'a':'span');
   agent.className='dh-brand-agent';
   if(url)agent.href=url;
   agent.textContent=label||'Cyber Yoshi';
-  brand.appendChild(title);
-  brand.appendChild(agent);
+  right.appendChild(agent);
   var pill=document.querySelector('.status');
-  if(pill)brand.appendChild(pill);
+  if(pill){pill.classList.add('dh-brand-status'); right.appendChild(pill);}
+  brand.appendChild(left); brand.appendChild(right);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);
  else go();
@@ -2712,14 +2729,17 @@ LIVE_SCRIPT = """<script>/* dh-live */
  var lastAt=Date.now(), idleMs=90000;
  function apply(text,state){
   var el=document.querySelector('.dh-live'); if(!el)return;
-  var body=el.querySelector('.dh-live-text');
+  var label=el.querySelector('.dh-live-label');
+  var detail=el.querySelector('.dh-live-detail');
   var st=state||'active';
   el.setAttribute('data-state',st);
-  var idle=el.getAttribute('data-idle-text')||'';
-  var prefix=el.getAttribute('data-active-prefix')||'';
-  if(body){
-   if(st==='idle') body.textContent=idle;
-   else body.textContent=text?(prefix+' '+text).trim():prefix;
+  var idleLabel=el.getAttribute('data-idle-label')||'Waiting';
+  var activeLabel=el.getAttribute('data-active-label')||'Designing';
+  if(label){
+   label.textContent=st==='idle'?idleLabel:activeLabel;
+  }
+  if(detail){
+   detail.textContent=st==='idle'?'':(text||'');
   }
   lastAt=Date.now();
  }
@@ -2739,8 +2759,10 @@ LIVE_SCRIPT = """<script>/* dh-live */
   if(el.getAttribute('data-state')!=='active')return;
   if(Date.now()-lastAt>=idleMs){
    el.setAttribute('data-state','idle');
-   var body=el.querySelector('.dh-live-text');
-   if(body)body.textContent=el.getAttribute('data-idle-text')||'';
+   var label=el.querySelector('.dh-live-label');
+   var detail=el.querySelector('.dh-live-detail');
+   if(label)label.textContent=el.getAttribute('data-idle-label')||'Waiting';
+   if(detail)detail.textContent='';
   }
  },15000);
  connect();
@@ -3435,11 +3457,11 @@ def render_article(project_root: Path, decisions: dict[str, object],
     agent_state = "active" if agent_working else "idle"
     live_status = status.strip()
     if agent_state == "idle":
-        live_body = txt["bar-idle"]
-    elif live_status:
-        live_body = f'{txt["bar-active-prefix"]} {live_status}'
+        live_label = txt["bar-idle"]
+        live_detail = ""
     else:
-        live_body = txt["bar-active-prefix"]
+        live_label = txt["bar-active-label"]
+        live_detail = live_status
     designing_display = (round_label or cohort_name).strip()
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
            TOC_SCRIPT, SHOT_FIT_SCRIPT, LIGHTBOX_SCRIPT, BRAND_SCRIPT, LIVE_SCRIPT,
@@ -3448,7 +3470,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
            f'data-done-label="{html_escape(txt["completed"])}" '
            f'data-agent-url="{html_escape(agent_url)}" '
            f'data-agent-state="{agent_state}" '
-           f'data-agent-label="{html_escape(agent_name)}"'
+           f'data-agent-label="{html_escape(agent_name)}" '
+           f'data-companion-kind="{html_escape(txt["companion-kind"])}"'
            f'{root_style}>',
            '<header class="dh-hero">',
            # Read by a graphic designer, not by whoever built the harness: who
@@ -3616,9 +3639,10 @@ def render_article(project_root: Path, decisions: dict[str, object],
         "</div>",
         '<aside class="dh-bar" role="complementary">'
         + f'<i class="dh-live" role="status" data-state="{agent_state}" '
-        + f'data-idle-text="{html_escape(txt["bar-idle"])}" '
-        + f'data-active-prefix="{html_escape(txt["bar-active-prefix"])}">'
-        + f'<span class="dh-live-text">{html_escape(live_body)}</span></i>'
+        + f'data-idle-label="{html_escape(txt["bar-idle"])}" '
+        + f'data-active-label="{html_escape(txt["bar-active-label"])}">'
+        + f'<span class="dh-live-label">{html_escape(live_label)}</span>'
+        + f'<span class="dh-live-detail">{html_escape(live_detail)}</span></i>'
         + (f'<a class="dh-bar-go" href="{html_escape(agent_url)}">'
            f'{CHAT_ICON}<span>{html_escape(txt["bar-return"])}</span></a>'
            if agent_url.strip()

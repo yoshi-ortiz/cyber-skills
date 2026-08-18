@@ -73,13 +73,11 @@
     .status { font-size: 0.7rem; color: var(--status-color, var(--success)); display: flex; align-items: center; gap: 0.4rem; justify-self: end; white-space: nowrap; line-height: 1; }
     .status::before {
       content: '';
-      width: 14px;
-      height: 11px;
+      width: 7px;
+      height: 7px;
       flex: none;
-      border-radius: 2px;
+      border-radius: 50%;
       background: var(--status-color, var(--success));
-      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
     }
 
     .main { flex: 1; overflow-y: auto; overflow-x: auto; min-width: 0; }

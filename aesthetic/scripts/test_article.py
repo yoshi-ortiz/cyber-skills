@@ -450,18 +450,18 @@ class TheCompanionHeaderIsTwoByTwo(unittest.TestCase):
                           bh.render_article(Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
                                             set(), "", "en", None, "F", "Ask."),
                           re.S).group(1)
-        self.assertIn("flex-direction:column", style)
-        self.assertIn("dh-brand-name", style)
-        self.assertRegex(style, r"\.dh-brand-agent\{[^}]*text-transform:none")
+        self.assertIn("grid-template-columns", style)
+        self.assertIn(".header .brand.dh-brand", style)
+        self.assertIn("dh-brand-kind", style)
         script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>",
                            bh.render_article(Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
                                              set(), "", "en", None, "F", "Ask.",
                                              agent_url="cursor://x", agent_name="Composer"),
                            re.S).group(1)
-        self.assertIn("CYBER YOSHI: SKILLS", script)
-        self.assertIn("brand.appendChild(title)", script)
-        self.assertIn("brand.appendChild(agent)", script)
-        self.assertIn("brand.appendChild(pill)", script)
+        self.assertIn("Cyber Yoshi: Skills", script)
+        self.assertIn("dh-brand-left", script)
+        self.assertIn("dh-brand-right", script)
+        self.assertIn("Agent companion", script)
 
 
 class TheSkillKeepsTheUserInformed(unittest.TestCase):
@@ -584,8 +584,9 @@ class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
         markup = self.markup("Redrawing the cover", working=True)
         live = markup.split('class="dh-live"')[1].split("</i>")[0]
         self.assertIn('data-state="active"', live)
-        self.assertIn("Designing:", live)
+        self.assertIn("Designing", live)
         self.assertIn("Redrawing the cover", live)
+        self.assertIn("dh-live-label", live)
         self.assertNotIn("dh-live-tag", live)
         self.assertNotIn("&lt;active&gt;", live)
 
@@ -593,8 +594,8 @@ class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
         markup = self.markup("Ready to score")
         live = markup.split('class="dh-live"')[1].split("</i>")[0]
         self.assertIn('data-state="idle"', live)
-        self.assertIn("Chat awaiting your scoring and direction", live)
-        self.assertNotIn("dh-live-tag", live)
+        self.assertIn("Waiting", live)
+        self.assertIn("dh-live-label", live)
         self.assertNotIn("&lt;idle&gt;", live)
 
     def test_the_page_listens_for_a_live_status_push(self):
@@ -701,10 +702,9 @@ class DoneLooksLikeDone(unittest.TestCase):
         script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>", markup, re.S)
         self.assertIsNotNone(script, "the brand rewrite was not emitted")
         body = script.group(1)
-        self.assertIn("CYBER YOSHI: SKILLS", body)
-        self.assertIn("brand.appendChild(title)", body)
-        self.assertIn("brand.appendChild(agent)", body)
-        self.assertIn("brand.appendChild(pill)", body)
+        self.assertIn("Cyber Yoshi: Skills", body)
+        self.assertIn("dh-brand-left", body)
+        self.assertIn("dh-brand-right", body)
         self.assertNotIn(".brand{display:none}", markup,
                          "blanking the bar leaves an empty strip")
 
@@ -917,8 +917,9 @@ class TheLiveBarStatesItselfClearly(unittest.TestCase):
             set(), "", "en", None, "F", "Ask.", status="Inference premise", agent_working=True)
         live_snippet = markup.split('class="dh-live"')[1].split("</i>")[0]
         self.assertIn('data-state="active"', live_snippet)
-        self.assertIn("Designing:", live_snippet)
+        self.assertIn("Designing", live_snippet)
         self.assertIn("Inference premise", live_snippet)
+        self.assertIn("dh-live-detail", live_snippet)
         self.assertNotIn("dh-live-tag", markup)
         self.assertNotIn("&lt;active&gt;", markup)
         idle = bh.render_article(
@@ -926,11 +927,11 @@ class TheLiveBarStatesItselfClearly(unittest.TestCase):
             set(), "", "en", None, "F", "Ask.")
         idle_live = idle.split('class="dh-live"')[1].split("</i>")[0]
         self.assertIn('data-state="idle"', idle_live)
-        self.assertIn("Chat awaiting your scoring and direction", idle_live)
+        self.assertIn("Waiting", idle_live)
         self.assertNotIn("&lt;idle&gt;", idle)
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
-        self.assertIn('.dh-live[data-state="active"]::before', style)
-        self.assertIn('.dh-live[data-state="idle"]::before', style)
+        self.assertIn('.dh-live[data-state="active"] .dh-live-label', style)
+        self.assertIn('.dh-live[data-state="idle"] .dh-live-label', style)
 
 
 class SupersededRowsStayReadable(unittest.TestCase):

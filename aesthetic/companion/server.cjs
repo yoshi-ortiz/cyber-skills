@@ -243,14 +243,8 @@ function escapeHtmlText(value) {
 }
 
 function brandMarkup() {
-  // The page belongs to the user's project, not to the tool serving it. The
-  // owner leads; the engine that runs it is a credit, and `vunknown` helped
-  // nobody so the version is gone.
-  return '<div class="brand">'
-    + '<span class="brand-copy">Cyber Yoshi: SKILLS</span>'
-    + '<a class="brand-credit" href="https://github.com/obra/superpowers">'
-    + 'Live companion \u00b7 powered by Jesse Vincent \u00b7 Superpowers</a>'
-    + '</div>';
+  // Empty shell — the article's dh-brand script fills this once data-agent-* is present.
+  return '<div class="brand"></div>';
 }
 
 function renderBranding(html) {
