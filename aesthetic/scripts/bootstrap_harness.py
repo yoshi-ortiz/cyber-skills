@@ -128,7 +128,7 @@ FOUNDATIONS = (
     ("illustration", ("art", "artsource", "illustration", "image", "imagery",
                       "texture", "photo", "icon", "mark", "drawing")),
     ("composition", ("layout", "grid", "composition", "form", "format", "page",
-                     "spread", "cover", "interior", "spine", "margin")),
+                     "pages", "spread", "cover", "interior", "spine", "margin")),
     ("voice", ("copy", "voice", "language", "roles", "label", "microcopy")),
     ("motion", ("motion", "anim", "animation", "transition")),
 )
@@ -217,7 +217,8 @@ STRINGS = {
         "bar-hint": "give your critique and directions there \u2014 new designs follow",
         "bar-return": "Return",
         "agent-working": "Agent running", "agent-idle": "Agent idle",
-        "bar-idle": "Waiting",
+        "bar-idle": "waiting for your chat directions",
+        "prep-legend": "Rank what is still pending. Inference is still running.",
         "bar-active-label": "Designing",
         "bar-left": "left to score", "done-cheer": "Marked as done",
         "credit-what": "Live companion",
@@ -276,7 +277,8 @@ STRINGS = {
         "bar-hint": "dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
         "bar-return": "Volver",
         "agent-working": "Agente trabajando", "agent-idle": "Agente en pausa",
-        "bar-idle": "Esperando",
+        "bar-idle": "esperando tus indicaciones en el chat",
+        "prep-legend": "Puntúa lo que sigue pendiente. La inferencia sigue en curso.",
         "bar-active-label": "Diseñando",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
         "credit-what": "Companion en vivo",
@@ -372,6 +374,40 @@ def agent_context_from_env() -> tuple[str, str]:
     name = (os.environ.get("CURSOR_AGENT_NAME") or os.environ.get("AGENT_NAME")
             or os.environ.get("CURSOR_MODEL") or "").strip()
     return url, name
+
+
+def agent_display_line(name: str, url: str = "") -> str:
+    """Header reads `App | Model`. Do not invent a URL scheme."""
+    name = (name or "").strip()
+    if "|" in name:
+        return " | ".join(part.strip() for part in name.split("|") if part.strip())
+    app = (os.environ.get("DH_AGENT_APP") or os.environ.get("CURSOR_AGENT_APP") or "").strip()
+    lower = (url or "").lower()
+    if not app:
+        if lower.startswith("cursor:"):
+            app = "Cursor"
+        elif "claude.ai" in lower or lower.startswith("claude:"):
+            app = "Claude"
+    if app and name:
+        return f"{app} | {name}"
+    return app or name
+
+
+def check_asks(asks: str, cohort: set[str], language: str | None = None) -> None:
+    """A cohort without a real question is a questionnaire nobody can answer."""
+    if not cohort:
+        return
+    text = asks.strip()
+    generics = {STRINGS["en"]["zone-round-note"].casefold(),
+                STRINGS["es"]["zone-round-note"].casefold()}
+    if language:
+        generics.add(strings_for(language)["zone-round-note"].casefold())
+    if not text:
+        return
+    if text.casefold() in generics:
+        raise HarnessError(
+            "this round has no question. Pass --asks \"<the one thing to judge>\", "
+            "not the zone's purpose line. The last PNG and the user's last rank name that move.")
 # companion_doctor sends a click on this synthetic element to prove the socket
 # reaches the ledger, then strips its rows back out. An `adopt` racing that
 # cleanup used to fold the probe in as a real element, and adopt never removes.
@@ -906,7 +942,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "33"
+CONTROLS_VERSION = "34"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -1166,7 +1202,8 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  text-transform:uppercase;white-space:nowrap;padding:3px 8px;border-radius:999px;
  opacity:0;transform:translateY(2px);pointer-events:none;
  transition:opacity .18s ease,transform .18s ease;
- background:#1c8b4b;color:#fff;border:1px solid #126435}
+ background:var(--dh-accent,#d9482a);color:#fff;
+ border:1px solid color-mix(in srgb, var(--dh-accent,#d9482a) 72%, #000)}
 .dh-fb .dh-saved[data-on]{opacity:1;transform:none}
 /* One continuous strip: zero is a first-class score, not a hidden reset. */
 .dh-fb .dh-stars{display:flex;align-items:center;gap:0}
@@ -1519,11 +1556,20 @@ def scope_comp_css(css: str) -> str:
     Comps are drawn as standalone HTML pages with `body { width: 510px }`.
     Inlined verbatim, every thumbnail overwrites the frame's body and the
     whole page shrinks to one comp width -- exactly the broken layout.
+    Rewriting :root/html/body to `.dh-comp-scope` AND wrapping in
+    `@scope (.dh-comp-scope)` made host rules miss: a selector inside
+    `@scope` is a descendant of the root, so `.dh-comp-scope { background }`
+    never matched the host. The drawing went blank (white on the lightbox,
+    transparent on the card). `:scope` is the host.
     """
-    css = re.sub(r":root\b", f".{COMP_SCOPE_CLASS}", css)
-    css = re.sub(r"\bhtml\b", f".{COMP_SCOPE_CLASS}", css)
-    css = re.sub(r"\bbody\b", f".{COMP_SCOPE_CLASS}", css)
-    return css
+    if not css.strip():
+        return css
+    css = re.sub(r":root\b", ":scope", css)
+    css = re.sub(r"(?<![\w-])html(?![\w-])", ":scope", css)
+    css = re.sub(r"(?<![\w-])body(?![\w-])", ":scope", css)
+    if "@scope" in css:
+        return css
+    return f"@scope (.{COMP_SCOPE_CLASS}) {{\n{css}\n}}\n"
 
 
 def html_comp_fragment(raw: str) -> tuple[str, float, float]:
@@ -1981,7 +2027,11 @@ ARTICLE_STYLE = """<style>/* dh-article */
    corrupt the very judgement it is collecting -- so every surface here is a
    var() the screen already sets, and the harness supplies only structure. */
 html:has(.dh-art){scroll-behavior:smooth}
-@media (prefers-reduced-motion:reduce){html:has(.dh-art){scroll-behavior:auto}}
+.main{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){
+ html:has(.dh-art){scroll-behavior:auto}
+ .main{scroll-behavior:auto}
+}
 /* One spacing scale, used everywhere. Before this the page carried a dozen
    hand-typed gaps -- zones at 56/40/44, 0/60/0 and 72/34/40, groups at 32/12,
    specimens at 22 -- so nothing lined up with anything and the eye read the
@@ -2143,7 +2193,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 .header .brand.dh-brand .status,.brand.dh-brand .status,.brand.dh-brand .dh-brand-status{
  margin:0;font-size:.68rem;justify-self:end;position:static;display:flex;
  align-items:center;gap:.4rem;
- color:color-mix(in srgb, #f2f2f2 72%, transparent)}
+ color:var(--status-color,#34c759)}
 .header .brand.dh-brand .status::before,.brand.dh-brand .status::before,
 .brand.dh-brand .dh-brand-status::before{
  content:'';width:16px;height:13px;flex:none;border-radius:0;
@@ -2234,7 +2284,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 /* The section name is the label; the round's own topic is the subject, so it
    reads larger. The question below is the ask, weighted just under it. */
 .dh-zone[data-zone="round"] > header h2{font-weight:900;letter-spacing:-.03em}
-.dh-ask{margin:var(--s3) auto 0;max-inline-size:30ch;padding:0 var(--s3);
+.dh-ask{margin:var(--s3) auto 0;max-inline-size:62ch;padding:0 var(--s3);
  font-size:clamp(20px,2.6vw,27px);line-height:1.36;font-weight:600;
  letter-spacing:-.02em;text-wrap:balance;
  color:color-mix(in srgb, var(--dh-bg,#fff) 96%, transparent)}
@@ -2361,8 +2411,10 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-toc{position:sticky;inset-block-start:0;z-index:20;margin:0;padding:0;
  background:color-mix(in srgb, var(--dh-bg,#fff) 92%, transparent);
  backdrop-filter:blur(8px);border-block-end:1px solid var(--dh-rule)}
-.dh-toc ol{display:flex;gap:4px;margin:0;padding:9px 0;list-style:none;
+.dh-toc ol,.dh-toc li{display:flex;gap:4px;margin:0;padding:9px 0;list-style:none;
  overflow-x:auto;scrollbar-width:none}
+.dh-toc li{padding:0;overflow:visible}
+.dh-toc li::before,.dh-toc li::marker{content:none}
 .dh-toc ol::-webkit-scrollbar{display:none}
 .dh-toc ol a{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;
  text-decoration:none;white-space:nowrap;color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);
@@ -2484,7 +2536,8 @@ dialog.dh-lb{position:fixed;inset:0;z-index:200;margin:0;padding:clamp(12px,3vw,
  border:none;max-inline-size:none;max-block-size:none;inline-size:100%;block-size:100%;
  background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);color:var(--dh-bg,#fff);overflow:hidden}
 dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-html:has(dialog.dh-lb[open]) .dh-bar{display:none}
+html:has(dialog.dh-lb[open]) .dh-bar,
+html:has(dialog.dh-lb[open]) .header{display:none}
 .dh-lb-shell{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:var(--s2);
  inline-size:min(960px,100%);
  block-size:min(920px,calc(100dvh - 32px));max-block-size:calc(100dvh - 32px);
@@ -2493,7 +2546,7 @@ html:has(dialog.dh-lb[open]) .dh-bar{display:none}
  border-radius:14px;border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
  box-shadow:0 28px 80px rgba(0,0,0,.55);
  --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 32%, transparent)}
-.dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px;flex-wrap:wrap}
+.dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px;flex-wrap:nowrap}
 .dh-lb-count{font-size:11px;font-weight:700;letter-spacing:.16em;font-variant-numeric:tabular-nums;
  opacity:.75;flex:none}
 .dh-lb-name{display:flex;flex-direction:column;gap:2px;min-inline-size:0;flex:1 1 auto}
@@ -2519,7 +2572,8 @@ html:has(dialog.dh-lb[open]) .dh-bar{display:none}
 .dh-lb-copy{font-size:13px;line-height:1.55;max-block-size:12vh;overflow-y:auto;
  padding-inline:0;align-self:center;inline-size:min(62ch,100%)}
 .dh-lb-foot{display:flex;justify-content:center;align-items:center;gap:var(--s2);
- padding-block-start:var(--s2);border-block-start:1px solid var(--dh-rule);flex-wrap:wrap}
+ padding-block-start:var(--s2);border-block-start:1px solid var(--dh-rule);flex-wrap:nowrap;
+ overflow-x:auto}
 .dh-lb-score-wrap{flex:none;max-inline-size:100%}
 /* The thumbnail's own markup, re-scaled. `--dh-shot-w` is what sizes a shot,
    so the slide sets it to the frame height rather than restyling the node. */
@@ -2546,12 +2600,12 @@ html:has(dialog.dh-lb[open]) .dh-bar{display:none}
 .dh-lb-nav:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent)}
 .dh-lb-nav[disabled]{opacity:.25;cursor:default}
 .dh-lb-score-wrap .dh-lb-score{margin:0}
-.dh-lb-score-wrap .dh-lb-score .dh-signals{margin:0;flex-wrap:wrap;justify-content:center}
+.dh-lb-score-wrap .dh-lb-score .dh-signals{margin:0;flex-wrap:nowrap;justify-content:center}
 /* The lightbox clones the row strip outside `.dh-fb`, so give it a shell the
    scoring CSS already knows. */
 .dh-lb-fb.dh-fb{display:block;grid-template-columns:unset;padding:0;margin:0;
  border:0;background:transparent!important;box-shadow:none!important;color:inherit!important}
-.dh-lb-fb .dh-signals{position:static;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.dh-lb-fb .dh-signals{position:static;display:flex;flex-wrap:nowrap;gap:8px;justify-content:center}
 dialog.dh-lb .dh-lb-score .dh-stars > *{
  color:color-mix(in srgb, var(--dh-bg,#fff) 36%, transparent)}
 dialog.dh-lb .dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
@@ -2624,7 +2678,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-live[data-state="active"] .dh-live-label::before{background:#7fd18f}
 .dh-live-detail{font-size:11px;line-height:1.35;opacity:.88;max-inline-size:36ch;
  margin:0;padding:0}
-.dh-live[data-state="idle"] .dh-live-detail{display:none}
+.dh-live[data-state="idle"] .dh-live-detail{opacity:.88}
 .dh-bar-copy span{opacity:.78}
 .dh-live-label,.dh-live-detail{opacity:1}
 /* One return action: chat icon and label, hyperlinked to the agent session. */
@@ -2653,7 +2707,13 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
    page whose whole job is sober judgement. */
 @keyframes dh-pop{0%{transform:scale(1)}38%{transform:scale(1.32)}100%{transform:scale(1)}}
 .dh-fb [data-verdict].on{animation:dh-pop .34s ease-out}
-.dh-fb .dh-saved[data-cheer]{background:#126435;border-color:#0c4423}
+.dh-fb .dh-saved[data-cheer]{background:var(--dh-accent,#d9482a);
+ border-color:color-mix(in srgb, var(--dh-accent,#d9482a) 72%, #000)}
+.dh-zone[data-zone="round"][data-preparing]{opacity:.72;transition:none}
+.dh-prep{display:none;margin:var(--s2) auto 0;max-inline-size:46ch;font-size:13px;
+ line-height:1.45;font-weight:600;letter-spacing:.01em;
+ color:color-mix(in srgb, var(--dh-bg,#fff) 82%, transparent)}
+.dh-zone[data-zone="round"][data-preparing] .dh-prep{display:block}
 @media (prefers-reduced-motion:reduce){.dh-art *,.dh-lb *{transition:none!important;
  animation:none!important}}
 </style>"""
@@ -2735,45 +2795,37 @@ LIVE_SCRIPT = """<script>/* dh-live */
 (function(){
  if(window.__dhLive)return; window.__dhLive=1;
  var lastAt=Date.now(), idleMs=90000;
+ function prepRound(st){
+  var round=document.querySelector('.dh-zone[data-zone="round"]');
+  if(!round)return;
+  if(st==='active') round.setAttribute('data-preparing','1');
+  else round.removeAttribute('data-preparing');
+ }
  function apply(text,state){
   var el=document.querySelector('.dh-live'); if(!el)return;
   var label=el.querySelector('.dh-live-label');
   var detail=el.querySelector('.dh-live-detail');
   var st=state||'active';
   el.setAttribute('data-state',st);
-  var idleLabel=el.getAttribute('data-idle-label')||'Waiting';
+  var idleLabel=el.getAttribute('data-idle-label')||'waiting for your chat directions';
   var activeLabel=el.getAttribute('data-active-label')||'Designing';
-  if(label){
-   label.textContent=st==='idle'?idleLabel:activeLabel;
-  }
-  if(detail){
-   detail.textContent=st==='idle'?'':(text||'');
-  }
+  var idleAid=el.getAttribute('data-idle-aid')||'';
+  if(label) label.textContent=st==='idle'?idleLabel:activeLabel;
+  if(detail) detail.textContent=st==='idle'?idleAid:(text||'');
+  prepRound(st);
   lastAt=Date.now();
  }
- function connect(){
-  var key=''; try{key=sessionStorage.getItem('brainstorm-session-key')||'';}catch(e){}
-  var ws=new WebSocket('ws://'+location.host+(key?'/?key='+encodeURIComponent(key):''));
-  ws.onmessage=function(ev){
-   try{var d=JSON.parse(ev.data);}catch(e){return;}
-   if(d.type==='dh-agent'){
-    var st=d.state==='idle'?'idle':'active';
-    apply(d.text,st);
-   }
-  };
+ function onAgent(d){
+  if(!d)return;
+  apply(d.text, d.state==='idle'?'idle':'active');
  }
+ window.addEventListener('dh-agent',function(ev){onAgent(ev.detail);});
+ if(window.__dhLastAgent) onAgent(window.__dhLastAgent);
  setInterval(function(){
   var el=document.querySelector('.dh-live'); if(!el)return;
   if(el.getAttribute('data-state')!=='active')return;
-  if(Date.now()-lastAt>=idleMs){
-   el.setAttribute('data-state','idle');
-   var label=el.querySelector('.dh-live-label');
-   var detail=el.querySelector('.dh-live-detail');
-   if(label)label.textContent=el.getAttribute('data-idle-label')||'Waiting';
-   if(detail)detail.textContent='';
-  }
+  if(Date.now()-lastAt>=idleMs) apply('', 'idle');
  },15000);
- connect();
 })();
 </script>"""
 
@@ -2786,6 +2838,9 @@ TOC_SCRIPT = """<script>/* dh-toc */
   var bar=document.querySelector('.dh-toc');
   return bar?Math.round(bar.getBoundingClientRect().height)+8:64;
  }
+ function scroller(){
+  return document.querySelector('.main') || document.scrollingElement || document.documentElement;
+ }
  function start(){
   var links=[].slice.call(document.querySelectorAll('.dh-toc a[data-zone]'));
   var zones=links.map(function(a){return document.getElementById(a.getAttribute('href').slice(1))})
@@ -2797,17 +2852,26 @@ TOC_SCRIPT = """<script>/* dh-toc */
   /* Clicking a pill marks it AT ONCE. Leaving it to the observer meant the
      indicator lagged the click by a scroll -- which reads as a broken nav,
      because the thing you just pressed is not the thing lit up. */
-  links.forEach(function(a){a.addEventListener('click',function(){
-   mark(a.getAttribute('href').slice(1));});});
+  links.forEach(function(a){a.addEventListener('click',function(e){
+   var id=a.getAttribute('href').slice(1);
+   var zone=document.getElementById(id);
+   mark(id);
+   if(!zone)return;
+   e.preventDefault();
+   var root=scroller();
+   var top=zone.getBoundingClientRect().top + root.scrollTop - barHeight();
+   root.scrollTo({top:Math.max(0,top), behavior:'smooth'});
+  });});
   /* Highest section still intersecting the top band wins. Picking the largest
      visible ratio instead makes a short section that is fully on screen beat
      the long one the reader is actually inside. */
   if(!('IntersectionObserver' in window))return;
   var visible={};
+  var rootEl=document.querySelector('.main');
   var io=new IntersectionObserver(function(entries){
    entries.forEach(function(e){visible[e.target.id]=e.isIntersecting});
    for(var i=0;i<zones.length;i++){ if(visible[zones[i].id]){ mark(zones[i].id); return } }
-  },{rootMargin:'-'+barHeight()+'px 0px -68% 0px', threshold:0});
+  },{root:rootEl, rootMargin:'-'+barHeight()+'px 0px -68% 0px', threshold:0});
   zones.forEach(function(z){io.observe(z)});
   /* The second level tracks headings, not sections, so it needs its own
      observer -- sharing one made a heading scrolling past re-mark the zone. */
@@ -3366,8 +3430,9 @@ def render_article(project_root: Path, decisions: dict[str, object],
     txt = strings_for(language or project_language(project_root))
     stored_url, stored_name = companion_agent(project_root)
     agent_url = agent_url.strip() or stored_url
-    agent_name = agent_name.strip() or stored_name or txt["companion-agent"]
+    agent_name = agent_display_line(agent_name.strip() or stored_name, agent_url)
     cohort = cohort or set()
+    check_asks(asks, cohort, language or project_language(project_root))
     # A cohort is one surface or one problem. Three elements drawn from three
     # different foundations, under a name that claims a shared surface, is a
     # batch of errands -- and the page cannot say what it is asking, so the
@@ -3472,7 +3537,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
     live_status = status.strip()
     if agent_state == "idle":
         live_label = txt["bar-idle"]
-        live_detail = ""
+        live_detail = txt["bar-hint"]
     else:
         live_label = txt["bar-active-label"]
         live_detail = live_status
@@ -3554,7 +3619,9 @@ def render_article(project_root: Path, decisions: dict[str, object],
         # protagonist of the page -- set large and centred rather than filed as
         # a grey note under a heading, which is where nobody read it.
         heading = txt["round-heading"] if zone == "round" else txt[f"zone-{zone}"]
-        note_markup = (f'<p class="dh-ask">{html_escape(note)}</p>' if zone == "round"
+        note_markup = (f'<p class="dh-ask">{html_escape(note)}</p>'
+                       f'<p class="dh-prep">{html_escape(txt["prep-legend"])}</p>'
+                       if zone == "round"
                        else f'<p class="dh-note">{html_escape(note)}</p>')
         # The round tag names the OBJECT being judged, not a slug like `objeto`.
         tag = (html_escape(round_tag_label(cohort, decisions, cohort_name, round_label))
@@ -3563,7 +3630,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
                      else f'{len(members)} {html_escape(txt["designs"])}'))
         icon = (ROUND_ICONS.get(primary_foundation(cohort), ROUND_ICON)
                 if zone == "round" and cohort else "")
-        out += [f'<section class="dh-zone" id="dh-zone-{zone}" data-zone="{zone}">', "<header>",
+        preparing = ' data-preparing="1"' if zone == "round" and agent_working else ""
+        out += [f'<section class="dh-zone" id="dh-zone-{zone}" data-zone="{zone}"{preparing}>', "<header>",
                 icon,
                 f'<p class="dh-tag">{tag}</p>',
                 f'<h2>{html_escape(heading)}</h2>',
@@ -3654,6 +3722,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
         '<aside class="dh-bar" role="complementary">'
         + f'<i class="dh-live" role="status" data-state="{agent_state}" '
         + f'data-idle-label="{html_escape(txt["bar-idle"])}" '
+        + f'data-idle-aid="{html_escape(txt["bar-hint"])}" '
         + f'data-active-label="{html_escape(txt["bar-active-label"])}">'
         + f'<span class="dh-live-label">{html_escape(live_label)}</span>'
         + f'<span class="dh-live-detail">{html_escape(live_detail)}</span></i>'
@@ -4509,9 +4578,9 @@ def parser() -> argparse.ArgumentParser:
                          help="object name for the round header, e.g. Micrófono. "
                               "Inferred from the cohort when omitted.")
     article.add_argument("--agent", default="",
-                         help="the agent's own name for the companion header, e.g. "
-                              "'Claude Opus 5'. Empty hides the line rather than "
-                              "inventing one.")
+                         help="App | Model for the companion header, e.g. "
+                              "'Cursor | Composer'. Empty hides the model line "
+                              "rather than inventing one.")
     article.add_argument("--agent-url", default="",
                          help="deep link back to the agent's desktop app. Left empty "
                               "the header and the bottom bar render as plain text "
@@ -4523,8 +4592,8 @@ def parser() -> argparse.ArgumentParser:
                          help="green pulsing dot while the agent is drawing; omit when waiting "
                               "on the user (idle text + orange dot)")
     article.add_argument("--asks", default="",
-                         help="one sentence: what this round asks the user to judge. "
-                              "Required when the cohort spans more than two foundations")
+                         help="the one design question this round asks. Required "
+                              "when the cohort is set. Do not paste the zone note.")
     article.add_argument("--title", default="",
                          help="the artefact being designed, in the user's own words "
                               "(stored in project.json and reused)")

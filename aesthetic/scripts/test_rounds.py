@@ -80,6 +80,29 @@ class RoundsThatDoNotEarnTheirPlace(unittest.TestCase):
         bh.check_round_earns_its_place(
             decisions, {"art.trama.limpia", "cover.spine.remaches"})
 
+
+class ARoundMustAskARealQuestion(unittest.TestCase):
+    """`--asks` restating the zone note is how a round became unreadable."""
+
+    def test_the_zone_purpose_line_is_refused_as_asks(self):
+        with self.assertRaises(bh.HarnessError) as caught:
+            bh.check_asks(bh.STRINGS["es"]["zone-round-note"], {"core.idea.redraw"})
+        self.assertIn("--asks", str(caught.exception))
+
+    def test_empty_asks_keeps_the_zone_note(self):
+        bh.check_asks("", {"core.idea.redraw"})
+
+    def test_a_specific_question_is_allowed(self):
+        bh.check_asks("Does the coloured tab beat the one you liked?", {"core.idea.redraw"})
+
+    def test_no_cohort_means_no_question_to_refuse(self):
+        bh.check_asks("", set())
+
+    def test_pages_inventory_is_composition_not_core(self):
+        self.assertEqual(bh.foundation_of("pages.inventory.archivador.posiciones"),
+                         "composition")
+
+
 class AnAgentPlaceholderIsNotAScore(unittest.TestCase):
     """`decide --source agent --stars 1` used to write `scored: True`.
 

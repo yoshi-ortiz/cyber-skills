@@ -57,7 +57,8 @@ Done when: every chosen claim id has been read at its file#anchor, and every num
 program:
   id:
   thesis:   # one sentence
-  artefact: # social infographic program, not a site, not a printed kit
+  artefact: # whatever INDEX says this corpus is for. A printed kit stays a kit;
+            # do not force a social carousel onto a product, talk, or print piece.
   audience:
 series:
   - id:
@@ -95,6 +96,7 @@ Do not continue into visual design. Do not call doctor unless the user asked.
 
 ## Anti-patterns (delete the draft if you did these)
 
+- Assumed a social infographic program when the corpus is a product, talk, or print piece.
 - Invented a palette, type ramp, illustration cohort, or motion system.
 - Drew or specified layout grids "so the carousel looks finished."
 - Hashed any file and called that an index.

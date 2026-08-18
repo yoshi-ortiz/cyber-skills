@@ -425,7 +425,8 @@ function handleRequest(req, res) {
       try { data = JSON.parse(body || '{}'); } catch (e) { data = {}; }
       const text = String(data.text || '').slice(0, 200);
       const state = data.state === 'idle' ? 'idle' : 'active';
-      broadcast({ type: 'dh-agent', text, state });
+      lastAgent = { type: 'dh-agent', text, state };
+      broadcast(lastAgent);
       res.writeHead(204, securityHeaders());
       res.end();
     });
@@ -452,6 +453,7 @@ function handleRequest(req, res) {
 // ========== WebSocket Connection Handling ==========
 
 const clients = new Set();
+let lastAgent = { type: 'dh-agent', text: '', state: 'idle' };
 
 function handleUpgrade(req, socket) {
   if (!isAuthorized(req) || !isAllowedWebSocketOrigin(req)) { socket.destroy(); return; }
@@ -477,6 +479,7 @@ function handleUpgrade(req, socket) {
   try {
     socket.write(encodeFrame(OPCODES.TEXT,
       Buffer.from(JSON.stringify({ type: 'dh-state', state: currentSignals() }))));
+    socket.write(encodeFrame(OPCODES.TEXT, Buffer.from(JSON.stringify(lastAgent))));
   } catch (e) { /* a socket that dies mid-handshake is not an error worth logging */ }
 
   socket.on('data', (chunk) => {

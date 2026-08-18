@@ -98,6 +98,10 @@
       let data;
       try { data = JSON.parse(msg.data); } catch (e) { return; }
       if (data.type === 'reload') window.location.reload();
+      if (data.type === 'dh-agent') {
+        window.__dhLastAgent = data;
+        window.dispatchEvent(new CustomEvent('dh-agent', { detail: data }));
+      }
     };
 
     ws.onclose = () => {

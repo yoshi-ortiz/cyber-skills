@@ -597,8 +597,9 @@ class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
         markup = self.markup("Ready to score")
         live = markup.split('class="dh-live"')[1].split("</i>")[0]
         self.assertIn('data-state="idle"', live)
-        self.assertIn("Waiting", live)
+        self.assertIn("waiting for your chat directions", live)
         self.assertIn("dh-live-label", live)
+        self.assertIn("give your critique and directions", live)
         self.assertNotIn("&lt;idle&gt;", live)
 
     def test_the_page_listens_for_a_live_status_push(self):
@@ -958,7 +959,8 @@ class TheLiveBarStatesItselfClearly(unittest.TestCase):
             set(), "", "en", None, "F", "Ask.")
         idle_live = idle.split('class="dh-live"')[1].split("</i>")[0]
         self.assertIn('data-state="idle"', idle_live)
-        self.assertIn("Waiting", idle_live)
+        self.assertIn("waiting for your chat directions", idle_live)
+        self.assertIn("give your critique and directions", idle_live)
         self.assertNotIn("&lt;idle&gt;", idle)
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
         self.assertIn('.dh-live[data-state="active"] .dh-live-label', style)
@@ -1005,6 +1007,107 @@ class TheStickyBarReadsTopDown(unittest.TestCase):
         self.assertEqual(order, sorted(order),
                          "legend belongs above the chart it explains, and the "
                          "chart above the sections it indexes")
+
+
+class ChromeFixesV34(unittest.TestCase):
+    def markup(self, **kwargs) -> str:
+        opts = dict(language="en", title="F", asks="Ask.",
+                    agent_name="Composer", agent_url="cursor://agent")
+        opts.update(kwargs)
+        return bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", opts.pop("language"), None, opts.pop("title"),
+            opts.pop("asks"), **opts)
+
+    def test_saved_pill_uses_the_project_accent(self):
+        style = re.search(r"<style>/\* dh-controls \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        saved = re.search(r"\.dh-fb \.dh-saved\{([^}]*)\}", style).group(1)
+        self.assertIn("--dh-accent", saved)
+        self.assertNotIn("#1c8b4b", saved)
+        cheer = re.search(r"\.dh-fb \.dh-saved\[data-cheer\]\{([^}]*)\}",
+                          self.markup())
+        article = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                            self.markup(), re.S).group(1)
+        cheer = re.search(r"\.dh-fb \.dh-saved\[data-cheer\]\{([^}]*)\}", article)
+        self.assertIsNotNone(cheer)
+        self.assertNotIn("#126435", cheer.group(1))
+
+    def test_connected_label_uses_the_status_color(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        rule = re.search(
+            r"\.brand\.dh-brand \.dh-brand-status\{([^}]*)\}", style)
+        self.assertIsNotNone(rule)
+        self.assertIn("--status-color", rule.group(1))
+
+    def test_agent_line_is_app_pipe_model(self):
+        markup = self.markup()
+        self.assertIn("Cursor | Composer", markup)
+        self.assertIn('data-agent-label="Cursor | Composer"', markup)
+
+    def test_toc_kills_leaked_comp_bullets(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        self.assertIn(".dh-toc li::before", style)
+        self.assertIn(".main{scroll-behavior:smooth}", style.replace(" ", ""))
+
+    def test_idle_detail_is_not_hidden(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        self.assertNotIn(
+            '.dh-live[data-state="idle"] .dh-live-detail{display:none}',
+            style.replace(" ", ""))
+
+    def test_live_script_does_not_open_a_second_socket(self):
+        script = re.search(r"<script>/\* dh-live \*/(.*?)</script>",
+                           self.markup(), re.S).group(1)
+        self.assertNotIn("WebSocket", script)
+        self.assertIn("dh-agent", script)
+        self.assertIn("data-preparing", script)
+
+    def test_lightbox_hides_the_companion_header(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        self.assertIn("html:has(dialog.dh-lb[open]) .header", style)
+        signals = re.search(
+            r"\.dh-lb-score-wrap \.dh-lb-score \.dh-signals\{([^}]*)\}",
+            style).group(1)
+        self.assertIn("nowrap", signals)
+
+    def test_preparing_round_is_static(self):
+        working = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            {"core.idea"}, "", "en", None, "F", "Does this beat what stands?",
+            agent_working=True)
+        self.assertIn('data-preparing="1"', working)
+        self.assertIn("class=\"dh-prep\"", working)
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          working, re.S).group(1)
+        prep = re.search(r"\[data-preparing\]\{([^}]*)\}", style).group(1)
+        self.assertIn("opacity", prep)
+        self.assertIn("transition:none", prep.replace(" ", ""))
+
+    def test_the_ask_has_a_readable_measure(self):
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        rule = re.search(r"\.dh-ask\{([^}]*)\}", style).group(1)
+        self.assertNotIn("30ch", rule)
+        self.assertIn("62ch", rule)
+
+    def test_comp_element_selectors_cannot_style_the_toc(self):
+        raw = ("<html><head><style>li::before{content:'·'}*{margin:0;padding:0}"
+               "body{width:510px;background:#e8e4d8}</style></head>"
+               "<body><ul><li>x</li></ul></body></html>")
+        frag, _, _ = bh.html_comp_fragment(raw)
+        compact = re.sub(r"\s+", "", frag)
+        self.assertIn("@scope", frag)
+        self.assertIn(bh.COMP_SCOPE_CLASS, frag)
+        # Host size/paint must bind to :scope. `.dh-comp-scope { width }`
+        # inside `@scope (.dh-comp-scope)` never matches the host, so the
+        # drawing rendered as an empty white rectangle.
+        self.assertIn(":scope{width:510px;background:#e8e4d8}", compact)
+        self.assertNotIn(f".{bh.COMP_SCOPE_CLASS}{{width:510px", compact)
 
 
 if __name__ == "__main__":
