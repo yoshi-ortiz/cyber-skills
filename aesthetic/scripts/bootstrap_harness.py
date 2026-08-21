@@ -911,8 +911,6 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
             # Scores and thumbs leave state alone: an element already standing
             # stays standing, and a new one arrives as `proposed` for review.
             verdict = prior.get("state") or "proposed"
-            if verdict in ("superseded", "rejected"):
-                verdict = "proposed"
         # Only the dedicated rank interaction establishes rank provenance.
         # Older companions omitted `type`, so a numeric non-sentiment event is
         # accepted as a rank for compatibility. A thumb event carrying stars=0

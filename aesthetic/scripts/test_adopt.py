@@ -168,6 +168,20 @@ class SentimentDoesNotCreateARank(unittest.TestCase):
             self.assertFalse(entry["scored"])
             self.assertEqual(bh.ledger_stats(bh.load_decisions(output))["userSet"], 0)
 
+    def test_sentiment_does_not_resurrect_a_rejected_element(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = harness(root)
+            bh.record_decision(root, "voice.celebratory", "rejected", 0,
+                               "agent proposal", [], source="agent", sentiment=None)
+            bh.adopt_companion(root, ledger(root, {
+                "type": "sentiment", "element": "voice.celebratory",
+                "sentiment": "dislike", "timestamp": 1000,
+            }))
+            entry = element(output, "voice.celebratory")
+            self.assertEqual(entry["state"], "rejected")
+            self.assertEqual(entry["sentiment"], "dislike")
+
 
 class AlreadyAdoptedHistory(unittest.TestCase):
     """`decide --source user` writes straight to decisions.json and never reaches
