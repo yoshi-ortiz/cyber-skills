@@ -10,7 +10,7 @@ generated:
 
 # Interpret visual and multimodal evidence
 
-Load for **observe** on a visual or multimodal corpus, or **continue** on art. Treat indexes, prose, images, screenshots, and existing feedback as one evidence set. An `INDEX.md` does not stop visual inference.
+Load for **observe** on a visual or multimodal corpus, **continue** on art, or a greenfield run with no corpus at all. Treat indexes, prose, images, screenshots, and existing feedback as one evidence set. An `INDEX.md` does not stop visual inference.
 
 Do not open `bootstrap_harness.py`. Do not invent colours or faces the corpus does not evidence. Read [sentiment-analysis.md](sentiment-analysis.md) before directing the round.
 
@@ -19,13 +19,16 @@ Do not open `bootstrap_harness.py`. Do not invent colours or faces the corpus do
 Stop when all are true:
 
 1. A cohort of 3-6 elements is named in one sentence (what they share).
+1. Direction is grounded: observations when a corpus exists, premises when it does not.
 2. New drawings use new element ids, proposed at 0 stars until the user ranks.
 3. Standing ranked elements outside the cohort are untouched.
 4. User has the companion URL and a PNG pasted in chat for each new comp.
 
 ## Interpret the corpus
 
-Read the named folder read-only and account for every supported item. Cluster by recurring relationships, not decoration. Fuse text and image observations only when the relationship is explicit; do not treat metadata as a visual observation. Declare foundations the user can rank. Missing or empty directory: say so and stop.
+Read the named folder read-only and account for every supported item. Cluster by recurring relationships, not decoration. Fuse text and image observations only when the relationship is explicit; do not treat metadata as a visual observation. Declare foundations the user can rank.
+
+Missing or empty directory: say so, then seed and direct from premises instead — `editorial_workflow.py seed`. Refusing to direct because the user brought no references is the failure mode this skill exists to avoid. A premise cites [golden-rules.md](golden-rules.md) or a [profile](domain-profiles.md), names counterevidence, and is recorded as inference, never as something the corpus showed.
 
 Then follow [loop.md](loop.md): Frame, Direct, Declare, Build, Critique, Capture.
 

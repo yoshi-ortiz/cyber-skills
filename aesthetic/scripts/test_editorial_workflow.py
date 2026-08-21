@@ -235,5 +235,114 @@ class OriginalArticleWithBurndownTest(unittest.TestCase):
             self.assertIn("3 unresolved elements", markup)
 
 
+class EmptyCorpusStillDirectsTheWorkTest(unittest.TestCase):
+    """A project with no reference folder must still reach a testable direction.
+
+    Refusing to direct without a corpus is the derail: the skill produced
+    nothing at all rather than an honestly-labelled inference."""
+
+    def seeded_corpus(self) -> dict:
+        return ew.seed_corpus_value(profile="art-direction", subject="a field-recording label")
+
+    def preferences(self) -> dict:
+        return {"coverage": {"userRanked": 0, "elements": 0, "fraction": 0},
+                "elements": []}
+
+    def spec(self) -> dict:
+        return {
+            "version": 1,
+            "observations": [],
+            "premises": [
+                {"basis": "graphic-design-fundamentals",
+                 "claim": "Hierarchy is carried by one dominant size step, not by weight alone.",
+                 "counterevidence": ["A second competing size step would flatten the read."]},
+                {"basis": "art-direction",
+                 "claim": "Marks read as index rather than symbol: traces of the recording act.",
+                 "counterevidence": ["Pictographic icons would make the mark a symbol."]},
+            ],
+            "preferencePatterns": [],
+            "hypotheses": [
+                {"id": "tape-index", "thesis": "The artifact records its own making.",
+                 "signatureMove": "Timecode rail runs the full measure.",
+                 "visualSystem": {key: key + " rule" for key in
+                    ("palette", "typography", "grid", "hierarchy", "imagery", "voice", "motion")}},
+                {"id": "quiet-catalog", "thesis": "Restraint frames the recording.",
+                 "signatureMove": "A single hairline separates catalog entries.",
+                 "visualSystem": {key: key + " rule" for key in
+                    ("palette", "typography", "grid", "hierarchy", "imagery", "voice", "motion")}},
+            ],
+            "comparison": [{"hypothesis": name, "corpusFit": 3, "preferenceFit": 3,
+                            "subjectSpecificity": 4, "coherence": 4,
+                            "executionLeverage": 4, "tradeoff": "observable tradeoff"}
+                           for name in ("tape-index", "quiet-catalog")],
+            "selected": "tape-index",
+            "selectionRationale": "The timecode rail is specific to recording; the catalog fits any label.",
+            "cohort": ["composition.hero", "type.display", "rail.timecode"],
+        }
+
+    def test_a_seeded_corpus_needs_no_reference_folder(self) -> None:
+        value = self.seeded_corpus()
+        self.assertEqual(value["items"], [])
+        self.assertEqual(value["grounding"], "inference")
+        self.assertEqual(value["profile"], "art-direction")
+
+    def test_direction_is_reachable_with_premises_instead_of_observations(self) -> None:
+        result = ew.validate_art_direction(self.spec(), self.seeded_corpus(), self.preferences())
+        self.assertEqual(result["selected"], "tape-index")
+        self.assertEqual(result["grounding"], "inference")
+        self.assertEqual(len(result["premises"]), 2)
+
+    def test_inference_is_never_recorded_as_corpus_evidence(self) -> None:
+        result = ew.validate_art_direction(self.spec(), self.seeded_corpus(), self.preferences())
+        self.assertEqual(result["observations"], [])
+
+    def test_a_premise_must_name_a_known_basis(self) -> None:
+        broken = self.spec()
+        broken["premises"][0]["basis"] = "vibes"
+        with self.assertRaises(ew.WorkflowError):
+            ew.validate_art_direction(broken, self.seeded_corpus(), self.preferences())
+
+    def test_a_premise_may_not_hide_a_vague_label(self) -> None:
+        broken = self.spec()
+        broken["premises"][0]["claim"] = "The layout should feel clean and premium."
+        with self.assertRaises(ew.WorkflowError):
+            ew.validate_art_direction(broken, self.seeded_corpus(), self.preferences())
+
+    def test_a_premise_must_state_counterevidence(self) -> None:
+        broken = self.spec()
+        broken["premises"][0]["counterevidence"] = []
+        with self.assertRaises(ew.WorkflowError):
+            ew.validate_art_direction(broken, self.seeded_corpus(), self.preferences())
+
+    def test_premises_cannot_launder_inference_when_a_real_corpus_exists(self) -> None:
+        corpus = {"items": [{"id": "image-a", "kind": "image"}], "grounding": "corpus"}
+        with self.assertRaises(ew.WorkflowError):
+            ew.validate_art_direction(self.spec(), corpus, self.preferences())
+
+    def test_a_real_corpus_still_requires_observations(self) -> None:
+        corpus = {"items": [{"id": "image-a", "kind": "image"}], "grounding": "corpus"}
+        bare = self.spec()
+        bare["premises"] = []
+        with self.assertRaises(ew.WorkflowError):
+            ew.validate_art_direction(bare, corpus, self.preferences())
+
+    def test_a_first_round_needs_no_decisions_file_on_disk(self) -> None:
+        """Nothing ranked yet is a normal first round, not a missing artifact."""
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            ew.seed_corpus(project, profile="art-direction", subject="a field-recording label")
+            self.assertFalse((project / ew.STORE / ew.DECISIONS_FILE).exists())
+            result = ew.save_art_direction(project, self.spec())
+            self.assertEqual(result["grounding"], "inference")
+
+    def test_seeding_an_empty_folder_does_not_raise(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            value = ew.seed_corpus(project, profile="frontend-layout", subject="a docs site")
+            self.assertEqual(value["grounding"], "inference")
+            written = json.loads((project / ew.STORE / ew.CORPUS_FILE).read_text())
+            self.assertEqual(written["items"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -149,6 +149,10 @@ document.addEventListener('click', (e) => {
 
 Run `adopt` (see `commands.md`) in the same turn the feedback arrives. Feedback that is not adopted is lost at the next session boundary.
 
+## Theme controls
+
+Keep **Agent settings** collapsed in the status aid. **Update app theme** is off by default. **Saved themes**, **Reset theme**, and **Save** use `spec/design-harness/theme.json`. An unsafe color or font change rolls back one setting at a time, never the whole theme.
+
 ## Provenance
 
 Everything `adopt` ingests is recorded `source: user`. Anything the agent types with `decide` is `source: agent`, stored at 0★ until the user ranks. That distinction is the point: before it existed, a user's click and an agent's guess were indistinguishable in the ledger.

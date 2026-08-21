@@ -25,6 +25,13 @@ DECISIONS_FILE = "decisions.json"
 ART_DIRECTION_FILE = "art-direction.json"
 TEXT_SUFFIXES = {".md", ".txt", ".html", ".htm", ".csv", ".json", ".yaml", ".yml"}
 IMAGE_SUFFIXES = {".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"}
+VAGUE_LABEL = re.compile(r"\b(clean|modern|bold|editorial|premium)\b", re.I)
+# A premise is inference, so it must cite doctrine that exists outside this run.
+KNOWN_BASES = {
+    "graphic-design-fundamentals", "aesthetics-philosophy", "art-history", "golden-rules",
+    "frontend-layout", "art-direction", "motion", "composition",
+    "physical-space", "product-design", "copywriting", "mockup-layering",
+}
 EVENT_STATES = {"unresolved", "resolved", "discarded"}
 DEFAULT_THEME = {
     "bg": "#f5f5f7",
@@ -141,8 +148,39 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
         raise WorkflowError(str(exc)) from exc
     preference_ids = {item.get("element") for item in preferences.get("elements", [])
                       if isinstance(item, Mapping)}
-    observations = raw.get("observations")
-    if not isinstance(observations, list) or not observations:
+    # A project with no reference folder still gets to direct the work. It
+    # argues from declared premises instead, and the grounding says which.
+    seeded = not corpus_ids
+    premises = raw.get("premises", [])
+    if not isinstance(premises, list):
+        raise WorkflowError("premises must be a list")
+    if premises and not seeded:
+        raise WorkflowError("premises are inference; a real corpus must be cited as observations")
+    normalized_premises = []
+    if seeded:
+        if not premises:
+            raise WorkflowError("a seeded corpus needs premises: declare what you are directing from")
+        for index, premise in enumerate(premises):
+            if not isinstance(premise, Mapping):
+                raise WorkflowError(f"premises[{index}] must be an object")
+            basis = _text(premise.get("basis"), f"premises[{index}].basis")
+            if basis not in KNOWN_BASES:
+                raise WorkflowError(f"unknown premise basis {basis}")
+            claim = _text(premise.get("claim"), f"premises[{index}].claim")
+            if VAGUE_LABEL.search(claim):
+                raise WorkflowError("premise claim must name an observable relationship")
+            counter = premise.get("counterevidence")
+            if not isinstance(counter, list) or not counter:
+                raise WorkflowError("premise must state counterevidence")
+            normalized_premises.append({"basis": basis, "claim": claim,
+                                        "counterevidence": [str(item) for item in counter]})
+
+    observations = raw.get("observations", [])
+    if not isinstance(observations, list):
+        raise WorkflowError("observations must be a list")
+    if seeded and observations:
+        raise WorkflowError("a seeded corpus has nothing to observe; use premises")
+    if not seeded and not observations:
         raise WorkflowError("art direction needs corpus observations")
     seen_corpus: set[str] = set()
     normalized_observations = []
@@ -181,7 +219,7 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
     if not isinstance(patterns, list):
         raise WorkflowError("preferencePatterns must be a list")
     normalized_patterns = []
-    vague = re.compile(r"\b(clean|modern|bold|editorial|premium)\b", re.I)
+    vague = VAGUE_LABEL
     for index, pattern in enumerate(patterns):
         if not isinstance(pattern, Mapping):
             raise WorkflowError(f"preferencePatterns[{index}] must be an object")
@@ -261,11 +299,16 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
     cohort = raw.get("cohort")
     if not isinstance(cohort, list) or not 3 <= len(cohort) <= 6 or len(set(cohort)) != len(cohort):
         raise WorkflowError("cohort must contain three to six unique elements")
-    unknown_cohort = [item for item in cohort if item not in preference_ids]
-    if unknown_cohort:
-        raise WorkflowError("unknown cohort element " + str(unknown_cohort[0]))
+    # With nothing ranked yet the cohort is necessarily new work. Once the user
+    # has ranked anything, the cohort must stay inside that set so a round
+    # cannot quietly drift off the elements under judgement.
+    if preference_ids:
+        unknown_cohort = [item for item in cohort if item not in preference_ids]
+        if unknown_cohort:
+            raise WorkflowError("unknown cohort element " + str(unknown_cohort[0]))
     return {
         "version": 1, "observations": normalized_observations, "omissions": normalized_omissions,
+        "premises": normalized_premises, "grounding": "inference" if seeded else "corpus",
         "preferencePatterns": normalized_patterns, "hypotheses": normalized_hypotheses,
         "comparison": normalized_comparison, "selected": selected,
         "selectionRationale": _text(raw.get("selectionRationale"), "selectionRationale"),
@@ -276,7 +319,10 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
 def save_art_direction(project_root: Path, raw: Any) -> dict[str, Any]:
     root = Path(project_root)
     corpus = _read_json(root / STORE / CORPUS_FILE)
-    preferences = preference_brief(_read_json(root / STORE / DECISIONS_FILE))
+    # Nothing ranked yet is a normal first round, not a missing artifact.
+    decisions_path = root / STORE / DECISIONS_FILE
+    decisions = _read_json(decisions_path) if decisions_path.exists() else {"elements": []}
+    preferences = preference_brief(decisions)
     value = validate_art_direction(raw, corpus, preferences)
     try:
         validate_assets(value["assets"], {item.get("id") for item in corpus["items"]}, root)
@@ -572,6 +618,23 @@ def _kind(path: Path) -> str | None:
     return None
 
 
+def seed_corpus_value(profile: str, subject: str) -> dict[str, Any]:
+    """An honest stand-in for a corpus the user has not supplied.
+
+    It holds no items on purpose: nothing here may later be cited as if the
+    user had shown it to us."""
+    if profile not in KNOWN_BASES:
+        raise WorkflowError(f"unknown profile {profile}")
+    return {"version": 1, "grounding": "inference", "profile": profile,
+            "subject": _text(subject, "subject"), "modalities": [], "items": []}
+
+
+def seed_corpus(project_root: Path, profile: str, subject: str) -> dict[str, Any]:
+    result = seed_corpus_value(profile, subject)
+    _atomic_json(Path(project_root) / STORE / CORPUS_FILE, result)
+    return result
+
+
 def observe_corpus(project_root: Path, source_root: Path) -> dict[str, Any]:
     root = Path(source_root).resolve()
     if not root.is_dir():
@@ -606,6 +669,10 @@ def _parser() -> argparse.ArgumentParser:
     observe = commands.add_parser("observe")
     observe.add_argument("--project-root", type=Path, required=True)
     observe.add_argument("--source-root", type=Path, required=True)
+    seed = commands.add_parser("seed")
+    seed.add_argument("--project-root", type=Path, required=True)
+    seed.add_argument("--profile", required=True)
+    seed.add_argument("--subject", required=True)
     preferences = commands.add_parser("preferences")
     preferences.add_argument("--project-root", type=Path, required=True)
     preferences.add_argument("--out", type=Path)
@@ -628,6 +695,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command == "observe":
             result = observe_corpus(args.project_root, args.source_root)
+        elif args.command == "seed":
+            result = seed_corpus(args.project_root, args.profile, args.subject)
         elif args.command == "preferences":
             result = preference_brief(_read_json(args.project_root / STORE / DECISIONS_FILE))
             if args.out:
