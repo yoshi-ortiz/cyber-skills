@@ -1,3 +1,13 @@
+---
+type: Reference
+title: Design domain profiles
+description: Evidence and verification extensions for different creative domains.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Domain profiles
 
 Select the smallest set that covers the current project. Profiles extend one evidence, critique, and promotion lifecycle; they do not create separate workflows.
@@ -33,4 +43,3 @@ Capture audience, job, promise, voice, information hierarchy, required claims, e
 ## mockup-layering
 
 Represent every output with an ordered layer manifest: canvas size, units, color profile, renderer/version, source hashes, layer order, position, scale, rotation, crop, mask, opacity, blend mode, effects, and export format. A render is reproducible only when the same manifest and source hashes produce the same output hash, or a documented renderer-specific tolerance.
-

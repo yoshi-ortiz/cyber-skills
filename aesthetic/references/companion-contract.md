@@ -1,3 +1,13 @@
+---
+type: Contract
+title: Companion contract
+description: Durable independent feedback signals and browser surface requirements.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Companion contract
 
 ## After a proposal
@@ -21,10 +31,11 @@
 
 ## A file:// tab is not the companion
 
-`helper.js` is injected only into served pages; clicks on a `file://` copy go nowhere and look identical. Generated controls carry a red offline banner that hides only once the helper connects — never remove it.
+`helper.js` is injected only into served pages; clicks on a `file://` copy go nowhere. Generated controls carry an offline banner that hides once the helper connects.
 
-
-The harness requires no particular companion — any browser surface that shows screens and returns feedback, satisfying the contract below. `companion/` vendors one that does. If none can satisfy it, say so and fall back to `decide` in the terminal — never approximate it by remembering what the user clicked.
+Any browser surface may serve as the companion if it satisfies this contract.
+`companion/` vendors one. Otherwise fall back to terminal `decide`; never invent
+or remember clicks.
 
 ## What the companion must provide
 
@@ -38,7 +49,7 @@ The harness requires no particular companion — any browser surface that shows 
 
 Emitting the zero as `data-reset` is the one shape this contract forbids: the obvious handler for a control named *reset* clears the row, and that destroys the thumb and the tick, two signals a score may never touch. Routed through `data-rank="0"` it scores 0 and changes nothing else, as §Deterministic semantics requires of every score.
 
-Two further traps, both observed in the wild:
+Two observed traps:
 
 - **Do not light the zero from `rank <= stars`.** It is true for every score, so a 5-star row draws `0 1 2 3 4 5` all lit at once. The zero is on only when the score *is* zero.
 - **Do not place the zero inside the star strip.** Unlabelled and a pixel from the first star, it collects the clicks meant for a 1 — and before the point above was fixed, a mis-hit zero also wiped the thumb.
@@ -67,7 +78,8 @@ At least one of `stars`, `verdict` or `sentiment` must be present. An interactio
 
 ## Deterministic semantics
 
-**A score never changes state.** Stars rate how well a thing is *drawn*; they say nothing about whether it should exist. Only an explicit verdict moves an element between groups. This is the single most important rule in this file: an earlier version mapped `stars: 0 → rejected`, so an element the user rated 0 was auto-rejected and its work deleted from the design.
+**A score never changes state.** Stars rate execution; only an explicit verdict
+moves lifecycle. Never map `stars: 0` to `rejected`.
 
 | Signal | Effect on state | Effect on rank |
 | --- | --- | --- |
@@ -79,7 +91,10 @@ At least one of `stars`, `verdict` or `sentiment` must be present. An interactio
 
 `0` and "unrated" are different things and the number does not distinguish them — `scored` does. An element nobody has touched is `scored: false`; one scored zero is `scored: true, stars: 0` and counts toward coverage. It has been judged.
 
-A `rejected` or `superseded` element that receives a fresh score returns to `proposed` rather than staying buried — a rank is renewed interest. Sentiment never supersedes or rejects anything; replacing one element with another is a deliberate `decide --supersedes`.
+A `rejected` or `superseded` element stays in that lifecycle when it receives a
+fresh score. Rank measures execution and cannot express renewed scope. Sentiment
+never supersedes or rejects anything; replacing one element with another is a
+deliberate `decide --supersedes`.
 
 Replay is ordered by `(timestamp, file position)`, so adopting a ledger twice is byte-identical — `adopt` is idempotent and safe to re-run.
 

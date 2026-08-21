@@ -40,7 +40,7 @@ Load `modern-web-guidance` before changing article CSS or script.
 
 - Red before green. Assert parsed structure, not generated substrings — see `references/verification.md`.
 - Before adding SKILL.md prose, ask whether a tool could enforce it.
-- Canonical is the iCloud copy. rsync to `~/.agents/skills/aesthetic/` after editing.
+- This repository copy is canonical. Propagate it with the verified install command after editing.
 - Restart the companion after editing `helper.js` or `frame-template.html`.
 
 ## Known debt

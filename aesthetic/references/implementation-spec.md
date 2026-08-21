@@ -1,3 +1,13 @@
+---
+type: Specification
+title: Portable evidence-backed design harness
+description: Product boundaries and acceptance seam for the aesthetic skill.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Portable evidence-backed design harness
 
 ## Problem

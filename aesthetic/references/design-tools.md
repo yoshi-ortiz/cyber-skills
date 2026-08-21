@@ -1,3 +1,13 @@
+---
+type: Reference
+title: Design tool capabilities
+description: Evidence-backed adapters and preflight expectations by capability.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Design tools
 
 The harness names the adapters a design project may need and records which ones were **observed**. It never assumes one is present: the compute invariant forbids claiming an MCP server or local tool without preflight evidence.

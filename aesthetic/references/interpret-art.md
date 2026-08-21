@@ -1,4 +1,14 @@
-# interpret-art.md
+---
+type: Playbook
+title: Interpret visual and multimodal evidence
+description: Turn a corpus and element-level preferences into one testable art direction.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
+# Interpret visual and multimodal evidence
 
 Load for **observe** on a visual or multimodal corpus, or **continue** on art. Treat indexes, prose, images, screenshots, and existing feedback as one evidence set. An `INDEX.md` does not stop visual inference.
 

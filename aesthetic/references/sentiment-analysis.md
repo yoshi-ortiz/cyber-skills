@@ -1,3 +1,13 @@
+---
+type: Contract
+title: Element-level sentiment analysis
+description: Infer creative preferences without collapsing independent feedback signals.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Sentiment analysis contract
 
 Use the deterministic preference brief before proposing or critiquing art direction. This is element-level descriptive analysis, not a latent taste score and not model training.

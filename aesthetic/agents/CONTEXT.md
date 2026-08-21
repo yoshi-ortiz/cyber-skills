@@ -7,5 +7,5 @@ max_file_bytes: 4000
 
 # Agents
 
-Canonical is the iCloud skill copy. After editing, synchronize the runtime copy
+The repository skill copy is canonical. After editing, synchronize the runtime copy
 and install the companion. Never patch a runtime copy alone.

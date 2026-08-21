@@ -1,3 +1,13 @@
+---
+type: Playbook
+title: Evidence-backed creative loop
+description: Frame, direct, declare, build, critique, and capture a design round.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # The loop, in full
 
 `SKILL.md` carries the six steps in one line each. This is what each one means
@@ -84,13 +94,14 @@ of the next round went on repairing it instead of improving the design.
 
 ```bash
 python3 scripts/bootstrap_harness.py shoot --html comp.html --out shots/<element>.png
-python3 scripts/bootstrap_harness.py decide --element <id> --preview shots/<element>.png ...
+python3 scripts/bootstrap_harness.py decide --element <id> --preview comp.html ...
 ```
 
 `shoot` renders at 510px wide (Chrome, falling back to QuickLook) and **refuses
 a comp that is blank or has no contrast against its own ground** -- measured on
-the pixels, so "nearly invisible" cannot reach the ledger. `decide --preview`
-re-checks every PNG for the same reason. If QuickLook is doing the rendering it
+the pixels, so "nearly invisible" cannot reach the ledger. The HTML comp is the
+canonical interactive preview; the PNG is its rendered verification artifact.
+`decide --preview` re-checks rendered previews for the same reason. If QuickLook is doing the rendering it
 fits the page into a square, so the comp must read without depending on its own
 aspect ratio.
 

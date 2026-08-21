@@ -1,3 +1,13 @@
+---
+type: Reference
+title: Ledger statistics
+description: Deterministic descriptive statistics for individual design elements.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Ledger statistics
 
 Deterministic aggregates over the standing ledger. Same decisions, same numbers — a **benchmark**, not proof the round is good.

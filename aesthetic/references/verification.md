@@ -1,3 +1,13 @@
+---
+type: Playbook
+title: Visual verification
+description: Browser-visible checks for generated screens and feedback controls.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Verification
 
 Every graphic that ever vanished in this project passed a string count first. This file is the list of ways that happened, so the next one is recognised instead of rediscovered.

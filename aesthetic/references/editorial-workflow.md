@@ -1,3 +1,13 @@
+---
+type: Contract
+title: Editorial burndown contract
+description: Append-only epic and element scope rendered in the ranking article.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Editorial burndown contract
 
 The burndown is project management data rendered inside the established Aesthetic ranking article. It is not a second website and it does not rank art direction.

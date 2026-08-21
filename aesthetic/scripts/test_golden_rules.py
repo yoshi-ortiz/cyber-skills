@@ -1,6 +1,6 @@
 """Tests for the checkable subset of the design golden rules.
 
-Expected values come from Knowledge/design/fundamentals.md, never from
+Expected values come from references/graphic-design-fundamentals.md, never from
 recomputing what the implementation does. Each test cites its source line.
 """
 import unittest
@@ -9,7 +9,7 @@ import golden_rules as gr
 
 
 class Measure(unittest.TestCase):
-    """fundamentals.md S4: 'Measure: optimal range 45-75 characters per line'."""
+    """Arizona accessible-branding guidance: 45–75 characters per line."""
 
     def test_sixty_two_characters_is_within_the_optimal_measure(self):
         line = "The quick brown fox jumps over the lazy dog, twice over now."
@@ -33,9 +33,7 @@ class Measure(unittest.TestCase):
 
 
 class ValueContrast(unittest.TestCase):
-    """fundamentals.md S2: value contrast is what 'maximizes boundary edge
-    detection ... UI text legibility'. Expected ratios are WCAG's own published
-    figures, not values recomputed from this implementation."""
+    """Expected ratios come from WCAG 2.2 success criterion 1.4.3."""
 
     def test_black_on_white_is_the_maximum_ratio(self):
         self.assertAlmostEqual(gr.contrast_ratio("#000000", "#FFFFFF"), 21.0, places=1)

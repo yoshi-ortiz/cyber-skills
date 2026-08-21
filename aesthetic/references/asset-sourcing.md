@@ -1,3 +1,13 @@
+---
+type: Policy
+title: Asset sourcing contract
+description: Resolve licensed reusable assets before deterministic generation.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Asset sourcing contract
 
 Do not spend inference effort rebuilding common visual assets, and never hallucinate vector geometry.
@@ -10,6 +20,23 @@ Do not spend inference effort rebuilding common visual assets, and never halluci
 4. Otherwise omit it and report the missing asset.
 
 This order applies to icons, ornaments, dividers, marks, textures, bitmap and pixel fonts, kaomoji, Unicode arrangements, and ASCII graphics. A publicly available pixel font should be fetched and licensed, not redrawn glyph by glyph.
+
+## Cheap evidence first
+
+Inspect representative pages and images before expensive extraction. Corpus
+files are hashed at intake; parsing every embedded object or installing a new
+tool requires a design question that the cheaper view cannot answer.
+
+Each recommendation names its category, observed cue, design question, primary
+source, license or attribution, pinned version or retrieval date, expected cost,
+and disposition. Raise obvious categories such as iconography, pixel type,
+ASCII/Unicode, motion curves, spatial standards, or compositing sources without
+asking the user to invent a library name.
+
+Resolve the official documentation or primary repository, confirm the license,
+pin the source, fetch only the current cohort's artifact, hash it outside the
+immutable corpus, and record every transformation. A search snippet, unofficial
+mirror, remembered vector path, or generated imitation is not a resolved source.
 
 ## Provenance record
 

@@ -1,6 +1,16 @@
+---
+type: Policy
+title: Anti-slop constraints
+description: Reject generic, unsupported, and unreviewed visual output.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Anti-slop constraints
 
-Source: `Knowledge/design/ai-design-slop.md`. Slop is **unconstrained generation followed by insufficient curation** — plausible-looking work produced faster than it is understood, directed, or reviewed. This file turns that into checks the harness enforces rather than advice it hopes you remember.
+Slop is **unconstrained generation followed by insufficient curation** — plausible-looking work produced faster than it is understood, directed, or reviewed. This file turns that failure into checks the harness enforces rather than advice it hopes you remember.
 
 The harness already implements the constraint stack from that note: intent → brand → tokens → component registry → behavior → review. The ledger *is* the registry; the corpus *is* the brand evidence. Use them.
 
@@ -8,7 +18,7 @@ The harness already implements the constraint stack from that note: intent → b
 
 The failure mode is statistical defaults: familiar sans-serif, purple-to-cyan gradients, interchangeable cards, vague hero copy.
 
-- Every visual move traces to a corpus cluster or a verbatim excerpt. Anything else is **inference**, is labelled as such, and is recorded at one star.
+- Every visual move traces to a corpus cluster or a verbatim excerpt. Anything else is **inference**, is labelled as such, and remains unscored at 0 stars until the user ranks it.
 - Do not introduce a colour, typeface, or texture the corpus does not evidence. If a project has an existing identity, extend it — replacing it is a decision the user makes, not a side effect of a redraw.
 - “Modern”, “clean”, “bold”, “editorial”, and “premium” are not directions. Replace them with observable spatial, typographic, image, rhythm, or interaction relationships and cite ranked element evidence plus counterevidence.
 - Reach for the corpus before reaching for a default. "Looks fine" is the symptom, not the goal.
@@ -70,7 +80,7 @@ Stop and re-source when you notice yourself:
 | Constraint | Enforced by |
 | --- | --- |
 | Decisions survive the session | `decisions.json`, `validate` |
-| Rank reflects the user, not the agent | `stars` set by user; inference at 1★ |
+| Rank reflects the user, not the agent | `stars` set by user; inference remains unscored at 0★ |
 | The graphic is rendered, not assumed | `decide --preview`, hash-pinned by `validate` |
 | Corpus is evidence, not decoration | `source-manifest.json`, `validate` |
 | Palette is declared, not defaulted | `controls` emits `var(--dh-*)` only |

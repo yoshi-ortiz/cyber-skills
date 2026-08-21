@@ -1,3 +1,13 @@
+---
+type: Playbook
+title: Command reference
+description: Supported commands for evidence, feedback, editorial scope, and rendering.
+status: stable
+generated:
+  by: codex/gpt-5
+  at: 2026-08-20T23:57:30-05:00
+---
+
 # Commands
 
 Every verb takes `--project-root` and answers `--help`. Read `--help` before asking the user anything about flags.

@@ -29,11 +29,13 @@ Every user response is critique evidence. Positive and negative findings are exa
 
 A decision binds one design element, named by a stable dotted id such as `cover.layout.two-column`. It exists only once written to `decisions.json` by `bootstrap_harness.py decide`. Conversation history is not a record and does not survive the session.
 
-Every decision carries a verdict, a 1–5 star rank, and a verbatim user excerpt. Paraphrase is not evidence.
+Every decision carries lifecycle and provenance. A user rank is 0–5; missing is
+unscored, not neutral. Preserve verbatim user words when present. Paraphrase is
+not evidence.
 
 Elements in standing — verdict `approved` or `proposed` — bind every later shot. An element in standing may not be replaced, restyled, or dropped without a `decide --supersedes` naming its replacement first. Rebuilding a surface silently drops every element that surface carried; treat that as the destructive act it is.
 
-Star rank is set by the user, never by the agent. Agent inference is recorded at one star, labelled as inference, and never outranks a user decision.
+Star rank is set by the user, never by the agent. Agent inference remains unscored at zero stars, is labelled as inference, and never outranks a user decision.
 
 ## Feedback-adoption invariant
 
@@ -43,7 +45,7 @@ The companion writes to a session-independent ledger. Anything scoped to a singl
 
 ## Generation invariant
 
-Every visual move traces to a corpus cluster or a verbatim user excerpt. Anything else is inference: label it, record it at one star, and never let it outrank a user decision.
+Every visual move traces to a corpus cluster or a verbatim user excerpt. Anything else is inference: label it, leave it unscored at zero stars, and never let it outrank a user decision.
 
 Compose from design elements already in standing. Do not introduce a colour, typeface, or texture the corpus does not evidence, and do not restate settled work — rebuilding a surface silently drops every element it carried.
 
@@ -58,4 +60,3 @@ A star recorded against an id nobody can see is a guess. Attach the graphic with
 ## Promotion invariant
 
 Promotion requires user approval, current lineage, unchanged source hashes, a ledger that validates, and passing required conformance checks.
-

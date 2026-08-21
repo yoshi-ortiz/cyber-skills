@@ -92,6 +92,48 @@ _Avoid_: Hand-authored SVG path, improvised replacement
 
 ## Rules
 
+**Golden Rule**:
+Stable design doctrine used to frame or test work. It is independent of an individual's feedback and must be indexed with credible Rule Evidence.
+_Avoid_: Taste rule, preference, aesthetic score
+
+**Design Fundamental**:
+A teachable formal relationship or constraint involving composition, hierarchy, typography, color, image, space, or perception.
+_Avoid_: Style preset, visual trend
+
+**Aesthetic Principle**:
+A philosophical question or account used to articulate the kind of experience or judgement a direction seeks.
+_Avoid_: Mood word, universal law of beauty
+
+**Art-Historical Precedent**:
+A contextualized work, movement, method, or production relationship used to explain lineage and its limits.
+_Avoid_: Style costume, movement preset
+
+**Checkable Constraint**:
+A declared property with a deterministic pass/fail result, such as contrast or allowed grid vocabulary.
+_Avoid_: Quality score, aesthetic judgement
+
+**Directed Principle**:
+A stable design principle whose application requires contextual judgement and explicit evidence.
+_Avoid_: Deterministic rule, model intuition
+
+**Rule Evidence**:
+A curriculum, standard, scholarly reference, institutional chronology, or primary source supporting a formal, philosophical, or historical claim.
+_Avoid_: User preference, reachable URL alone
+
+**Preference Evidence**:
+Element-level user rank, sentiment, words, and visible preview used to infer what this user wants pursued.
+_Avoid_: Golden Rule, population-level taste
+
+**Academic Reception Evidence**:
+Evidence that a subject is taught or recognized in a university or art-institute curriculum. It establishes academic relevance, not the truth of every claim.
+_Avoid_: Source accuracy, popularity
+
+**Source Receipt**:
+A cached machine record that a named resource was reachable at a time, with its locator and response metadata.
+_Avoid_: Truth certificate, peer review
+
+## Invariants
+
 - Rank, sentiment, and lifecycle never write one another.
 - User feedback outranks agent inference.
 - Like plus high rank is a positive anchor.
@@ -102,3 +144,5 @@ _Avoid_: Hand-authored SVG path, improvised replacement
 - Each element burns down under exactly one primary epic.
 - An unsafe theme element returns to inference while unrelated safe elements remain valid.
 - Reuse or fetch a commodity asset before generating one.
+- Golden Rules and learned user preferences remain separate evidence classes.
+- Machine reachability, academic reception, and substantive accuracy are three different claims.

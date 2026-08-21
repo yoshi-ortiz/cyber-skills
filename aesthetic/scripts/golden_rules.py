@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The checkable subset of the design golden rules.
 
-Source: Knowledge/design/fundamentals.md. Only rules that can be decided by
+Source doctrine: references/graphic-design-fundamentals.md. Only rules that can be decided by
 machine live here -- a rule that needs taste belongs in references/golden-rules.md
 and is enforced by the agent reading it, not by this module.
 
@@ -15,14 +15,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-MEASURE_RANGE = (45, 75)          # fundamentals.md S4, after Bringhurst
-BODY_CONTRAST_MIN = 4.5           # fundamentals.md S2 legibility, at WCAG AA
+MEASURE_RANGE = (45, 75)          # Arizona accessible-branding guidance
+BODY_CONTRAST_MIN = 4.5           # WCAG 2.2 success criterion 1.4.3
 
 
-GRIDS = ("manuscript", "column", "modular")            # fundamentals.md S3
+GRIDS = ("manuscript", "column", "modular")            # declared skill vocabulary
 GESTALT_LAWS = ("proximity", "similarity", "closure",
-                "continuity", "figure-ground")          # fundamentals.md S5
-REGISTERS = ("icon", "index", "symbol")                 # Peirce, fundamentals.md S5
+                "continuity", "figure-ground")          # declared skill vocabulary
+REGISTERS = ("icon", "index", "symbol")                 # declared skill vocabulary
 
 
 @dataclass(frozen=True)
