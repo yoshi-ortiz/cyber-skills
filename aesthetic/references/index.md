@@ -27,6 +27,7 @@ personal knowledge-vault path.
 | [Evidence-backed creative loop](loop.md) | Framing, directing, declaring, building, critiquing, and capturing |
 | [Anti-slop constraints](anti-slop.md) | Rejecting generic language, unsupported moves, or unreviewed output |
 | [Ledger statistics](stats.md) | Reading deterministic feedback aggregates without inventing a reward score |
+| [Designer communication](user-communication.md) | Giving non-technical designers the page, access key, progress, and a useful review action |
 
 ## Production contracts
 

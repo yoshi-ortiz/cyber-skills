@@ -5,28 +5,45 @@ description: Use when a multimodal corpus and human feedback must become grounde
 
 # Aesthetic ranking
 
-This is a project-local sentiment-analysis and creative-direction system. Its feedback loop helps the agent understand this user over time. `continue`, `critique`, `prototype`, and `observe` are context clues, not separate product workflows.
+This project-local system learns the user's design preferences. `continue`, `critique`, `prototype`, and `observe` are context clues.
 
-Keep the established article: hero, ranking graph, TOC, This round, Critical components, On development, and Discarded. The burndown sits after the hero. Never replace it with a kanban or second site.
+Keep the established article and its hero, graph, TOC, four sections, and progress chart. Never replace it with a kanban or second site.
+
+## Speak to the designer
+
+Read [user-communication.md](references/user-communication.md) before any
+user-visible update. It owns project language, plain words, functional emojis,
+and what to say during long or invisible work.
 
 ## Start
 
-Open the companion first and return its keyed URL.
+Open the companion before any update.
 
 ```bash
 python3 <skill>/scripts/bootstrap_harness.py open --project-root .
 ```
 
-If no harness exists, ask once for the reference folder, then initialize it. The corpus is read-only. User-visible language comes from `project.json`.
+First reply, no preamble:
 
-For a named reference folder, capture its complete inspectable inventory. Images and text are interpreted together; an `INDEX.md` is evidence, not a routing switch.
+```text
+🔗 <full URL>
+🔑 <value after ?key=>
+👀 <project-language review action>
+```
+
+`open` restores the last ranking page when available. Keep it live and give the
+designer something useful to review while work continues.
+
+If setup is missing, ask once for the reference folder, then initialize it read-only. User-visible language comes from `project.json`.
+
+Inventory every supported file in the named reference folder. Interpret images and text together; `INDEX.md` is evidence, not a routing switch.
 
 ```bash
 python3 <skill>/scripts/editorial_workflow.py observe \
   --project-root . --source-root <absolute-reference-folder>
 ```
 
-Open each supported item and explain omissions. Paths, hashes, MIME types, and search snippets are provenance, not aesthetic evidence.
+Open supported items. Explain omissions. Metadata is not visual evidence.
 
 ## Read the user before directing the work
 
@@ -41,23 +58,11 @@ python3 <skill>/scripts/editorial_workflow.py preferences --project-root . \
 
 Read [sentiment-analysis.md](references/sentiment-analysis.md). Never collapse stars, thumbs, lifecycle, or missing feedback into one score.
 
-- like + high stars: preserve as an anchor;
-- like + low stars: keep the idea and polish its execution;
-- dislike + high stars: acknowledge the craft and reject the direction;
-- dislike + low stars: discard;
-- missing rank or sentiment: unknown, never neutral.
-
 Preferences apply to individual elements only. One liked element does not approve its epic, theme, page, or style.
 
 ## Infer and rank art direction
 
-Read [loop.md](references/loop.md), [interpret-art.md](references/interpret-art.md), and [anti-slop.md](references/anti-slop.md). Before drawing, write a temporary inference record:
-
-1. observations with corpus item and visual/text locator;
-2. user-preference patterns with supporting element ids, counterevidence, sample size, coverage, and confidence;
-3. two to four structurally distinct hypotheses when the evidence is ambiguous;
-4. a dimension-by-dimension comparison of corpus fit, preference fit, subject specificity, coherence, and execution leverage;
-5. one selected hypothesis, its losing tradeoff, signature move, complete visual system, and 3–6 element test cohort.
+Read [loop.md](references/loop.md), [interpret-art.md](references/interpret-art.md), and [anti-slop.md](references/anti-slop.md). Follow their inference record before drawing. Compare ambiguous directions without averaging them, then select one hypothesis and a 3–6 element test cohort.
 
 Do not average those dimensions into one reward or store agent rank as user feedback. With sparse feedback, lower confidence and test less.
 
@@ -69,6 +74,19 @@ python3 <skill>/scripts/editorial_workflow.py direction --project-root . \
 ```
 
 This saves `art-direction.json`. Fix a rejected spec; never bypass the gate.
+
+## Keep long runs useful
+
+Before work that may take more than a minute, send one plain project-language
+update and mirror it in the collapsed bottom status aid:
+
+```bash
+python3 <skill>/scripts/bootstrap_harness.py status --project-root . \
+  --text "<emoji + visible work + why it matters>"
+```
+
+Name the visible result and link the live page. Give the designer a
+review action while work continues.
 
 ## Scope the editorial burndown
 
@@ -97,11 +115,11 @@ python3 <skill>/scripts/bootstrap_harness.py publish --project-root . \
   --screen design/aesthetic-ranking.html
 ```
 
-Keep the graph clickable, TOC sticky, slideshow functional, and Discarded last. Show the URL and screenshots. Ask the user to rank the new elements.
+Keep the graph clickable, TOC sticky, slideshow functional, and Discarded last. Show the URL and screenshots. Ask the user to rank the new elements in the project language.
 
 ## Continue and critique
 
-On continuation, use the latest state for the next action and append-only history for confidence and audit. Work in this order: liked/low-star polish, unresolved critical-epic elements, unscored cohort, then new exploration. Change one coherent 3–6 element cohort.
+On continuation, use the latest state for the next action and append-only history for confidence and audit. Work in this order: like + low stars, dislike + high stars, unresolved critical work, unscored designs, then new exploration. Change one coherent 3–6 element cohort.
 
 On critique, inspect the corpus, art-direction spec, preference brief, current screenshots, and accessibility report. Name the strongest mismatch first. Do not change ranks, sentiment, lifecycle, or scope while reporting.
 
@@ -116,4 +134,4 @@ A run is complete only when:
 5. the original article structure, scoring controls, burndown, slideshow, and responsive layout work;
 6. the user receives the current URL, screenshots, and a clear feedback request.
 
-Checks establish safety, not design quality. Inspect the render.
+Inspect the render. Checks prove safety, not design quality.

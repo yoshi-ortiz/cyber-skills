@@ -474,6 +474,23 @@ class TheSkillKeepsTheUserInformed(unittest.TestCase):
         self.assertIn("desktop and narrow widths", skill)
         self.assertIn("rank the new elements", skill)
 
+    def test_first_reply_gives_the_page_and_key_before_any_status(self):
+        skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
+        section = skill.split("## Start", 1)[1].split("## Read the user", 1)[0]
+        self.assertLess(section.index("🔗 <full URL>"), section.index("👀 <project-language"))
+        self.assertLess(section.index("🔑 <value after ?key=>"), section.index("👀 <project-language"))
+        self.assertIn("no preamble", section)
+
+    def test_plain_language_contract_is_loaded_before_the_first_update(self):
+        root = Path(__file__).resolve().parent.parent
+        skill = (root / "SKILL.md").read_text(encoding="utf-8")
+        contract = (root / "references" / "user-communication.md").read_text(encoding="utf-8")
+        self.assertIn("Read [user-communication.md]", skill)
+        for jargon in ("harness", "corpus", "cohort", "ledger", "critical epic", "burndown"):
+            self.assertIn(f"| {jargon} |", contract)
+        self.assertIn("project language", contract)
+        self.assertIn("keep the last\nranking page available", contract)
+
 
 class TheSkillIsInvokedWithEditorialVerbs(unittest.TestCase):
     def test_context_clues_are_documented(self):
