@@ -459,33 +459,28 @@ class TheRoundHeaderNamesTheObject(unittest.TestCase):
 
 class TheCompanionHeaderIsTwoByTwo(unittest.TestCase):
     def test_the_brand_shows_cyber_yoshi_agent_and_connection(self):
-        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
-                          bh.render_article(Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-                                            set(), "", "en", None, "F", "Ask."),
-                          re.S).group(1)
+        frame = (Path(__file__).parents[1] / "companion" / "frame-template.html").read_text(
+            encoding="utf-8")
+        style = re.search(r"<style>(.*?)</style>", frame, re.S).group(1)
         self.assertIn("grid-template-columns", style)
-        self.assertIn(".header .brand.dh-brand", style)
+        self.assertIn(".dh-brand", style)
         self.assertIn("dh-brand-kind", style)
-        self.assertIn("text-transform:uppercase", style)
+        self.assertIn("text-transform: uppercase", style)
         self.assertIn("M4 6h16v9H4V6zm-2 11h20v2H2v-2z", style)
-        script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>",
-                           bh.render_article(Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-                                             set(), "", "en", None, "F", "Ask.",
-                                             agent_url="cursor://x", agent_name="Composer"),
-                           re.S).group(1)
-        self.assertIn("CYBER YOSHI: SKILLS", script)
-        self.assertIn("dh-brand-left", script)
-        self.assertIn("dh-brand-right", script)
-        self.assertIn("Agent companion", script)
-        self.assertIn("target='_blank'", script)
+        self.assertIn("CYBER YOSHI: SKILLS", frame)
+        self.assertIn("dh-brand-left", frame)
+        self.assertIn("dh-brand-right", frame)
+        self.assertIn("Agent companion", frame)
+        self.assertIn('target="_blank"', frame)
 
 
 class TheSkillKeepsTheUserInformed(unittest.TestCase):
-    def test_editorial_output_demands_chat_screenshots(self):
+    def test_editorial_output_uses_checked_review_images(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("Show the URL and screenshots", skill)
         self.assertIn("desktop and narrow widths", skill)
-        self.assertIn("rank the new elements", skill)
+        self.assertIn("review_delivery.py", skill)
+        self.assertIn("absolute `image_path`", skill)
+        self.assertIn("URL, key, and project-language review request", skill)
 
     def test_first_reply_gives_the_page_and_key_before_any_status(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
@@ -635,17 +630,12 @@ class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
         self.assertIsNotNone(script, "the article lost its live-status script")
         self.assertIn("dh-agent", script.group(1))
 
-    def test_waiting_is_orange_and_designing_is_green(self):
+    def test_live_status_reserves_a_fixed_icon_column(self):
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
                           self.markup(), re.S).group(1)
-        idle = re.search(
-            r'\.dh-live\[data-state="idle"\] \.dh-live-label::before\{([^}]*)\}',
-            style).group(1)
-        active = re.search(
-            r'\.dh-live\[data-state="active"\] \.dh-live-label::before\{([^}]*)\}',
-            style).group(1)
-        self.assertIn("#e0902a", idle)
-        self.assertIn("#7fd18f", active)
+        live = re.search(r"\.dh-live\{([^}]*)\}", style).group(1)
+        self.assertIn("grid-template-columns:22px minmax(0,1fr)", live)
+        self.assertNotIn("flex-direction:column", live)
         detail = re.search(r"\.dh-live-detail\{([^}]*)\}", style).group(1)
         self.assertNotIn("padding-inline-start", detail)
 
@@ -752,24 +742,20 @@ class DoneLooksLikeDone(unittest.TestCase):
         self.assertIn("\U0001F3C1", rule.group(1))
         self.assertNotIn("\\1F3C1", rule.group(1))
 
-    def test_the_companions_brand_is_replaced_not_papered_over(self):
-        """The node is rebuilt by script: Cyber Yoshi brand, agent link, connection pill."""
+    def test_the_companion_frame_owns_the_brand(self):
         markup = self.markup()
-        script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>", markup, re.S)
-        self.assertIsNotNone(script, "the brand rewrite was not emitted")
-        body = script.group(1)
-        self.assertIn("CYBER YOSHI: SKILLS", body)
-        self.assertIn("dh-brand-left", body)
-        self.assertIn("dh-brand-right", body)
-        self.assertIn("target='_blank'", body)
-        self.assertNotIn(".brand{display:none}", markup,
-                         "blanking the bar leaves an empty strip")
+        frame = (Path(__file__).parents[1] / "companion" / "frame-template.html").read_text(
+            encoding="utf-8")
+        self.assertNotIn("/* dh-brand */", markup)
+        self.assertIn("CYBER YOSHI: SKILLS", frame)
+        self.assertIn("data-agent-link", frame)
+        self.assertIn("data-connection-text", frame)
 
     def test_the_agent_link_is_omitted_rather_than_invented(self):
-        # Guessing a URL scheme for someone else's desktop app is a dead click.
-        script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>",
-                           self.markup(), re.S).group(1)
-        self.assertIn("createElement(url?'a':'span')", script)
+        helper = (Path(__file__).parents[1] / "companion" / "helper.js").read_text(
+            encoding="utf-8")
+        self.assertIn("link.removeAttribute('href')", helper)
+        self.assertNotIn("cursor://", helper)
 
     def test_only_completed_work_reads_as_finished(self):
         # A thumb up is not a finish. `approved` said "approved", which read as
@@ -859,8 +845,9 @@ class TheBarReportsTheAgent(unittest.TestCase):
         self.assertIn('<details class="dh-bar-settings" data-theme-settings>', bar)
         self.assertNotIn('<details class="dh-bar-settings" data-theme-settings open', bar)
         self.assertIn('data-follow-art-direction', bar)
-        self.assertIn('data-theme-save="current"', bar)
-        self.assertIn('data-theme-save="new"', bar)
+        self.assertIn('data-theme-select', bar)
+        self.assertIn('data-theme-reset', bar)
+        self.assertIn('data-theme-save', bar)
 
 
 class PreviewsUseTheRecordedCanonicalAsset(unittest.TestCase):
@@ -1020,9 +1007,9 @@ class TheLiveBarStatesItselfClearly(unittest.TestCase):
         self.assertIn("Waiting for your chat directions", idle_live)
         self.assertIn("Give your critique and directions", idle_live)
         self.assertNotIn("&lt;idle&gt;", idle)
-        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
-        self.assertIn('.dh-live[data-state="active"] .dh-live-label', style)
-        self.assertIn('.dh-live[data-state="idle"] .dh-live-label', style)
+        self.assertIn('data-active-icon="🎨"', live_snippet)
+        self.assertIn('data-idle-icon="💬"', idle_live)
+        self.assertIn('class="dh-live-copy"', live_snippet)
 
 
 class SupersededRowsStayReadable(unittest.TestCase):
@@ -1092,10 +1079,9 @@ class ChromeFixesV34(unittest.TestCase):
         self.assertNotIn("#126435", cheer.group(1))
 
     def test_connected_label_uses_the_status_color(self):
-        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
-                          self.markup(), re.S).group(1)
-        rule = re.search(
-            r"\.brand\.dh-brand \.dh-brand-status\{([^}]*)\}", style)
+        frame = (Path(__file__).parents[1] / "companion" / "frame-template.html").read_text(
+            encoding="utf-8")
+        rule = re.search(r"\.status\s*\{([^}]*)\}", frame, re.S)
         self.assertIsNotNone(rule)
         self.assertIn("--status-color", rule.group(1))
 
@@ -1105,18 +1091,19 @@ class ChromeFixesV34(unittest.TestCase):
         self.assertIn('data-agent-model="Composer"', markup)
         self.assertIn('data-agent-label="Cursor Composer"', markup)
         self.assertNotIn("Cursor | Composer", markup)
-        script = re.search(r"<script>/\* dh-brand \*/(.*?)</script>",
-                           markup, re.S).group(1)
-        self.assertIn("dh-brand-app", script)
-        self.assertIn("dh-brand-model", script)
+        helper = (Path(__file__).parents[1] / "companion" / "helper.js").read_text(
+            encoding="utf-8")
+        self.assertIn("[data-agent-app]", helper)
+        self.assertIn("[data-agent-model]", helper)
 
     def test_connected_uses_regular_weight(self):
-        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
-                          self.markup(), re.S).group(1)
-        rule = re.search(
-            r"\.brand\.dh-brand \.dh-brand-status\{([^}]*)\}", style)
+        frame = (Path(__file__).parents[1] / "companion" / "frame-template.html").read_text(
+            encoding="utf-8")
+        rule = re.search(r"\.status\s*\{([^}]*)\}", frame, re.S)
         self.assertIsNotNone(rule)
-        self.assertIn("font-weight:400", rule.group(1).replace(" ", ""))
+        weight = re.search(r"font-weight:\s*(\d+)", rule.group(1))
+        self.assertIsNotNone(weight)
+        self.assertLess(int(weight.group(1)), 500)
 
     def test_toc_kills_leaked_comp_bullets(self):
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",

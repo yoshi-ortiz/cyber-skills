@@ -103,6 +103,24 @@ python3 scripts/bootstrap_harness.py publish --project-root . --screen <screen>.
 
 `embed` is **idempotent** and safe to rerun. If output changes on a second run, that is a bug. It refuses a screen with no placeholder and refuses ids not in standing. `--pin` puts this turn's work in a group on top. `publish` stamps the screen a clear margin ahead of every other because the companion serves **only the newest-mtime file**. Write the scoring screen last, or rerun `publish`.
 
+## Delivering review images
+
+Create an assessment JSON with one entry per cohort element. Each entry uses
+`element`, `rankable_design`, `subject_specific`, `signature_legible`,
+`explanatory_only`, and `generic_default`.
+
+```bash
+python3 scripts/review_delivery.py --project-root . \
+  --cohort "cover.ring.kicker,cover.spine.right" \
+  --assessments /tmp/proposal-assessments.json \
+  --out /tmp/review-images.json
+```
+
+The command resolves canonical HTML and hashes from `decisions.json`, stages
+the whole cohort under `design/review`, and publishes only after every render
+passes. It rejects missing, changed, duplicated, explanatory, or generic
+proposals. Final chat uses only the emitted absolute `image_path` values.
+
 ## Statistics
 
 See [stats.md](stats.md) for field semantics, cohort selection, and the command.

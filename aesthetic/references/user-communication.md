@@ -82,3 +82,13 @@ all of your references without missing files or changing the originals.`
 If the work has not produced a new image yet, say so plainly and keep the last
 ranking page available. The designer should never have to guess whether the
 session stalled.
+
+## Final review handoff
+
+Lead with the full URL, access key, and one project-language review request.
+Then attach every `image_path` emitted by `scripts/review_delivery.py`. These
+paths are absolute and already checked. Do not attach a relative path, a source
+HTML path, an evidence card, or an image that is absent from that JSON.
+
+Use the project language for every sentence and image caption. Keep internal
+checks and process names out of the handoff.

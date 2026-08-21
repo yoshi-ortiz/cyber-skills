@@ -35,6 +35,11 @@
       --error: #ff3b30;
       --selected-bg: #e8f4fd;
       --selected-border: #0071e3;
+      --chrome-bg: #15161a;
+      --chrome-ink: #f5f4ef;
+      --chrome-muted: #a8a9af;
+      --chrome-rule: #303137;
+      --app-font: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -54,7 +59,7 @@
     }
 
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: var(--app-font);
       background: var(--bg-primary);
       color: var(--text-primary);
       display: flex;
@@ -63,21 +68,70 @@
     }
 
     /* ===== FRAME STRUCTURE ===== */
-    .brand { display: flex; align-items: center; min-width: 0; overflow: hidden; color: var(--text-secondary); line-height: 1; }
-    .brand a { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; min-width: 0; max-width: 100%; line-height: 1; }
-    .brand-copy { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1; transform: translateY(-1px); }
-    .brand-logo { display: block; height: 1em; width: auto; max-width: 180px; flex-shrink: 0; filter: invert(1); }
-    @media (prefers-color-scheme: dark) {
-      .brand-logo { filter: none; }
+    .dh-brand {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0.4rem 1.5rem;
+      align-items: baseline;
+      inline-size: 100%;
+      min-inline-size: 0;
     }
-    .status { font-size: 0.7rem; color: var(--status-color, var(--success)); display: flex; align-items: center; gap: 0.4rem; justify-self: end; white-space: nowrap; line-height: 1; }
-    .status::before {
-      content: '';
-      width: 16px;
-      height: 13px;
-      flex: none;
-      border-radius: 0;
-      background: var(--status-color, var(--success));
+    .dh-brand-left, .dh-brand-right {
+      display: flex;
+      flex-direction: column;
+      gap: 0.26rem;
+      min-inline-size: 0;
+    }
+    .dh-brand-right { align-items: flex-end; text-align: right; }
+    .dh-brand a { color: inherit; text-decoration: none; }
+    .dh-brand-name {
+      display: block;
+      color: var(--chrome-ink);
+      font-size: 0.93rem;
+      font-weight: 760;
+      letter-spacing: 0.135em;
+      line-height: 1.08;
+      text-transform: uppercase;
+    }
+    .dh-brand-name:hover, .dh-brand-name:focus-visible { text-decoration: underline; }
+    .dh-brand-kind {
+      color: var(--chrome-muted);
+      font-size: 0.62rem;
+      font-weight: 650;
+      letter-spacing: 0.15em;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+    .dh-brand-agent {
+      display: flex;
+      gap: 0.4em;
+      align-items: baseline;
+      max-inline-size: min(38ch, 100%);
+      overflow: hidden;
+      color: var(--chrome-ink);
+      font-size: 0.8rem;
+      line-height: 1.2;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dh-brand-app { font-weight: 650; }
+    .dh-brand-model { color: var(--chrome-muted); font-weight: 430; }
+    .status {
+      display: grid;
+      grid-template-columns: 16px max-content;
+      gap: 0.42rem;
+      align-items: center;
+      color: var(--status-color, var(--success));
+      font-size: 0.68rem;
+      font-weight: 430;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .status-icon {
+      inline-size: 16px;
+      block-size: 13px;
+      background: currentColor;
       -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
       mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
     }
@@ -89,22 +143,18 @@
     #frame-content { padding: 2rem; min-height: 100%; min-width: 0; width: 100%; overflow-x: clip; }
 
     .header {
-      background: var(--bg-secondary);
-      border-bottom: 1px solid var(--border);
+      background: var(--chrome-bg);
+      border-bottom: 1px solid var(--chrome-rule);
       padding: 0.85rem 1.5rem;
       flex-shrink: 0;
       display: block;
       min-height: 56px;
+      color: var(--chrome-ink);
+      font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
     }
-    .header .brand { width: 100%; font-size: 0.75rem; line-height: 1.2; }
-    .header .status { font-size: 0.7rem; color: var(--status-color, var(--success)); display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; line-height: 1; }
-    .header span {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-    }
-    .header .selected-text {
-      color: var(--accent);
-      font-weight: 500;
+    @media (max-width: 620px) {
+      .dh-brand { grid-template-columns: minmax(0, 1fr); gap: 0.65rem; }
+      .dh-brand-right { align-items: flex-start; text-align: left; }
     }
     /* ===== TYPOGRAPHY ===== */
     h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
@@ -206,10 +256,25 @@
   </style>
 </head>
 <body>
-  <div class="header">
-    <!-- BRANDING -->
-    <div class="status">Connecting…</div>
-  </div>
+  <header class="header" data-companion-header>
+    <div class="dh-brand">
+      <div class="dh-brand-left">
+        <a class="dh-brand-name" href="https://github.com/yoshi-ortiz/cyber-skills"
+           target="_blank" rel="noopener noreferrer">CYBER YOSHI: SKILLS</a>
+        <span class="dh-brand-kind" data-companion-kind>Agent companion</span>
+      </div>
+      <div class="dh-brand-right">
+        <a class="dh-brand-agent" data-agent-link aria-disabled="true">
+          <span class="dh-brand-app" data-agent-app>Cyber Yoshi</span>
+          <span class="dh-brand-model" data-agent-model></span>
+        </a>
+        <span class="status" role="status" aria-live="polite">
+          <span class="status-icon" aria-hidden="true"></span>
+          <span data-connection-text>Connecting…</span>
+        </span>
+      </div>
+    </div>
+  </header>
 
   <div class="main">
     <div id="frame-content">

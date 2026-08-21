@@ -17,9 +17,32 @@
     return scored === 'yes' && Number.isInteger(stars) && stars >= 0 && stars <= 5
       ? stars : null;
   }
+  function splitStatusParts(raw) {
+    const value = String(raw || '').trim();
+    const match = value.match(/^((?:\p{Regional_Indicator}{2})|(?:\p{Extended_Pictographic}(?:\uFE0E|\uFE0F)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0E|\uFE0F)?)*))\s*/u);
+    return match ? { icon: match[1], text: value.slice(match[0].length) }
+      : { icon: '', text: value };
+  }
+  function agentIdentity(label, app, model, url, kind) {
+    let agentApp = String(app || '').trim();
+    let agentModel = String(model || '').trim();
+    const fallback = String(label || '').trim();
+    if (!agentApp && fallback.includes('|')) {
+      const parts = fallback.split('|').map(value => value.trim()).filter(Boolean);
+      agentApp = parts[0] || '';
+      agentModel = parts.slice(1).join(' ');
+    }
+    if (!agentApp && !agentModel) agentApp = fallback || 'Cyber Yoshi';
+    return {
+      app: agentApp,
+      model: agentModel,
+      url: String(url || '').trim(),
+      kind: String(kind || '').trim() || 'Agent companion'
+    };
+  }
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-      nextReconnectDelay, rankIsOn, starsForEvent,
+      nextReconnectDelay, rankIsOn, starsForEvent, splitStatusParts, agentIdentity,
       MIN_RECONNECT_MS, MAX_RECONNECT_MS, TOMBSTONE_AFTER_MS
     };
   }
@@ -67,8 +90,33 @@
       disconnected: ['Disconnected',  'var(--error)']
     };
     const [text, color] = map[state] || map.disconnected;
-    el.textContent = text;
+    const label = el.querySelector('[data-connection-text]');
+    if (label) label.textContent = text;
     el.style.setProperty('--status-color', color);
+  }
+
+  function wireAgentHeader() {
+    const host = document.querySelector('[data-agent-state]');
+    const header = document.querySelector('[data-companion-header]');
+    if (!host || !header) return;
+    const identity = agentIdentity(
+      host.getAttribute('data-agent-label'),
+      host.getAttribute('data-agent-app'),
+      host.getAttribute('data-agent-model'),
+      host.getAttribute('data-agent-url'),
+      host.getAttribute('data-companion-kind')
+    );
+    header.querySelector('[data-companion-kind]').textContent = identity.kind;
+    header.querySelector('[data-agent-app]').textContent = identity.app;
+    header.querySelector('[data-agent-model]').textContent = identity.model;
+    const link = header.querySelector('[data-agent-link]');
+    if (identity.url) {
+      link.href = identity.url;
+      link.removeAttribute('aria-disabled');
+    } else {
+      link.removeAttribute('href');
+      link.setAttribute('aria-disabled', 'true');
+    }
   }
 
   // Self-styled so it works on framed and full-document screens alike.
@@ -112,6 +160,9 @@
       try { data = JSON.parse(msg.data); } catch (e) { return; }
       if (data.type === 'reload') window.location.reload();
       if (data.type === 'dh-agent') {
+        const status = splitStatusParts(data.text);
+        data.icon = status.icon;
+        data.text = status.text;
         window.__dhLastAgent = data;
         window.dispatchEvent(new CustomEvent('dh-agent', { detail: data }));
       }
@@ -173,7 +224,20 @@
     root.setProperty('--text-secondary', elements.ink);
     root.setProperty('--accent', elements.accent);
     root.setProperty('--selected-border', elements.accent);
-    document.body.style.fontFamily = elements.font;
+    root.setProperty('--chrome-bg', elements.bg);
+    root.setProperty('--chrome-ink', elements.ink);
+    root.setProperty('--chrome-muted', elements.ink);
+    root.setProperty('--chrome-rule', elements.accent);
+    root.setProperty('--app-font', elements.font);
+  }
+
+  function clearFrameTheme() {
+    const root = document.documentElement.style;
+    [
+      '--bg-primary', '--bg-secondary', '--text-primary', '--text-secondary',
+      '--accent', '--selected-border', '--chrome-bg', '--chrome-ink',
+      '--chrome-muted', '--chrome-rule', '--app-font'
+    ].forEach(name => root.removeProperty(name));
   }
 
   function selectedTheme(spec) {
@@ -195,50 +259,72 @@
     const settings = document.querySelector('[data-theme-settings]');
     if (!settings) return;
     const follow = settings.querySelector('[data-follow-art-direction]');
+    const select = settings.querySelector('[data-theme-select]');
+    const reset = settings.querySelector('[data-theme-reset]');
+    const save = settings.querySelector('[data-theme-save]');
     const message = settings.querySelector('[data-theme-message]');
     let spec = null;
     const say = text => { message.textContent = text; };
-    themeRequest().then(value => {
+    const sync = value => {
       spec = value;
       follow.checked = Boolean(spec.followArtDirection);
+      select.replaceChildren(new Option('', ''));
+      (spec.themes || []).forEach(theme => select.add(new Option(theme.name || theme.id, theme.id)));
+      select.value = spec.selected || '';
+    };
+    themeRequest().then(value => {
+      sync(value);
       const selected = selectedTheme(spec);
-      if (follow.checked && selected) applyFrameTheme(selected.elements);
+      if (follow.checked) applyFrameTheme(selected ? selected.elements : articleTheme());
     }).catch(error => say(error.message));
     follow.addEventListener('change', async () => {
       try {
         spec = await themeRequest({ action: 'follow', enabled: follow.checked });
         if (follow.checked) {
-          const candidate = articleTheme();
           const selected = selectedTheme(spec);
-          applyFrameTheme(candidate || (selected && selected.elements));
+          applyFrameTheme(selected ? selected.elements : articleTheme());
         } else {
-          window.location.reload();
+          clearFrameTheme();
         }
-        say(follow.checked ? 'Companion follows the art direction' : 'Companion uses its safe theme');
+        say(follow.checked ? 'Update app theme on' : 'Update app theme off');
       } catch (error) { follow.checked = !follow.checked; say(error.message); }
     });
-    settings.querySelectorAll('[data-theme-save]').forEach(button => {
-      button.addEventListener('click', async () => {
-        const mode = button.dataset.themeSave;
-        const candidate = articleTheme();
-        if (!candidate) { say('No article theme is available'); return; }
-        let id = spec && spec.selected || 'art-direction';
-        let name = id;
-        if (mode === 'new') {
-          name = window.prompt('Theme name', 'Art direction') || '';
-          if (!name.trim()) return;
-          id = name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-|-$/g, '');
-        }
-        try {
-          spec = await themeRequest({ action: 'save', mode, id, name, elements: candidate });
-          const selected = selectedTheme(spec);
-          if (follow.checked && selected) applyFrameTheme(selected.elements);
-          const issues = selected && selected.issues || [];
-          say(issues.length
-            ? 'Saved with safe fallback for: ' + issues.map(issue => issue.element).join(', ')
-            : 'Theme saved to the project');
-        } catch (error) { say(error.message); }
-      });
+    select.addEventListener('change', async () => {
+      if (!select.value) return;
+      try {
+        sync(await themeRequest({ action: 'select', id: select.value }));
+        const selected = selectedTheme(spec);
+        if (follow.checked && selected) applyFrameTheme(selected.elements);
+        say('Saved theme selected');
+      } catch (error) { sync(spec); say(error.message); }
+    });
+    reset.addEventListener('click', async () => {
+      try {
+        sync(await themeRequest({ action: 'reset' }));
+        clearFrameTheme();
+        say('Theme reset');
+      } catch (error) { say(error.message); }
+    });
+    save.addEventListener('click', async () => {
+      const candidate = articleTheme();
+      if (!candidate) { say('No article theme is available'); return; }
+      let mode = spec && spec.selected ? 'current' : 'new';
+      let id = spec && spec.selected || '';
+      let name = selectedTheme(spec || {})?.name || id;
+      if (mode === 'new') {
+        name = window.prompt('Saved themes', 'Art direction') || '';
+        if (!name.trim()) return;
+        id = name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-|-$/g, '');
+      }
+      try {
+        sync(await themeRequest({ action: 'save', mode, id, name, elements: candidate }));
+        const selected = selectedTheme(spec);
+        if (follow.checked && selected) applyFrameTheme(selected.elements);
+        const issues = selected && selected.issues || [];
+        say(issues.length
+          ? 'Saved with safe fallback for ' + issues.map(issue => issue.element).join(', ')
+          : 'Theme saved');
+      } catch (error) { say(error.message); }
     });
   }
 
@@ -384,6 +470,7 @@
       sendEvent({ type: 'rank', element, choice: element, stars, ...metadata })
   };
 
+  wireAgentHeader();
   wireThemeSettings();
   connect();
 })();

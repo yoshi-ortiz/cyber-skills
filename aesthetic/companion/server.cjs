@@ -162,23 +162,16 @@ const MIME_TYPES = {
 // ========== Templates and Constants ==========
 
 function waitingPage() {
-  return renderBranding(`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>Brainstorm Companion</title>
 <style>
 body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
 h1 { color: #333; } p { color: #666; }
-.brand { display: flex; align-items: center; min-width: 0; overflow: hidden; margin-bottom: 1.5rem; color: #666; font-size: 0.9rem; line-height: 1; }
-.brand a { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; min-width: 0; max-width: 100%; line-height: 1; }
-.brand-copy { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1; transform: translateY(-1px); }
-.brand-logo { display: block; height: 1em; width: auto; max-width: 180px; filter: invert(1); }
-.brand { gap: 0.6rem; flex-wrap: wrap; }
-.brand-copy { font-weight: 700; color: #ddd; letter-spacing: 0.02em; }
-.brand-credit { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
 </style>
 </head>
-<body><!-- BRANDING --><h1>Brainstorm Companion</h1>
-<p>Waiting for the agent to push a screen...</p></body></html>`);
+<body><h1>Brainstorm Companion</h1>
+<p>Waiting for the agent to push a screen...</p></body></html>`;
 }
 
 const FORBIDDEN_PAGE = `<!DOCTYPE html>
@@ -245,15 +238,6 @@ function escapeHtmlText(value) {
     .replace(/"/g, '&quot;');
 }
 
-function brandMarkup() {
-  // Empty shell — the article's dh-brand script fills this once data-agent-* is present.
-  return '<div class="brand"></div>';
-}
-
-function renderBranding(html) {
-  return html.split('<!-- BRANDING -->').join(brandMarkup());
-}
-
 function isFullDocument(html) {
   const trimmed = html.trimStart().toLowerCase();
   return trimmed.startsWith('<!doctype') || trimmed.startsWith('<html');
@@ -262,7 +246,7 @@ function isFullDocument(html) {
 function wrapInFrame(content) {
   // split/join, not replace: a string replacement treats $$, $&, $` and $' as
   // special patterns, which mangles screens containing ASCII art or regex.
-  return renderBranding(frameTemplate).split('<!-- CONTENT -->').join(content);
+  return frameTemplate.split('<!-- CONTENT -->').join(content);
 }
 
 function getNewestScreen() {
@@ -448,13 +432,28 @@ function writeThemeSpec(spec) {
 
 function updateThemeSpec(request) {
   const spec = readThemeSpec();
+  if (request.action === 'reset') {
+    spec.selected = null;
+    spec.followArtDirection = false;
+    writeThemeSpec(spec);
+    return spec;
+  }
+  if (request.action === 'select') {
+    const identifier = String(request.id || '').trim();
+    if (!spec.themes.some(theme => theme.id === identifier)) {
+      throw new Error('saved theme does not exist');
+    }
+    spec.selected = identifier;
+    writeThemeSpec(spec);
+    return spec;
+  }
   if (request.action === 'follow') {
     spec.followArtDirection = Boolean(request.enabled);
     writeThemeSpec(spec);
     return spec;
   }
   if (request.action !== 'save' || !['current', 'new'].includes(request.mode)) {
-    throw new Error('theme action must be follow or save');
+    throw new Error('theme action must be follow, select, reset, or save');
   }
   const identifier = String(request.id || '').trim();
   if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(identifier)) throw new Error('invalid theme id');

@@ -2153,9 +2153,10 @@ html:has(.dh-art){scroll-behavior:smooth}
  align-items:baseline;margin:16px 0 0;max-inline-size:52ch}
 .dh-hero-meta .dh-label{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
  padding:4px 9px;border-radius:999px;flex:none;border:1px solid var(--dh-rule);
- color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);
+ justify-self:end;text-align:right}
 .dh-hero-meta .dh-value{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;
- overflow-wrap:anywhere}
+ overflow-wrap:anywhere;justify-self:start;text-align:left}
 .dh-project,.dh-designing{display:none}
 /* The instruction is the point of the page: it tells a designer what to do
    here AND what to do next. It reads at body size, not as fine print. */
@@ -2227,66 +2228,6 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-key i{inline-size:11px;block-size:8px;border-radius:1px;background:currentColor;flex:none}
 .dh-key b{font-size:9px;line-height:1;padding:1px 4px;border-radius:2px;
  border:1px solid currentColor}
-/* The companion draws its own brand bar above our page. This article is the
-   project's, not the tool's -- and the credit already sits in our footer, so
-   the bar is a second, louder copy of it. Hidden from here rather than by
-   patching another skill's server, which an update would overwrite. */
-/* The companion's own header, restyled. Its contents are REPLACED by script
-   rather than papered over with `content:` -- the CSS version left the server's
-   own "Superpowers vunknown" still showing beside ours, and pseudo-elements
-   cannot carry the hyperlinks this header needs. */
-/* `box-sizing` explicitly: both of these live OUTSIDE `.dh-art`, so neither
-   inherits its border-box and their padding was adding to a 100% width --
-   24px of horizontal overflow on the whole page. */
-.dh-brand,.dh-bar{box-sizing:border-box;max-inline-size:100%}
-/* Companion header: product left, session right — sans for chrome, mono stays
-   on the article. Frame template used to cap `.brand` at 0.75rem and shrink
-   the whole bar into undifferentiated small caps. */
-.header:has(.dh-brand) .brand{font-size:inherit;line-height:inherit}
-.header .brand.dh-brand,.brand.dh-brand{display:grid!important;
- grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto;
- gap:.35rem 1.25rem;align-items:baseline;width:100%;flex:1 1 auto;min-inline-size:0;
- line-height:1.2;overflow:visible;
- font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.dh-brand-left,.dh-brand-right{display:flex;flex-direction:column;gap:.28rem;min-inline-size:0}
-.dh-brand-right{align-items:flex-end;text-align:end}
-.header .brand.dh-brand a,.brand.dh-brand a{text-decoration:none;color:inherit}
-.header .brand.dh-brand .dh-brand-name,.brand.dh-brand .dh-brand-name{
- font-size:.94rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
- color:#fff;display:block;line-height:1.12}
-.header .brand.dh-brand .dh-brand-name:hover,.brand.dh-brand .dh-brand-name:hover{
- text-decoration:underline;color:#fff}
-.header .brand.dh-brand .dh-brand-kind,.brand.dh-brand .dh-brand-kind{
- font-size:.62rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
- color:color-mix(in srgb, #f2f2f2 58%, transparent)}
-.header .brand.dh-brand .dh-brand-agent,.brand.dh-brand .dh-brand-agent{
- font-size:.82rem;letter-spacing:-.015em;text-transform:none;
- display:flex;align-items:baseline;gap:.38em;min-inline-size:0;
- max-inline-size:min(34ch,100%);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.header .brand.dh-brand .dh-brand-app,.brand.dh-brand .dh-brand-app{
- font-weight:600;color:color-mix(in srgb, #f2f2f2 94%, transparent)}
-.header .brand.dh-brand .dh-brand-model,.brand.dh-brand .dh-brand-model{
- font-weight:400;color:color-mix(in srgb, #f2f2f2 72%, transparent)}
-.header .brand.dh-brand .dh-brand-agent:hover,.brand.dh-brand .dh-brand-agent:hover{
- text-decoration:none;color:#fff}
-.header .brand.dh-brand .dh-brand-agent:hover .dh-brand-app,
-.header .brand.dh-brand .dh-brand-agent:hover .dh-brand-model,
-.brand.dh-brand .dh-brand-agent:hover .dh-brand-app,
-.brand.dh-brand .dh-brand-agent:hover .dh-brand-model{color:#fff}
-.header .brand.dh-brand .status,.brand.dh-brand .status,.brand.dh-brand .dh-brand-status{
- margin:0;font-size:.68rem;font-weight:400;letter-spacing:.04em;
- justify-self:end;position:static;display:flex;align-items:center;gap:.45rem;
- color:var(--status-color,#34c759)}
-.header .brand.dh-brand .status::before,.brand.dh-brand .status::before,
-.brand.dh-brand .dh-brand-status::before{
- content:'';width:16px;height:13px;flex:none;border-radius:0;
- background:var(--status-color,#34c759);
- -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
- mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 6h16v9H4V6zm-2 11h20v2H2v-2z'/%3E%3C/svg%3E") center/contain no-repeat}
-.header:has(.dh-brand){display:block;padding:.85rem 1.5rem}
-.header:has(.dh-brand) .brand{width:100%}
-/* No dot here. The connection pill below already carries one, and two dots
-   reading different things is the ambiguity this row was meant to remove. */
 .dh-toc{padding-block-end:0}
 /* The sticky bar names itself. Scrolled deep into the page, a row of pills
    with no title does not say what the page is or what it is collecting. */
@@ -2750,7 +2691,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
 /* Floating action bar: one place to return to the agent, not a full-width footer. */
 .dh-bar{position:fixed;inset-block-end:16px;inset-inline-end:16px;inset-inline-start:auto;
- z-index:50;inline-size:min(360px,calc(100dvw - 32px));max-inline-size:100%;
+ z-index:50;inline-size:min(360px,calc(100dvw - 32px));max-inline-size:100%;box-sizing:border-box;
  display:flex;flex-direction:column;align-items:stretch;gap:8px;
  padding:12px 14px;border-radius:14px;
  font:500 13px/1.4 var(--dh-font,ui-sans-serif,system-ui,sans-serif);
@@ -2760,17 +2701,16 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
  box-shadow:0 14px 44px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
 .dh-bar b{font-weight:700;letter-spacing:-.01em}
 .dh-bar-copy{margin:0;opacity:.88}
-/* What the agent is doing, when it says so. A pulsing dot because the one
-   question a waiting user has is whether anything is still happening. */
-.dh-live{font-style:normal;display:flex;flex-direction:column;align-items:flex-start;
- gap:2px;font-size:12px;letter-spacing:.02em;list-style:none;margin:0;padding:0}
-.dh-live-label{display:inline-flex;align-items:center;gap:7px;font-weight:800;
- letter-spacing:.04em;line-height:1.2;color:inherit;min-inline-size:0;overflow-wrap:anywhere}
-.dh-live-label::before{content:'';inline-size:8px;block-size:8px;border-radius:50%;flex:none}
-.dh-live[data-state="idle"] .dh-live-label::before{background:#e0902a}
-.dh-live[data-state="active"] .dh-live-label::before{background:#7fd18f}
+.dh-live{font-style:normal;display:grid;grid-template-columns:22px minmax(0,1fr);
+ column-gap:8px;align-items:start;font-size:12px;letter-spacing:.02em;
+ list-style:none;margin:0;padding:0}
+.dh-live-icon{display:block;inline-size:22px;min-inline-size:22px;line-height:1.2;
+ text-align:center;font-family:"Apple Color Emoji","Segoe UI Emoji",sans-serif}
+.dh-live-copy{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-inline-size:0}
+.dh-live-label{display:block;font-weight:800;letter-spacing:.04em;line-height:1.2;
+ color:inherit;min-inline-size:0;overflow-wrap:anywhere}
 .dh-live-detail{font-size:11px;line-height:1.35;opacity:.88;max-inline-size:36ch;
- margin:0;padding:0}
+ margin:0;padding:0;overflow-wrap:anywhere}
 .dh-live[data-state="idle"] .dh-live-detail{opacity:.88}
 .dh-bar-copy span{opacity:.78}
 .dh-live-label,.dh-live-detail{opacity:1}
@@ -2784,14 +2724,30 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-bar-settings summary::after{content:'+';font-size:15px;line-height:1;font-weight:500}
 .dh-bar-settings[open] summary::after{content:'−'}
 .dh-bar-settings-panel{display:grid;gap:10px;padding:12px 2px 2px;min-inline-size:240px}
-.dh-bar-settings label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:650}
-.dh-bar-settings input{accent-color:var(--dh-accent,#d9482a)}
+.dh-bar-settings label{font-size:12px;font-weight:650}
+.dh-theme-switch{display:flex;align-items:center;gap:8px}
+.dh-theme-switch input{appearance:none;display:inline-grid;place-items:center;
+ inline-size:36px;block-size:20px;margin:0;border:1px solid currentColor;border-radius:999px;
+ background:transparent;color:inherit;cursor:pointer;transition:background .12s,border-color .12s}
+.dh-theme-switch input::before{content:'';inline-size:14px;block-size:14px;border-radius:50%;
+ background:currentColor;transform:translateX(-8px);transition:transform .12s}
+.dh-theme-switch input:checked{background:var(--dh-accent,#d9482a);
+ border-color:var(--dh-accent,#d9482a)}
+.dh-theme-switch input:checked::before{background:#fff;transform:translateX(8px)}
+.dh-theme-switch input:focus-visible,.dh-bar-settings select:focus-visible,
+.dh-bar-settings button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.dh-theme-select{display:grid;grid-template-columns:max-content minmax(0,1fr);
+ gap:8px;align-items:center}
+.dh-bar-settings select{min-inline-size:0;padding:6px 26px 6px 8px;border:1px solid currentColor;
+ border-radius:7px;background:transparent;color:inherit;font:inherit}
 .dh-bar-settings-actions{display:flex;gap:7px;flex-wrap:wrap}
 .dh-bar-settings button{padding:6px 9px;border:1px solid currentColor;border-radius:7px;
  background:transparent;color:inherit;font:inherit;cursor:pointer}
 .dh-bar-settings button:hover,.dh-bar-settings button:focus-visible{background:var(--dh-bg,#fff);
  color:var(--dh-ink,#111)}
-.dh-bar-settings [data-theme-message]{font-size:11px;line-height:1.35;opacity:.82}
+.dh-sr-only{position:absolute!important;inline-size:1px!important;block-size:1px!important;
+ padding:0!important;overflow:hidden!important;clip-path:inset(50%)!important;
+ white-space:nowrap!important;border:0!important}
 /* One return action: chat icon and label, hyperlinked to the agent session. */
 .dh-bar-go{display:inline-flex;align-items:center;gap:8px;flex:none;font-weight:800;
  letter-spacing:.06em;font-size:12px;padding:8px 14px;border-radius:999px;text-decoration:none;
@@ -2870,60 +2826,6 @@ CHAT_ICON = ('<svg class="dh-bar-ico" viewBox="0 0 24 24" fill="none" stroke="cu
              'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
              '<path d="M21 11.5a8.38 8.38 0 0 1-1.9 5.4 8.5 8.5 0 0 1-6.6 3.3 8.38 8.38 0 0 1-3.4-.7L3 21l1.5-5.4a8.38 8.38 0 0 1-.7-3.4 8.5 8.5 0 0 1 3.3-6.6 8.38 8.38 0 0 1 5.4-1.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>')
 
-BRAND_SCRIPT = """<script>/* dh-brand */
-(function(){
- if(window.__dhBrand)return; window.__dhBrand=1;
- function go(){
-  var host=document.querySelector('[data-agent-state]'); if(!host)return;
-  var brand=document.querySelector('.brand'); if(!brand)return;
-  var url=host.getAttribute('data-agent-url')||'';
-  var app=host.getAttribute('data-agent-app')||'';
-  var model=host.getAttribute('data-agent-model')||'';
-  var label=host.getAttribute('data-agent-label')||'';
-  if(!app&&label.indexOf('|')>=0){
-   var bits=label.split('|').map(function(s){return s.trim()}).filter(Boolean);
-   app=bits[0]||''; model=bits.slice(1).join(' ')||'';
-  }
-  if(!app&&!model){app=label; model='';}
-  var kind=host.getAttribute('data-companion-kind')||'Agent companion';
-  brand.className='brand dh-brand';
-  brand.textContent='';
-  var left=document.createElement('div'); left.className='dh-brand-left';
-  var title=document.createElement('a');
-  title.className='dh-brand-name';
-  title.href='https://github.com/yoshi-ortiz/cyber-skills';
-  title.target='_blank';
-  title.rel='noopener noreferrer';
-  title.textContent='CYBER YOSHI: SKILLS';
-  var sub=document.createElement('span');
-  sub.className='dh-brand-kind'; sub.textContent=kind;
-  left.appendChild(title); left.appendChild(sub);
-  var right=document.createElement('div'); right.className='dh-brand-right';
-  var agent=document.createElement(url?'a':'span');
-  agent.className='dh-brand-agent';
-  if(url)agent.href=url;
-  if(app){
-   var appEl=document.createElement('span');
-   appEl.className='dh-brand-app'; appEl.textContent=app;
-   agent.appendChild(appEl);
-   if(model){
-    var modelEl=document.createElement('span');
-    modelEl.className='dh-brand-model'; modelEl.textContent=model;
-    agent.appendChild(modelEl);
-   }
-  }else{
-   agent.textContent=label||'Cyber Yoshi';
-  }
-  right.appendChild(agent);
-  var pill=document.querySelector('.status');
-  if(pill){pill.classList.add('dh-brand-status'); right.appendChild(pill);}
-  brand.appendChild(left); brand.appendChild(right);
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);
- else go();
-})();
-</script>"""
-
 LIVE_SCRIPT = """<script>/* dh-live */
 (function(){
  if(window.__dhLive)return; window.__dhLive=1;
@@ -2934,8 +2836,9 @@ LIVE_SCRIPT = """<script>/* dh-live */
   if(st==='active') round.setAttribute('data-preparing','1');
   else round.removeAttribute('data-preparing');
  }
- function apply(text,state){
+ function apply(text,state,iconText){
   var el=document.querySelector('.dh-live'); if(!el)return;
+  var icon=el.querySelector('.dh-live-icon');
   var label=el.querySelector('.dh-live-label');
   var detail=el.querySelector('.dh-live-detail');
   var st=state||'active';
@@ -2943,6 +2846,8 @@ LIVE_SCRIPT = """<script>/* dh-live */
   var idleLabel=el.getAttribute('data-idle-label')||'waiting for your chat directions';
   var activeLabel=el.getAttribute('data-active-label')||'Designing';
   var idleAid=el.getAttribute('data-idle-aid')||'';
+  var fallbackIcon=el.getAttribute(st==='idle'?'data-idle-icon':'data-active-icon')||'';
+  if(icon) icon.textContent=iconText||fallbackIcon;
   if(label) label.textContent=st==='idle'?idleLabel:activeLabel;
   if(detail) detail.textContent=st==='idle'?idleAid:(text||'');
   prepRound(st);
@@ -2950,7 +2855,7 @@ LIVE_SCRIPT = """<script>/* dh-live */
  }
  function onAgent(d){
   if(!d)return;
-  apply(d.text, d.state==='idle'?'idle':'active');
+  apply(d.text, d.state==='idle'?'idle':'active',d.icon||'');
  }
  window.addEventListener('dh-agent',function(ev){onAgent(ev.detail);});
  if(window.__dhLastAgent) onAgent(window.__dhLastAgent);
@@ -3569,6 +3474,20 @@ def project_title(project_root: Path | None) -> str:
         return ""
 
 
+STATUS_ICON_RE = re.compile(
+    r"^((?:[\U0001F1E6-\U0001F1FF]{2})|"
+    r"(?:[\u2600-\u27BF\U0001F300-\U0001FAFF](?:\uFE0E|\uFE0F)?"
+    r"(?:\u200D[\u2600-\u27BF\U0001F300-\U0001FAFF](?:\uFE0E|\uFE0F)?)*))\s*")
+
+
+def split_status_icon(text: str, fallback: str) -> tuple[str, str]:
+    value = text.strip()
+    match = STATUS_ICON_RE.match(value)
+    if not match:
+        return fallback, value
+    return match.group(1), value[match.end():]
+
+
 def render_article(project_root: Path, decisions: dict[str, object],
                    cohort: set[str] | None = None, cohort_name: str = "",
                    language: str | None = None,
@@ -3708,12 +3627,13 @@ def render_article(project_root: Path, decisions: dict[str, object],
     if agent_state == "idle":
         live_label = txt["bar-idle"]
         live_detail = txt["bar-hint"]
+        live_icon = "💬"
     else:
         live_label = txt["bar-active-label"]
-        live_detail = live_status
+        live_icon, live_detail = split_status_icon(live_status, "🎨")
     designing_display = (round_label or cohort_name).strip()
     out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
-           TOC_SCRIPT, SHOT_FIT_SCRIPT, LIGHTBOX_SCRIPT, BRAND_SCRIPT, LIVE_SCRIPT,
+           TOC_SCRIPT, SHOT_FIT_SCRIPT, LIGHTBOX_SCRIPT, LIVE_SCRIPT,
            f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
            f'data-cheer-text="{html_escape(txt["done-cheer"])}" '
            f'data-done-label="{html_escape(txt["completed"])}" '
@@ -3906,17 +3826,26 @@ def render_article(project_root: Path, decisions: dict[str, object],
         + f'<i class="dh-live" role="status" data-state="{agent_state}" '
         + f'data-idle-label="{html_escape(txt["bar-idle"])}" '
         + f'data-idle-aid="{html_escape(txt["bar-hint"])}" '
+        + 'data-idle-icon="💬" data-active-icon="🎨" '
         + f'data-active-label="{html_escape(txt["bar-active-label"])}">'
+        + f'<span class="dh-live-icon" aria-hidden="true">{html_escape(live_icon)}</span>'
+        + '<span class="dh-live-copy">'
         + f'<span class="dh-live-label">{html_escape(live_label)}</span>'
-        + f'<span class="dh-live-detail">{html_escape(live_detail)}</span></i>'
+        + f'<span class="dh-live-detail">{html_escape(live_detail)}</span></span></i>'
         + '<details class="dh-bar-settings" data-theme-settings>'
-          '<summary aria-label="Theme settings">Theme</summary>'
+          '<summary>Agent settings</summary>'
           '<div class="dh-bar-settings-panel">'
-          '<label><input type="checkbox" data-follow-art-direction> Follow art direction</label>'
+          '<div class="dh-theme-switch">'
+          '<input id="dh-update-app-theme" type="checkbox" role="switch" '
+          'data-follow-art-direction>'
+          '<label for="dh-update-app-theme">Update app theme</label></div>'
+          '<div class="dh-theme-select">'
+          '<label for="dh-saved-themes">Saved themes</label>'
+          '<select id="dh-saved-themes" data-theme-select><option value=""></option></select></div>'
           '<div class="dh-bar-settings-actions">'
-          '<button type="button" data-theme-save="current">Save current</button>'
-          '<button type="button" data-theme-save="new">Save as new</button>'
-          '</div><output data-theme-message aria-live="polite">Safe project theme</output>'
+          '<button type="button" data-theme-reset>Reset theme</button>'
+          '<button type="button" data-theme-save>Save</button>'
+          '</div><output class="dh-sr-only" data-theme-message aria-live="polite"></output>'
           '</div></details>'
         + (f'<a class="dh-bar-go" href="{html_escape(agent_url)}">'
            f'{CHAT_ICON}<span>{html_escape(txt["bar-return"])}</span></a>'

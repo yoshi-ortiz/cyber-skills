@@ -137,6 +137,11 @@ hierarchy, composition, rhythm, specificity, coherence. Cut decoration with no
 job. If it reads as a generic default, or the signature is not immediately
 legible, revise before showing it.
 
+Write one explicit assessment for every cohort element. A proposal passes only
+when `rankable_design`, `subject_specific`, and `signature_legible` are `true`,
+and both `explanatory_only` and `generic_default` are `false`. Source excerpts,
+provenance cards, explanations, and generic layouts fail here.
+
 ## 6 · Capture
 
 `open` already put the URL in chat. If `publish` reports a different session
@@ -148,6 +153,10 @@ for ranks in the same turn. After the first proposal this session, run
 `doctor --quiet` in the background -- it is a health check, not an opening act,
 and its ok/FAIL lines do not belong in chat. Feedback that is not adopted in the
 turn it arrives is lost at the next session boundary.
+
+Run `scripts/review_delivery.py` with the published cohort and assessment JSON.
+Use its emitted absolute `image_path` values in chat. Do not rebuild, shorten,
+or guess those paths.
 
 Next round, improve liked-but-low-scoring (`polish`) work first. A low star with
 a thumb up is the clearest instruction the ledger can carry: the idea is right

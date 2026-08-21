@@ -37,6 +37,9 @@ The failure mode is unstructured DOM, utility sprawl, hardcoded values, duplicat
 - Generate compositions of elements already in standing, not arbitrary markup.
 - A new design-element id means a genuinely new element. Renaming one in standing is a **supersede**, recorded before the change.
 - Reference excerpts, source proofs, and before/after explanations annotate a proposal; they are not rankable proposals themselves.
+- Reject a proposal before delivery when it is explanatory, generic, unrelated
+  to the subject, or missing a legible signature move. A valid file is not proof
+  that the design earns a rank.
 - Reuse the tokens the screen already declares. A literal colour in generated markup is a defect.
 - Reuse common licensed assets. Reinventing a pixel font, ornament, or icon is slop when a pinned source can answer the same need. Never hallucinate vector paths.
 
@@ -84,6 +87,7 @@ Stop and re-source when you notice yourself:
 | Rank reflects the user, not the agent | `stars` set by user; inference remains unscored at 0★ |
 | The graphic is rendered, not assumed | `decide --preview`, hash-pinned by `validate` |
 | A round does not repeat one drawing under new names | duplicate preview hashes are refused |
+| Final chat receives only reviewed graphics | `review_delivery.py` requires passing assessments and emits existing absolute paths |
 | Corpus is evidence, not decoration | `source-manifest.json`, `validate` |
 | Palette is declared, not defaulted | `controls` emits `var(--dh-*)` only |
 | Adapters are observed, not claimed | `preflight` writes `capability-matrix.json` |
