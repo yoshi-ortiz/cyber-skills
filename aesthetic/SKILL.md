@@ -20,7 +20,8 @@ and what to say during long or invisible work.
 Open the companion before any update.
 
 ```bash
-python3 <skill>/scripts/bootstrap_harness.py open --project-root .
+python3 <skill>/scripts/bootstrap_harness.py open --project-root . \
+  --status "<emoji + project-language description of the first real design task>"
 ```
 
 First reply, no preamble:
@@ -88,6 +89,10 @@ python3 <skill>/scripts/bootstrap_harness.py status --project-root . \
 Name the visible result and link the live page. Give the designer a
 review action while work continues.
 
+The status is part of the run, not optional narration. Update it when the real
+activity changes: reading references and ratings, choosing a direction,
+drawing, checking readability, or publishing. Do not report setup commands.
+
 ## Scope the editorial burndown
 
 Save explicit project epics and element membership in `spec/design-harness/editorial.json`; append state changes to `editorial-events.jsonl`. Read [editorial-workflow.md](references/editorial-workflow.md).
@@ -113,6 +118,8 @@ python3 <skill>/scripts/bootstrap_harness.py article --project-root . \
   --agent "<App | Model>" --agent-url "<task deep link>"
 python3 <skill>/scripts/bootstrap_harness.py publish --project-root . \
   --screen design/aesthetic-ranking.html
+python3 <skill>/scripts/bootstrap_harness.py status --project-root . --idle \
+  --text "<project-language request to review the new designs>"
 ```
 
 Keep the graph clickable, TOC sticky, slideshow functional, and Discarded last. Show the URL and screenshots. Ask the user to rank the new elements in the project language.

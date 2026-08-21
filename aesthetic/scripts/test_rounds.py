@@ -286,6 +286,28 @@ class PreviewsMustBeVisible(unittest.TestCase):
             with self.assertRaises(bh.HarnessError):
                 bh.preview_reference(root, "shots/x.png")
 
+    def test_an_html_comp_is_the_canonical_preview_when_its_png_is_recorded(self):
+        """The article must not show a different asset than the ledger names.
+
+        `shoot` creates a PNG for visual inspection, but the HTML comp is the
+        interactive drawing used by cards, chart tooltips, and the slideshow.
+        Canonicalising while recording keeps all four views on one identity.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "shots").mkdir()
+            (root / "content").mkdir()
+            rendered = self.page("recorded.png", ink=(17, 17, 17))
+            (root / "shots" / "cover.object.png").write_bytes(rendered.read_bytes())
+            comp = root / "content" / "cover.object.html"
+            comp.write_text("<html><body>same drawing</body></html>", encoding="utf-8")
+
+            preview = bh.preview_reference(
+                root, "shots/cover.object.png", element="cover.object")
+
+            self.assertEqual(preview["path"], "content/cover.object.html")
+            self.assertEqual(preview["sha256"], bh.sha256_file(comp))
+
     def test_a_letterboxed_render_is_cropped_back_to_the_comp(self):
         """QuickLook returns a SQUARE thumbnail with the page anchored top-left.
 

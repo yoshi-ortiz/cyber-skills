@@ -109,6 +109,12 @@ Real content, never lorem and never emoji standing in for ranked artwork.
 Preserve every standing element outside this round's cohort — an element the user
 ranked is not yours to restyle because it happened to be nearby.
 
+A source excerpt, provenance card, comparison explanation, or copy of the
+incumbent is evidence, not another design. It may sit beside the proposal to
+explain it, but it does not count toward the 3–6 rankable elements. Every
+rankable id must show a materially different design decision on the project
+surface. The article rejects two ids backed by the same preview hash.
+
 Match craft to the thesis. Expressive work needs enough of itself to land;
 restrained work has nowhere to hide, so spacing, alignment and finish have to be
 exact.

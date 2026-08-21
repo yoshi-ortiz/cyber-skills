@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -56,6 +57,35 @@ class ServerThemeSafetyTest(unittest.TestCase):
         )
         completed = subprocess.run(["node", "-e", source], capture_output=True, text=True)
         self.assertEqual(completed.returncode, 0, completed.stderr)
+
+
+class ServerLiveStateTest(unittest.TestCase):
+    def test_polling_keeps_reload_alive_when_native_watching_hits_emfile(self) -> None:
+        """macOS can exhaust file descriptors while the design agent is busy.
+
+        The companion must degrade to a small directory scan instead of staying
+        connected while silently serving a stale article.
+        """
+        server = json.dumps(str(ROOT / "companion" / "server.cjs"))
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            (directory / "ranking.html").write_text("one", encoding="utf-8")
+            source = (
+                f"const s=require({server});const fs=require('fs');"
+                "const {EventEmitter}=require('events');"
+                f"const dir={json.dumps(tmp)};"
+                "const badWatch=()=>{const w=new EventEmitter();w.close=()=>{};"
+                "setTimeout(()=>{const e=new Error('too many open files');"
+                "e.code='EMFILE';w.emit('error',e)},5);return w};"
+                "let changed=false;"
+                "const watcher=s.startContentWatcher(dir,()=>{changed=true},"
+                "{watch:badWatch,pollMs:20,log:()=>{}});"
+                "setTimeout(()=>fs.writeFileSync(dir+'/ranking.html','two'),35);"
+                "setTimeout(()=>{watcher.close();process.exit(changed?0:2)},180);"
+            )
+            completed = subprocess.run(
+                ["node", "-e", source], capture_output=True, text=True, timeout=3)
+        self.assertEqual(completed.returncode, 0, completed.stderr or completed.stdout)
 
     def test_live_replay_ignores_rank_carried_by_sentiment(self) -> None:
         server = json.dumps(str(ROOT / "companion" / "server.cjs"))

@@ -72,6 +72,19 @@ class TheArticleAsRendered(unittest.TestCase):
             self.assertIn("data-el=", attrs,
                           "a thumbnail with no data-el cannot open its slide")
 
+    def test_a_round_cannot_repeat_one_drawing_under_two_names(self):
+        decisions = live(("cover.object.first", 0, None, "proposed"),
+                         ("cover.object.second", 0, None, "proposed"))
+        for entry in decisions["elements"]:
+            entry["preview"] = {"path": f"content/{entry['element']}.html",
+                                "sha256": "the-same-rendered-drawing"}
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(bh.HarnessError) as caught:
+                bh.render_article(Path(tmp), decisions,
+                                  {"cover.object.first", "cover.object.second"},
+                                  "object", "en", asks="Which drawing works better?")
+        self.assertIn("same drawing", str(caught.exception).lower())
+
     def test_the_lightbox_holds_no_state_of_its_own(self):
         # Every control in the slideshow must click the row's real control.
         # A second write path is how the JS and Python rules drifted apart.
@@ -481,6 +494,15 @@ class TheSkillKeepsTheUserInformed(unittest.TestCase):
         self.assertLess(section.index("🔑 <value after ?key=>"), section.index("👀 <project-language"))
         self.assertIn("no preamble", section)
 
+    def test_live_status_spans_the_real_run(self):
+        skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
+        start = skill.split("## Start", 1)[1].split("## Read the user", 1)[0]
+        publish = skill.split("## Publish the established article", 1)[1].split(
+            "## Continue and critique", 1)[0]
+        self.assertIn('--status "<emoji + project-language', start)
+        self.assertIn("activity changes", skill)
+        self.assertIn("status --project-root . --idle", publish)
+
     def test_plain_language_contract_is_loaded_before_the_first_update(self):
         root = Path(__file__).resolve().parent.parent
         skill = (root / "SKILL.md").read_text(encoding="utf-8")
@@ -841,8 +863,8 @@ class TheBarReportsTheAgent(unittest.TestCase):
         self.assertIn('data-theme-save="new"', bar)
 
 
-class PreviewsPreferHtmlComps(unittest.TestCase):
-    """When a PNG thumbnail and an HTML comp both exist, embed the comp."""
+class PreviewsUseTheRecordedCanonicalAsset(unittest.TestCase):
+    """Recording chooses the comp; rendering never swaps identities."""
 
     def test_preferred_preview_path_picks_content_html(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -858,7 +880,7 @@ class PreviewsPreferHtmlComps(unittest.TestCase):
             chosen = bh.preferred_preview_path(root, png, "pages.inventory.archivador")
             self.assertEqual(chosen, html)
 
-    def test_render_preview_embeds_html_not_png(self):
+    def test_render_preview_does_not_silently_replace_the_recorded_png(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             shots = root / "shots"
@@ -872,10 +894,32 @@ class PreviewsPreferHtmlComps(unittest.TestCase):
                             encoding="utf-8")
             preview = {"path": png.relative_to(root).as_posix(), "sha256": "abc"}
             out = bh.render_preview(root, preview, "x", bh.STRINGS["en"])
-            self.assertIn("Hi", out)
-            self.assertNotIn(".png", out.lower())
-            self.assertIn('class="dh-shot-inner"', out)
-            self.assertIn("block-size:", out)
+            self.assertNotIn("Hi", out)
+            self.assertIn("data:image/png;base64", out)
+
+    def test_old_png_records_are_migrated_before_the_article_is_rendered(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = root / "spec" / "design-harness"
+            output.mkdir(parents=True)
+            (root / "shots").mkdir()
+            (root / "content").mkdir()
+            png = root / "shots" / "x.png"
+            png.write_bytes(b"old rendered artifact")
+            html = root / "content" / "x.html"
+            html.write_text("<html><body>canonical drawing</body></html>", encoding="utf-8")
+            decisions = live(("x", 0, None, "proposed"))
+            decisions["elements"][0]["evidence"] = "user asked to compare this drawing"
+            decisions["elements"][0]["preview"] = {
+                "path": "shots/x.png", "sha256": bh.sha256_file(png)}
+            bh.write_json(output / "decisions.json", decisions)
+
+            changed = bh.canonicalize_recorded_previews(root, decisions)
+
+            self.assertEqual(changed, 1)
+            stored = json.loads((output / "decisions.json").read_text(encoding="utf-8"))
+            self.assertEqual(stored["elements"][0]["preview"]["path"], "content/x.html")
+            self.assertEqual(stored["elements"][0]["preview"]["sha256"], bh.sha256_file(html))
 
     def test_html_comp_preview_uses_div_not_span(self):
         raw = ("<html><head><style>body{width:510px;min-height:660px;background:#f00}"

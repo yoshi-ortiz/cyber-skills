@@ -1629,7 +1629,7 @@ def preview_inner_style(comp_width: float, comp_height: float) -> str:
             f"transform:scale(calc(var(--dh-shot-w,96px) / {comp_width}));pointer-events:none")
 
 
-def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
+def preview_reference(project_root: Path, raw: str, element: str = "") -> dict[str, str]:
     """Resolve and hash a preview graphic for a design element.
 
     Stored as a project-relative path plus a hash, on the same principle as the
@@ -1642,6 +1642,13 @@ def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
         raise HarnessError("preview must live inside the project root")
     if not candidate.is_file():
         raise HarnessError(f"preview not found: {raw}")
+    # `shoot` writes a PNG so the agent can inspect the rendered pixels. When
+    # the matching HTML comp also exists it is the canonical interactive
+    # drawing. Store that identity now instead of silently swapping assets only
+    # while rendering the article; cards, chart tooltips, slideshow and ledger
+    # then all name the same thing.
+    if element:
+        candidate = preferred_preview_path(project_root, candidate, element)
     if candidate.suffix.lower() not in PREVIEW_SUFFIXES:
         raise HarnessError(f"unsupported preview type '{candidate.suffix}'; use one of "
                            + ", ".join(sorted(PREVIEW_SUFFIXES)))
@@ -1650,6 +1657,37 @@ def preview_reference(project_root: Path, raw: str) -> dict[str, str]:
     if candidate.suffix.lower() == ".png":
         check_preview_legible(candidate)
     return {"path": candidate.relative_to(project_root).as_posix(), "sha256": sha256_file(candidate)}
+
+
+def canonicalize_recorded_previews(project_root: Path,
+                                   decisions: dict[str, object]) -> int:
+    """Migrate raster-era records to their matching interactive comp.
+
+    Old articles swapped this only at render time, so the ledger named one
+    asset while the card and slideshow showed another. Persist the resolution
+    once; subsequent rendering is literal and every view stays in sync.
+    """
+    changed = 0
+    for entry in decisions["elements"]:
+        preview = entry.get("preview")
+        if not preview or not preview.get("path"):
+            continue
+        recorded = project_root / str(preview["path"])
+        if not recorded.is_file():
+            continue
+        canonical = preferred_preview_path(project_root, recorded, str(entry["element"]))
+        if canonical == recorded:
+            continue
+        entry["preview"] = {
+            "path": canonical.relative_to(project_root).as_posix(),
+            "sha256": sha256_file(canonical),
+        }
+        changed += 1
+    if changed:
+        output = project_root / "spec" / "design-harness"
+        write_json(output / "decisions.json", decisions)
+        (output / "DECISIONS.md").write_text(render_decisions_md(decisions), encoding="utf-8")
+    return changed
 
 
 def render_preview(project_root: Path | None, preview: dict[str, str] | None, element: str,
@@ -1672,7 +1710,7 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
     if project_root is None:
         return f'{tag}<span class="dh-shot-missing">{preview["path"]}</span></div>'
 
-    path = preferred_preview_path(project_root, project_root / preview["path"], element)
+    path = project_root / preview["path"]
     if not path.is_file():
         return (f'{tag}<span class="dh-shot-missing">gráfico ausente<br>'
                 f'{preview["path"]}</span></div>')
@@ -3486,6 +3524,29 @@ def check_round_earns_its_place(decisions: dict[str, object], cohort: set[str]) 
           "why the ledger is growing and the scores are not.")
 
 
+def check_unique_cohort_previews(decisions: dict[str, object], cohort: set[str]) -> None:
+    """A copied drawing with a new id is not another proposal."""
+    seen: dict[str, str] = {}
+    duplicates: list[tuple[str, str]] = []
+    for entry in decisions["elements"]:
+        element = str(entry["element"])
+        if element not in cohort:
+            continue
+        preview = entry.get("preview") or {}
+        digest = str(preview.get("sha256") or "")
+        if not digest:
+            continue
+        if digest in seen:
+            duplicates.append((seen[digest], element))
+        else:
+            seen[digest] = element
+    if duplicates:
+        pairs = ", ".join(f"{first} / {second}" for first, second in duplicates)
+        raise HarnessError(
+            "this round presents the same drawing under different names: " + pairs +
+            ". Keep one proposal or draw a materially different alternative.")
+
+
 ZONES = ("round", "fundamentals", "backlog", "antipattern")
 # Only the backlog earns a second level of navigation: it is the long one, and
 # the reader arrives at it looking for a particular surface.
@@ -3541,6 +3602,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
     agent_name = agent_display_line(raw_name, agent_url)
     cohort = cohort or set()
     check_asks(asks, cohort, language or project_language(project_root))
+    check_unique_cohort_previews(decisions, cohort)
     # A cohort is one surface or one problem. Three elements drawn from three
     # different foundations, under a name that claims a shared surface, is a
     # batch of errands -- and the page cannot say what it is asking, so the
@@ -4800,7 +4862,8 @@ def main() -> int:
                 print("Corpus unchanged.")
         elif args.command == "decide":
             supersedes = [item.strip() for item in args.supersedes.split(",") if item.strip()]
-            preview = preview_reference(args.project_root, args.preview) if args.preview else None
+            preview = (preview_reference(args.project_root, args.preview, args.element)
+                       if args.preview else None)
             decisions = record_decision(args.project_root, args.element, args.verdict,
                                         args.stars, args.evidence, supersedes, preview,
                                         source=args.source,
@@ -4833,11 +4896,13 @@ def main() -> int:
             root = args.project_root.resolve(strict=True)
             theme = {k: getattr(args, k) for k in ("bg", "ink", "accent", "font") if getattr(args, k)}
             cohort = {e.strip() for e in args.cohort.split(",") if e.strip()}
-            known = {e["element"] for e in load_decisions(root / "spec" / "design-harness")["elements"]}
+            decisions = load_decisions(root / "spec" / "design-harness")
+            canonicalize_recorded_previews(root, decisions)
+            known = {e["element"] for e in decisions["elements"]}
             unknown = sorted(cohort - known)
             if unknown:
                 raise HarnessError("cohort names element(s) not in the ledger: " + ", ".join(unknown))
-            check_round_earns_its_place(load_decisions(root / "spec" / "design-harness"), cohort)
+            check_round_earns_its_place(decisions, cohort)
             if args.title:
                 # Remembered, so the next run does not have to be told again --
                 # and so a forgotten flag cannot silently rename the artefact.
@@ -4847,7 +4912,7 @@ def main() -> int:
                 write_json(path, stored)
             if args.agent_url.strip() or args.agent.strip():
                 save_companion_agent(root, args.agent_url, args.agent)
-            markup = render_article(root, load_decisions(root / "spec" / "design-harness"),
+            markup = render_article(root, decisions,
                                     cohort, args.cohort_name, args.lang or None, theme or None,
                                     args.title, args.asks, args.status,
                                     args.agent_url, args.agent, args.round_label,

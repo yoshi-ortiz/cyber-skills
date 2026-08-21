@@ -763,6 +763,86 @@ function touchActivity() {
 
 const debounceTimers = new Map();
 
+function htmlSnapshot(directory) {
+  const snapshot = new Map();
+  for (const filename of fs.readdirSync(directory)) {
+    if (filename.startsWith('.') || !filename.endsWith('.html')) continue;
+    try {
+      const stat = fs.statSync(path.join(directory, filename));
+      snapshot.set(filename, `${stat.mtimeMs}:${stat.size}`);
+    } catch (e) { /* a concurrent rename is picked up by the next scan */ }
+  }
+  return snapshot;
+}
+
+/** Watch HTML files without letting an exhausted macOS watcher freeze the UI.
+ *
+ * `fs.watch` can emit EMFILE after it has already been created. The browser's
+ * socket remains connected in that state, which made a stale article look
+ * healthy. A bounded directory scan is a truthful, low-cost fallback.
+ */
+function startContentWatcher(directory, onChange, options = {}) {
+  const watch = options.watch || fs.watch;
+  const pollMs = Number(options.pollMs || process.env.BRAINSTORM_POLL_MS) || 400;
+  const log = options.log || ((entry) => console.error(JSON.stringify(entry)));
+  let snapshot = htmlSnapshot(directory);
+  let nativeWatcher = null;
+  let pollTimer = null;
+  let closed = false;
+  let fallbackReported = false;
+
+  function rememberAndNotify(filename) {
+    if (!filename || filename.startsWith('.') || !filename.endsWith('.html')) return;
+    try {
+      const stat = fs.statSync(path.join(directory, filename));
+      snapshot.set(filename, `${stat.mtimeMs}:${stat.size}`);
+    } catch (e) { snapshot.delete(filename); }
+    onChange(filename);
+  }
+
+  function scan() {
+    if (closed) return;
+    let next;
+    try { next = htmlSnapshot(directory); }
+    catch (e) { return; }
+    for (const [filename, signature] of next) {
+      if (snapshot.get(filename) !== signature) onChange(filename);
+    }
+    snapshot = next;
+  }
+
+  function usePolling(error) {
+    if (closed || pollTimer) return;
+    if (nativeWatcher && typeof nativeWatcher.close === 'function') {
+      try { nativeWatcher.close(); } catch (e) { /* already failed */ }
+    }
+    nativeWatcher = null;
+    if (!fallbackReported) {
+      fallbackReported = true;
+      log({type: 'watch-fallback', reason: error && (error.code || error.message) || 'unknown'});
+    }
+    pollTimer = setInterval(scan, pollMs);
+    if (typeof pollTimer.unref === 'function') pollTimer.unref();
+  }
+
+  try {
+    nativeWatcher = watch(directory, (eventType, filename) => rememberAndNotify(filename));
+    if (nativeWatcher && typeof nativeWatcher.on === 'function') {
+      nativeWatcher.on('error', usePolling);
+    }
+  } catch (error) {
+    usePolling(error);
+  }
+
+  return {
+    close() {
+      closed = true;
+      if (nativeWatcher && typeof nativeWatcher.close === 'function') nativeWatcher.close();
+      if (pollTimer) clearInterval(pollTimer);
+    }
+  };
+}
+
 // ========== Server Startup ==========
 
 function startServer() {
@@ -779,7 +859,7 @@ function startServer() {
   const server = http.createServer(handleRequest);
   server.on('upgrade', handleUpgrade);
 
-  const watcher = fs.watch(CONTENT_DIR, (eventType, filename) => {
+  const watcher = startContentWatcher(CONTENT_DIR, (filename) => {
     if (!filename || filename.startsWith('.') || !filename.endsWith('.html')) return;
 
     if (debounceTimers.has(filename)) clearTimeout(debounceTimers.get(filename));
@@ -803,7 +883,6 @@ function startServer() {
       broadcast({ type: 'reload' });
     }, 100));
   });
-  watcher.on('error', (err) => console.error('fs.watch error:', err.message));
 
   function shutdown(reason) {
     console.log(JSON.stringify({ type: 'server-stopped', reason }));
@@ -915,6 +994,7 @@ module.exports = {
   validateThemeElements,
   updateThemeSpec,
   reduceSignals,
+  startContentWatcher,
   OPCODES,
   MAX_FRAME_PAYLOAD_BYTES
 };
