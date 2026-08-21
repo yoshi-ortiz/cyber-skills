@@ -12,9 +12,15 @@
   function rankIsOn(rank, stars) {
     return rank === 0 ? stars === 0 : rank > 0 && rank <= stars;
   }
+  function starsForEvent(raw, scored) {
+    const stars = parseInt(raw, 10);
+    return scored === 'yes' && Number.isInteger(stars) && stars >= 0 && stars <= 5
+      ? stars : null;
+  }
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-      nextReconnectDelay, rankIsOn, MIN_RECONNECT_MS, MAX_RECONNECT_MS, TOMBSTONE_AFTER_MS
+      nextReconnectDelay, rankIsOn, starsForEvent,
+      MIN_RECONNECT_MS, MAX_RECONNECT_MS, TOMBSTONE_AFTER_MS
     };
   }
 
@@ -137,6 +143,105 @@
     }
   }
 
+  function rgbToHex(value) {
+    const channels = String(value).match(/[\d.]+/g);
+    if (!channels || channels.length < 3) return null;
+    return '#' + channels.slice(0, 3).map(n =>
+      Math.max(0, Math.min(255, Math.round(Number(n)))).toString(16).padStart(2, '0')
+    ).join('');
+  }
+
+  function articleTheme() {
+    const art = document.querySelector('.dh-art');
+    if (!art) return null;
+    const style = getComputedStyle(art);
+    const accent = style.getPropertyValue('--dh-accent').trim();
+    return {
+      bg: rgbToHex(style.backgroundColor),
+      ink: rgbToHex(style.color),
+      accent: /^#[0-9a-f]{6}$/i.test(accent) ? accent : '#d9482a',
+      font: style.fontFamily
+    };
+  }
+
+  function applyFrameTheme(elements) {
+    if (!elements) return;
+    const root = document.documentElement.style;
+    root.setProperty('--bg-primary', elements.bg);
+    root.setProperty('--bg-secondary', elements.bg);
+    root.setProperty('--text-primary', elements.ink);
+    root.setProperty('--text-secondary', elements.ink);
+    root.setProperty('--accent', elements.accent);
+    root.setProperty('--selected-border', elements.accent);
+    document.body.style.fontFamily = elements.font;
+  }
+
+  function selectedTheme(spec) {
+    return (spec.themes || []).find(theme => theme.id === spec.selected) || null;
+  }
+
+  async function themeRequest(payload) {
+    const response = await fetch('/theme', {
+      method: payload ? 'POST' : 'GET',
+      headers: payload ? { 'Content-Type': 'application/json' } : {},
+      body: payload ? JSON.stringify(payload) : undefined
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Theme request failed');
+    return data;
+  }
+
+  function wireThemeSettings() {
+    const settings = document.querySelector('[data-theme-settings]');
+    if (!settings) return;
+    const follow = settings.querySelector('[data-follow-art-direction]');
+    const message = settings.querySelector('[data-theme-message]');
+    let spec = null;
+    const say = text => { message.textContent = text; };
+    themeRequest().then(value => {
+      spec = value;
+      follow.checked = Boolean(spec.followArtDirection);
+      const selected = selectedTheme(spec);
+      if (follow.checked && selected) applyFrameTheme(selected.elements);
+    }).catch(error => say(error.message));
+    follow.addEventListener('change', async () => {
+      try {
+        spec = await themeRequest({ action: 'follow', enabled: follow.checked });
+        if (follow.checked) {
+          const candidate = articleTheme();
+          const selected = selectedTheme(spec);
+          applyFrameTheme(candidate || (selected && selected.elements));
+        } else {
+          window.location.reload();
+        }
+        say(follow.checked ? 'Companion follows the art direction' : 'Companion uses its safe theme');
+      } catch (error) { follow.checked = !follow.checked; say(error.message); }
+    });
+    settings.querySelectorAll('[data-theme-save]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const mode = button.dataset.themeSave;
+        const candidate = articleTheme();
+        if (!candidate) { say('No article theme is available'); return; }
+        let id = spec && spec.selected || 'art-direction';
+        let name = id;
+        if (mode === 'new') {
+          name = window.prompt('Theme name', 'Art direction') || '';
+          if (!name.trim()) return;
+          id = name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-|-$/g, '');
+        }
+        try {
+          spec = await themeRequest({ action: 'save', mode, id, name, elements: candidate });
+          const selected = selectedTheme(spec);
+          if (follow.checked && selected) applyFrameTheme(selected.elements);
+          const issues = selected && selected.issues || [];
+          say(issues.length
+            ? 'Saved with safe fallback for: ' + issues.map(issue => issue.element).join(', ')
+            : 'Theme saved to the project');
+        } catch (error) { say(error.message); }
+      });
+    });
+  }
+
   // Capture clicks on choice elements
   document.addEventListener('click', (e) => {
     const target = e.target.closest('[data-choice]');
@@ -156,8 +261,7 @@
   // Star rank: 1-5, set by the user, never inferred by the agent.
   function starsOf(el) {
     const holder = el.closest('[data-stars]');
-    const raw = holder && parseInt(holder.dataset.stars, 10);
-    return Number.isInteger(raw) && raw >= 0 && raw <= 5 ? raw : null;
+    return holder ? starsForEvent(holder.dataset.stars, holder.dataset.scored) : null;
   }
 
   // Click a [data-rank] control to set the standing of its design element.
@@ -170,6 +274,7 @@
     if (!Number.isInteger(stars) || stars < 0 || stars > 5) return;
     e.stopPropagation();
     holder.dataset.stars = String(stars);
+    holder.dataset.scored = 'yes';
     holder.querySelectorAll('[data-rank]').forEach((s) => {
       s.classList.toggle('on', rankIsOn(parseInt(s.dataset.rank, 10), stars));
     });
@@ -279,5 +384,6 @@
       sendEvent({ type: 'rank', element, choice: element, stars, ...metadata })
   };
 
+  wireThemeSettings();
   connect();
 })();

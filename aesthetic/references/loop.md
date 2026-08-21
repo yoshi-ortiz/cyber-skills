@@ -7,11 +7,16 @@ thin, or when a screen came back scoring badly and you cannot say why.
 ## 1 · Frame
 
 Pin the subject, the audience, the artefact's single job, the real content, the
-constraints, and the user's ranked preferences. Open the last PNG of the
+constraints, and the user's element-level preference brief. Open the last PNG of the
 incumbent and the user's last rank for this id before drawing. Infer what the
 evidence supports rather than interviewing: ask only for a missing choice that
 would change the result, and ask it once. `--asks` is one plain sentence a
 designer can answer out loud, not an id and not a symbol from the drawing.
+
+For every preference pattern, name supporting ids, the visible feature they
+share, counterevidence, sample size, coverage, and confidence. Missing feedback
+is unknown. Agent placeholders are not user ranks. Never average stars and
+thumbs into a reward.
 
 An artefact with two jobs has none. If the brief names two, say which one the
 composition will serve and what the other gets instead.
@@ -23,9 +28,14 @@ ground, how a grid breaks, what repeats at what interval — never by isolated
 decoration. Three references sharing a colour is a coincidence; three sharing a
 figure-ground inversion is a direction.
 
+When evidence is ambiguous, compare two to four structurally different
+hypotheses across corpus fit, preference fit, subject specificity, coherence,
+and execution leverage. Do not average the dimensions. Select one hypothesis
+and name the tradeoff that made it win.
+
 Write a one-sentence visual thesis rooted in the subject's own materials,
-language, tools, history or environment. Choose a movement, and one memorable
-**signature** move that a viewer could describe from memory.
+language, tools, history or environment, plus one memorable **signature** move
+that a viewer could describe from memory.
 
 **The test:** if the thesis would fit an unrelated brief unchanged, it is not a
 direction, it is a style. Reject it and go back to the corpus.
@@ -40,7 +50,7 @@ Specify the system before drawing anything:
 | type | roles and a scale, not a list of fonts |
 | grid | the module, the gutter, and the rule for breaking it |
 | hierarchy | primary → secondary → tertiary, named per surface |
-| imagery | register (icon / index / symbol) |
+| imagery | register (icon / index / symbol) plus sourced asset provenance |
 | copy | voice, and the words that are never used |
 | motion | what moves, why, and the reduced-motion answer |
 
@@ -63,7 +73,9 @@ Müller-Brockmann, Bringhurst, Gestalt, Peirce, movement — in
 Load `modern-web-guidance` before writing the comp's CSS; take the pattern it
 names instead of inventing one.
 
-**Draw the comp in HTML/CSS, then render it.** Never hand-author SVG. Authoring
+**Draw the comp in HTML/CSS, then render it.** Never hand-author SVG. Fetch
+common icons, ornaments, and pixel fonts from pinned licensed sources before
+considering a procedural generator. Authoring
 an SVG means authoring a coordinate system you never see, which is the one job
 the model is worst at -- the ledger carried 59 such previews holding 6352
 `<rect>` and 15 `<path>`, 34 of them with a near-zero opacity somewhere, and a
@@ -97,6 +109,10 @@ every `failingRules` entry **before** showing the screen. `unreadable: 0` is a
 precondition, not a target: screens have twice shipped with body text at 1.1:1
 that no reading of the markup could have caught, because a block painted a ground
 and let its ink inherit the companion's frame.
+
+Reject or roll back the individual theme token that fails contrast. Text needs
+4.5:1; interactive and meaningful non-text graphics need 3:1. White text on a
+white background is a generation failure, never a user-review item.
 
 Then compare against brief and corpus **at the same scale** — a thumbnail hides
 exactly the failures a full-size view reveals, and vice versa. Ask of each:

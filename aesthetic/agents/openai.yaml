@@ -1,0 +1,4 @@
+interface:
+  display_name: "Aesthetic"
+  short_description: "Ground art direction in references and user sentiment"
+  default_prompt: "Use $aesthetic to analyze element-level rank and sentiment without collapsing them, infer evidence-backed art direction, preserve the Aesthetic ranking article, and ask me to rank the next cohort."

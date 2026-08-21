@@ -12,6 +12,10 @@
   const parse = (c) => {
     const m = (c || '').match(/[\d.]+/g);
     if (!m) return null;
+    if ((c || '').startsWith('color(srgb')) {
+      return { r: +m[0] * 255, g: +m[1] * 255, b: +m[2] * 255,
+               a: m.length > 3 ? +m[3] : 1 };
+    }
     return { r: +m[0], g: +m[1], b: +m[2], a: m.length > 3 ? +m[3] : 1 };
   };
   const over = (f, b) => ({

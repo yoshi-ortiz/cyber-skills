@@ -10,6 +10,7 @@ The failure mode is statistical defaults: familiar sans-serif, purple-to-cyan gr
 
 - Every visual move traces to a corpus cluster or a verbatim excerpt. Anything else is **inference**, is labelled as such, and is recorded at one star.
 - Do not introduce a colour, typeface, or texture the corpus does not evidence. If a project has an existing identity, extend it — replacing it is a decision the user makes, not a side effect of a redraw.
+- “Modern”, “clean”, “bold”, “editorial”, and “premium” are not directions. Replace them with observable spatial, typographic, image, rhythm, or interaction relationships and cite ranked element evidence plus counterevidence.
 - Reach for the corpus before reaching for a default. "Looks fine" is the symptom, not the goal.
 - `controls` never hardcodes colour: it emits `var(--dh-*)` with fallbacks so the project palette wins.
 
@@ -26,6 +27,7 @@ The failure mode is unstructured DOM, utility sprawl, hardcoded values, duplicat
 - Generate compositions of elements already in standing, not arbitrary markup.
 - A new design-element id means a genuinely new element. Renaming one in standing is a **supersede**, recorded before the change.
 - Reuse the tokens the screen already declares. A literal colour in generated markup is a defect.
+- Reuse common licensed assets. Reinventing a pixel font, ornament, or icon is slop when a pinned source can answer the same need. Never hallucinate vector paths.
 
 **Check:** is every generated layer something the team can name, find in the ledger, and delete?
 
@@ -38,6 +40,7 @@ The failure mode is a layout that predicts well and behaves badly.
 - Honour `prefers-reduced-motion`.
 - Prefer container queries and logical properties over fixed breakpoints and physical directions.
 - Every state a screen can enter needs a defined appearance — including "no data yet".
+- Fail closed on contrast before rendering: 4.5:1 for normal text and 3:1 for controls and meaningful non-text graphics. Roll back only the unsafe token to its last safe value.
 
 **Check:** change the content, the viewport, and the input method. Does it still hold?
 

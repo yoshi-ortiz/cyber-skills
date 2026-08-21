@@ -470,17 +470,16 @@ class TheCompanionHeaderIsTwoByTwo(unittest.TestCase):
 class TheSkillKeepsTheUserInformed(unittest.TestCase):
     def test_editorial_output_demands_chat_screenshots(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("Show the URL and a screenshot", skill)
-        self.assertIn("desktop and narrow layouts", skill)
-        self.assertIn("one clear execution decision", skill)
+        self.assertIn("Show the URL and screenshots", skill)
+        self.assertIn("desktop and narrow widths", skill)
+        self.assertIn("rank the new elements", skill)
 
 
 class TheSkillIsInvokedWithEditorialVerbs(unittest.TestCase):
-    def test_the_argument_hint_matches_the_documented_verbs(self):
+    def test_context_clues_are_documented(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
         for verb in ("observe", "continue", "critique"):
-            self.assertRegex(skill, rf"- `{verb}[^`]*`",
-                          f"{verb} is advertised but never documented")
+            self.assertIn(f"`{verb}`", skill, f"{verb} is advertised but never documented")
         self.assertNotIn("interpret @", skill,
                          "an old `interpret @` invocation survived in SKILL.md")
 
@@ -496,14 +495,14 @@ class TheSkillIsInvokedWithEditorialVerbs(unittest.TestCase):
         for verb in ("continue", "critique"):
             self.assertIn(verb, desc)
         self.assertIn("multimodal corpus", desc)
-        self.assertIn("editorial board", desc)
+        self.assertIn("editorial burndown", desc)
+        self.assertIn("user sentiment", desc)
 
-    def test_continue_validates_before_changing_work_state(self):
+    def test_scope_events_are_append_only_and_idempotent(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
-        section = skill.split("## Continue one item", 1)[1].split("## Critique", 1)[0]
-        self.assertLess(section.index("editorial_workflow.py validate"),
-                        section.index("editorial_workflow.py advance"))
-        self.assertIn("stable event id", section)
+        section = skill.split("## Scope the editorial burndown", 1)[1].split("## Build", 1)[0]
+        self.assertIn("append", section)
+        self.assertIn("no-op", section)
 
     def test_observe_is_the_first_compiler_command(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
@@ -512,11 +511,12 @@ class TheSkillIsInvokedWithEditorialVerbs(unittest.TestCase):
         self.assertIsNotNone(compiler)
         self.assertEqual(compiler.group(1), "observe")
 
-    def test_the_always_loaded_file_does_not_name_legacy_selection_commands(self):
+    def test_the_always_loaded_file_uses_the_established_article(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
         self.assertNotIn("`doctor`", skill)
         self.assertNotIn("`stats`", skill)
-        self.assertNotIn("bootstrap_harness.py article --project-root", skill)
+        self.assertIn("bootstrap_harness.py article --project-root", skill)
+        self.assertNotIn("editorial-board.html", skill)
 
 
 class OpenPutsTheUrlInChat(unittest.TestCase):

@@ -100,8 +100,11 @@ let PORT = preferredPort();
 const HOST = process.env.BRAINSTORM_HOST || '127.0.0.1';
 const URL_HOST = process.env.BRAINSTORM_URL_HOST || (HOST === '127.0.0.1' ? 'localhost' : HOST);
 const SESSION_DIR = process.env.BRAINSTORM_DIR || '/tmp/brainstorm';
+const PROJECT_DIR = process.env.BRAINSTORM_PROJECT_DIR || null;
 const CONTENT_DIR = path.join(SESSION_DIR, 'content');
 const STATE_DIR = path.join(SESSION_DIR, 'state');
+const THEME_FILE = PROJECT_DIR
+  ? path.join(PROJECT_DIR, 'spec', 'design-harness', 'theme.json') : null;
 const SUPERPOWERS_VERSION = readSuperpowersVersion();
 const SUPERPOWERS_BRAND_IMAGE_URL = 'https://primeradiant.com/brand/superpowers-visual-brainstorming-logo.png';
 const TELEMETRY_DISABLE_ENV_VARS = [
@@ -372,6 +375,104 @@ function securityHeaders(headers = {}) {
   };
 }
 
+const DEFAULT_THEME = {
+  bg: '#f5f5f7', ink: '#1d1d1f', accent: '#0066cc', font: 'system-ui, sans-serif'
+};
+
+function rgb(hex) {
+  const match = /^#([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if (!match) return null;
+  return [0, 2, 4].map(offset => parseInt(match[1].slice(offset, offset + 2), 16));
+}
+
+function contrast(first, second) {
+  const luminance = value => {
+    const channels = rgb(value);
+    if (!channels) return null;
+    const linear = channels.map(channel => {
+      const scaled = channel / 255;
+      return scaled <= 0.04045 ? scaled / 12.92 : Math.pow((scaled + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  };
+  const a = luminance(first), b = luminance(second);
+  return a === null || b === null ? 0 : (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+function validateThemeElements(candidate = {}, safe = DEFAULT_THEME) {
+  const previous = { ...DEFAULT_THEME, ...safe };
+  const active = { ...previous };
+  const issues = [];
+  if (rgb(candidate.bg)) active.bg = String(candidate.bg).toLowerCase();
+  else if ('bg' in candidate) issues.push({ element: 'bg', message: 'background must be six-digit hex' });
+  if (rgb(candidate.ink) && contrast(candidate.ink, active.bg) >= 4.5) {
+    active.ink = String(candidate.ink).toLowerCase();
+  } else if ('ink' in candidate) {
+    issues.push({ element: 'ink', message: 'text contrast is below 4.5:1' });
+  }
+  if (rgb(candidate.accent) && contrast(candidate.accent, active.bg) >= 3) {
+    active.accent = String(candidate.accent).toLowerCase();
+  } else if ('accent' in candidate) {
+    issues.push({ element: 'accent', message: 'control contrast is below 3:1' });
+  }
+  const font = String(candidate.font || '').trim();
+  if (font && font.length <= 200 && /^[A-Za-z0-9 ,.'"_-]+$/.test(font)) active.font = font;
+  else if ('font' in candidate) issues.push({ element: 'font', message: 'unsafe font stack' });
+  // A background can be syntactically valid yet collide with the last safe
+  // ink after the candidate ink is rejected. In that case the background is
+  // the offending change: roll back that element too. Never persist white on
+  // white (or its dark equivalent) as an allegedly safe theme.
+  if (contrast(active.ink, active.bg) < 4.5) {
+    active.bg = previous.bg;
+    issues.push({ element: 'bg', message: 'background conflicts with the last safe ink' });
+  }
+  return { active, issues };
+}
+
+function readThemeSpec() {
+  const empty = { version: 1, selected: null, followArtDirection: false, themes: [] };
+  if (!THEME_FILE) return empty;
+  try {
+    const value = JSON.parse(fs.readFileSync(THEME_FILE, 'utf-8'));
+    return value && Array.isArray(value.themes) ? value : empty;
+  } catch (e) { return empty; }
+}
+
+function writeThemeSpec(spec) {
+  if (!THEME_FILE) throw new Error('project-backed settings are unavailable');
+  fs.mkdirSync(path.dirname(THEME_FILE), { recursive: true });
+  const temporary = THEME_FILE + '.' + process.pid + '.tmp';
+  fs.writeFileSync(temporary, JSON.stringify(spec, null, 2) + '\n', { mode: 0o600 });
+  fs.renameSync(temporary, THEME_FILE);
+}
+
+function updateThemeSpec(request) {
+  const spec = readThemeSpec();
+  if (request.action === 'follow') {
+    spec.followArtDirection = Boolean(request.enabled);
+    writeThemeSpec(spec);
+    return spec;
+  }
+  if (request.action !== 'save' || !['current', 'new'].includes(request.mode)) {
+    throw new Error('theme action must be follow or save');
+  }
+  const identifier = String(request.id || '').trim();
+  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(identifier)) throw new Error('invalid theme id');
+  const themes = new Map(spec.themes.map(theme => [theme.id, theme]));
+  if (request.mode === 'new' && themes.has(identifier)) throw new Error('theme already exists');
+  const target = request.mode === 'current' && spec.selected ? spec.selected : identifier;
+  const prior = (themes.get(target) || {}).elements || DEFAULT_THEME;
+  const checked = validateThemeElements(request.elements || {}, prior);
+  themes.set(target, {
+    id: target, name: String(request.name || target).slice(0, 100),
+    elements: checked.active, issues: checked.issues
+  });
+  spec.selected = target;
+  spec.themes = [...themes.values()].sort((a, b) => a.id.localeCompare(b.id));
+  writeThemeSpec(spec);
+  return spec;
+}
+
 function isAllowedWebSocketOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return true;
@@ -415,6 +516,22 @@ function handleRequest(req, res) {
 
     res.writeHead(200, securityHeaders({ 'Content-Type': 'text/html; charset=utf-8' }));
     res.end(html);
+  } else if (req.method === 'GET' && pathname === '/theme') {
+    res.writeHead(200, securityHeaders({ 'Content-Type': 'application/json; charset=utf-8' }));
+    res.end(JSON.stringify(readThemeSpec()));
+  } else if (req.method === 'POST' && pathname === '/theme') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 8192) req.destroy(); });
+    req.on('end', () => {
+      try {
+        const result = updateThemeSpec(JSON.parse(body || '{}'));
+        res.writeHead(200, securityHeaders({ 'Content-Type': 'application/json; charset=utf-8' }));
+        res.end(JSON.stringify(result));
+      } catch (error) {
+        res.writeHead(400, securityHeaders({ 'Content-Type': 'application/json; charset=utf-8' }));
+        res.end(JSON.stringify({ error: error.message }));
+      }
+    });
   } else if (req.method === 'POST' && pathname === '/agent') {
     // Live status for the bottom bar. Does not write a screen, so it cannot
     // steal the newest-mtime route the way a republish would.
@@ -560,11 +677,15 @@ function handleMessage(text) {
 // Same last-wins reduction the harness applies when it adopts, so a freshly
 // opened browser and an adopted ledger cannot disagree.
 function currentSignals() {
-  const out = {};
   let raw = '';
   try {
     raw = fs.readFileSync(path.join(path.dirname(SESSION_DIR), 'decisions.jsonl'), 'utf-8');
-  } catch (e) { return out; }
+  } catch (e) { return {}; }
+  return reduceSignals(raw);
+}
+
+function reduceSignals(raw) {
+  const out = {};
   for (const line of raw.split('\n')) {
     if (!line.trim()) continue;
     let e;
@@ -573,7 +694,13 @@ function currentSignals() {
     if (!id || typeof id !== 'string' || id.startsWith('__')) continue;  // skip probes
     const s = out[id] || (out[id] = {});
     if (e.reset === true || e.type === 'reset') s.stars = 0;
-    else if (Number.isInteger(e.stars) && e.stars >= 0 && e.stars <= 5) s.stars = e.stars;
+    else {
+      const establishesRank = e.type === 'rank' ||
+        (e.type == null && !Object.prototype.hasOwnProperty.call(e, 'sentiment'));
+      if (establishesRank && Number.isInteger(e.stars) && e.stars >= 0 && e.stars <= 5) {
+        s.stars = e.stars;
+      }
+    }
     if ('sentiment' in e) s.sentiment = e.sentiment;
     if (e.verdict === 'completed' || e.verdict === 'approved') s.verdict = 'completed';
     else if (e.verdict === 'proposed' || e.verdict === 'rejected') s.verdict = null;
@@ -784,6 +911,10 @@ module.exports = {
   encodeFrame,
   decodeFrame,
   browserLauncherForPlatform,
+  contrast,
+  validateThemeElements,
+  updateThemeSpec,
+  reduceSignals,
   OPCODES,
   MAX_FRAME_PAYLOAD_BYTES
 };

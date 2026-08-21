@@ -138,6 +138,37 @@ class SameTimestampPairs(unittest.TestCase):
             self.assertEqual(once, bh.load_decisions(output))
 
 
+class SentimentDoesNotCreateARank(unittest.TestCase):
+    def test_thumb_only_feedback_keeps_an_agent_proposal_unscored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = harness(root)
+            bh.record_decision(root, "core.idea", "proposed", 0,
+                               "agent proposal", [], source="agent", sentiment=None)
+            bh.adopt_companion(root, ledger(root, {
+                "type": "sentiment", "element": "core.idea", "sentiment": "like",
+                "timestamp": 1000,
+            }))
+            entry = element(output, "core.idea")
+            self.assertEqual(entry["sentiment"], "like")
+            self.assertFalse(entry["scored"])
+            self.assertEqual(entry["source"], "user")
+
+    def test_legacy_thumb_event_carrying_zero_still_does_not_create_a_rank(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = harness(root)
+            bh.record_decision(root, "core.idea", "proposed", 0,
+                               "agent proposal", [], source="agent", sentiment=None)
+            bh.adopt_companion(root, ledger(root, {
+                "type": "sentiment", "element": "core.idea", "sentiment": "like",
+                "stars": 0, "timestamp": 1000,
+            }))
+            entry = element(output, "core.idea")
+            self.assertFalse(entry["scored"])
+            self.assertEqual(bh.ledger_stats(bh.load_decisions(output))["userSet"], 0)
+
+
 class AlreadyAdoptedHistory(unittest.TestCase):
     """`decide --source user` writes straight to decisions.json and never reaches
     the companion ledger, so it has no position in the chronological replay. If
@@ -206,9 +237,11 @@ class WithdrawingAThumb(unittest.TestCase):
 
     def liked(self, root: Path) -> Path:
         output = harness(root)
-        bh.adopt_companion(root, ledger(root, {
-            "type": "sentiment", "element": "palette.role-groups-three",
-            "sentiment": "like", "stars": 2, "timestamp": 1000}))
+        bh.adopt_companion(root, ledger(root,
+            {"type": "rank", "element": "palette.role-groups-three",
+             "stars": 2, "timestamp": 900},
+            {"type": "sentiment", "element": "palette.role-groups-three",
+             "sentiment": "like", "timestamp": 1000}))
         return output
 
     def test_a_withdrawal_clears_the_stored_sentiment(self):

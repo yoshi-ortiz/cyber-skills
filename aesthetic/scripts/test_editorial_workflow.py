@@ -1,239 +1,238 @@
-"""End-to-end contracts for the corpus-to-editorial-board workflow."""
+"""Contracts for sentiment inference, hierarchical burndown, and safe themes."""
 
 from __future__ import annotations
 
-import copy
 import json
-import subprocess
 import tempfile
 import unittest
-from html.parser import HTMLParser
 from pathlib import Path
 
+import bootstrap_harness as bh
 import editorial_workflow as ew
+from asset_contract import AssetError, validate_assets
 
 
-class BoardParser(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self.script_count = 0
-        self.column_count = 0
-        self.text: list[str] = []
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        values = dict(attrs)
-        classes = (values.get("class") or "").split()
-        if tag == "script":
-            self.script_count += 1
-        if tag == "section" and "column" in classes:
-            self.column_count += 1
-
-    def handle_data(self, data: str) -> None:
-        value = data.strip()
-        if value:
-            self.text.append(value)
+def decision(element: str, stars: int = 0, sentiment: str | None = None,
+             *, scored: bool = True, source: str = "user", state: str = "proposed") -> dict:
+    return {
+        "element": element, "stars": stars, "sentiment": sentiment,
+        "scored": scored, "source": source, "state": state,
+        "preview": None, "evidence": "user feedback",
+    }
 
 
-class EditorialWorkflowTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        root = Path(self.temp.name)
-        self.project = root / "project"
-        self.corpus = root / "corpus"
-        self.project.mkdir()
-        self.corpus.mkdir()
-        (self.corpus / "reference.png").write_bytes(b"\x89PNG\r\n\x1a\nreference")
-        (self.corpus / "brief.md").write_text(
-            "# Field notes\nUse severe type, close crops, and visible revision marks.\n",
-            encoding="utf-8",
-        )
-        self.corpus_packet = ew.observe_corpus(self.project, self.corpus)
-        self.ids = {item["kind"]: item["id"] for item in self.corpus_packet["items"]}
+class PerElementPreferencePolicyTest(unittest.TestCase):
+    def test_each_signal_pair_keeps_its_distinct_instruction(self) -> None:
+        values = [
+            decision("anchor", 5, "like"),
+            decision("polish", 1, "like"),
+            decision("conflict", 5, "dislike"),
+            decision("discard", 1, "dislike"),
+            decision("liked-direction", 0, "like", scored=False, source="agent"),
+            decision("explore", 0, None, scored=False, source="agent"),
+        ]
+        brief = ew.preference_brief({"elements": values})
+        states = {item["element"]: item["preferenceState"] for item in brief["elements"]}
+        self.assertEqual(states, {
+            "anchor": "anchor",
+            "polish": "polish",
+            "conflict": "conflict",
+            "discard": "discard",
+            "liked-direction": "direction-like",
+            "explore": "explore",
+        })
+        self.assertNotIn("reward", json.dumps(brief).lower())
+        self.assertNotIn("average", json.dumps(brief).lower())
 
-    def direction(self, identifier: str, place: int) -> dict[str, object]:
-        image = self.ids["image"]
-        text = self.ids["text"]
-        return {
-            "id": identifier,
-            "name": identifier.replace("-", " ").title(),
-            "thesis": f"Use the corpus tension to make {identifier} unmistakable.",
-            "signatureMove": f"A unique {identifier} crop interrupts the reading grid.",
-            "evidence": [
-                {
-                    "corpusItem": image,
-                    "locator": "full frame",
-                    "observation": f"The image supports the {identifier} crop and hard edge.",
-                },
-                {
-                    "corpusItem": text,
-                    "locator": "Field notes, paragraph 1",
-                    "observation": f"The brief names the {identifier} editorial pressure.",
-                },
-            ],
-            "visualSystem": {
-                "palette": "warm paper, black ink, signal red",
-                "typography": "compressed display with a quiet text serif",
-                "grid": "twelve columns with deliberate interruptions",
-                "hierarchy": "one dominant statement per view",
-                "imagery": "tight documentary crops",
-                "voice": "direct, concrete, editorial",
-                "motion": "cuts only when state changes",
-            },
-            "scorecard": {
-                "corpusFit": 5 if place == 1 else 4,
-                "subjectSpecificity": 5,
-                "systemCoherence": 4,
-                "distinctiveness": 5 - place + 1,
-                "executionLeverage": 4,
-            },
-            "agentRank": {
-                "place": place,
-                "rationale": f"Rank {place} because its system turns corpus evidence into a coherent build.",
-            },
-        }
+    def test_sentiment_only_feedback_does_not_increase_rank_coverage(self) -> None:
+        decisions = {"elements": [
+            decision("core.idea", 0, "like", scored=False, source="agent"),
+        ]}
+        stats = bh.ledger_stats(decisions)
+        self.assertEqual(stats["userSet"], 0)
+        self.assertEqual(stats["coverage"], 0)
 
-    def inference(self) -> dict[str, object]:
+
+class ArtDirectionInferenceContractTest(unittest.TestCase):
+    def corpus(self) -> dict:
+        return {"items": [
+            {"id": "image-a", "kind": "image"},
+            {"id": "text-a", "kind": "text"},
+        ]}
+
+    def preferences(self) -> dict:
+        return {"coverage": {"userRanked": 2, "elements": 3, "fraction": 2 / 3},
+                "elements": [{"element": name} for name in
+                             ("composition.hero", "type.display", "nav.utility")]}
+
+    def spec(self) -> dict:
         return {
             "version": 1,
-            "coverage": {"observed": list(self.ids.values()), "omitted": []},
-            "directions": [
-                self.direction("hard-crop", 1),
-                self.direction("redline-ledger", 2),
-                self.direction("quiet-index", 3),
+            "observations": [
+                {"corpusItem": "image-a", "locator": "upper crop",
+                 "observation": "The crop withholds the subject edge."},
+                {"corpusItem": "text-a", "locator": "paragraph 2",
+                 "observation": "Revision is part of the finished voice."},
             ],
+            "preferencePatterns": [{
+                "claim": "The user favors type crossing image boundaries.",
+                "support": ["composition.hero", "type.display"],
+                "counterevidence": ["nav.utility"], "n": 3,
+                "coverage": 0.67, "confidence": "medium",
+            }],
+            "hypotheses": [
+                {"id": "hard-crop", "thesis": "Revision stays visibly unfinished.",
+                 "signatureMove": "Hard crops cross a fixed annotation rail.",
+                 "visualSystem": {key: key + " rule" for key in
+                    ("palette", "typography", "grid", "hierarchy", "imagery", "voice", "motion")}},
+                {"id": "open-index", "thesis": "Evidence accumulates in an open index.",
+                 "signatureMove": "Captions form the primary reading rail.",
+                 "visualSystem": {key: key + " rule" for key in
+                    ("palette", "typography", "grid", "hierarchy", "imagery", "voice", "motion")}},
+            ],
+            "comparison": [{"hypothesis": name, "corpusFit": 4, "preferenceFit": 4,
+                            "subjectSpecificity": 4, "coherence": 4,
+                            "executionLeverage": 4, "tradeoff": "observable tradeoff"}
+                           for name in ("hard-crop", "open-index")],
             "selected": "hard-crop",
-            "sprint": {
-                "name": "Issue 01",
-                "goal": "Turn the selected direction into one testable editorial page.",
-                "items": [
-                    {
-                        "id": "hero-compose",
-                        "direction": "hard-crop",
-                        "title": "Compose the opening spread",
-                        "deliverable": "A responsive opening spread with the hard crop in place.",
-                        "points": 5,
-                        "acceptance": [
-                            {"check": "Desktop and narrow screenshots keep the headline readable.",
-                             "evidenceKind": "screenshot"}
-                        ],
-                        "executionElement": "composition.hero",
-                    },
-                    {
-                        "id": "type-lockup",
-                        "direction": "hard-crop",
-                        "title": "Lock the type hierarchy",
-                        "deliverable": "A heading and deck pair with measured line lengths.",
-                        "points": 3,
-                        "acceptance": [
-                            {"check": "The deck remains between 45 and 75 characters per line.",
-                             "evidenceKind": "measurement"}
-                        ],
-                        "executionElement": "typography.hierarchy",
-                    },
-                ],
+            "selectionRationale": "The crop is supported by both modalities; the index is safer but less specific.",
+            "cohort": ["composition.hero", "type.display", "nav.utility"],
+        }
+
+    def test_validates_grounded_noncollapsed_inference(self) -> None:
+        result = ew.validate_art_direction(self.spec(), self.corpus(), self.preferences())
+        self.assertEqual(result["selected"], "hard-crop")
+        self.assertNotIn("score", result)
+        self.assertNotIn("reward", json.dumps(result).lower())
+
+    def test_rejects_invented_evidence_and_vague_patterns(self) -> None:
+        broken = self.spec()
+        broken["observations"][0]["corpusItem"] = "invented"
+        with self.assertRaisesRegex(ew.WorkflowError, "unknown corpus item"):
+            ew.validate_art_direction(broken, self.corpus(), self.preferences())
+        broken = self.spec()
+        broken["preferencePatterns"][0]["claim"] = "The user likes clean premium design."
+        with self.assertRaisesRegex(ew.WorkflowError, "observable"):
+            ew.validate_art_direction(broken, self.corpus(), self.preferences())
+
+    def test_rejects_averaged_or_incomplete_comparison(self) -> None:
+        broken = self.spec()
+        broken["comparison"][0]["average"] = 4
+        with self.assertRaisesRegex(ew.WorkflowError, "average"):
+            ew.validate_art_direction(broken, self.corpus(), self.preferences())
+
+    def test_rejects_generated_from_memory_vectors(self) -> None:
+        with self.assertRaisesRegex(AssetError, "generated-from-memory"):
+            validate_assets([{"id": "ornament", "provenance": "generated-from-memory",
+                              "path": "ornament.svg"}], {"image-a"})
+
+
+class EditorialBurndownTest(unittest.TestCase):
+    def spec(self) -> dict:
+        return {
+            "version": 1,
+            "baselineAt": "2026-08-20T12:00:00Z",
+            "epics": [
+                {"id": "identity", "title": "Identity", "critical": True},
+                {"id": "deployment", "title": "Deployment", "critical": False},
+            ],
+            "elements": {
+                "core.thesis": "identity",
+                "typography.pixel-face": "identity",
+                "release.production": "deployment",
             },
         }
 
-    def write_inference(self, value: dict[str, object] | None = None) -> Path:
-        path = Path(self.temp.name) / "directions.json"
-        path.write_text(json.dumps(value or self.inference()), encoding="utf-8")
-        return path
+    def test_burndown_tracks_epics_and_elements_as_separate_series(self) -> None:
+        events = [
+            {"eventId": "type-done", "at": "2026-08-20T13:00:00Z",
+             "kind": "element", "id": "typography.pixel-face", "to": "resolved"},
+            {"eventId": "identity-done", "at": "2026-08-20T14:00:00Z",
+             "kind": "epic", "id": "identity", "to": "resolved"},
+        ]
+        result = ew.editorial_burndown(self.spec(), events)
+        self.assertEqual(result["points"], [
+            {"at": "2026-08-20T12:00:00Z", "unresolvedEpics": 2, "unresolvedElements": 3},
+            {"at": "2026-08-20T13:00:00Z", "unresolvedEpics": 2, "unresolvedElements": 2},
+            {"at": "2026-08-20T14:00:00Z", "unresolvedEpics": 1, "unresolvedElements": 2},
+        ])
+        self.assertEqual(result["criticalEpics"], ["identity"])
 
-    def test_observe_preserves_inspectable_text_and_image_material(self) -> None:
-        self.assertEqual(self.corpus_packet["modalities"], ["image", "text"])
-        image = next(item for item in self.corpus_packet["items"] if item["kind"] == "image")
-        text = next(item for item in self.corpus_packet["items"] if item["kind"] == "text")
-        self.assertEqual(Path(image["inspectPath"]), (self.corpus / "reference.png").resolve())
-        self.assertIn("visible revision marks", text["textExcerpt"])
-        self.assertEqual(Path(text["inspectPath"]), (self.corpus / "brief.md").resolve())
+    def test_every_element_has_exactly_one_primary_epic(self) -> None:
+        broken = self.spec()
+        broken["elements"]["core.thesis"] = ["identity", "deployment"]
+        with self.assertRaisesRegex(ew.WorkflowError, "one primary epic"):
+            ew.validate_editorial_spec(broken)
 
-    def test_publish_is_grounded_bounded_and_keeps_user_stars_separate(self) -> None:
-        ledger = self.project / "spec" / "design-harness" / "decisions.json"
-        ledger.parent.mkdir(parents=True, exist_ok=True)
-        ledger.write_text(json.dumps({"elements": [{
-            "element": "composition.hero", "stars": 5, "source": "user",
-            "scored": True, "state": "proposed", "sentiment": "like",
-        }]}), encoding="utf-8")
-        before = ledger.read_bytes()
-        out = self.project / "design" / "editorial-board.html"
-
-        ew.publish(self.project, self.write_inference(), out)
-
-        markup = out.read_text(encoding="utf-8")
-        parsed = BoardParser()
-        parsed.feed(markup)
-        rendered_text = " ".join(parsed.text)
-        self.assertLess(len(markup.encode("utf-8")), 40_000)
-        self.assertIn("Hard Crop", rendered_text)
-        self.assertIn("8 points remaining", rendered_text)
-        self.assertIn("User execution 5/5", rendered_text)
-        self.assertIn("Agent rank 1", rendered_text)
-        self.assertEqual(parsed.column_count, 4)
-        self.assertEqual(parsed.script_count, 0)
-        self.assertEqual(ledger.read_bytes(), before)
-        stored = json.loads((ledger.parent / "art-direction.json").read_text(encoding="utf-8"))
-        self.assertNotIn("stars", json.dumps(stored))
-
-    def test_advance_reduces_remaining_points_and_duplicate_event_is_a_no_op(self) -> None:
-        out = self.project / "design" / "editorial-board.html"
-        ew.publish(self.project, self.write_inference(), out)
-
-        ew.advance(self.project, "hero-compose", "done", "hero-done-1", "2026-08-20T12:00:00Z")
-        events = self.project / "spec" / "design-harness" / "editorial-events.jsonl"
-        first = events.read_bytes()
-        ew.advance(self.project, "hero-compose", "done", "hero-done-1", "2026-08-20T12:00:00Z")
-
-        self.assertEqual(events.read_bytes(), first)
-        ew.render_project(self.project, out)
-        markup = out.read_text(encoding="utf-8")
-        parsed = BoardParser()
-        parsed.feed(markup)
-        rendered_text = " ".join(parsed.text)
-        self.assertIn("3 points remaining", rendered_text)
-        self.assertIn("1 of 2 done", rendered_text)
-        self.assertRegex(rendered_text, r'Done.*Compose the opening spread')
-
-    def test_publish_fails_closed_when_selected_direction_ignores_text(self) -> None:
-        inference = self.inference()
-        selected = inference["directions"][0]
-        selected["evidence"] = [selected["evidence"][0]]
-        out = self.project / "design" / "editorial-board.html"
-
-        with self.assertRaisesRegex(ew.WorkflowError, "selected direction.*text"):
-            ew.publish(self.project, self.write_inference(inference), out)
-
-        self.assertFalse(out.exists())
-        self.assertFalse((self.project / "spec" / "design-harness" / "art-direction.json").exists())
-
-    def test_publish_rejects_invalid_work_and_rankings_without_mutation(self) -> None:
-        cases = []
-        empty_work = self.inference()
-        empty_work["sprint"]["items"] = []
-        cases.append(empty_work)
-        duplicate_rank = self.inference()
-        duplicate_rank["directions"][1]["agentRank"]["place"] = 1
-        cases.append(duplicate_rank)
-        invented_evidence = self.inference()
-        invented_evidence["directions"][2]["evidence"][0]["corpusItem"] = "missing-item"
-        cases.append(invented_evidence)
-
-        for index, inference in enumerate(cases):
-            out = self.project / "design" / f"invalid-{index}.html"
-            with self.assertRaises(ew.WorkflowError):
-                ew.publish(self.project, self.write_inference(inference), out)
-            self.assertFalse(out.exists())
+    def test_duplicate_scope_event_is_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ew.save_editorial_spec(root, self.spec())
+            event = {"eventId": "type-done", "at": "2026-08-20T13:00:00Z",
+                     "kind": "element", "id": "typography.pixel-face", "to": "resolved"}
+            self.assertTrue(ew.append_scope_event(root, event))
+            before = (root / ew.STORE / ew.EVENTS_FILE).read_bytes()
+            self.assertFalse(ew.append_scope_event(root, event))
+            self.assertEqual((root / ew.STORE / ew.EVENTS_FILE).read_bytes(), before)
 
 
-class CompanionRankStateTest(unittest.TestCase):
-    def test_zero_control_is_only_on_for_zero_stars(self) -> None:
-        helper = Path(__file__).parents[1] / "companion" / "helper.js"
-        script = (
-            f"const h=require({json.dumps(str(helper))});"
-            "if(!h.rankIsOn(0,0)||h.rankIsOn(0,5)||!h.rankIsOn(5,5))process.exit(1);"
-        )
-        completed = subprocess.run(["node", "-e", script], capture_output=True, text=True)
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+class ElementLevelThemeSafetyTest(unittest.TestCase):
+    def safe(self) -> dict:
+        return {
+            "bg": "#ffffff", "ink": "#111111", "accent": "#005fcc",
+            "font": "system-ui, sans-serif",
+        }
+
+    def test_white_text_is_rejected_without_discarding_safe_theme_elements(self) -> None:
+        candidate = dict(self.safe(), ink="#ffffff", accent="#8b0000")
+        result = ew.validate_theme_elements(candidate, self.safe())
+        self.assertEqual(result["active"]["bg"], "#ffffff")
+        self.assertEqual(result["active"]["accent"], "#8b0000")
+        self.assertEqual(result["active"]["ink"], "#111111")
+        self.assertEqual(result["errors"][0]["element"], "ink")
+        self.assertLess(result["errors"][0]["contrast"], 4.5)
+
+    def test_save_current_and_save_as_new_preserve_safe_values(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = ew.save_theme(root, "current", "newsprint", self.safe(), "Newsprint")
+            self.assertEqual(first["selected"], "newsprint")
+            second = ew.save_theme(root, "new", "night-proof", {
+                "bg": "#111111", "ink": "#ffffff", "accent": "#73d2ff",
+                "font": "system-ui, sans-serif",
+            }, "Night proof")
+            self.assertEqual(second["selected"], "night-proof")
+            self.assertEqual({theme["id"] for theme in second["themes"]},
+                             {"newsprint", "night-proof"})
+
+
+class OriginalArticleWithBurndownTest(unittest.TestCase):
+    def test_article_keeps_original_sections_and_adds_burndown_after_hero(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "spec" / "design-harness").mkdir(parents=True)
+            bh.write_json(root / "spec" / "design-harness" / "project.json",
+                          {"version": bh.VERSION, "state": "draft", "title": "Demo"})
+            ew.save_editorial_spec(root, EditorialBurndownTest().spec())
+            decisions = {"elements": [
+                decision("core.thesis", 5, "like"),
+                decision("composition.hero", 2, None),
+                decision("composition.secondary", 2, None),
+                decision("voice.rejected", 1, "dislike", state="rejected"),
+            ]}
+            markup = bh.render_article(root, decisions, {"composition.hero"}, "Hero", "en")
+            order = [markup.index(fragment) for fragment in (
+                'class="dh-hero"',
+                'class="dh-burndown"',
+                'class="dh-toc"',
+                'id="dh-zone-round"',
+                'id="dh-zone-fundamentals"',
+                'id="dh-zone-backlog"',
+                'id="dh-zone-antipattern"',
+            )]
+            self.assertEqual(order, sorted(order))
+            self.assertIn("2 unresolved epics", markup)
+            self.assertIn("3 unresolved elements", markup)
 
 
 if __name__ == "__main__":

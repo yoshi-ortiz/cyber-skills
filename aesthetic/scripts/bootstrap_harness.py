@@ -580,7 +580,8 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                     sentiment: str | None | object = KEEP_SENTIMENT,
                     implemented: str | None = None,
                     description: str | None = None,
-                    title: str | None = None) -> dict[str, object]:
+                    title: str | None = None,
+                    scored: bool | None = None) -> dict[str, object]:
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
     if verdict not in DECISION_STATES:
         raise HarnessError(f"verdict must be one of: {', '.join(DECISION_STATES)}")
@@ -600,6 +601,9 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             "cap exists to prevent.")
     if source == "agent":
         stars = ZERO_STARS
+    rank_was_set = source == "user" if scored is None else bool(scored)
+    if source == "agent":
+        rank_was_set = False
     decisions = load_decisions(output)
     known = {e["element"] for e in decisions["elements"]}
     missing = [s for s in supersedes if s not in known]
@@ -618,7 +622,7 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             # painted a gold star on every brand-new proposal, suppressed
             # the "sin puntuar" marker, and made a round the user had not
             # looked at yet read as one they had already judged badly.
-            e["scored"] = source == "user"
+            e["scored"] = rank_was_set
             if implemented is not None:
                 e["implemented"] = implemented
             if description is not None:
@@ -641,7 +645,7 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             "evidence": evidence, "supersededBy": None, "preview": preview,
             # Same rule on the create path as on the update path: an agent
             # placeholder is a starting position, never a score.
-            "source": source, "scored": source == "user",
+            "source": source, "scored": rank_was_set,
             "sentiment": None if sentiment is KEEP_SENTIMENT else sentiment, "tokens": None,
             "implemented": implemented, "description": description, "title": title,
         })
@@ -897,6 +901,7 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
     for _, _, event in sorted(accepted, key=lambda row: (row[0], row[1])):
         element = event["element"]
         stars, sentiment = event.get("stars"), event.get("sentiment")
+        has_sentiment = "sentiment" in event
         explicit = event.get("verdict")
         prior = existing.get(element, {})
         if explicit in ("approved", "rejected", "completed", "proposed"):
@@ -908,16 +913,24 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
             verdict = prior.get("state") or "proposed"
             if verdict in ("superseded", "rejected"):
                 verdict = "proposed"
-        rank = stars if is_star(stars) else prior.get("stars", 0)
+        # Only the dedicated rank interaction establishes rank provenance.
+        # Older companions omitted `type`, so a numeric non-sentiment event is
+        # accepted as a rank for compatibility. A thumb event carrying stars=0
+        # is never a rank: that historical UI bug poisoned coverage otherwise.
+        establishes_rank = event.get("type") == "rank" or (
+            event.get("type") is None and not has_sentiment and is_star(stars))
+        rank = stars if establishes_rank and is_star(stars) else prior.get("stars", 0)
+        rank_was_set = bool(establishes_rank or prior.get("scored"))
         withdrawn = "sentiment" in event and sentiment is None
         evidence = str(event.get("text") or "").strip() or (
             f"companion {sentiment}: {rank} star" if sentiment else
             (f"companion withdrew the thumb: {rank} star" if withdrawn
              else f"companion rank: {rank} star"))
         record_decision(project_root, element, verdict, rank, evidence[:400], [],
-                        source="user",
+                        source="user", scored=rank_was_set,
                         sentiment=sentiment if "sentiment" in event else KEEP_SENTIMENT)
-        existing[element] = dict(prior, element=element, state=verdict, stars=rank)
+        existing[element] = dict(prior, element=element, state=verdict, stars=rank,
+                                 source="user", scored=rank_was_set)
     for _, _, element in sorted(resets, key=lambda row: (row[0], row[1])):
         score_zero(project_root, element)
     # Re-read: every record_decision above rewrote the file underneath us.
@@ -1170,7 +1183,7 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
    also one less thing on the card. */
 .dh-fb .dh-token{grid-column:1 / -1;justify-self:start;font-size:9.5px;letter-spacing:.04em;
  padding:0;background:none;overflow-wrap:anywhere;
- color:color-mix(in srgb, var(--dh-ink,#111) 42%, transparent)}
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
 .dh-fb .dh-token::before{content:"#";opacity:.55;margin-inline-end:1px}
 .dh-fb .dh-id{font-weight:700;font-size:15px;letter-spacing:-.01em;
  overflow-wrap:anywhere;color:var(--dh-ink,#111)}
@@ -1182,7 +1195,7 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
  padding:2px 7px;border-radius:999px;white-space:nowrap;font-weight:700;
  background:color-mix(in srgb, var(--dh-ink,#111) 8%, transparent);
- color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
 .dh-fb[data-group="developing"] .dh-state{background:color-mix(in srgb, #1c8b4b 16%, transparent);
  color:#166b3a}
 .dh-fb[data-group="rejected"] .dh-state{background:color-mix(in srgb, #b00020 13%, transparent);
@@ -2071,7 +2084,7 @@ html:has(.dh-art){scroll-behavior:smooth}
    would say what has been counted rather than what is wanted. */
 .dh-hero{padding:40px 0 20px;border-block-end:2px solid var(--dh-ink,#111)}
 .dh-hero .dh-eyebrow{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent);margin:0 0 18px}
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent);margin:0 0 18px}
 .dh-hero h1{margin:0;font-size:clamp(34px,6.2vw,68px);line-height:1.02;font-weight:800;
  letter-spacing:-.035em;text-wrap:balance}
 .dh-hero h1 em{font-style:normal;color:var(--dh-accent,#d9482a)}
@@ -2084,7 +2097,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-versus-label{margin:0}
 .dh-versus-label b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
  color:color-mix(in srgb, currentColor 58%, transparent)}
-.dh-versus-label b.dh-now{color:var(--dh-accent,#d9482a)}
+.dh-versus-label b.dh-now{color:var(--dh-bg,#fff)}
 /* Not `opacity`. A light card at 70% over the round zone's dark ground blends
    toward it and comes out muddy olive -- the "before" row looked broken rather
    than recessed. An opaque tint recedes on any ground. */
@@ -2116,7 +2129,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-figures div{display:flex;flex-direction:column;gap:3px}
 .dh-figures b{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .dh-figures span{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
 /* The signature: one bar per standing element, coloured by its own score, worst
    to best. The whole system's temperature in a single line -- real data, no
    decoration, and it reads before a single word is read. */
@@ -2158,7 +2171,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-temp a{cursor:zoom-in}
 /* The last bars would push their tooltip off the right edge. */
 .dh-temp a:nth-last-child(-n+8)::after{inset-inline-start:auto;inset-inline-end:0}
-.dh-temp a span{font-size:8px;font-weight:800;line-height:1;color:var(--dh-bg,#fff)}
+.dh-temp a span{font-size:9px;font-weight:800;line-height:1;color:var(--dh-bg,#fff)}
 /* The round's own items are marked in the strip, so "what am I being asked?"
    is answerable from the sticky bar without scrolling to find out. */
 /* This round, findable in a strip of sixty: a full ring, not a hairline. */
@@ -2173,7 +2186,7 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-temp-sticky{block-size:11px;margin:0}
 .dh-key{display:flex;flex-wrap:wrap;gap:4px 16px;margin:7px 0 0;padding:0 0 8px;
  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
 .dh-key span{display:flex;align-items:center;gap:5px}
 .dh-key i{inline-size:11px;block-size:8px;border-radius:1px;background:currentColor;flex:none}
 .dh-key b{font-size:9px;line-height:1;padding:1px 4px;border-radius:2px;
@@ -2300,12 +2313,12 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-zone[data-zone="antipattern"] > header h2{font-size:clamp(19px,2.4vw,25px);font-weight:700;
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
 .dh-zone[data-zone="antipattern"] > header .dh-note{
- color:color-mix(in srgb, var(--dh-ink,#111) 50%, transparent)}
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
 .dh-zone[data-zone="antipattern"] .dh-group{
  color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
 .dh-zone[data-zone="antipattern"] .dh-tag{color:#b00020;border-color:#b00020}
 .dh-empty{margin:0;font-size:13px;font-style:italic;
- color:color-mix(in srgb, var(--dh-ink,#111) 45%, transparent)}
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
 /* The round's question, set as the protagonist it is. Filed as a grey note
    under a heading it was the one sentence on the page nobody read -- and it is
    the only thing the page is actually asking. */
@@ -2744,7 +2757,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
  border-block-start:1px solid var(--dh-rule);
  display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;
  font-size:10px;letter-spacing:.14em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 45%, transparent)}
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
 .dh-credit b{font-weight:700}
 /* Completing something is the one irreversible-feeling act on the page, so it
    gets a moment. Scaling the tick is enough -- confetti would be noise on a
@@ -3494,6 +3507,17 @@ def render_article(project_root: Path, decisions: dict[str, object],
     the faces as type -- and the scoring row sits against the thing it judges.
     """
     txt = strings_for(language or project_language(project_root))
+    workflow = None
+    try:
+        import editorial_workflow as workflow
+        saved_theme = workflow.selected_theme(project_root)
+        candidate_theme = theme or ((saved_theme or {}).get("elements"))
+        if candidate_theme:
+            theme = workflow.validate_theme_elements(candidate_theme)["active"]
+    except (ImportError, OSError, ValueError):
+        # Older installed copies have no project theme module. Their original
+        # safe article fallbacks remain intact.
+        workflow = None
     stored_url, stored_name = companion_agent(project_root)
     agent_url = agent_url.strip() or stored_url
     raw_name = agent_name.strip() or stored_name
@@ -3586,12 +3610,12 @@ def render_article(project_root: Path, decisions: dict[str, object],
     # waiting on THEM -- never scored, or liked but still weak. The old figures
     # counted the round and the archive, which told nobody what to do next.
     def user_stars(entry: dict[str, object]) -> int:
-        return int(entry.get("stars") or 0) if entry.get("source") == "user" else -1
+        return int(entry.get("stars") or 0) if entry.get("scored") else -1
     better = len([e for e in live if zone_of(e, cohort) != "antipattern"
                   and (user_stars(e) >= 3 or e["state"] in ("approved", "completed"))])
     ongoing = len([e for e in live if zone_of(e, cohort) != "antipattern"
                    and user_stars(e) < 3
-                   and (e.get("source") != "user" or e["element"] in set(stats["needsPolish"]))])
+                   and (not e.get("scored") or e["element"] in set(stats["needsPolish"]))])
     to_improve = len([e for e in live if zone_of(e, cohort) == "antipattern"])
     # A kebab-case cohort id set at 68px is a machine label wearing a headline's
     # clothes. The hero names the artefact being designed; the round is a line
@@ -3642,6 +3666,16 @@ def render_article(project_root: Path, decisions: dict[str, object],
            f'<div><b>{to_improve}</b><span>{html_escape(txt["hero-improve"])}</span></div>',
            "</div>",
            "</header>"]
+    # Keep the original article as the only presentation. The small workflow
+    # module supplies durable project scope; it must never render a competing
+    # website. A missing spec simply means this older project has no burndown.
+    if workflow:
+        try:
+            burndown_markup = workflow.render_burndown(project_root)
+        except (OSError, ValueError):
+            burndown_markup = ""
+        if burndown_markup:
+            out.append(burndown_markup)
     shown = [z for z in ZONES
              if z == "round" or any(zone_of(e, cohort) == z for e in live)]
     links = []
@@ -3783,7 +3817,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
         out.append("</section>")
     # A designer finishing a page of scores has no idea what happens next.
     # The bar says it, stays put, and counts what is still unscored.
-    unscored_now = len([e for e in live if e.get("source") != "user"])
+    unscored_now = len([e for e in live if not e.get("scored")])
     out += [
         '<footer class="dh-credit">'
         f'<b>{html_escape(txt["credit-what"])}</b>'
@@ -3971,7 +4005,7 @@ def ledger_stats(decisions: dict[str, object]) -> dict[str, object]:
     """
     elements = decisions["elements"]
     live = [e for e in elements if e["state"] in ("approved", "proposed")]
-    user = [e for e in live if e.get("source") == "user"]
+    user = [e for e in live if e.get("source") == "user" and e.get("scored")]
     ranked = sorted((e["stars"] for e in user))
 
     def median(values: list[int]) -> float:
@@ -4004,7 +4038,7 @@ def ledger_stats(decisions: dict[str, object]) -> dict[str, object]:
         "completed": sum(1 for e in elements if e["state"] == "completed"),
         "rejected": sum(1 for e in elements if e["state"] == "rejected"),
         "superseded": sum(1 for e in elements if e["state"] == "superseded"),
-        "unscored": sorted(e["element"] for e in live if e.get("source") != "user"),
+        "unscored": sorted(e["element"] for e in live if not e.get("scored")),
         "conflicts": conflicts, "needsPolish": needs_polish,
     }
 

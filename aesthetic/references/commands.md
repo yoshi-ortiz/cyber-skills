@@ -2,24 +2,27 @@
 
 Every verb takes `--project-root` and answers `--help`. Read `--help` before asking the user anything about flags.
 
-## Editorial workflow
+## Sentiment and editorial data
 
-Use the small compiler for new corpus work. It owns intake, inference validation, work events, and the editorial board.
+The small data module owns corpus inventory, element-level preference analysis,
+explicit epic scope, append-only burndown events, and theme candidates. It does
+not render a second website.
 
 ```bash
 python3 scripts/editorial_workflow.py observe --project-root . --source-root /absolute/corpus
-python3 scripts/editorial_workflow.py publish --project-root . \
-  --directions /tmp/aesthetic-directions.json --out design/editorial-board.html
+python3 scripts/editorial_workflow.py preferences --project-root . \
+  --out /tmp/aesthetic-preferences.json
+python3 scripts/editorial_workflow.py direction --project-root . \
+  --spec /tmp/aesthetic-art-direction.json
+python3 scripts/editorial_workflow.py scope --project-root . \
+  --spec /tmp/editorial.json
 python3 scripts/editorial_workflow.py advance --project-root . \
-  --item hero-compose --to review --event-id hero-compose-review-1
-python3 scripts/editorial_workflow.py output --project-root . \
-  --out design/editorial-board.html
-python3 scripts/editorial_workflow.py validate --project-root .
+  --event /tmp/editorial-event.json
+python3 scripts/editorial_workflow.py status --project-root .
 ```
 
-`publish` refuses incomplete inference and leaves the prior artifacts untouched. `advance` appends one event. An existing event id changes nothing. `output` renders only a valid stored direction set.
-
-Do not use `bootstrap_harness.py article` for new corpus work. The legacy ledger commands below remain for existing execution feedback and old projects.
+`advance` appends one validated scope event. An existing event id changes
+nothing. The established `bootstrap_harness.py article` renders the burndown.
 
 ## Opening the page
 

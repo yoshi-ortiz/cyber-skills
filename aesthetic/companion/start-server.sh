@@ -195,7 +195,7 @@ fi
 
 # Foreground mode for environments that reap detached/background processes.
 if [[ "$FOREGROUND" == "true" ]]; then
-  env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" node server.cjs "--brainstorm-server-id=$SERVER_ID" &
+  env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_PROJECT_DIR="$PROJECT_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" node server.cjs "--brainstorm-server-id=$SERVER_ID" &
   SERVER_PID=$!
   echo "$SERVER_PID" > "$PID_FILE"
   [[ -n "$OWNER_PID_FILE" ]] && echo "$SERVER_PID" > "$OWNER_PID_FILE"
@@ -211,7 +211,7 @@ fi
 #    still share the group; a new session does not.
 OWNER_PID=""
 unset BRAINSTORM_OWNER_PID || true
-export BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST"
+export BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_PROJECT_DIR="$PROJECT_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST"
 python3 -c 'import os, sys; os.setsid(); os.execvp("node", ["node", "server.cjs"] + sys.argv[1:])' \
   "--brainstorm-server-id=$SERVER_ID" >"$LOG_FILE" 2>&1 < /dev/null &
 SERVER_PID=$!
