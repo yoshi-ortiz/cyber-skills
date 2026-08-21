@@ -7,8 +7,15 @@
   function nextReconnectDelay(current, max) {
     return Math.min(current * 2, max);
   }
+
+  // Zero is a separate worst-score control, not the first lit star.
+  function rankIsOn(rank, stars) {
+    return rank === 0 ? stars === 0 : rank > 0 && rank <= stars;
+  }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { nextReconnectDelay, MIN_RECONNECT_MS, MAX_RECONNECT_MS, TOMBSTONE_AFTER_MS };
+    module.exports = {
+      nextReconnectDelay, rankIsOn, MIN_RECONNECT_MS, MAX_RECONNECT_MS, TOMBSTONE_AFTER_MS
+    };
   }
 
   // Everything below is browser-only; bail out when loaded in Node (tests).
@@ -164,7 +171,7 @@
     e.stopPropagation();
     holder.dataset.stars = String(stars);
     holder.querySelectorAll('[data-rank]').forEach((s) => {
-      s.classList.toggle('on', parseInt(s.dataset.rank, 10) <= stars);
+      s.classList.toggle('on', rankIsOn(parseInt(s.dataset.rank, 10), stars));
     });
     sendEvent({
       type: 'rank',

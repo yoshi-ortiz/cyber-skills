@@ -1,4 +1,0 @@
-interface:
-  display_name: "Aesthetic"
-  short_description: "Create specific, evidence-backed design"
-  default_prompt: "Use $aesthetic to create a brief-specific design from the evidence, critique the rendered result, and preserve ranked user decisions."

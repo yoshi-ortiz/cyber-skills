@@ -468,23 +468,18 @@ class TheCompanionHeaderIsTwoByTwo(unittest.TestCase):
 
 
 class TheSkillKeepsTheUserInformed(unittest.TestCase):
-    def test_continue_demands_project_language_and_chat_pngs(self):
+    def test_editorial_output_demands_chat_screenshots(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("project.json", skill)
-        self.assertIn("language", skill)
-        self.assertIn("paste the PNG", skill)
-        self.assertIn("--round-label", skill)
-        self.assertNotIn("load [loop.md]", skill.split("## First tool call")[1].split("## While")[0],
-                         "loop.md must not appear before the URL is in chat")
+        self.assertIn("Show the URL and a screenshot", skill)
+        self.assertIn("desktop and narrow layouts", skill)
+        self.assertIn("one clear execution decision", skill)
 
 
-class TheSkillIsInvokedWithFourVerbs(unittest.TestCase):
+class TheSkillIsInvokedWithEditorialVerbs(unittest.TestCase):
     def test_the_argument_hint_matches_the_documented_verbs(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn('argument-hint: "continue | critique | prototype | observe @/art-folder"',
-                      skill)
-        for verb in ("continue", "critique", "prototype", "observe"):
-            self.assertIn(f"- **{verb}", skill,
+        for verb in ("observe", "continue", "critique"):
+            self.assertRegex(skill, rf"- `{verb}[^`]*`",
                           f"{verb} is advertised but never documented")
         self.assertNotIn("interpret @", skill,
                          "an old `interpret @` invocation survived in SKILL.md")
@@ -495,42 +490,33 @@ class TheSkillIsInvokedWithFourVerbs(unittest.TestCase):
         'evidence-backed design harness' instead of the verbs the hint lists."""
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
         desc = re.search(r"^description:\s*(.*)$", skill, re.M).group(1).lower()
-        for jargon in ("harness", "ledger", "corpus", "knowledge-index",
+        for jargon in ("harness", "ledger", "knowledge-index",
                        "spec/design-harness", "evidence-backed"):
             self.assertNotIn(jargon, desc, f"slash search still says {jargon!r}")
-        for verb in ("continue", "critique", "prototype", "observe"):
+        for verb in ("continue", "critique"):
             self.assertIn(verb, desc)
+        self.assertIn("multimodal corpus", desc)
+        self.assertIn("editorial board", desc)
 
-    def test_continue_opens_the_page_before_running_doctor(self):
+    def test_continue_validates_before_changing_work_state(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
-        continue_line = [ln for ln in skill.splitlines() if ln.startswith("- **continue")][0]
-        self.assertIn("`open`", continue_line)
-        self.assertNotIn("doctor", continue_line)
-        self.assertNotIn("stats", continue_line)
-        self.assertNotIn("loop.md", continue_line,
-                         "loop.md in the continue bullet is loaded before the page opens")
+        section = skill.split("## Continue one item", 1)[1].split("## Critique", 1)[0]
+        self.assertLess(section.index("editorial_workflow.py validate"),
+                        section.index("editorial_workflow.py advance"))
+        self.assertIn("stable event id", section)
 
-    def test_the_first_named_command_is_open(self):
-        """A continue run read loop.md, DECISIONS.md and doctor before the
-        server bound a port, because 'open the page' was a three-step recipe
-        sitting under 'Read disk first'. One verb, first, is the seam."""
+    def test_observe_is_the_first_compiler_command(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
         body = skill.split("---", 2)[2]
-        named = re.search(r"`([a-z][a-z0-9-]*)`", body)
-        self.assertIsNotNone(named)
-        self.assertEqual(named.group(1), "open",
-                         f"first command is {named.group(1)!r}, not open")
-        read_at = body.find("Read disk first")
-        open_at = body.find("`open`")
-        self.assertTrue(read_at < 0 or open_at < read_at,
-                        "Read disk first still precedes open")
+        compiler = re.search(r"editorial_workflow\.py ([a-z-]+)", body)
+        self.assertIsNotNone(compiler)
+        self.assertEqual(compiler.group(1), "observe")
 
-    def test_the_always_loaded_file_does_not_name_doctor_or_stats(self):
+    def test_the_always_loaded_file_does_not_name_legacy_selection_commands(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
         self.assertNotIn("`doctor`", skill)
         self.assertNotIn("`stats`", skill)
-        self.assertNotIn("Do not open `bootstrap_harness.py`", skill,
-                         "forbidding the file makes agents read it instead of running verbs")
+        self.assertNotIn("bootstrap_harness.py article --project-root", skill)
 
 
 class OpenPutsTheUrlInChat(unittest.TestCase):

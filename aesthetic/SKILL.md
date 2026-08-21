@@ -1,82 +1,118 @@
 ---
 name: aesthetic
-version: 0.8.3
-description: Ranked design work on a live page. Use to continue a round, critique what stands, prototype one idea, or observe a folder of references — art, UI, product, space, copy, motion, or social posts.
-argument-hint: "continue | critique | prototype | observe @/art-folder"
+description: Use when a multimodal corpus must become grounded, ranked art direction and a responsive editorial board. Also use to continue or critique that design sprint. Not for generic UI coding without references.
 ---
 
 # Aesthetic
 
-Great design is specific to its subject, coherent as a system, visibly refined, and faithful to what the user chose. A round succeeds only if both happen: the work visibly improves, and a rank the user actually set reaches the ledger.
+Turn the corpus into a decision before drawing. The default path is one closed sequence.
 
-## When invoked
+```text
+inspectable corpus -> three grounded directions -> agent rank -> selected direction -> editorial sprint -> board
+```
 
-- **continue** (or nothing) — `open`. Reply with the URL.
-- **critique** — judge what stands. Rank nothing on the user's behalf.
-- **prototype** — draw one comp to answer one question, `shoot` it, show it. No ledger round, no cohort.
-- **observe @/art-folder** — read the corpus. Routes on what is actually there: INDEX.md present → text, load [interpret-knowledge.md](references/interpret-knowledge.md), propose IA, do not draw. Images and no INDEX.md → visual, load [interpret-art.md](references/interpret-art.md).
+User execution stars never choose the art direction. Agent rank never enters `decisions.json`.
 
-Empty `inspiration/` is not a missing corpus when `knowledge-index/` exists.
+## Pick the mode
 
-## First tool call
+- `observe @/corpus` starts a new editorial sprint from the named folder.
+- `continue` opens a valid sprint, completes one work item, and advances its state.
+- `critique` judges the selected direction and current execution without changing rank, stars, or work state.
+
+If the user supplies a corpus without a verb, use `observe`. If the user supplies neither, use `continue` only when `spec/design-harness/art-direction.json` exists. Otherwise ask for the corpus path.
+
+## Intake
+
+Run this first for `observe`.
+
+```bash
+python3 <skill>/scripts/editorial_workflow.py observe \
+  --project-root . --source-root <absolute-corpus-path>
+```
+
+Read `spec/design-harness/corpus.json`. Open every item listed in `items`. Use the image viewer for images. Read text from `inspectPath`. A hash proves which file you opened. It is not visual or editorial evidence.
+
+Do not fork on `INDEX.md`. A corpus with text and images needs one fused interpretation. Mark every supported item as observed or omit it with a concrete reason.
+
+## Ground and rank
+
+Read [editorial-workflow.md](references/editorial-workflow.md). Write one temporary direction-set JSON file in its exact shape.
+
+Produce exactly three structurally different directions. Each direction needs a thesis, one signature move, a complete visual system, cited observations, a five-part scorecard, and an agent-rank rationale. The selected direction must cite image and text evidence when both exist.
+
+Score corpus fit, subject specificity, system coherence, distinctiveness, and execution leverage from 1 through 5. Rank the directions 1 through 3. Do not average blindly. Explain the deciding tradeoff in the rank rationale.
+
+Reject a direction when its thesis could describe an unrelated product, its signature move is decoration, or its evidence repeats filenames without an observation.
+
+Turn only the selected direction into sprint work. Each item needs a concrete deliverable, positive points, and an observable acceptance check. Park alternate directions outside the board.
+
+## Publish
+
+Run the compiler only after you inspected the corpus and wrote the direction set.
+
+```bash
+python3 <skill>/scripts/editorial_workflow.py publish \
+  --project-root . \
+  --directions /tmp/aesthetic-directions.json \
+  --out design/editorial-board.html
+```
+
+`publish` fails before it writes when inference is incomplete. Fix the direction set. Never bypass validation and never fall back to `bootstrap_harness.py article`.
+
+## Editorial board
+
+The output has one selected direction, a compact ranked comparison, a points burndown, and four columns named Backlog, Doing, Review, and Done. It reads user-set execution feedback from the existing ledger without changing it.
+
+Open the served project after a successful publish.
 
 ```bash
 python3 <skill>/scripts/bootstrap_harness.py open --project-root .
 ```
 
-Done when the reply is the URL (`?key=` included). Read `spec/design-harness/project.json` → `language`. One sentence in **that language**, then the URL. The bottom bar carries longer status.
+Show the URL and a screenshot. Check both desktop and narrow layouts. If the direction is generic, the hierarchy collapses, content clips, or interaction fails, the run is not done.
 
-If the harness is missing: ask once for the references folder and direction, then `init`, then `open`.
+## Continue one item
 
-## While you work
+Validate before work.
 
-Load [loop.md](references/loop.md) after the URL is in chat. Read the last DECISIONS row and the last PNG of the incumbent before drawing. `--asks` is one plain sentence a designer can answer out loud — name the thing in words, not ids or symbols. Do not open this skill's scripts.
+```bash
+python3 <skill>/scripts/editorial_workflow.py validate --project-root .
+```
 
-**Language.** Reason in English if it helps; every word the user sees is in `project.json` → `language`. Chat, `--status`, `--description`, `--title`, `--asks`, `--round-label`. Ids and flags stay English.
+Read the selected direction, the event history, the current board, and the latest execution preview. Pick one item from Doing, then Review, then Backlog. Work only on that deliverable.
 
-**Heartbeat.** Before a step longer than a minute: one chat sentence + `status --text` in plain words (`starting ranking app`, `reading arts`, `proposing designs`). Never ids, paths, or file names. After every `shoot`: paste the PNG in chat before `publish`. Silence reads as a hang.
+Move the item when its acceptance evidence exists. Use a stable event id so a retry changes nothing.
 
-**Agent on the page.** Pass `article --agent` as `App | Model` (e.g. `Cursor | Composer`) and `--agent-url` the session deep link. Pass `--round-label` the object name (e.g. Micrófono), not a slug like `objeto`. `--asks` is the one design question, readable without the drawing's labels. Add `--working` only while drawing; otherwise the bottom bar stays orange idle. Push `status --idle` when you stop.
+```bash
+python3 <skill>/scripts/editorial_workflow.py advance \
+  --project-root . --item <work-id> --to <backlog|doing|review|done> \
+  --event-id <stable-event-id>
 
-**New proposals stay unscored.** `decide --source agent --stars 0 --preview content/<element>.html`. The row and slideshow show blank stars until the user ranks. Never pass a PNG when the HTML comp exists.
+python3 <skill>/scripts/editorial_workflow.py output \
+  --project-root . --out design/editorial-board.html
+```
 
-Look at the last graphic and references at the same scale. Name the one move. Draw HTML/CSS, `shoot`, look at the PNG. Redraw once if you would not pin it.
+Moving an item out of Done raises remaining points. That is a revision, not a broken chart.
 
-If `ia.*` stands and there is no art folder, load [continue-after-ia.md](references/continue-after-ia.md).
+## Critique
 
-## What a design run may write
+Read the corpus evidence, selected direction, board, and current screenshots. Judge the work against the direction's thesis, signature move, visual system, and item acceptance checks. Name the strongest mismatch first. Do not change files, events, agent rank, or user execution stars.
 
-| Writable | Read-only |
-| --- | --- |
-| the project's screens | this skill's `scripts/`, `references/`, `companion/` |
-| `spec/design-harness/`, through harness verbs only | the corpus; companion `decisions.jsonl` |
+## Quality gate
 
-Do not repair the harness while designing. Writes go through `adopt`, `decide`, `describe`, `supersede`.
+A run succeeds only when all checks pass.
 
-## What a round must be
+1. The selected direction uses observations from every available supported medium.
+2. The three candidates differ in structure, not only color, typeface, or wording.
+3. The selected signature move is visible in the current execution.
+4. Every sprint item can be accepted with a screenshot, measurement, copy check, or interaction check.
+5. The board is under 40 KB, needs no JavaScript, and works at desktop and narrow widths.
+6. The user has a current screenshot and one clear execution decision to make.
 
-`article` refuses two rounds. Both are satisfiable by doing the right thing, not by a flag.
+Automated checks prove the workflow is consistent. They do not prove the design is good. Look at the result.
 
-1. **Polish before novelty.** While anything carries a thumb up and ≤2 stars, improve one of them — `<that-id>.<slug>`, or re-ask the id. A thumb up on a low score means idea right, drawing not there yet.
-2. **One redraw per element.** Two new drawings of the same incumbent is wallpaper.
+## Write boundary
 
-Comps are **HTML/CSS** + `shoot` — never hand-authored SVG. Every thumbnail opens a slideshow with its scoring strip.
+During a design run, write project screens and `spec/design-harness/` only through the workflow commands. Treat the corpus and this skill's `scripts/`, `references/`, and `companion/` as read-only.
 
-## How to talk to the user
-
-They are a designer. Name the move, not the machinery. One sentence before a long step; the bottom bar carries the rest. A round ends with: what changed, the URL if new, and the one thing to rank. Never explain the harness unless asked.
-
-## Shared
-
-1. Ledger via verbs. Run them; do not edit this skill's scripts.
-2. Do not edit this skill while designing.
-3. Art path writes `core.*` `palette.*` `typography.*` `illustration.*` `composition.*` `voice.*` `motion.*`. Knowledge path writes `ia.*` `social.*`.
-4. Observing a text corpus stops at IA. Empty `inspiration/` is not a stop.
-
-## observe — text corpus
-
-Load [interpret-knowledge.md](references/interpret-knowledge.md). INDEX.md is the catalog. Stop at IA.
-
-## observe — art folder
-
-Load [interpret-art.md](references/interpret-art.md), then [loop.md](references/loop.md).
+To change this skill, read `AGENTS.md`.

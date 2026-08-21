@@ -2,6 +2,25 @@
 
 Every verb takes `--project-root` and answers `--help`. Read `--help` before asking the user anything about flags.
 
+## Editorial workflow
+
+Use the small compiler for new corpus work. It owns intake, inference validation, work events, and the editorial board.
+
+```bash
+python3 scripts/editorial_workflow.py observe --project-root . --source-root /absolute/corpus
+python3 scripts/editorial_workflow.py publish --project-root . \
+  --directions /tmp/aesthetic-directions.json --out design/editorial-board.html
+python3 scripts/editorial_workflow.py advance --project-root . \
+  --item hero-compose --to review --event-id hero-compose-review-1
+python3 scripts/editorial_workflow.py output --project-root . \
+  --out design/editorial-board.html
+python3 scripts/editorial_workflow.py validate --project-root .
+```
+
+`publish` refuses incomplete inference and leaves the prior artifacts untouched. `advance` appends one event. An existing event id changes nothing. `output` renders only a valid stored direction set.
+
+Do not use `bootstrap_harness.py article` for new corpus work. The legacy ledger commands below remain for existing execution feedback and old projects.
+
 ## Opening the page
 
 ```bash
@@ -27,7 +46,7 @@ Three text fields, each with one job. All optional, all shown on the scoring row
 | Flag | Holds |
 | --- | --- |
 | `--description` | what the component **is**, in plain words |
-| `--evidence` | why it exists — **verbatim** user words, never a paraphrase |
+| `--evidence` | why it exists, using **verbatim** user words and never a paraphrase |
 | `--implemented` | what was actually **built** this round |
 
 A row with no `--description` shows only its dotted id, which is what made earlier screens unrankable.
@@ -39,7 +58,7 @@ python3 scripts/bootstrap_harness.py describe --project-root . \
   --element cover.ring.kicker --description "..." --implemented "..."
 ```
 
-`decide` demands a verdict and a rank, so relabelling a user-ranked row means retyping the user's stars — exactly the invention the 1-star cap exists to prevent. `describe` touches text only.
+`decide` demands a verdict and a rank. Relabelling a user-ranked row would mean retyping the user's stars, which the 1-star cap exists to prevent. `describe` touches text only.
 
 ## Adopting clicks
 
@@ -58,7 +77,7 @@ Place a placeholder naming the elements a section scores:
 <div data-dh-controls="cover.layout.two-column,cover.spine.right"></div>
 ```
 
-Fill it and serve it — three commands, never by hand:
+Fill it and serve it with three commands. Never do this by hand.
 
 ```bash
 python3 scripts/bootstrap_harness.py article --project-root . \
@@ -69,15 +88,11 @@ python3 scripts/bootstrap_harness.py embed --project-root . --screen <screen>.ht
 python3 scripts/bootstrap_harness.py publish --project-root . --screen <screen>.html
 ```
 
-`embed` is **idempotent** — safe to re-run; if output changes on a second run, that is a bug. It refuses a screen with no placeholder and refuses ids not in standing. `--pin` puts this turn's work in a group on top. `publish` stamps the screen a clear margin ahead of every other, because the companion serves **only the newest-mtime file** — so write the scoring screen last, or re-run `publish`.
+`embed` is **idempotent** and safe to rerun. If output changes on a second run, that is a bug. It refuses a screen with no placeholder and refuses ids not in standing. `--pin` puts this turn's work in a group on top. `publish` stamps the screen a clear margin ahead of every other because the companion serves **only the newest-mtime file**. Write the scoring screen last, or rerun `publish`.
 
 ## Statistics
 
-```bash
-python3 scripts/bootstrap_harness.py stats --project-root .
-```
-
-Deterministic — same ledger, same numbers. Lead with **coverage**: the fraction of standing elements carrying a signal the user actually set. A high star average means nothing at 20% coverage, because the rest is agent inference. `polish` is liked-but-scored-low: redraw it, never drop it. `unscored` names exactly what still needs clicks.
+See [stats.md](stats.md) for field semantics, cohort selection, and the command.
 
 ## Init and validate
 
@@ -91,4 +106,4 @@ python3 scripts/bootstrap_harness.py self-test          # after changing this sk
 
 Profiles are listed in [domain-profiles.md](domain-profiles.md); adapters and design MCP servers in [design-tools.md](design-tools.md). Record what you actually observed with `preflight`, and never narrate a tool you did not run.
 
-The user names the corpus path; never assume its directory name. It is read-only. `validate` reports ledger health and corpus drift **separately** — drift is usually the user reorganising files and does not block design work. A regenerated preview is a note, not a failure.
+The user names the corpus path. Never assume its directory name. It is read-only. `validate` reports ledger health and corpus drift **separately**. Drift is usually the user reorganising files and does not block design work. A regenerated preview is a note, not a failure.

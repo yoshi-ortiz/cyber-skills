@@ -115,10 +115,8 @@ def main(argv: list[str] | None = None) -> int:
     import argparse, sys
     parser = argparse.ArgumentParser(description="check directory context contracts")
     parser.add_argument("--root", type=Path, default=Path("."))
-    parser.add_argument("--one", action="store_true",
-                        help="check only --root, do not descend")
     args = parser.parse_args(argv)
-    reports = [check(args.root)] if args.one else walk(args.root)
+    reports = walk(args.root)
     sys.stdout.write(render(reports))
     return 1 if any(not r.ok for r in reports) else 0
 
