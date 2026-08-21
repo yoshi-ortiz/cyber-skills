@@ -812,6 +812,17 @@ class TheBarReportsTheAgent(unittest.TestCase):
         self.assertNotIn("left to score", bar,
                          "the bar reports the agent, not a to-do tally")
 
+    def test_theme_settings_are_collapsed_inside_the_bottom_status_aid(self):
+        markup = bh.render_article(
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
+            set(), "", "en", None, "F", "Ask.")
+        bar = markup.split('class="dh-bar"')[1].split("</aside>")[0]
+        self.assertIn('<details class="dh-bar-settings" data-theme-settings>', bar)
+        self.assertNotIn('<details class="dh-bar-settings" data-theme-settings open', bar)
+        self.assertIn('data-follow-art-direction', bar)
+        self.assertIn('data-theme-save="current"', bar)
+        self.assertIn('data-theme-save="new"', bar)
+
 
 class PreviewsPreferHtmlComps(unittest.TestCase):
     """When a PNG thumbnail and an HTML comp both exist, embed the comp."""
@@ -1066,6 +1077,7 @@ class ChromeFixesV34(unittest.TestCase):
         bar = bar.replace(" ", "")
         self.assertIn("inset-inline-end:16px", bar)
         self.assertIn("flex-direction:column", bar)
+        self.assertIn("inline-size:min(360px,calc(100dvw-32px))", bar)
         self.assertNotIn("inset-inline:0", bar)
 
     def test_lightbox_centers_score_and_strip(self):

@@ -2712,7 +2712,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
 /* Floating action bar: one place to return to the agent, not a full-width footer. */
 .dh-bar{position:fixed;inset-block-end:16px;inset-inline-end:16px;inset-inline-start:auto;
- z-index:50;max-inline-size:min(420px,calc(100dvw - 32px));
+ z-index:50;inline-size:min(360px,calc(100dvw - 32px));max-inline-size:100%;
  display:flex;flex-direction:column;align-items:stretch;gap:8px;
  padding:12px 14px;border-radius:14px;
  font:500 13px/1.4 var(--dh-font,ui-sans-serif,system-ui,sans-serif);
@@ -2727,7 +2727,7 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-live{font-style:normal;display:flex;flex-direction:column;align-items:flex-start;
  gap:2px;font-size:12px;letter-spacing:.02em;list-style:none;margin:0;padding:0}
 .dh-live-label{display:inline-flex;align-items:center;gap:7px;font-weight:800;
- letter-spacing:.04em;line-height:1.2;color:inherit}
+ letter-spacing:.04em;line-height:1.2;color:inherit;min-inline-size:0;overflow-wrap:anywhere}
 .dh-live-label::before{content:'';inline-size:8px;block-size:8px;border-radius:50%;flex:none}
 .dh-live[data-state="idle"] .dh-live-label::before{background:#e0902a}
 .dh-live[data-state="active"] .dh-live-label::before{background:#7fd18f}
@@ -2736,6 +2736,24 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-live[data-state="idle"] .dh-live-detail{opacity:.88}
 .dh-bar-copy span{opacity:.78}
 .dh-live-label,.dh-live-detail{opacity:1}
+/* Project theme controls belong to this status aid, not the companion header.
+   Native details keeps them collapsed until explicitly requested. */
+.dh-bar-settings{margin:2px 0 0;color:inherit;font:inherit}
+.dh-bar-settings summary{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ cursor:pointer;list-style:none;padding:7px 10px;border:1px solid currentColor;border-radius:8px;
+ font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.9}
+.dh-bar-settings summary::-webkit-details-marker{display:none}
+.dh-bar-settings summary::after{content:'+';font-size:15px;line-height:1;font-weight:500}
+.dh-bar-settings[open] summary::after{content:'−'}
+.dh-bar-settings-panel{display:grid;gap:10px;padding:12px 2px 2px;min-inline-size:240px}
+.dh-bar-settings label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:650}
+.dh-bar-settings input{accent-color:var(--dh-accent,#d9482a)}
+.dh-bar-settings-actions{display:flex;gap:7px;flex-wrap:wrap}
+.dh-bar-settings button{padding:6px 9px;border:1px solid currentColor;border-radius:7px;
+ background:transparent;color:inherit;font:inherit;cursor:pointer}
+.dh-bar-settings button:hover,.dh-bar-settings button:focus-visible{background:var(--dh-bg,#fff);
+ color:var(--dh-ink,#111)}
+.dh-bar-settings [data-theme-message]{font-size:11px;line-height:1.35;opacity:.82}
 /* One return action: chat icon and label, hyperlinked to the agent session. */
 .dh-bar-go{display:inline-flex;align-items:center;gap:8px;flex:none;font-weight:800;
  letter-spacing:.06em;font-size:12px;padding:8px 14px;border-radius:999px;text-decoration:none;
@@ -3829,6 +3847,15 @@ def render_article(project_root: Path, decisions: dict[str, object],
         + f'data-active-label="{html_escape(txt["bar-active-label"])}">'
         + f'<span class="dh-live-label">{html_escape(live_label)}</span>'
         + f'<span class="dh-live-detail">{html_escape(live_detail)}</span></i>'
+        + '<details class="dh-bar-settings" data-theme-settings>'
+          '<summary aria-label="Theme settings">Theme</summary>'
+          '<div class="dh-bar-settings-panel">'
+          '<label><input type="checkbox" data-follow-art-direction> Follow art direction</label>'
+          '<div class="dh-bar-settings-actions">'
+          '<button type="button" data-theme-save="current">Save current</button>'
+          '<button type="button" data-theme-save="new">Save as new</button>'
+          '</div><output data-theme-message aria-live="polite">Safe project theme</output>'
+          '</div></details>'
         + (f'<a class="dh-bar-go" href="{html_escape(agent_url)}">'
            f'{CHAT_ICON}<span>{html_escape(txt["bar-return"])}</span></a>'
            if agent_url.strip()

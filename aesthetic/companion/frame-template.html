@@ -106,20 +106,6 @@
       color: var(--accent);
       font-weight: 500;
     }
-    .theme-settings{position:absolute;inset-block-start:12px;inset-inline-end:18px;z-index:80;
-      font:500 12px/1.4 system-ui,sans-serif;color:var(--text-primary)}
-    .theme-settings summary{cursor:pointer;list-style:none;padding:6px 10px;border:1px solid var(--border);
-      border-radius:999px;background:var(--bg-secondary)}
-    .theme-settings[open] summary{border-radius:10px 10px 0 0}
-    .theme-settings-panel{display:grid;gap:10px;min-inline-size:230px;padding:14px;
-      border:1px solid var(--border);border-radius:10px 0 10px 10px;background:var(--bg-secondary);
-      box-shadow:0 14px 38px rgba(0,0,0,.18)}
-    .theme-settings label{display:flex;align-items:center;gap:8px}
-    .theme-settings-actions{display:flex;gap:7px}
-    .theme-settings button{padding:6px 9px;border:1px solid var(--border);border-radius:7px;
-      background:var(--bg-primary);color:var(--text-primary);cursor:pointer}
-    .theme-settings [data-theme-message]{font-size:11px;color:var(--text-secondary)}
-
     /* ===== TYPOGRAPHY ===== */
     h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
     h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem; }
@@ -223,17 +209,6 @@
   <div class="header">
     <!-- BRANDING -->
     <div class="status">Connecting…</div>
-    <details class="theme-settings" data-theme-settings>
-      <summary aria-label="Theme settings">Theme</summary>
-      <div class="theme-settings-panel">
-        <label><input type="checkbox" data-follow-art-direction> Follow art direction</label>
-        <div class="theme-settings-actions">
-          <button type="button" data-theme-save="current">Save current</button>
-          <button type="button" data-theme-save="new">Save as new</button>
-        </div>
-        <output data-theme-message aria-live="polite">Safe project theme</output>
-      </div>
-    </details>
   </div>
 
   <div class="main">

@@ -84,7 +84,7 @@ Never invent SVG paths. Follow [asset-sourcing.md](references/asset-sourcing.md)
 
 Run the accessibility checks before publishing. Body text must reach 4.5:1 contrast and controls/meaningful graphics 3:1. A failing theme token is rejected or replaced by its last safe value; do not emit an illegible candidate and ask the user to discover it.
 
-Store theme candidates, the selected candidate, accessibility issues, and the follow-art-direction setting in `spec/design-harness/theme.json`. The browser is an unsaved preview. “Save current” updates the selected candidate; “Save as new” preserves it and creates another.
+Keep theme controls collapsed in the bottom status aid. Store candidates, selection, accessibility issues, and follow-art-direction in `spec/design-harness/theme.json`; the browser is an unsaved preview. “Save current” updates the selection; “Save as new” preserves it and creates another.
 
 ## Publish the established article
 

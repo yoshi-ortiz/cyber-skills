@@ -37,12 +37,10 @@ class HelperRankProvenanceTest(unittest.TestCase):
 
 
 class FrameSettingsStructureTest(unittest.TestCase):
-    def test_frame_has_project_theme_controls(self) -> None:
+    def test_frame_header_does_not_duplicate_article_theme_controls(self) -> None:
         frame = (ROOT / "companion" / "frame-template.html").read_text(encoding="utf-8")
-        self.assertIn('data-theme-settings', frame)
-        self.assertIn('data-follow-art-direction', frame)
-        self.assertIn('data-theme-save="current"', frame)
-        self.assertIn('data-theme-save="new"', frame)
+        self.assertNotIn('data-theme-settings', frame)
+        self.assertNotIn('data-follow-art-direction', frame)
 
 
 class ServerThemeSafetyTest(unittest.TestCase):
