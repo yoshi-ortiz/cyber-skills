@@ -221,6 +221,13 @@ STRINGS = {
         "prep-legend": "New designs are on the way. Rank anything still pending.",
         "bar-active-label": "Designing",
         "bar-left": "left to score", "done-cheer": "Marked as done",
+        "agent-settings": "Agent settings", "update-app-theme": "Update app theme",
+        "saved-themes": "Saved themes", "reset-theme": "Reset theme", "save-theme": "Save",
+        "no-theme": "No article theme is available", "theme-on": "Update app theme on",
+        "theme-off": "Update app theme off", "theme-selected": "Saved theme selected",
+        "theme-reset-msg": "Theme reset", "theme-name-prompt": "Saved themes",
+        "theme-name-default": "Art direction",
+        "theme-saved-fallback": "Saved with safe fallback for",
         "credit-what": "Live companion",
         "credit-who": "Inspired from Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
         "project-label": "Project", "designing": "Designing",
@@ -281,6 +288,13 @@ STRINGS = {
         "prep-legend": "Están llegando diseños nuevos. Puntúa lo que sigue pendiente.",
         "bar-active-label": "Diseñando",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
+        "agent-settings": "Configuración del agente", "update-app-theme": "Actualizar el tema de la app",
+        "saved-themes": "Temas guardados", "reset-theme": "Restablecer tema", "save-theme": "Guardar",
+        "no-theme": "No hay un tema de artículo disponible", "theme-on": "Actualización de tema activada",
+        "theme-off": "Actualización de tema desactivada", "theme-selected": "Tema guardado seleccionado",
+        "theme-reset-msg": "Tema restablecido", "theme-name-prompt": "Temas guardados",
+        "theme-name-default": "Dirección de arte",
+        "theme-saved-fallback": "Guardado con respaldo seguro para",
         "credit-what": "Companion en vivo",
         "credit-who": "Inspired from Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
         "project-label": "Proyecto", "designing": "Diseñando",
@@ -2709,6 +2723,14 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-live-copy{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-inline-size:0}
 .dh-live-label{display:block;font-weight:800;letter-spacing:.04em;line-height:1.2;
  color:inherit;min-inline-size:0;overflow-wrap:anywhere}
+/* A fixed dot, not a recolored label: the label's own text color stays
+   whatever the theme already proved readable, so the state signal never
+   has to re-earn its own contrast check. */
+.dh-live-label::before{content:'';display:inline-block;inline-size:8px;block-size:8px;
+ border-radius:50%;margin-inline-end:6px;vertical-align:middle;
+ box-shadow:0 0 0 1px rgba(255,255,255,.5)}
+.dh-live[data-state="active"] .dh-live-label::before{background:#2ecc71}
+.dh-live[data-state="idle"] .dh-live-label::before{background:#f0a020}
 .dh-live-detail{font-size:11px;line-height:1.35;opacity:.88;max-inline-size:36ch;
  margin:0;padding:0;overflow-wrap:anywhere}
 .dh-live[data-state="idle"] .dh-live-detail{opacity:.88}
@@ -3639,6 +3661,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
            f'data-done-label="{html_escape(txt["completed"])}" '
            f'data-agent-url="{html_escape(agent_url)}" '
            f'data-agent-state="{agent_state}" '
+           f'data-lang="{html_escape((language or project_language(project_root)).lower())}" '
            f'data-agent-label="{html_escape(agent_name)}" '
            f'data-agent-app="{html_escape(agent_app)}" '
            f'data-agent-model="{html_escape(agent_model)}" '
@@ -3833,18 +3856,18 @@ def render_article(project_root: Path, decisions: dict[str, object],
         + f'<span class="dh-live-label">{html_escape(live_label)}</span>'
         + f'<span class="dh-live-detail">{html_escape(live_detail)}</span></span></i>'
         + '<details class="dh-bar-settings" data-theme-settings>'
-          '<summary>Agent settings</summary>'
+          f'<summary>{html_escape(txt["agent-settings"])}</summary>'
           '<div class="dh-bar-settings-panel">'
           '<div class="dh-theme-switch">'
           '<input id="dh-update-app-theme" type="checkbox" role="switch" '
           'data-follow-art-direction>'
-          '<label for="dh-update-app-theme">Update app theme</label></div>'
+          f'<label for="dh-update-app-theme">{html_escape(txt["update-app-theme"])}</label></div>'
           '<div class="dh-theme-select">'
-          '<label for="dh-saved-themes">Saved themes</label>'
+          f'<label for="dh-saved-themes">{html_escape(txt["saved-themes"])}</label>'
           '<select id="dh-saved-themes" data-theme-select><option value=""></option></select></div>'
           '<div class="dh-bar-settings-actions">'
-          '<button type="button" data-theme-reset>Reset theme</button>'
-          '<button type="button" data-theme-save>Save</button>'
+          f'<button type="button" data-theme-reset>{html_escape(txt["reset-theme"])}</button>'
+          f'<button type="button" data-theme-save>{html_escape(txt["save-theme"])}</button>'
           '</div><output class="dh-sr-only" data-theme-message aria-live="polite"></output>'
           '</div></details>'
         + (f'<a class="dh-bar-go" href="{html_escape(agent_url)}">'

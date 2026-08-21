@@ -105,6 +105,14 @@ canonical interactive preview; the PNG is its rendered verification artifact.
 fits the page into a square, so the comp must read without depending on its own
 aspect ratio.
 
+510px is the REVIEW frame, not the comp's own CSS. `body { width: 510px }`
+makes a fixed card, right for a card/print/mockup brief, wrong for a website
+brief. A website comp declares fluid sizing (`%`, `clamp()`, breakpoints) and
+gets shot again with `--width` at a narrow value to prove it reflows.
+
+Reuse one render pass per candidate -- shoot, inspect, fix, reshoot the failing
+part, not a fresh navigate per candidate per viewport.
+
 Real content, never lorem and never emoji standing in for ranked artwork.
 Preserve every standing element outside this round's cohort — an element the user
 ranked is not yours to restyle because it happened to be nearby.
@@ -132,10 +140,11 @@ Reject or roll back the individual theme token that fails contrast. Text needs
 white background is a generation failure, never a user-review item.
 
 Then compare against brief and corpus **at the same scale** — a thumbnail hides
-exactly the failures a full-size view reveals, and vice versa. Ask of each:
-hierarchy, composition, rhythm, specificity, coherence. Cut decoration with no
-job. If it reads as a generic default, or the signature is not immediately
-legible, revise before showing it.
+exactly the failures a full-size view reveals, and vice versa. For a website
+brief, compare the narrow-width shot too; a comp that only works at 510px is not
+done. Ask of each: hierarchy, composition, rhythm, specificity, coherence. Cut
+decoration with no job. If it reads as a generic default, or the signature is
+not immediately legible, revise before showing it.
 
 Write one explicit assessment for every cohort element. A proposal passes only
 when `rankable_design`, `subject_specific`, and `signature_legible` are `true`,

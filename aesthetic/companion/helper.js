@@ -3,6 +3,26 @@
   const MAX_RECONNECT_MS = 30000;
   const TOMBSTONE_AFTER_MS = 15000; // show the "paused" overlay after this long disconnected
 
+  // The server picks every label the article renders in the project language
+  // (STRINGS in bootstrap_harness.py). This file runs after that HTML is
+  // fixed, so it cannot add new server-rendered text -- it can only choose
+  // which language its OWN status messages use, read off the article root
+  // the server already stamped with data-lang.
+  const THEME_STRINGS = {
+    en: { on: 'Update app theme on', off: 'Update app theme off',
+          selected: 'Saved theme selected', reset: 'Theme reset', themeSaved: 'Theme saved',
+          noTheme: 'No article theme is available', namePrompt: 'Saved themes',
+          nameDefault: 'Art direction', savedFallback: 'Saved with safe fallback for' },
+    es: { on: 'Actualización de tema activada', off: 'Actualización de tema desactivada',
+          selected: 'Tema guardado seleccionado', reset: 'Tema restablecido', themeSaved: 'Tema guardado',
+          noTheme: 'No hay un tema de artículo disponible', namePrompt: 'Temas guardados',
+          nameDefault: 'Dirección de arte', savedFallback: 'Guardado con respaldo seguro para' },
+  };
+  function themeStrings() {
+    const lang = (document.querySelector('.dh-art')?.dataset.lang || 'en').toLowerCase();
+    return THEME_STRINGS[lang] || THEME_STRINGS.en;
+  }
+
   // Pure: next backoff delay (doubles, capped). Exported for unit tests.
   function nextReconnectDelay(current, max) {
     return Math.min(current * 2, max);
@@ -264,6 +284,7 @@
     const save = settings.querySelector('[data-theme-save]');
     const message = settings.querySelector('[data-theme-message]');
     let spec = null;
+    const T = themeStrings();
     const say = text => { message.textContent = text; };
     const sync = value => {
       spec = value;
@@ -286,7 +307,7 @@
         } else {
           clearFrameTheme();
         }
-        say(follow.checked ? 'Update app theme on' : 'Update app theme off');
+        say(follow.checked ? T.on : T.off);
       } catch (error) { follow.checked = !follow.checked; say(error.message); }
     });
     select.addEventListener('change', async () => {
@@ -295,24 +316,24 @@
         sync(await themeRequest({ action: 'select', id: select.value }));
         const selected = selectedTheme(spec);
         if (follow.checked && selected) applyFrameTheme(selected.elements);
-        say('Saved theme selected');
+        say(T.selected);
       } catch (error) { sync(spec); say(error.message); }
     });
     reset.addEventListener('click', async () => {
       try {
         sync(await themeRequest({ action: 'reset' }));
         clearFrameTheme();
-        say('Theme reset');
+        say(T.reset);
       } catch (error) { say(error.message); }
     });
     save.addEventListener('click', async () => {
       const candidate = articleTheme();
-      if (!candidate) { say('No article theme is available'); return; }
+      if (!candidate) { say(T.noTheme); return; }
       let mode = spec && spec.selected ? 'current' : 'new';
       let id = spec && spec.selected || '';
       let name = selectedTheme(spec || {})?.name || id;
       if (mode === 'new') {
-        name = window.prompt('Saved themes', 'Art direction') || '';
+        name = window.prompt(T.namePrompt, T.nameDefault) || '';
         if (!name.trim()) return;
         id = name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-|-$/g, '');
       }
@@ -322,8 +343,8 @@
         if (follow.checked && selected) applyFrameTheme(selected.elements);
         const issues = selected && selected.issues || [];
         say(issues.length
-          ? 'Saved with safe fallback for ' + issues.map(issue => issue.element).join(', ')
-          : 'Theme saved');
+          ? T.savedFallback + ' ' + issues.map(issue => issue.element).join(', ')
+          : T.themeSaved);
       } catch (error) { say(error.message); }
     });
   }

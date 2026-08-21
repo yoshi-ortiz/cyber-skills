@@ -37,7 +37,7 @@ python3 <skill>/scripts/editorial_workflow.py observe \
   --project-root . --source-root <absolute-reference-folder>
 ```
 
-Open supported items. Explain omissions. Metadata is not visual evidence.
+Open supported items, explain omissions. Metadata is not visual evidence.
 
 No folder is not a stop. Seed and direct from premises:
 
@@ -76,18 +76,18 @@ python3 <skill>/scripts/editorial_workflow.py direction --project-root . \
   --spec /tmp/aesthetic-art-direction.json
 ```
 
-Fix a rejected spec. Never bypass the gate.
+Fix a rejected spec; never bypass the gate.
 
 ## Long runs
 
-Before work over a minute, send one project-language update, mirrored in the status aid:
+Send a project-language status update before tool-using work, not only long work, mirrored in the status aid:
 
 ```bash
 python3 <skill>/scripts/bootstrap_harness.py status --project-root . \
   --text "<emoji + visible work + why it matters>"
 ```
 
-Name the visible result and link the page. Update the status when the real activity changes. Never report setup commands.
+Name the visible result and link the page. Update it as activity changes. Never report setup commands.
 
 ## Scope the editorial burndown
 

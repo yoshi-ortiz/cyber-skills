@@ -191,6 +191,29 @@ class ArticleSettingsStructureTest(unittest.TestCase):
         buttons = [button.visible_text() for button in settings.all("button")]
         self.assertEqual(buttons, ["Reset theme", "Save"])
 
+    def test_spanish_settings_panel_is_spanish_not_english(self) -> None:
+        """One screen speaking two languages is the exact regression
+        STRINGS was built to prevent, and this panel had drifted back into
+        it -- hardcoded English literals bypassing STRINGS entirely."""
+        decisions = {
+            "version": bh.VERSION, "state": "draft", "supersededCount": 0,
+            "elements": [{
+                "element": "core.idea", "stars": 0, "sentiment": None,
+                "state": "proposed", "scored": False, "source": "agent",
+            }],
+        }
+        markup = bh.render_article(Path("/tmp"), decisions, {"core.idea"}, "", "es", None,
+                                   "Project", "Ask.", "", agent_working=False)
+        settings = tree(markup).find(**{"data-theme-settings": ""})
+        self.assertIsNotNone(settings)
+        text = settings.visible_text()
+        for english in ("Agent settings", "Update app theme", "Saved themes",
+                        "Reset theme", "Save"):
+            self.assertNotIn(english, text)
+        self.assertIn("Configuración del agente", text)
+        self.assertIn("Guardar", text)
+        self.assertIn('data-lang="es"', markup)
+
     def test_hero_metadata_keys_and_values_share_an_opposed_grid_edge(self) -> None:
         style_node = next(node for node in tree(self.markup()).all("style")
                           if "dh-article" in node.visible_text())

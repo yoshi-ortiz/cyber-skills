@@ -13,19 +13,33 @@ generated:
 The designer should know three things at a glance. Where to review the work,
 what is happening now, and what they can do while they wait.
 
+## Language
+
+Every visible sentence stays in the project language -- not only the three moments
+named below. That includes running commentary on what you are doing right now
+("exploring the corpus", "rendering the comp"), not just the labelled handoffs.
+A session that narrates its own work in one language and talks to the designer in
+another reads as two agents, not one. Pick the project language once and hold it
+for the whole conversation; do not code-switch mid-reply.
+
 ## First reply
 
 The URL and access key always come first. Do not put a greeting, plan, or status
-before them.
+before them. Render them as a small table so the long key does not force the
+reader to hunt through a line of prose for it; the review action stays its own
+sentence below, since it is prose, not a fact.
 
 ```text
-🔗 http://localhost:49830/?key=abc
-🔑 abc
+| Access |
+| --- |
+| 🔗 http://localhost:49830/?key=abc |
+| 🔑 abc |
+
 👀 While I prepare the next designs, you can review and score what is already on the page.
 ```
 
-Translate the third line and every later message into the project language. The
-URL and key stay unchanged. If there is no previous page, give one useful action
+Translate the review-action line and every later message into the project language.
+The URL and key stay unchanged. If there is no previous page, give one useful action
 instead, such as adding visual references or answering one concrete design
 question.
 
