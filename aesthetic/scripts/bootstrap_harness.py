@@ -100,7 +100,7 @@ KEEP_SENTIMENT = object()
 # score as "delete this" already destroyed work the user wanted kept.
 SCORE_NEVER_REMOVES = True
 # A preview is the graphic the star is actually about.
-PREVIEW_SUFFIXES = {".svg", ".html", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
+PREVIEW_SUFFIXES = {".html", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
 # Who set a rank. The distinction is the whole point: an agent-typed number and
 # a user click used to be indistinguishable in the ledger.
 # Three lifecycle groups the user reads at a glance. Derived from state, never
@@ -1445,6 +1445,43 @@ def check_no_hand_authored_svg(html: Path) -> None:
             "comp before shooting it.")
 
 
+def audit_recorded_svg(project_root: Path) -> list[dict[str, str]]:
+    """Find elements ALREADY in the ledger whose recorded preview hand-authors SVG.
+
+    `check_no_hand_authored_svg` only stops a NEW comp from being shot. It has
+    no opinion on what a session recorded before that gate existed -- and a
+    project that hit this failure for real can carry dozens of them, each one
+    an element a designer cannot see rendered because there is no PNG to
+    canonicalise, only the raw markup that made it into the article. This
+    reads the ledger and reports every one by element id and recorded path, so
+    they can be found and redrawn instead of discovered one crash at a time.
+    """
+    project_root = project_root.resolve(strict=True)
+    output = project_root / "spec" / "design-harness"
+    decisions_path = output / "decisions.json"
+    if not decisions_path.is_file():
+        return []
+    decisions = json.loads(decisions_path.read_text(encoding="utf-8"))
+    hits = []
+    for entry in decisions.get("elements", []):
+        preview = entry.get("preview")
+        if not isinstance(preview, dict):
+            continue
+        rel = preview.get("path")
+        if not rel or not str(rel).lower().endswith((".html", ".svg")):
+            continue
+        candidate = project_root / rel
+        if not candidate.is_file():
+            continue
+        try:
+            text = candidate.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if re.search(r"<svg\b", text, re.I):
+            hits.append({"element": entry.get("element", ""), "path": str(rel)})
+    return hits
+
+
 def render_html_preview(html: Path, out: Path, width: int = PREVIEW_WIDTH,
                         timeout: int = 45) -> str:
     """Rasterise a comp. Returns the renderer used, or raises.
@@ -1684,6 +1721,11 @@ def preview_reference(project_root: Path, raw: str, element: str = "") -> dict[s
     # then all name the same thing.
     if element:
         candidate = preferred_preview_path(project_root, candidate, element)
+    if candidate.suffix.lower() == ".svg":
+        raise HarnessError(
+            f"{candidate.name} is an .svg file recorded directly as a preview -- unchecked "
+            "and unrenderable by the pipeline that gates every other comp. Draw it in "
+            "HTML/CSS, `shoot` it to a PNG, and `decide --preview` that comp instead.")
     if candidate.suffix.lower() not in PREVIEW_SUFFIXES:
         raise HarnessError(f"unsupported preview type '{candidate.suffix}'; use one of "
                            + ", ".join(sorted(PREVIEW_SUFFIXES)))
@@ -4808,6 +4850,9 @@ def parser() -> argparse.ArgumentParser:
     stats = subcommands.add_parser("stats", help="deterministic statistics over the ledger")
     stats.add_argument("--project-root", required=True, type=Path)
     stats.add_argument("--json", action="store_true", help="machine-readable output")
+    audit_svg = subcommands.add_parser(
+        "audit-svg", help="list ledger elements whose recorded preview hand-authors <svg>")
+    audit_svg.add_argument("--project-root", required=True, type=Path)
     subcommands.add_parser("self-test")
     return command
 
@@ -4857,6 +4902,15 @@ def main() -> int:
             entry = retire_element(args.project_root, args.element, args.winner, args.evidence)
             print(f"Retired {args.element} in favour of {args.winner}. "
                   f"{args.winner} was not written -- its rank and source are untouched.")
+        elif args.command == "audit-svg":
+            hits = audit_recorded_svg(args.project_root)
+            if not hits:
+                print("No recorded preview hand-authors <svg>.")
+            else:
+                print(f"{len(hits)} recorded preview(s) hand-author <svg> -- redraw in HTML/CSS "
+                     "and `shoot` + `decide --preview` again:")
+                for hit in hits:
+                    print(f"  {hit['element']}\t{hit['path']}")
         elif args.command == "shoot":
             check_no_hand_authored_svg(args.html)
             renderer = render_html_preview(args.html, args.out, args.width)

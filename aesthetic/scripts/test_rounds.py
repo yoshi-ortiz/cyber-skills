@@ -10,6 +10,7 @@ The article's own invariants are checked the same way -- against generated
 markup, never against the source string, because two of the worst defects so
 far were CSS the browser silently discarded while the source looked correct.
 """
+import json
 import re
 import tempfile
 import unittest
@@ -395,6 +396,49 @@ class HandAuthoredSvgIsRefusedBeforeItRenders(unittest.TestCase):
         # it -- never puts the substring "<svg" in the comp's own markup.
         comp = self.comp("cover.html", '<img src="assets/mark.svg" alt="">')
         bh.check_no_hand_authored_svg(comp)  # must not raise
+
+    def test_recording_a_bare_svg_file_as_a_preview_is_refused(self):
+        # The gate above only stops a NEW comp at `shoot`. A bare .svg file
+        # never goes through `shoot` at all -- it was still an accepted
+        # preview TYPE, so `decide --preview foo.svg` walked straight past
+        # every check the HTML/PNG path enforces.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            svg = root / "mark.svg"
+            svg.write_text('<svg><path d="M0 0L10 10"/></svg>', encoding="utf-8")
+            with self.assertRaises(bh.HarnessError) as caught:
+                bh.preview_reference(root, "mark.svg")
+            self.assertIn("shoot", str(caught.exception))
+
+
+class RecordedSvgIsFoundInAnExistingLedger(unittest.TestCase):
+    """A project that hit the SVG failure before this gate existed cannot be
+    fixed by a check on NEW work. Something has to say which already-recorded
+    elements are unrenderable so they can be found, not discovered one at a
+    time as a crash."""
+
+    def test_an_html_preview_with_inline_svg_is_reported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store = root / "spec" / "design-harness"
+            store.mkdir(parents=True)
+            comp = root / "content"
+            comp.mkdir()
+            (comp / "bad.html").write_text(
+                '<html><body><svg><path d="M0 0L1 1"/></svg></body></html>', encoding="utf-8")
+            (comp / "good.html").write_text(
+                '<html><body><div style="width:10px"></div></body></html>', encoding="utf-8")
+            (store / "decisions.json").write_text(json.dumps({"elements": [
+                {"element": "broken.mark", "preview": {"path": "content/bad.html"}},
+                {"element": "fine.card", "preview": {"path": "content/good.html"}},
+                {"element": "unscored.thing", "preview": None},
+            ]}), encoding="utf-8")
+            hits = bh.audit_recorded_svg(root)
+            self.assertEqual(hits, [{"element": "broken.mark", "path": "content/bad.html"}])
+
+    def test_a_project_with_no_ledger_yet_reports_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(bh.audit_recorded_svg(Path(tmp)), [])
 
 
 if __name__ == "__main__":
