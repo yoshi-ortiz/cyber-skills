@@ -27,19 +27,21 @@ for the whole conversation; do not code-switch mid-reply.
 The URL and access key always come first. Do not put a greeting, plan, or status
 before them. Render them as a small table so the long key does not force the
 reader to hunt through a line of prose for it; the review action stays its own
-sentence below, since it is prose, not a fact.
+sentence below, since it is prose, not a fact. Mask the raw URL behind a short
+link label -- a pasted `?key=` string is not something a reader should have to
+read past, only click.
 
 ```text
 | Access |
 | --- |
-| 🔗 http://localhost:49830/?key=abc |
+| 🔗 [Open your designs](http://localhost:49830/?key=abc) |
 | 🔑 abc |
 
 👀 While I prepare the next designs, you can review and score what is already on the page.
 ```
 
 Translate the review-action line and every later message into the project language.
-The URL and key stay unchanged. If there is no previous page, give one useful action
+The URL and key stay unchanged, and the link text is never the raw URL. If there is no previous page, give one useful action
 instead, such as adding visual references or answering one concrete design
 question.
 
@@ -63,6 +65,10 @@ Bad:
 - `Validating corpus provenance and deterministic tokens.`
 
 ## Plain words
+
+Every word in the left column has leaked into a real reply. Before sending any
+message, reread it and swap each one out; a table you looked at once and did
+not apply is the same as not having it.
 
 | Internal term | Say to the designer |
 | --- | --- |

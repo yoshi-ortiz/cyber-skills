@@ -1424,6 +1424,27 @@ def find_chrome() -> str:
     return ""
 
 
+def check_no_hand_authored_svg(html: Path) -> None:
+    """Refuse a comp that draws its own `<svg>` instead of writing HTML/CSS.
+
+    loop.md has said "never hand-author SVG" since this file's own history: a
+    session once carried 59 such previews holding 6352 `<rect>` and 15 `<path>`
+    the model invented rather than sourced, 34 of them faded to near-zero
+    opacity. That was a prose rule nobody mechanically checked, so it kept
+    getting written anyway. A comp needing a real graphic references a fetched
+    or project asset with `<img src="...">` -- that never matches this check,
+    because the SVG markup lives in the referenced file, not in the comp.
+    """
+    text = html.read_text(encoding="utf-8", errors="replace")
+    if re.search(r"<svg\b", text, re.I):
+        raise HarnessError(
+            f"{html.name} hand-authors an <svg> element. Comps are drawn in HTML/CSS; "
+            "a graphic is reused from the project, fetched from a pinned licensed source "
+            "and referenced with <img src=\"...\">, generated deterministically in CSS, "
+            "or omitted. See asset-sourcing.md. Remove the inline <svg> and redraw the "
+            "comp before shooting it.")
+
+
 def render_html_preview(html: Path, out: Path, width: int = PREVIEW_WIDTH,
                         timeout: int = 45) -> str:
     """Rasterise a comp. Returns the renderer used, or raises.
@@ -4837,6 +4858,7 @@ def main() -> int:
             print(f"Retired {args.element} in favour of {args.winner}. "
                   f"{args.winner} was not written -- its rank and source are untouched.")
         elif args.command == "shoot":
+            check_no_hand_authored_svg(args.html)
             renderer = render_html_preview(args.html, args.out, args.width)
             check_preview_legible(args.out)
             ink = preview_ink(args.out)

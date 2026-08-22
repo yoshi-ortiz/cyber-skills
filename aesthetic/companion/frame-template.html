@@ -152,9 +152,16 @@
       color: var(--chrome-ink);
       font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
     }
+    /* Two columns hold at every width, name left and status right, never
+       stacked: a stacked header pushes the connection status below the fold
+       on a phone, which is the one line that says whether clicks are saved. */
     @media (max-width: 620px) {
-      .dh-brand { grid-template-columns: minmax(0, 1fr); gap: 0.65rem; }
-      .dh-brand-right { align-items: flex-start; text-align: left; }
+      .header { padding: 0.65rem 0.85rem; }
+      .dh-brand { gap: 0.4rem 0.6rem; }
+      .dh-brand-name { font-size: 0.78rem; letter-spacing: 0.08em; }
+      .dh-brand-kind { display: none; }
+      .dh-brand-agent { max-inline-size: 100%; font-size: 0.72rem; }
+      .status { font-size: 0.62rem; }
     }
     /* ===== TYPOGRAPHY ===== */
     h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }

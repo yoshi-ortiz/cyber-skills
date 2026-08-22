@@ -362,5 +362,40 @@ class PreviewsMustBeVisible(unittest.TestCase):
         self.assertGreater(ink["contrast"], bh.MIN_INK_CONTRAST)
 
 
+class HandAuthoredSvgIsRefusedBeforeItRenders(unittest.TestCase):
+    """The pixel gate above catches a blank or faded comp. It cannot catch a
+    comp that draws perfectly legible pixels out of an invented `<svg
+    path="...">` -- that render is visible, it is just not sourced. loop.md
+    says "never hand-author SVG" and nothing enforced it: a session shipped 59
+    such previews holding 6352 `<rect>` and 15 `<path>` anyway. This checks the
+    SOURCE, before a single pixel is spent rendering it.
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def comp(self, name, body):
+        path = self.tmp / name
+        path.write_text(f"<html><body>{body}</body></html>", encoding="utf-8")
+        return path
+
+    def test_an_inline_svg_is_refused(self):
+        comp = self.comp("icon.html", '<svg><path d="M0 0L10 10"/></svg>')
+        with self.assertRaises(bh.HarnessError) as caught:
+            bh.check_no_hand_authored_svg(comp)
+        self.assertIn("svg", str(caught.exception).lower())
+        self.assertIn("asset-sourcing.md", str(caught.exception))
+
+    def test_a_pure_html_css_comp_passes(self):
+        comp = self.comp("card.html", '<div style="width:100px;height:100px"></div>')
+        bh.check_no_hand_authored_svg(comp)  # must not raise
+
+    def test_a_referenced_asset_file_is_not_inline_authoring(self):
+        # The legitimate path -- fetch or reuse an asset and point <img> at
+        # it -- never puts the substring "<svg" in the comp's own markup.
+        comp = self.comp("cover.html", '<img src="assets/mark.svg" alt="">')
+        bh.check_no_hand_authored_svg(comp)  # must not raise
+
+
 if __name__ == "__main__":
     unittest.main()
