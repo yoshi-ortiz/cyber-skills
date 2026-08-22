@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="405" viewBox="0 0 720 405" role="img" aria-label="Aesthetic companion screenshot placeholder">
+  <rect width="720" height="405" fill="#1a1a2e"/>
+  <rect x="24" y="24" width="672" height="357" rx="12" fill="#16213e" stroke="#0f3460" stroke-width="2"/>
+  <text x="360" y="190" fill="#e94560" font-family="system-ui,sans-serif" font-size="22" font-weight="600" text-anchor="middle">Aesthetic ranking companion</text>
+  <text x="360" y="225" fill="#a2a8b3" font-family="system-ui,sans-serif" font-size="14" text-anchor="middle">Screenshot placeholder</text>
+  <text x="360" y="252" fill="#6b7280" font-family="system-ui,sans-serif" font-size="12" text-anchor="middle">Replace assets/aesthetic-companion.png with a capture of the ranking article</text>
+</svg>

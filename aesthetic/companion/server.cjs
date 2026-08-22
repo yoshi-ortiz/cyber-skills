@@ -546,6 +546,39 @@ function handleRequest(req, res) {
       res.writeHead(204, securityHeaders());
       res.end();
     });
+  } else if (req.method === 'POST' && pathname === '/brief') {
+    // The user's own prose. Queued, not applied: brief_workflow.py owns the
+    // schema, exactly as it owns decisions.jsonl for scoring. Validating here
+    // too would put the same rules in two languages and let them drift.
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 8192) req.destroy(); });
+    req.on('end', () => {
+      let data = {};
+      try { data = JSON.parse(body || '{}'); } catch (e) { data = {}; }
+      const id = String(data.id || '').slice(0, 120);
+      const answer = String(data.answer || '').slice(0, 4000);
+      if (!id || !answer) {
+        res.writeHead(400, securityHeaders({ 'Content-Type': 'application/json; charset=utf-8' }));
+        res.end(JSON.stringify({ error: 'id and answer are required' }));
+        return;
+      }
+      const line = JSON.stringify({
+        eventId: String(data.eventId || `b-${Date.now()}`).slice(0, 120),
+        at: String(data.at || new Date().toISOString()).slice(0, 40),
+        id, answer,
+      }) + '\n';
+      try {
+        fs.appendFileSync(path.join(path.dirname(SESSION_DIR), 'brief-inbox.jsonl'), line);
+      } catch (e) {
+        console.error('Failed to queue brief answer:', e.message);
+        res.writeHead(500, securityHeaders());
+        res.end();
+        return;
+      }
+      touchActivity();
+      res.writeHead(204, securityHeaders());
+      res.end();
+    });
   } else if (req.method === 'GET' && pathname.startsWith('/files/')) {
     const fileName = path.basename(pathname.slice(7));
     const filePath = path.join(CONTENT_DIR, fileName);
@@ -884,6 +917,9 @@ function startServer() {
   const knownFiles = new Set(
     fs.readdirSync(CONTENT_DIR).filter(f => !f.startsWith('.') && f.endsWith('.html'))
   );
+  // filename -> sha256 of the bytes last broadcast, so an identical
+  // republish is not mistaken for a change worth reloading over.
+  const contentDigests = new Map();
 
   const server = http.createServer(handleRequest);
   server.on('upgrade', handleUpgrade);
@@ -908,6 +944,17 @@ function startServer() {
       } else {
         console.log(JSON.stringify({ type: 'screen-updated', file: filePath }));
       }
+
+      // Reload only when the bytes actually changed. `publish` stamps mtime
+      // with os.utime to win the newest-screen race, so republishing an
+      // identical screen used to fire a full reload that destroyed whatever
+      // the user was typing into the brief for no gain at all.
+      let digest = '';
+      try {
+        digest = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+      } catch (e) { digest = ''; }
+      if (digest && contentDigests.get(filename) === digest) return;
+      if (digest) contentDigests.set(filename, digest);
 
       broadcast({ type: 'reload' });
     }, 100));
