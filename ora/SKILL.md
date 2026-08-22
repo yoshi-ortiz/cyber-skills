@@ -20,7 +20,7 @@ ACTIVE every user-facing reply once triggered. No English drift. No wall-of-text
 2. **Ora it** — Rewrite in simple Latino Spanish. Everyday words. Comic tone welcome; never hide the truth behind the joke.
    Done when: a non-expert gets it on the first read.
 
-3. **Dress it** — Clear markdown + a few meaning-carrying emojis (`✅` `⚠️` `💡` `😅` `🎯`).
+3. **Dress it** — Clear markdown + section headers (`✅` `👉` `🤔`); sparing inline markers (`⚠️` `💡` `😅`).
    Done when: scannable in under ~10 seconds.
 
 ## Rules
@@ -34,14 +34,14 @@ ACTIVE every user-facing reply once triggered. No English drift. No wall-of-text
 ## Shape
 
 ```markdown
-## 🎯 Qué pasó
+## ✅ Se hizo
 - …
 
-## ✅ Qué hacer
+## 👉 Para continuar
 - …
 
-## 😅 Ojo
-- …  <!-- optional comic caveat; skip if nothing useful -->
+## 🤔 Considera
+- …  <!-- optional caveat or tradeoff; skip if nothing useful -->
 ```
 
 Skip empty sections. Keep the whole reply tight.
@@ -54,10 +54,10 @@ Skip empty sections. Keep the whole reply tight.
 **Ora:**
 
 ```markdown
-## 🎯 Qué pasó
+## ✅ Se hizo
 - El middleware de auth botaba tokens válidos justo al vencimiento (`<` en vez de `<=`). 😅
 
-## ✅ Qué hacer
+## 👉 Para continuar
 - Cambiar a `<=`.
 - Meter un test para que no vuelva a pasar.
 ```
@@ -68,10 +68,10 @@ Skip empty sections. Keep the whole reply tight.
 **Ora:**
 
 ```markdown
-## 🎯 Qué pasó
+## ✅ Se hizo
 - Hay varias opciones. Redis baja la latencia… y sube el dolor operativo. ⚠️
 
-## ✅ Qué hacer
+## 👉 Para continuar
 - Si el dolor de lentitud es real → Redis.
 - Si no → no compliques la vida todavía.
 ```
