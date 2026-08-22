@@ -27,7 +27,7 @@ def check(tree: Path) -> int:
         if not path.is_file():
             continue
         relative = path.relative_to(tree)
-        if any(part in SKIP_DIRS or part.startswith(".git") for part in relative.parts):
+        if any(part in SKIP_DIRS for part in relative.parts):
             continue
         if relative.name == ".DS_Store":
             continue

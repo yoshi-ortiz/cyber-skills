@@ -23,7 +23,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fog import is_fog
 
-SKIP_DIRS = {".git", "__pycache__", ".DS_Store"}
+# `.git` only, never a `.git*` prefix -- that silently dropped .gitignore
+# from every published tree, so main would have started committing __pycache__.
+SKIP_DIRS = {".git", "__pycache__"}
 
 
 def published_paths(root: Path) -> list[Path]:
@@ -33,7 +35,7 @@ def published_paths(root: Path) -> list[Path]:
         if not path.is_file():
             continue
         relative = path.relative_to(root)
-        if any(part in SKIP_DIRS or part.startswith(".git") for part in relative.parts):
+        if any(part in SKIP_DIRS for part in relative.parts):
             continue
         if relative.name == ".DS_Store":
             continue
@@ -46,8 +48,7 @@ def published_paths(root: Path) -> list[Path]:
 def publish(root: Path, out: Path) -> tuple[int, int]:
     """Copy the published tree to `out`. Returns (kept, skipped)."""
     every = [p.relative_to(root) for p in sorted(root.rglob("*")) if p.is_file()
-             and not any(part in SKIP_DIRS or part.startswith(".git")
-                         for part in p.relative_to(root).parts)]
+             and not any(part in SKIP_DIRS for part in p.relative_to(root).parts)]
     keep = published_paths(root)
     if out.exists():
         shutil.rmtree(out)
