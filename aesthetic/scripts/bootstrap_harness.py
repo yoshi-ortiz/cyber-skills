@@ -268,6 +268,9 @@ STRINGS = {
         "state-rejected": "set aside",
         "like": "like it", "dislike": "do not like it", "completed": "completed",
         "bookmark": "bookmark this card",
+        "brief-title": "Project brief", "brief-count": "{answered} of {total} answered",
+        "brief-unanswered": "not answered yet",
+        "brief-now": "Now", "brief-more": "{count} more after this",
         "zero-title": "zero stars: terrible, but it still stands",
         "zero-label": "zero stars for {element}: terrible execution",
     },
@@ -337,6 +340,10 @@ STRINGS = {
         "state-rejected": "descartado",
         "like": "me gusta", "dislike": "no me gusta", "completed": "completado",
         "bookmark": "guardar esta tarjeta",
+        "brief-title": "Resumen del proyecto",
+        "brief-count": "{answered} de {total} respondidas",
+        "brief-unanswered": "sin responder",
+        "brief-now": "Ahora", "brief-more": "{count} más después de esta",
         "zero-title": "cero estrellas: pésimo, pero sigue en pie",
         "zero-label": "cero estrellas para {element}: pésima ejecución",
     },
@@ -3957,6 +3964,17 @@ def render_article(project_root: Path, decisions: dict[str, object],
     # Keep the original article as the only presentation. The small workflow
     # module supplies durable project scope; it must never render a competing
     # website. A missing spec simply means this older project has no burndown.
+    # The brief leads the burndown: it is what the work is measured against,
+    # and it is the one section the user can act on without waiting for a
+    # render. `WorkflowError` subclasses ValueError, so the existing catch
+    # already covers a corrupt spec on both.
+    try:
+        import brief_workflow
+        brief_markup = brief_workflow.render_brief(project_root, txt)
+    except (ImportError, OSError, ValueError):
+        brief_markup = ""
+    if brief_markup:
+        out.append(brief_markup)
     if workflow:
         try:
             burndown_markup = workflow.render_burndown(project_root)
