@@ -176,6 +176,42 @@ def answer_brief(project_root: Path, event: Mapping[str, Any]) -> bool:
     return True
 
 
+BRIEF_INBOX_FILE = "brief-inbox.jsonl"
+
+
+def adopt_brief_inbox(project_root: Path, inbox: Path) -> tuple[int, int]:
+    """Fold answers the browser wrote into the validated brief.
+
+    The companion server appends what the user typed and validates almost
+    nothing, exactly as it does for scoring: the browser writes to a queue
+    and Python owns the schema. Keeping one validator means a malformed
+    answer is refused in one place rather than in two languages that drift.
+
+    Returns (adopted, skipped). Idempotent: re-adopting the same inbox
+    changes nothing, because each line carries its own eventId.
+    """
+    inbox = Path(inbox)
+    if not inbox.exists():
+        return (0, 0)
+    adopted = skipped = 0
+    for line in inbox.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            skipped += 1
+            continue
+        try:
+            if answer_brief(project_root, event):
+                adopted += 1
+            else:
+                skipped += 1
+        except WorkflowError:
+            skipped += 1
+    return (adopted, skipped)
+
+
 def brief_progress(spec: Mapping[str, Any]) -> tuple[int, int]:
     """How many prompts carry an answer, out of how many there are."""
     answers = spec["answers"]
@@ -226,7 +262,72 @@ BRIEF_STYLE = """<style>/* dh-brief */
  letter-spacing:-.01em;text-wrap:balance}
 .dh-brief-more{font-size:11px;
  color:color-mix(in srgb, var(--dh-ink,#111) 52%, transparent)}
+/* The only free-text input in the whole companion. It inherits the page's
+   own type so an answer looks like the manifesto it becomes, not like a
+   form control bolted on. */
+.dh-brief-write{inline-size:100%;margin-block-start:var(--s2);padding:10px 12px;
+ font:inherit;font-size:15px;line-height:1.55;color:inherit;
+ background:var(--dh-bg,#fff);border:1px solid var(--dh-rule);border-radius:8px;
+ resize:vertical;min-block-size:4.5em}
+.dh-brief-write:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:1px}
+.dh-brief-actions{display:flex;align-items:center;gap:var(--s2);
+ margin-block-start:var(--s2);flex-wrap:wrap}
+.dh-brief-save{cursor:pointer;font:inherit;font-size:13px;font-weight:700;line-height:1;
+ padding:9px 14px;border-radius:8px;border:1px solid var(--dh-ink,#111);
+ background:var(--dh-ink,#111);color:var(--dh-bg,#fff)}
+.dh-brief-save:hover{opacity:.85}
+.dh-brief-save[disabled]{opacity:.45;cursor:default}
+.dh-brief-saved{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+ color:#1c8b4b}
 </style>"""
+
+
+BRIEF_SCRIPT = """<script>/* dh-brief */
+(function(){
+ if(window.__dhBrief)return; window.__dhBrief=1;
+ /* A republish reloads the whole document (the watcher broadcasts `reload`
+    and helper.js obeys it unconditionally), so anything half-typed here is
+    destroyed by a round finishing somewhere else. The draft is mirrored into
+    sessionStorage on every keystroke and restored on load, which is what
+    lets the user write the brief WHILE the agent is drawing. */
+ var KEY='dh-brief-draft';
+ function box(){return document.querySelector('[data-brief-answer]')}
+ function restore(){
+  var t=box(); if(!t)return;
+  try{
+   var saved=JSON.parse(sessionStorage.getItem(KEY)||'null');
+   if(saved&&saved.id===t.getAttribute('data-brief-answer')&&!t.value)t.value=saved.text;
+  }catch(e){}
+ }
+ document.addEventListener('input',function(e){
+  var t=e.target.closest?e.target.closest('[data-brief-answer]'):null; if(!t)return;
+  try{sessionStorage.setItem(KEY,JSON.stringify(
+    {id:t.getAttribute('data-brief-answer'),text:t.value}))}catch(err){}
+ });
+ document.addEventListener('click',function(e){
+  var btn=e.target.closest?e.target.closest('[data-brief-save]'):null; if(!btn)return;
+  var t=box(); if(!t)return;
+  var text=t.value.trim(); if(!text)return;
+  btn.disabled=true;
+  fetch('/brief',{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({id:t.getAttribute('data-brief-answer'),answer:text,
+    eventId:'b-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),
+    at:new Date().toISOString()})})
+   .then(function(r){
+    if(!r.ok)throw new Error('save failed');
+    try{sessionStorage.removeItem(KEY)}catch(err){}
+    var note=document.createElement('span'); note.className='dh-brief-saved';
+    note.setAttribute('role','status');
+    note.textContent=btn.getAttribute('data-saved-label')||'Saved';
+    btn.insertAdjacentElement('afterend',note);
+    t.readOnly=true;
+   })
+   .catch(function(){btn.disabled=false});
+ });
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',restore);
+ else restore();
+})();
+</script>"""
 
 
 def render_brief(project_root: Path, txt: Mapping[str, str] | None = None) -> str:
@@ -272,11 +373,20 @@ def render_brief(project_root: Path, txt: Mapping[str, str] | None = None) -> st
             '<div class="dh-brief-item dh-brief-asking">'
             f'<span class="dh-brief-prompt">{html_escape(words.get("brief-now", "Now"))}</span>'
             f'<p class="dh-brief-question">{html_escape(pending["prompt"])}</p>'
-            f'{more}</div>')
+            f'<textarea class="dh-brief-write" data-brief-answer="{html_escape(pending["id"])}"'
+            f' rows="3" maxlength="{MAX_ANSWER_CHARS}"'
+            f' aria-label="{html_escape(pending["prompt"])}"'
+            f' placeholder="{html_escape(words.get("brief-placeholder", "Answer in your own words"))}"'
+            "></textarea>"
+            '<div class="dh-brief-actions">'
+            f'<button type="button" class="dh-brief-save" data-brief-save'
+            f' data-saved-label="{html_escape(words.get("brief-saved", "Saved"))}">'
+            f'{html_escape(words.get("brief-save", "Save answer"))}</button>'
+            f'{more}</div></div>')
     # Open while it is still incomplete: an unfinished brief is the one thing
     # on the page the user can act on without waiting for a render.
     state = "" if pending is None else " open"
-    return (BRIEF_STYLE
+    return (BRIEF_STYLE + BRIEF_SCRIPT
             + f'<details class="dh-brief"{state}>'
             + f'<summary><span class="dh-brief-title">{html_escape(heading)}</span>'
             + f'<span class="dh-brief-count">{html_escape(counted)}</span></summary>'
@@ -296,6 +406,10 @@ def main() -> int:
     answer.add_argument("--at", required=True, help="ISO 8601 timestamp")
     answer.add_argument("--id", required=True, help="which prompt this answers")
     answer.add_argument("--answer", required=True)
+    adopt = sub.add_parser("adopt", help="fold browser-written answers into the brief")
+    adopt.add_argument("--project-root", required=True, type=Path)
+    adopt.add_argument("--inbox", required=True, type=Path,
+                       help="brief-inbox.jsonl written by the companion")
     show = sub.add_parser("show", help="print the brief as JSON")
     show.add_argument("--project-root", required=True, type=Path)
     args = parser.parse_args()
@@ -310,6 +424,10 @@ def main() -> int:
                 "eventId": args.event_id, "at": args.at,
                 "id": args.id, "answer": args.answer})
             print(json.dumps({"changed": changed}))
+        elif args.command == "adopt":
+            adopted, skipped = adopt_brief_inbox(args.project_root, args.inbox)
+            print(f"Adopted {adopted} brief answer(s); skipped {skipped} "
+                  "already-recorded or unusable line(s).")
         elif args.command == "show":
             spec = load_brief(args.project_root)
             print(json.dumps(spec, indent=2, ensure_ascii=False, sort_keys=True)

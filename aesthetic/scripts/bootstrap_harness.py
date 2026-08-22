@@ -222,7 +222,7 @@ STRINGS = {
         "bar-return": "Return",
         "agent-working": "Agent running", "agent-idle": "Agent idle",
         "bar-idle": "Waiting for your chat directions",
-        "prep-legend": "New designs are on the way. Rank anything still pending.",
+        "prep-legend": "New designs are on the way \u2014 keep scoring, your ranks save while I draw.",
         "bar-active-label": "Designing",
         "bar-left": "left to score", "done-cheer": "Marked as done",
         "agent-settings": "Agent settings", "update-app-theme": "Update app theme",
@@ -271,6 +271,8 @@ STRINGS = {
         "brief-title": "Project brief", "brief-count": "{answered} of {total} answered",
         "brief-unanswered": "not answered yet",
         "brief-now": "Now", "brief-more": "{count} more after this",
+        "brief-save": "Save answer", "brief-saved": "Saved",
+        "brief-placeholder": "Answer in your own words",
         "zero-title": "zero stars: terrible, but it still stands",
         "zero-label": "zero stars for {element}: terrible execution",
     },
@@ -293,7 +295,7 @@ STRINGS = {
         "bar-return": "Volver",
         "agent-working": "Agente trabajando", "agent-idle": "Agente en pausa",
         "bar-idle": "Esperando tus indicaciones en el chat",
-        "prep-legend": "Están llegando diseños nuevos. Puntúa lo que sigue pendiente.",
+        "prep-legend": "Están llegando diseños nuevos \u2014 sigue puntuando, tus puntos se guardan mientras dibujo.",
         "bar-active-label": "Diseñando",
         "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
         "agent-settings": "Configuración del agente", "update-app-theme": "Actualizar el tema de la app",
@@ -344,6 +346,8 @@ STRINGS = {
         "brief-count": "{answered} de {total} respondidas",
         "brief-unanswered": "sin responder",
         "brief-now": "Ahora", "brief-more": "{count} más después de esta",
+        "brief-save": "Guardar respuesta", "brief-saved": "Guardado",
+        "brief-placeholder": "Responde con tus propias palabras",
         "zero-title": "cero estrellas: pésimo, pero sigue en pie",
         "zero-label": "cero estrellas para {element}: pésima ejecución",
     },
@@ -3049,7 +3053,13 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-fb .dh-saved[data-cheer]{background:var(--dh-accent,#d9482a);
  border-color:color-mix(in srgb, var(--dh-accent,#d9482a) 72%, #000)}
 .dh-zone[data-zone="round"]{position:relative}
-.dh-zone[data-zone="round"][data-preparing] > :not(.dh-prep){opacity:.72;transition:none}
+/* NOT dimmed. The rows stayed fully clickable the whole time this rule was
+   here -- there is no pointer-events, disabled or inert anywhere in the
+   preparing state, and clicks during inference are sent, stored and echoed
+   normally. All the 72% opacity ever did was tell the user that the one
+   thing they could usefully do was unavailable. The banner says what is
+   happening; the work stays lit. */
+.dh-zone[data-zone="round"][data-preparing] > :not(.dh-prep){transition:none}
 .dh-prep{display:none;margin:0;max-inline-size:none;font-size:15px;
  line-height:1.4;font-weight:700;letter-spacing:.01em;text-align:center;
  pointer-events:none}

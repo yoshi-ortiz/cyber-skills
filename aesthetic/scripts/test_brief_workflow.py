@@ -105,6 +105,57 @@ class AnsweringIsIdempotent(unittest.TestCase):
             self.assertIn("brief start", str(caught.exception))
 
 
+class TheBrowsersAnswersAreAdopted(unittest.TestCase):
+    """The companion queues what the user typed and validates almost nothing,
+    exactly as it does for scoring. Python owns the schema, so adopting is
+    where a malformed answer is refused."""
+
+    def inbox(self, root: Path, *lines: str) -> Path:
+        path = root / "brief-inbox.jsonl"
+        path.write_text("".join(line + "\n" for line in lines), encoding="utf-8")
+        return path
+
+    def test_a_queued_answer_reaches_the_brief(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            started(root)
+            box = self.inbox(root, json.dumps(
+                {"eventId": "b1", "at": AT, "id": "ships", "answer": "A print programme."}))
+            self.assertEqual(bw.adopt_brief_inbox(root, box), (1, 0))
+            spec = bw.load_brief(root)
+            self.assertEqual(next(i for i in spec["answers"]
+                                  if i["id"] == "ships")["answer"], "A print programme.")
+
+    def test_adopting_twice_changes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            started(root)
+            box = self.inbox(root, json.dumps(
+                {"eventId": "b1", "at": AT, "id": "ships", "answer": "Once."}))
+            self.assertEqual(bw.adopt_brief_inbox(root, box), (1, 0))
+            before = (root / STORE / bw.BRIEF_EVENTS_FILE).read_bytes()
+            self.assertEqual(bw.adopt_brief_inbox(root, box), (0, 1))
+            self.assertEqual((root / STORE / bw.BRIEF_EVENTS_FILE).read_bytes(), before)
+
+    def test_a_bad_line_is_skipped_without_losing_the_good_ones(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            started(root)
+            box = self.inbox(
+                root,
+                "{ not json",
+                json.dumps({"eventId": "b1", "at": AT, "id": "ships", "answer": "Good."}),
+                json.dumps({"eventId": "b2", "at": AT, "id": "nope", "answer": "Unknown id."}))
+            self.assertEqual(bw.adopt_brief_inbox(root, box), (1, 2))
+            self.assertEqual(bw.brief_progress(bw.load_brief(root))[0], 1)
+
+    def test_an_absent_inbox_is_not_an_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            started(root)
+            self.assertEqual(bw.adopt_brief_inbox(root, root / "nothing.jsonl"), (0, 0))
+
+
 class TheBriefRefusesWhatWouldCorruptIt(unittest.TestCase):
     def test_a_non_object_brief_is_refused(self):
         with self.assertRaises(WorkflowError):

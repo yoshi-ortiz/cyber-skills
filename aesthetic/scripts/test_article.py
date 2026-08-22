@@ -1330,7 +1330,13 @@ class ChromeFixesV34(unittest.TestCase):
         prep = re.search(
             r"\[data-preparing\] > :not\(\.dh-prep\)\{([^}]*)\}", style)
         self.assertIsNotNone(prep)
-        self.assertIn("opacity", prep.group(1))
+        # The rows must NOT be dimmed. They stayed fully clickable the whole
+        # time the old `opacity:.72` was here -- nothing sets pointer-events,
+        # disabled or inert while preparing, and clicks are sent, stored and
+        # echoed normally. Dimming only told the user that the one thing they
+        # could usefully do during a long inference was unavailable.
+        self.assertNotIn("opacity", prep.group(1),
+                         "a live control must not be styled as a disabled one")
         self.assertIn("transition:none", prep.group(1).replace(" ", ""))
         overlay = re.search(
             r"\[data-preparing\] \.dh-prep\{([^}]*)\}", style).group(1)
