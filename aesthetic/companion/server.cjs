@@ -575,11 +575,19 @@ let lastAgent = { type: 'dh-agent', text: '', state: 'idle', updatedAt: Date.now
 // owning process dying (see ownerAlive() below) otherwise leaves lastAgent
 // stuck "active" for up to IDLE_TIMEOUT_MS (4 hours), which reads as "still
 // working" long after the agent has actually stopped. AGENT_STALE_MS is a
-// much shorter, independent window: past it, an "active" status is treated
-// as idle until a fresh heartbeat arrives. Override with BRAINSTORM_AGENT_STALE_MS.
+// shorter, independent window: past it, an "active" status is treated as
+// idle until a fresh heartbeat arrives. Override with BRAINSTORM_AGENT_STALE_MS.
+//
+// Fifteen minutes, NOT three. Status is push-based -- the agent calls
+// `status` between steps -- so silence is ambiguous: it means either "the
+// run stopped" or "one step is taking a long time". At three minutes a
+// single slow inference step flipped the bar to idle while the agent was
+// very much still working, which is worse than the bug it was added for:
+// it tells the user their turn has come when it has not. This window must
+// sit above the longest plausible single step and below "abandoned".
 const AGENT_STALE_MS = (() => {
   const ms = Number(process.env.BRAINSTORM_AGENT_STALE_MS);
-  return Number.isFinite(ms) && ms > 0 ? ms : 3 * 60 * 1000;
+  return Number.isFinite(ms) && ms > 0 ? ms : 15 * 60 * 1000;
 })();
 
 // Pure so it's unit-testable without a live server. Returns the SAME object

@@ -760,8 +760,8 @@ class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
                       "slideshow scores must inherit the dark overlay palette")
         self.assertIn("html:has(dialog.dh-lb[open]) .dh-bar", style,
                       "the floating aid must not sit on top of the slideshow")
-        self.assertIn("block-size:min(920px,calc(100dvh - 32px))", style,
-                      "the shell needs a definite height so the drawing cell can size")
+        self.assertRegex(style, r"block-size:min\(\d+px,calc\(100dvh - 32px\)\)",
+                         "the shell needs a definite height so the drawing cell can size")
         self.assertIn("justify-content:center", style)
 
 
@@ -1267,6 +1267,21 @@ class ChromeFixesV34(unittest.TestCase):
         self.assertIn("inline-size:min(360px,calc(100dvw-32px))", bar)
         self.assertNotIn("inset-inline:0", bar)
 
+    def test_the_lightbox_declares_the_spacing_scale_it_uses(self):
+        """The dialog is appended to `document.body`, NOT inside `.dh-art`,
+        so it inherits none of the `--s1..--s6` declared there. Without a
+        redeclaration every `var(--sN)` in the lightbox resolves to nothing:
+        the shell computes `padding:0` and every zone gap collapses, which is
+        how the slideshow spent several rounds looking cluttered while the
+        spacing edits meant to fix it were being silently discarded."""
+        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
+                          self.markup(), re.S).group(1)
+        dialog = re.search(r"dialog\.dh-lb\{([^}]*)\}", style).group(1)
+        for token in ("--s1:", "--s2:", "--s3:", "--s4:"):
+            self.assertIn(token, dialog.replace(" ", ""),
+                          f"the lightbox uses {token[:-1]} but never declares it, so it "
+                          "resolves to nothing and the spacing silently disappears")
+
     def test_lightbox_centers_score_and_strip(self):
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
                           self.markup(), re.S).group(1)
@@ -1274,8 +1289,13 @@ class ChromeFixesV34(unittest.TestCase):
         self.assertIn("justify-content:center", strip.replace(" ", ""))
         score = re.search(r"\.dh-lb-score-wrap\{([^}]*)\}", style).group(1)
         self.assertIn("justify-content:center", score.replace(" ", ""))
-        copy = re.search(r"\.dh-lb-copy\{([^}]*)\}", style).group(1)
-        self.assertIn("text-align:center", copy.replace(" ", ""))
+        # The COPY is deliberately not centred. Centring three stacked lines of
+        # different lengths gives each a different left edge, which read as
+        # debris under the drawing instead of a paragraph about it. It gets a
+        # measure and a start edge; only the controls stay centred.
+        copy = re.search(r"\.dh-lb-copy\{([^}]*)\}", style).group(1).replace(" ", "")
+        self.assertIn("text-align:start", copy)
+        self.assertRegex(copy, r"inline-size:min\(\d+ch,100%\)")
 
     def test_live_script_does_not_open_a_second_socket(self):
         script = re.search(r"<script>/\* dh-live \*/(.*?)</script>",

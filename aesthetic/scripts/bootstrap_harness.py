@@ -1377,6 +1377,13 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 /* Its own hue -- gold, not the approve-green or dislike-red -- so a
    bookmark never reads as a verdict on the work, only as "keep this handy". */
 .dh-fb [data-bookmark].on{background:#e0a20a;border-color:#a97600;color:#fff}
+/* The ribbon itself: a box with a notch cut out of its foot. Deterministic
+   CSS geometry, so it inherits currentColor and needs no asset. */
+.dh-ribbon{display:block;inline-size:11px;block-size:15px;background:currentColor;
+ clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%);opacity:.5;
+ transition:opacity .12s}
+.dh-fb [data-bookmark]:hover .dh-ribbon{opacity:.8}
+.dh-fb [data-bookmark].on .dh-ribbon{opacity:1}
 /* Approve reads as done: green fill, white tick, unmistakable. */
 .dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
 /* Completed is the one final act on the page: the tick becomes a finish flag,
@@ -2060,6 +2067,18 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
                          f'<span>{built}</span></span>')
         lines.append("</span>")
         lines.append('<span class="dh-signals">')
+        # Leads the strip. A bookmark is "keep this where I can find it", which
+        # is a decision ABOUT the card rather than a judgement of it, so it sits
+        # before the scale instead of trailing the verdict where it read as a
+        # fifth opinion. The ribbon is clip-path on a box, not an emoji and not
+        # hand-authored SVG -- `check_no_hand_authored_svg` refuses the latter,
+        # and asset-sourcing.md allows a deterministic CSS primitive.
+        bookmarked = bool(entry.get("bookmarked"))
+        on = ' class="on"' if bookmarked else ""
+        lines.append(f'<span data-bookmark role="button" tabindex="0" '
+                     f'aria-pressed="{"true" if bookmarked else "false"}" '
+                     f'aria-label="{txt["bookmark"]}: {element}" title="{txt["bookmark"]}"{on}>'
+                     f'<i class="dh-ribbon" aria-hidden="true"></i></span>')
         stars_markup = "".join(
             f'<span data-rank="{n}" role="button" tabindex="0" '
             f'aria-label="{n} {txt["stars-of"]} {STAR_RANGE[1]}: {txt["execution-quality"]}"'
@@ -2098,16 +2117,6 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
                      f'aria-pressed="{"true" if done else "false"}" '
                      f'aria-label="{txt["completed"]}: {element}" title="{txt["completed"]}"{on}>'
                      f'<span>&#10003;</span></span>')
-        # A 4th independent signal, not a fifth state folded into verdict or
-        # sentiment -- docs/adr/0001 keeps rank/sentiment/lifecycle from
-        # collapsing into one score, and a bookmark is orthogonal to all
-        # three (a disliked, low-rank card can still be worth coming back to).
-        bookmarked = bool(entry.get("bookmarked"))
-        on = ' class="on"' if bookmarked else ""
-        lines.append(f'<span data-bookmark role="button" tabindex="0" '
-                     f'aria-pressed="{"true" if bookmarked else "false"}" '
-                     f'aria-label="{txt["bookmark"]}: {element}" title="{txt["bookmark"]}"{on}>'
-                     f'&#128278;</span>')
         lines.append("</span>")
         lines.append("</div>")
     lines.append("</div>")
@@ -2746,21 +2755,39 @@ html:has(.dh-art){scroll-behavior:smooth}
    that, and arrows walk the whole set without going back to the scroll. */
 dialog.dh-lb:not([open]){display:none}
 /* Transparent dialog + opaque shell: clicks on the dimmed margin close the modal. */
+/* The scale is REDECLARED here, and that is load-bearing. `--s1..--s6` are
+   defined on `.dh-art`, but the dialog is appended to `document.body`, so it
+   is not a descendant of `.dh-art` and inherits none of them. Every
+   `var(--sN)` in the whole lightbox stylesheet silently resolved to nothing:
+   the shell computed `padding:0`, every zone gap collapsed, and the drawing,
+   its argument, the scoring strip and the filmstrip were left touching each
+   other with no space anywhere. That is the "cluttered slideshow" in one
+   line, and it survived several rounds of spacing edits because the edits
+   themselves were the thing being discarded. */
 dialog.dh-lb{position:fixed;inset:0;z-index:200;margin:0;padding:clamp(12px,3vw,28px);
+ --s1:8px;--s2:14px;--s3:24px;--s4:40px;--s5:64px;--s6:104px;
  border:none;max-inline-size:none;max-block-size:none;inline-size:100%;block-size:100%;
  background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);color:var(--dh-bg,#fff);overflow:hidden}
 dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
 html:has(dialog.dh-lb[open]) .dh-bar,
 html:has(dialog.dh-lb[open]) .header{display:none}
-.dh-lb-shell{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:var(--s2);
- inline-size:min(960px,100%);
- block-size:min(920px,calc(100dvh - 32px));max-block-size:calc(100dvh - 32px);
- margin:0 auto;padding:clamp(var(--s2),2.4vw,var(--s4));
+/* Gap 0, and every zone declares its OWN step. One uniform `gap` gave the
+   title, the drawing, the argument, the scoring strip and the filmstrip the
+   same 14px between them, so five unrelated things read as one undifferentiated
+   stack and the drawing never got to be the subject. The steps below are the
+   article's own scale, used as a scale: hairline inside a zone, s3 between
+   zones, and a rule wherever the change of purpose is total. */
+.dh-lb-shell{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:0;
+ inline-size:min(1040px,100%);
+ block-size:min(960px,calc(100dvh - 32px));max-block-size:calc(100dvh - 32px);
+ margin:0 auto;padding:clamp(var(--s3),2.6vw,var(--s4));
  background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
  border-radius:14px;border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
  box-shadow:0 28px 80px rgba(0,0,0,.55);
  --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 32%, transparent)}
-.dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px;flex-wrap:nowrap}
+.dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px;flex-wrap:nowrap;
+ padding-block-end:var(--s2);margin-block-end:var(--s3);
+ border-block-end:1px solid var(--dh-rule)}
 .dh-lb-count{font-size:11px;font-weight:700;letter-spacing:.16em;font-variant-numeric:tabular-nums;
  opacity:.75;flex:none}
 .dh-lb-name{display:flex;flex-direction:column;gap:2px;min-inline-size:0;flex:1 1 auto}
@@ -2779,17 +2806,24 @@ html:has(dialog.dh-lb[open]) .header{display:none}
 .dh-lb-x:focus-visible{outline:2px solid var(--dh-rule);outline-offset:2px}
 /* Body: image on top, copy and scoring in a footer row -- never a side column
    that floats over the drawing in a narrow companion pane. */
-.dh-lb-body{display:flex;flex-direction:column;gap:var(--s2);min-block-size:0;overflow:hidden;
+.dh-lb-body{display:flex;flex-direction:column;gap:0;min-block-size:0;overflow:hidden;
  align-items:center;width:100%}
+/* The drawing is the subject, so it takes the whole free row and the arrows
+   get out of its way: a wider gutter than the old s2, so a 40px control never
+   sits against the sheet edge it is meant to be beside. */
 .dh-lb-frame{position:relative;flex:1 1 auto;min-block-size:0;width:100%;
  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
- gap:var(--s2);padding-block:var(--s1)}
-.dh-lb-copy{font-size:13px;line-height:1.55;max-block-size:12vh;overflow-y:auto;
- padding-inline:var(--s2);align-self:center;inline-size:min(62ch,100%);
- text-align:center;margin-inline:auto}
+ gap:var(--s3)}
+/* Left-aligned inside a real measure, not centred fragments. Centring three
+   stacked lines of different lengths gives every line a different left edge,
+   which is what made the argument read as debris under the drawing rather
+   than as a paragraph about it. */
+.dh-lb-copy{font-size:13.5px;line-height:1.6;max-block-size:16vh;overflow-y:auto;
+ inline-size:min(68ch,100%);margin:var(--s3) auto 0;text-align:start}
 .dh-lb-foot{display:flex;flex-direction:column;align-items:center;justify-content:center;
  gap:var(--s2);width:100%;
- padding-block-start:var(--s2);border-block-start:1px solid var(--dh-rule);
+ margin-block-start:var(--s3);padding-block-start:var(--s3);
+ border-block-start:1px solid var(--dh-rule);
  flex-wrap:nowrap;overflow-x:auto}
 .dh-lb-score-wrap{flex:none;inline-size:100%;max-inline-size:100%;
  display:flex;justify-content:center;align-items:center}
@@ -2810,12 +2844,28 @@ html:has(dialog.dh-lb[open]) .header{display:none}
  block-size:min(100cqh, 100cqw * 11 / 8.5);
  max-inline-size:100%;max-block-size:100%;position:relative;
  background:#fff;border-radius:4px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+/* The sheet ratio belongs to a SCALED HTML COMP, which is drawn into a real
+   510x660 box and needs that box to exist. A PNG or SVG preview carries its
+   own intrinsic aspect, and forcing the sheet on it letterboxed the drawing
+   inside a tall cream slab -- the "huge empty area under the artwork" that
+   made every such slide look broken. Let the media size the box instead. */
+.dh-lb-art .dh-shot:not(:has(.dh-shot-inner)){aspect-ratio:auto;
+ block-size:auto;inline-size:auto;display:grid;place-items:center}
+.dh-lb-art .dh-shot:not(:has(.dh-shot-inner)) > img,
+.dh-lb-art .dh-shot:not(:has(.dh-shot-inner)) > svg{
+ display:block;max-inline-size:100%;max-block-size:100cqh;
+ inline-size:auto;block-size:auto;object-fit:contain}
 .dh-lb-art .dh-shot-inner{position:absolute;inset-block-start:0;inset-inline-start:0;
  transform-origin:0 0;pointer-events:none}
+/* Quieter than the drawing it walks. At full-strength border and fill these
+   two circles read as primary controls flanking the subject. */
 .dh-lb-nav{flex:none;inline-size:40px;block-size:40px;border-radius:999px;cursor:pointer;
- border:1px solid var(--dh-rule);background:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
- color:inherit;font:inherit;font-size:18px;line-height:1}
-.dh-lb-nav:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent)}
+ border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
+ background:transparent;opacity:.7;
+ color:inherit;font:inherit;font-size:18px;line-height:1;
+ transition:opacity .12s,background .12s,border-color .12s}
+.dh-lb-nav:hover{opacity:1;border-color:var(--dh-rule);
+ background:color-mix(in srgb, var(--dh-bg,#fff) 14%, transparent)}
 .dh-lb-nav[disabled]{opacity:.25;cursor:default}
 .dh-lb-score-wrap .dh-lb-score{margin:0;inline-size:auto;max-inline-size:100%}
 .dh-lb-score-wrap .dh-lb-score .dh-signals{margin:0;flex-wrap:nowrap;justify-content:center}
@@ -2844,10 +2894,16 @@ dialog.dh-lb .dh-lb-score .dh-stars::after{
  color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
 dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
  color:color-mix(in srgb, var(--dh-bg,#fff) 52%, transparent)}
-.dh-lb-copy .dh-lb-why{margin:0;opacity:.92}
-.dh-lb-copy .dh-lb-sub{margin:var(--s1) 0 0;font-size:11.5px;opacity:.68}
-.dh-lb-copy .dh-lb-sub b{font-weight:700;letter-spacing:.1em;text-transform:uppercase;
- font-size:9.5px;display:block;margin-block-end:2px;opacity:.8}
+/* The argument leads and the provenance follows it, as a labelled pair on one
+   line rather than a label stacked over its own value. Stacked, each of the
+   two provenance lines cost three rows and the block outgrew the drawing's
+   own caption. */
+.dh-lb-copy .dh-lb-why{margin:0;opacity:.95;font-size:14px;line-height:1.55}
+.dh-lb-copy .dh-lb-sub{margin:var(--s2) 0 0;font-size:12px;opacity:.62;
+ display:grid;grid-template-columns:max-content minmax(0,1fr);
+ gap:var(--s1) var(--s2);align-items:baseline}
+.dh-lb-copy .dh-lb-sub b{font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+ font-size:9.5px;opacity:.85;white-space:nowrap}
 .dh-lb-score{padding:0;border:0}
 /* The strip is a live proxy: clicking here clicks the row's own control, so
    the ledger has exactly one write path and the lightbox never holds state. */
@@ -2869,13 +2925,20 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-lb-acts button.on{border-color:var(--dh-accent,#d9482a);
  background:color-mix(in srgb, var(--dh-accent,#d9482a) 30%, transparent)}
 .dh-lb-acts button:hover{border-color:currentColor}
-/* Filmstrip: where you are in the set, and one click to anywhere else. */
-.dh-lb-strip{display:flex;gap:8px;overflow-x:auto;padding-block:8px;scrollbar-width:thin;
+/* Filmstrip: where you are in the set, and one click to anywhere else.
+   It is NAVIGATION, so it reads lighter than everything above it -- smaller
+   thumbs, a real gap between them, and its own rule. Eight 72px sheets at an
+   8px gap under a scoring strip at the same 14px offset made a dense band of
+   near-identical rectangles that competed with the drawing it was serving. */
+.dh-lb-strip{display:flex;gap:var(--s2);overflow-x:auto;scrollbar-width:thin;
  justify-content:center;align-items:center;width:100%;
- --dh-shot-w:72px;min-block-size:calc(var(--dh-shot-w) * 11 / 8.5 + 10px)}
-.dh-lb-strip .dh-shot{cursor:pointer;opacity:.5;outline:2px solid transparent;
- border-radius:2px;background:#fff;transition:opacity .12s}
-.dh-lb-strip .dh-shot:hover{opacity:.85}
+ margin-block-start:var(--s3);padding-block-start:var(--s3);
+ border-block-start:1px solid color-mix(in srgb, var(--dh-bg,#fff) 14%, transparent);
+ --dh-shot-w:58px;min-block-size:calc(var(--dh-shot-w) * 11 / 8.5 + 10px)}
+.dh-lb-strip .dh-shot{cursor:pointer;opacity:.42;outline:2px solid transparent;
+ outline-offset:2px;border-radius:2px;background:#fff;
+ transition:opacity .12s,outline-color .12s}
+.dh-lb-strip .dh-shot:hover{opacity:.8}
 .dh-lb-strip .dh-shot[aria-current="true"]{opacity:1;outline-color:var(--dh-accent,#d9482a)}
 /* A thumbnail that opens something must say so before it is clicked. */
 .dh-art .dh-shot[data-el]{cursor:zoom-in}
@@ -3609,14 +3672,34 @@ def check_round_earns_its_place(decisions: dict[str, object], cohort: set[str]) 
     # A cohort member is "new" when the ledger has never seen it. Its incumbent
     # is the standing element it redraws, read off its own dotted id.
     incumbents = {c: incumbent_of(c, known - {c}) for c in cohort}
-    overrun = sorted({inc for inc in incumbents.values() if inc
-                      and sum(1 for v in incumbents.values() if v == inc) > MAX_VARIANTS_PER_IDEA})
+    # Counted against the LEDGER, not just against this cohort. Counting the
+    # cohort alone let an idea accumulate variants one round at a time and
+    # never trip the cap: two this round, two the next, and nothing ever saw
+    # four at once. A real ledger reached seven live drawings under one
+    # `family.tab` that way, which is the "too many for the same element"
+    # scope failure -- the round was small every time, the family was not.
+    live_ids = {e["element"] for e in live}
+    standing = {}
+    for inc in {i for i in incumbents.values() if i}:
+        prefix = inc + "."
+        standing[inc] = len([e for e in live_ids
+                             if e.startswith(prefix) and e not in cohort])
+    overrun = sorted(
+        inc for inc in standing
+        if standing[inc] + sum(1 for v in incumbents.values() if v == inc)
+        > MAX_VARIANTS_PER_IDEA)
     if overrun:
+        detail = ", ".join(
+            f"{inc} ({standing[inc]} already standing "
+            f"+ {sum(1 for v in incumbents.values() if v == inc)} proposed here)"
+            for inc in overrun)
         raise HarnessError(
-            "this round draws " + ", ".join(overrun) + f" more than {MAX_VARIANTS_PER_IDEA} times "
-            "over. That many variants of one idea stops being a choice and becomes wallpaper -- the "
-            "user cannot usefully compare a wall of near-identical guesses. Keep the strongest "
-            f"{MAX_VARIANTS_PER_IDEA} and drop the rest.")
+            "this round would leave more than " + str(MAX_VARIANTS_PER_IDEA)
+            + " live drawings of one idea: " + detail
+            + ". That stops being a choice and becomes wallpaper -- the user cannot "
+            "usefully compare a wall of near-identical guesses. Supersede the ones this "
+            "round replaces (`decide --supersedes`) instead of stacking another variant "
+            "beside them, or ask about a different element.")
 
     if not polish:
         return

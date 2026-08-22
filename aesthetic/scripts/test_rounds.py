@@ -73,6 +73,36 @@ class RoundsThatDoNotEarnTheirPlace(unittest.TestCase):
         bh.check_round_earns_its_place(
             decisions, {"art.trama.limpia", "art.trama.real"})
 
+    def test_variants_accumulated_over_earlier_rounds_still_count(self):
+        """The cap counts the LEDGER, not just this cohort. Counting the
+        cohort alone let an idea grow one round at a time and never trip it:
+        two variants this round, two the next, and nothing ever saw four at
+        once. A real ledger reached seven live drawings under one family
+        that way. A single new variant on top of three standing ones is the
+        fourth, and must be refused."""
+        decisions = live(("art.trama", 2, "like", "proposed"),
+                         ("art.trama.a", 0, None, "proposed"),
+                         ("art.trama.b", 0, None, "proposed"),
+                         ("art.trama.c", 0, None, "proposed"),
+                         ("art.trama.d", 0, None, "proposed"))
+        with self.assertRaises(bh.HarnessError) as caught:
+            bh.check_round_earns_its_place(decisions, {"art.trama.d"})
+        message = str(caught.exception)
+        self.assertIn("art.trama", message)
+        self.assertIn("already standing", message,
+                      "the refusal must say the count came from the ledger, or the "
+                      "agent cannot tell why a one-element round was rejected")
+
+    def test_superseded_variants_stop_counting_against_the_cap(self):
+        # Retiring the ones a round replaces is the named way out of the
+        # refusal, so it has to actually work.
+        decisions = live(("art.trama", 2, "like", "proposed"),
+                         ("art.trama.a", 0, None, "superseded"),
+                         ("art.trama.b", 0, None, "superseded"),
+                         ("art.trama.c", 0, None, "proposed"),
+                         ("art.trama.d", 0, None, "proposed"))
+        bh.check_round_earns_its_place(decisions, {"art.trama.d"})
+
     def test_a_fourth_redraw_of_one_element_is_still_wallpaper(self):
         decisions = live(("art.trama", 2, "like", "proposed"),
                          ("art.trama.a", 0, None, "proposed"),
