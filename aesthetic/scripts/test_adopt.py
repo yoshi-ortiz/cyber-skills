@@ -183,6 +183,42 @@ class SentimentDoesNotCreateARank(unittest.TestCase):
             self.assertEqual(entry["sentiment"], "dislike")
 
 
+class BookmarkOnlyEventsAdopt(unittest.TestCase):
+    """A bookmark-only companion event carries no stars, sentiment, or
+    verdict -- before this feature it would have been silently dropped by
+    the same skip rule that used to swallow bare sentiment withdrawals."""
+
+    def test_a_bookmark_only_event_is_not_skipped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = harness(root)
+            bh.record_decision(root, "core.idea", "proposed", 0,
+                               "agent proposal", [], source="agent", sentiment=None)
+            adopted, skipped = bh.adopt_companion(root, ledger(root, {
+                "type": "bookmark", "element": "core.idea", "bookmark": True,
+                "timestamp": 1000,
+            }))
+            self.assertEqual((adopted, skipped), (1, 0))
+            entry = element(output, "core.idea")
+            self.assertTrue(entry["bookmarked"])
+            self.assertFalse(entry["scored"], "a bookmark click is not a rank")
+
+    def test_a_bookmark_event_does_not_disturb_a_standing_rank(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = harness(root)
+            bh.record_decision(root, "core.idea", "proposed", 4,
+                               "user liked it", [], source="user", sentiment="like")
+            bh.adopt_companion(root, ledger(root, {
+                "type": "bookmark", "element": "core.idea", "bookmark": True,
+                "timestamp": 2000,
+            }))
+            entry = element(output, "core.idea")
+            self.assertTrue(entry["bookmarked"])
+            self.assertEqual(entry["stars"], 4)
+            self.assertEqual(entry["sentiment"], "like")
+
+
 class AlreadyAdoptedHistory(unittest.TestCase):
     """`decide --source user` writes straight to decisions.json and never reaches
     the companion ledger, so it has no position in the chronological replay. If

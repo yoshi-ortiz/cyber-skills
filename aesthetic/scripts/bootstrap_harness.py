@@ -95,6 +95,10 @@ SENTIMENTS = {"like": "encouraged", "dislike": "discouraged"}
 # ledger held 18 of them, one element un-liked twelve times, while `stats` went
 # on counting every withdrawn like.
 KEEP_SENTIMENT = object()
+# Same "not passed here" sentinel, for a field with no natural falsy default:
+# `bookmarked=False` must still be distinguishable from "the caller has no
+# opinion, leave whatever is already recorded alone".
+KEEP_BOOKMARK = object()
 # A score never changes an element's state. Removal is always a deliberate act
 # (`decide --supersedes` or an explicit reject control), because reading a low
 # score as "delete this" already destroyed work the user wanted kept.
@@ -263,6 +267,7 @@ STRINGS = {
         "state-completed": "completed", "state-superseded": "replaced",
         "state-rejected": "set aside",
         "like": "like it", "dislike": "do not like it", "completed": "completed",
+        "bookmark": "bookmark this card",
         "zero-title": "zero stars: terrible, but it still stands",
         "zero-label": "zero stars for {element}: terrible execution",
     },
@@ -331,6 +336,7 @@ STRINGS = {
         "state-completed": "terminado", "state-superseded": "reemplazado",
         "state-rejected": "descartado",
         "like": "me gusta", "dislike": "no me gusta", "completed": "completado",
+        "bookmark": "guardar esta tarjeta",
         "zero-title": "cero estrellas: pésimo, pero sigue en pie",
         "zero-label": "cero estrellas para {element}: pésima ejecución",
     },
@@ -434,6 +440,26 @@ def check_asks(asks: str, cohort: set[str], language: str | None = None) -> None
         raise HarnessError(
             "this round has no question. Pass --asks \"<the one thing to judge>\", "
             "not the zone's purpose line. The last PNG and the user's last rank name that move.")
+
+
+MAX_COHORT_SIZE = 6
+
+
+def check_cohort_size(cohort: set[str], max_size: int = MAX_COHORT_SIZE) -> None:
+    """A round nobody can finish reading is not a round, it's a backlog.
+
+    `SKILL.md` and `loop.md` have said "3-6 element cohort" in prose since
+    this file's own history, and every round drifted past it anyway because
+    nothing enforced it: the round zone never folds ("the round is the ask
+    and must never be hidden"), so a large cohort renders every card open,
+    unfoldable, and slower to draw and shoot than the reader can use.
+    """
+    if len(cohort) <= max_size:
+        return
+    raise HarnessError(
+        f"this round's cohort has {len(cohort)} elements, over the {max_size}-element "
+        "limit. Split it into two rounds instead of asking the user to judge all of "
+        "them at once -- see SKILL.md's '3-6 element cohort' convention.")
 # companion_doctor sends a click on this synthetic element to prove the socket
 # reaches the ledger, then strips its rows back out. An `adopt` racing that
 # cleanup used to fold the probe in as a real element, and adopt never removes.
@@ -595,7 +621,8 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
                     implemented: str | None = None,
                     description: str | None = None,
                     title: str | None = None,
-                    scored: bool | None = None) -> dict[str, object]:
+                    scored: bool | None = None,
+                    bookmarked: bool | object = KEEP_BOOKMARK) -> dict[str, object]:
     output = project_root.resolve(strict=True) / "spec" / "design-harness"
     if verdict not in DECISION_STATES:
         raise HarnessError(f"verdict must be one of: {', '.join(DECISION_STATES)}")
@@ -648,6 +675,9 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             if sentiment is not KEEP_SENTIMENT:
                 e["sentiment"] = sentiment
             e.setdefault("sentiment", None)
+            if bookmarked is not KEEP_BOOKMARK:
+                e["bookmarked"] = bool(bookmarked)
+            e.setdefault("bookmarked", False)
             if preview is not None:
                 e["preview"] = preview
             e.setdefault("preview", None)
@@ -662,6 +692,7 @@ def record_decision(project_root: Path, element: str, verdict: str, stars: int,
             "source": source, "scored": rank_was_set,
             "sentiment": None if sentiment is KEEP_SENTIMENT else sentiment, "tokens": None,
             "implemented": implemented, "description": description, "title": title,
+            "bookmarked": False if bookmarked is KEEP_BOOKMARK else bool(bookmarked),
         })
     if any(e["state"] == "approved" for e in decisions["elements"]):
         decisions["state"] = "approved"
@@ -898,7 +929,8 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         # rehydrate script has always drawn this line (`if('sentiment' in ev)`)
         # -- adopt did not, so the browser cleared the chip and the ledger kept
         # the like forever.
-        if not has_sentiment and event.get("verdict") is None and not is_star(stars):
+        if not has_sentiment and "bookmark" not in event and event.get("verdict") is None \
+                and not is_star(stars):
             skipped += 1
             continue
         # Replay order is fixed by (timestamp, file position) so adopting the
@@ -934,13 +966,18 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
         rank = stars if establishes_rank and is_star(stars) else prior.get("stars", 0)
         rank_was_set = bool(establishes_rank or prior.get("scored"))
         withdrawn = "sentiment" in event and sentiment is None
+        bookmark_only = "bookmark" in event and not has_sentiment and event.get("verdict") is None \
+            and not is_star(stars)
         evidence = str(event.get("text") or "").strip() or (
-            f"companion {sentiment}: {rank} star" if sentiment else
-            (f"companion withdrew the thumb: {rank} star" if withdrawn
-             else f"companion rank: {rank} star"))
+            (f"companion {'bookmarked' if event.get('bookmark') else 'unbookmarked'} it"
+             if bookmark_only else
+             f"companion {sentiment}: {rank} star" if sentiment else
+             (f"companion withdrew the thumb: {rank} star" if withdrawn
+              else f"companion rank: {rank} star")))
         record_decision(project_root, element, verdict, rank, evidence[:400], [],
                         source="user", scored=rank_was_set,
-                        sentiment=sentiment if "sentiment" in event else KEEP_SENTIMENT)
+                        sentiment=sentiment if "sentiment" in event else KEEP_SENTIMENT,
+                        bookmarked=event["bookmark"] if "bookmark" in event else KEEP_BOOKMARK)
         existing[element] = dict(prior, element=element, state=verdict, stars=rank,
                                  source="user", scored=rank_was_set)
     for _, _, element in sorted(resets, key=lambda row: (row[0], row[1])):
@@ -1034,6 +1071,8 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
   }
   if('sentiment' in s) row.querySelectorAll('[data-sentiment]').forEach(function(b){
     b.classList.toggle('on', b.dataset.sentiment===s.sentiment);});
+  if('bookmark' in s) row.querySelectorAll('[data-bookmark]').forEach(function(b){
+    b.classList.toggle('on', !!s.bookmark);});
   if('verdict' in s){
    row.querySelectorAll('[data-verdict]').forEach(function(b){
     b.classList.toggle('on', b.dataset.verdict===s.verdict);});
@@ -1073,6 +1112,7 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
   if('sentiment' in ev)s.sentiment=ev.sentiment;
   if(ev.verdict==='completed'||ev.verdict==='approved')s.verdict='completed';
   else if(ev.verdict==='proposed'||ev.verdict==='rejected')s.verdict=null;
+  if('bookmark' in ev)s.bookmark=!!ev.bookmark;
   var one={}; one[ev.element]=s; applyState(one,true);}
  /* Ranks and thumbs are the companion's to send, and the server echoes them
     back here. The completed toggle is NOT: a companion that only recognises
@@ -1089,6 +1129,19 @@ REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
   sock.send(JSON.stringify({type:'verdict',element:row.getAttribute('data-element'),
    choice:row.getAttribute('data-element'),
    verdict:on?'proposed':(btn.getAttribute('data-verdict')||'completed'),
+   text:row.getAttribute('data-label')||null,timestamp:Date.now()}));
+ },true);
+ /* A 4th vocabulary word the companion does not know either -- same reason
+    as `completed` above: deliver it directly instead of hoping helper.js
+    happens to recognise "bookmark". */
+ document.addEventListener('click',function(e){
+  var btn=e.target.closest?e.target.closest('[data-bookmark]'):null; if(!btn)return;
+  var row=btn.closest('.dh-fb[data-element]'); if(!row)return;
+  if(!sock||sock.readyState!==1)return;
+  var on=btn.classList.contains('on');
+  sock.send(JSON.stringify({type:'bookmark',element:row.getAttribute('data-element'),
+   choice:row.getAttribute('data-element'),
+   bookmark:!on,
    text:row.getAttribute('data-label')||null,timestamp:Date.now()}));
  },true);
  (function socket(){
@@ -1163,11 +1216,12 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 @container dh-row (max-width: 380px){
  .dh-fb.dh-fb.dh-fb{grid-template-columns:minmax(0,1fr)}
  .dh-fb .dh-shot{inline-size:100%;max-inline-size:220px}
- /* The strip is five 30px stars, a zero and three verdict buttons: 214px of
-    fixed touch targets, which is wider than the row itself down here. They
-    shrink rather than spill -- still comfortably above the 24px minimum. */
+ /* The strip is five 30px stars, a zero and four verdict/bookmark buttons:
+    244px of fixed touch targets, which is wider than the row itself down
+    here. They shrink rather than spill -- still comfortably above the 24px
+    minimum -- and `.dh-signals` already wraps if a line still overflows. */
  .dh-fb.dh-fb .dh-stars > *{inline-size:26px;min-inline-size:0;font-size:17px}
- .dh-fb [data-sentiment],.dh-fb [data-verdict],.dh-fb .dh-zero > *{
+ .dh-fb [data-sentiment],.dh-fb [data-verdict],.dh-fb [data-bookmark],.dh-fb .dh-zero > *{
   min-inline-size:30px;font-size:14px}
  .dh-fb .dh-signals{gap:4px}
 }
@@ -1313,13 +1367,16 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
 /* Green go, red stop, and the tick green with them. These hues are fixed on
    purpose: they are the same instrument on every project, so they do not
    follow --dh-accent into whatever palette is being judged. */
-.dh-fb [data-sentiment],.dh-fb [data-verdict]{min-inline-size:38px;min-block-size:34px;
+.dh-fb [data-sentiment],.dh-fb [data-verdict],.dh-fb [data-bookmark]{min-inline-size:38px;min-block-size:34px;
  display:grid;place-items:center;cursor:pointer;user-select:none;font-size:15px;
  border:1px solid rgba(0,0,0,.22);border-radius:6px;background:transparent;line-height:1;
  transition:background .12s,color .12s,border-color .12s}
-.dh-fb [data-sentiment]:hover,.dh-fb [data-verdict]:hover{border-color:var(--dh-ink,#111)}
+.dh-fb [data-sentiment]:hover,.dh-fb [data-verdict]:hover,.dh-fb [data-bookmark]:hover{border-color:var(--dh-ink,#111)}
 .dh-fb [data-sentiment="like"].on{background:#1c8b4b;border-color:#126435;color:#fff}
 .dh-fb [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
+/* Its own hue -- gold, not the approve-green or dislike-red -- so a
+   bookmark never reads as a verdict on the work, only as "keep this handy". */
+.dh-fb [data-bookmark].on{background:#e0a20a;border-color:#a97600;color:#fff}
 /* Approve reads as done: green fill, white tick, unmistakable. */
 .dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
 /* Completed is the one final act on the page: the tick becomes a finish flag,
@@ -1330,7 +1387,8 @@ FEEDBACK_STYLE = """<style>/* dh-controls */
  100%{background:var(--dh-bg,#fff)}}
 .dh-fb[data-done]{animation:dh-flash .75s ease-out}
 .dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible,
-.dh-fb [data-verdict]:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+.dh-fb [data-verdict]:focus-visible,.dh-fb [data-bookmark]:focus-visible{
+ outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
 /* A foundation heading opens a section of a design system, so it is sized like
    one. At 11px uppercase it read as a caption and the eye slid past it -- the
    grouping was there and invisible, which is the same as absent. The rule under
@@ -1483,13 +1541,19 @@ def audit_recorded_svg(project_root: Path) -> list[dict[str, str]]:
 
 
 def render_html_preview(html: Path, out: Path, width: int = PREVIEW_WIDTH,
-                        timeout: int = 45) -> str:
+                        timeout: int = 45, chrome_timeout: int = 12) -> str:
     """Rasterise a comp. Returns the renderer used, or raises.
 
     Chrome is preferred because it honours the CSS the comp was written in.
     `qlmanage` is the fallback that needs nothing installed, but QuickLook fits
     the page into a square thumbnail, so the comp must not depend on its own
     aspect ratio to read.
+
+    Chrome and qlmanage get SEPARATE budgets. A local static-HTML screenshot
+    should resolve in well under `chrome_timeout` seconds -- sharing one long
+    `timeout` between both legs meant a hung or GPU-flaky Chrome process ate
+    the whole budget before falling back, turning one slow shot into the
+    worst-case wait for every shot in a round.
     """
     html = html.resolve(strict=True)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -1505,7 +1569,7 @@ def render_html_preview(html: Path, out: Path, width: int = PREVIEW_WIDTH,
                  "--force-device-scale-factor=1", "--virtual-time-budget=3000",
                  f"--window-size={width},{height}",
                  f"--screenshot={out}", html.as_uri()],
-                capture_output=True, timeout=timeout)
+                capture_output=True, timeout=chrome_timeout)
             if out.is_file() and out.stat().st_size:
                 return "chrome"
             detail = (result.stderr or b"").decode("utf-8", "replace").strip()[:200]
@@ -2034,6 +2098,16 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
                      f'aria-pressed="{"true" if done else "false"}" '
                      f'aria-label="{txt["completed"]}: {element}" title="{txt["completed"]}"{on}>'
                      f'<span>&#10003;</span></span>')
+        # A 4th independent signal, not a fifth state folded into verdict or
+        # sentiment -- docs/adr/0001 keeps rank/sentiment/lifecycle from
+        # collapsing into one score, and a bookmark is orthogonal to all
+        # three (a disliked, low-rank card can still be worth coming back to).
+        bookmarked = bool(entry.get("bookmarked"))
+        on = ' class="on"' if bookmarked else ""
+        lines.append(f'<span data-bookmark role="button" tabindex="0" '
+                     f'aria-pressed="{"true" if bookmarked else "false"}" '
+                     f'aria-label="{txt["bookmark"]}: {element}" title="{txt["bookmark"]}"{on}>'
+                     f'&#128278;</span>')
         lines.append("</span>")
         lines.append("</div>")
     lines.append("</div>")
@@ -2240,6 +2314,17 @@ html:has(.dh-art){scroll-behavior:smooth}
    toward it and comes out muddy olive -- the "before" row looked broken rather
    than recessed. An opaque tint recedes on any ground. */
 .dh-versus .dh-fb-before{background:color-mix(in srgb, var(--dh-ink,#111) 10%, var(--dh-bg,#fff))}
+/* Two or more genuine variants of ONE idea, grouped under a shared "before"
+   instead of each getting its own standalone .dh-versus -- comparing them
+   side by side is the point, not paging through identical-looking cards one
+   at a time. auto-fit/minmax reflows to one column on a narrow viewport
+   without a dedicated breakpoint. */
+.dh-idea-group{display:flex;flex-direction:column;gap:var(--s1);margin:0 0 var(--s3);padding:var(--s3);
+ border:1px solid var(--dh-rule);border-radius:14px}
+.dh-idea-group .dh-fb-before{background:color-mix(in srgb, var(--dh-ink,#111) 10%, var(--dh-bg,#fff))}
+.dh-idea-variants{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+ gap:var(--s2);margin-block-start:var(--s1)}
+.dh-idea-variant{display:flex;flex-direction:column;gap:var(--s1)}
 /* What the round is ABOUT, in the system's own vocabulary. Without it the
    reader has to infer the domain from three unrelated rows. */
 .dh-domain{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
@@ -2492,11 +2577,13 @@ html:has(.dh-art){scroll-behavior:smooth}
 .dh-spec-score .dh-fb [data-rank="0"]{color:color-mix(in srgb, currentColor 48%, transparent)}
 .dh-spec-score .dh-fb .dh-zero{
  border-inline-end-color:color-mix(in srgb, currentColor 26%, transparent)}
-.dh-spec-score .dh-fb [data-sentiment],.dh-spec-score .dh-fb [data-verdict]{
+.dh-spec-score .dh-fb [data-sentiment],.dh-spec-score .dh-fb [data-verdict],
+.dh-spec-score .dh-fb [data-bookmark]{
  border-color:color-mix(in srgb, currentColor 30%, transparent);
  color:color-mix(in srgb, currentColor 70%, transparent)}
 .dh-spec-score .dh-fb [data-sentiment]:hover,
-.dh-spec-score .dh-fb [data-verdict]:hover{border-color:currentColor}
+.dh-spec-score .dh-fb [data-verdict]:hover,
+.dh-spec-score .dh-fb [data-bookmark]:hover{border-color:currentColor}
 /* A swatch column is far narrower than a control strip. Wrapping was the first
    answer and it only moved the failure: the strip measures 328px of controls in
    a 319px column, so it overflowed by NINE pixels and stranded the tick alone
@@ -2745,12 +2832,14 @@ dialog.dh-lb .dh-lb-score .dh-stars > *{
  color:color-mix(in srgb, var(--dh-bg,#fff) 36%, transparent)}
 dialog.dh-lb .dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
 dialog.dh-lb .dh-lb-score [data-sentiment],
-dialog.dh-lb .dh-lb-score [data-verdict]{
+dialog.dh-lb .dh-lb-score [data-verdict],
+dialog.dh-lb .dh-lb-score [data-bookmark]{
  border-color:var(--dh-rule);
  background:color-mix(in srgb, var(--dh-ink,#111) 28%, transparent);color:inherit}
 dialog.dh-lb .dh-lb-score [data-sentiment="like"].on,
 dialog.dh-lb .dh-lb-score [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff}
 dialog.dh-lb .dh-lb-score [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
+dialog.dh-lb .dh-lb-score [data-bookmark].on{background:#e0a20a;border-color:#a97600;color:#fff}
 dialog.dh-lb .dh-lb-score .dh-stars::after{
  color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
 dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
@@ -2817,12 +2906,11 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-live-label::before{content:'';display:inline-block;inline-size:8px;block-size:8px;
  border-radius:50%;margin-inline-end:6px;vertical-align:middle;
  box-shadow:0 0 0 1px rgba(255,255,255,.5)}
-/* Orange means the agent is still inferring -- the content on screen may
-   still change -- and only turns green once it goes idle (done, waiting on
-   you). The reverse reads as "all good" while a new design is still being
-   written underneath the visible one. */
-.dh-live[data-state="active"] .dh-live-label::before{background:#f0a020}
-.dh-live[data-state="idle"] .dh-live-label::before{background:#2ecc71}
+/* Green means the agent is actively producing work -- the content on
+   screen may still change underneath you. Orange means idle: the agent is
+   done for now and waiting on your chat, so it's safe to interact. */
+.dh-live[data-state="active"] .dh-live-label::before{background:#2ecc71}
+.dh-live[data-state="idle"] .dh-live-label::before{background:#f0a020}
 .dh-live-detail{font-size:11px;line-height:1.35;opacity:.88;max-inline-size:36ch;
  margin:0;padding:0;overflow-wrap:anywhere}
 .dh-live[data-state="idle"] .dh-live-detail{opacity:.88}
@@ -2943,7 +3031,6 @@ CHAT_ICON = ('<svg class="dh-bar-ico" viewBox="0 0 24 24" fill="none" stroke="cu
 LIVE_SCRIPT = """<script>/* dh-live */
 (function(){
  if(window.__dhLive)return; window.__dhLive=1;
- var lastAt=Date.now(), idleMs=90000;
  function prepRound(st){
   var round=document.querySelector('.dh-zone[data-zone="round"]');
   if(!round)return;
@@ -2965,7 +3052,6 @@ LIVE_SCRIPT = """<script>/* dh-live */
   if(label) label.textContent=st==='idle'?idleLabel:activeLabel;
   if(detail) detail.textContent=st==='idle'?idleAid:(text||'');
   prepRound(st);
-  lastAt=Date.now();
  }
  function onAgent(d){
   if(!d)return;
@@ -2973,11 +3059,6 @@ LIVE_SCRIPT = """<script>/* dh-live */
  }
  window.addEventListener('dh-agent',function(ev){onAgent(ev.detail);});
  if(window.__dhLastAgent) onAgent(window.__dhLastAgent);
- setInterval(function(){
-  var el=document.querySelector('.dh-live'); if(!el)return;
-  if(el.getAttribute('data-state')!=='active')return;
-  if(Date.now()-lastAt>=idleMs) apply('', 'idle');
- },15000);
 })();
 </script>"""
 
@@ -3159,6 +3240,9 @@ LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
   });
   c.querySelectorAll('[data-verdict]').forEach(function(n){
    wireProxy(n, '[data-verdict="'+n.getAttribute('data-verdict')+'"]');
+  });
+  c.querySelectorAll('[data-bookmark]').forEach(function(n){
+   wireProxy(n, '[data-bookmark]');
   });
   shell.appendChild(c); box.appendChild(shell); wrap.appendChild(box);
  }
@@ -3489,6 +3573,9 @@ def incumbent_of(element: str, known: set[str]) -> str:
     return ""
 
 
+MAX_VARIANTS_PER_IDEA = 3
+
+
 def check_round_earns_its_place(decisions: dict[str, object], cohort: set[str]) -> None:
     """Refuse a round that sprays new ideas instead of improving ranked ones.
 
@@ -3506,10 +3593,13 @@ def check_round_earns_its_place(decisions: dict[str, object], cohort: set[str]) 
     1. A round of nothing but new ids, while liked-and-low work is waiting.
        Redrawing one of them (`<parent>.<slug>`) satisfies this, because the
        redraw's incumbent is the element being polished.
-    2. Two new drawings of the SAME incumbent in one round. That is the
-       `anti-slop` wallpaper tell: a second variant is not a second option,
-       and the user cannot say which of two guesses is better when neither
-       improves on what already stands.
+    2. More than `MAX_VARIANTS_PER_IDEA` new drawings of the SAME incumbent
+       in one round. Up to that many are allowed and render grouped
+       together (see `render_article`'s idea-grouping) -- comparing 2-3
+       genuine variants of one idea side by side is the whole point of a
+       round. Past that cap it becomes the `anti-slop` wallpaper tell again:
+       the user cannot usefully compare a wall of near-identical guesses,
+       only pick the least-bad one.
     """
     live = [e for e in decisions["elements"] if e["state"] in ("approved", "proposed")]
     known = {e["element"] for e in decisions["elements"]}
@@ -3519,13 +3609,14 @@ def check_round_earns_its_place(decisions: dict[str, object], cohort: set[str]) 
     # A cohort member is "new" when the ledger has never seen it. Its incumbent
     # is the standing element it redraws, read off its own dotted id.
     incumbents = {c: incumbent_of(c, known - {c}) for c in cohort}
-    doubled = sorted({inc for inc in incumbents.values() if inc
-                      and sum(1 for v in incumbents.values() if v == inc) > 1})
-    if doubled:
+    overrun = sorted({inc for inc in incumbents.values() if inc
+                      and sum(1 for v in incumbents.values() if v == inc) > MAX_VARIANTS_PER_IDEA})
+    if overrun:
         raise HarnessError(
-            "this round draws " + ", ".join(doubled) + " twice over. A second variant of the "
-            "same element is wallpaper, not an option -- the user can only say which guess they "
-            "prefer, not whether either beat what stands. Keep the stronger one and drop the rest.")
+            "this round draws " + ", ".join(overrun) + f" more than {MAX_VARIANTS_PER_IDEA} times "
+            "over. That many variants of one idea stops being a choice and becomes wallpaper -- the "
+            "user cannot usefully compare a wall of near-identical guesses. Keep the strongest "
+            f"{MAX_VARIANTS_PER_IDEA} and drop the rest.")
 
     if not polish:
         return
@@ -3635,6 +3726,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
     agent_name = agent_display_line(raw_name, agent_url)
     cohort = cohort or set()
     check_asks(asks, cohort, language or project_language(project_root))
+    check_cohort_size(cohort)
     check_unique_cohort_previews(decisions, cohort)
     # A cohort is one surface or one problem. Three elements drawn from three
     # different foundations, under a name that claims a shared surface, is a
@@ -3879,6 +3971,19 @@ def render_article(project_root: Path, decisions: dict[str, object],
                         f'<em>{len([e for e in members if foundation_of(e["element"]) == key])}</em>'
                         "</a></li>" for key in order_seen)
                     + "</ol></nav>")
+        # Round-zone members that redraw the SAME incumbent render together
+        # under one shared "before" instead of each getting its own
+        # standalone before/after card. `check_round_earns_its_place` already
+        # caps this at MAX_VARIANTS_PER_IDEA, so a group here is always small.
+        incumbent_of_member: dict[str, str] = {}
+        variant_count: dict[str, int] = {}
+        grouped_already: set[str] = set()
+        if zone == "round":
+            for e in members:
+                inc = incumbent_of(e["element"], known_ids)
+                if inc and inc in rows:
+                    incumbent_of_member[e["element"]] = inc
+                    variant_count[inc] = variant_count.get(inc, 0) + 1
         seen_foundation = None
         for entry in members:
             key = foundation_of(entry["element"])
@@ -3904,14 +4009,41 @@ def render_article(project_root: Path, decisions: dict[str, object],
                     out.append(f'<h4 class="dh-group" id="dh-{zone}-{key}" data-group="{key}">'
                                f'{heading}</h4>')
                 out.append(_specimens(same, txt, rows))
+            if entry["element"] in grouped_already:
+                continue
             row = rows.get(entry["element"], "")
             row = row.replace('<div class="dh-fb"',
                               f'<div id="dh-el-{entry["element"]}" class="dh-fb"', 1)
             if zone == "round":
                 # Paired with what it replaces, or plainly marked as new. Either
                 # way the user is never asked to rank a drawing against nothing.
-                prior = incumbent_of(entry["element"], known_ids)
-                if prior and prior in rows:
+                prior = incumbent_of_member.get(entry["element"], "")
+                if prior and variant_count.get(prior, 0) >= 2:
+                    # Two or more variants of the SAME idea: one shared
+                    # "before", every variant beside it instead of each
+                    # getting its own standalone before/after card.
+                    variants = [e for e in members
+                               if incumbent_of_member.get(e["element"]) == prior]
+                    variant_markup = []
+                    for variant in variants:
+                        vrow = rows.get(variant["element"], "")
+                        vrow = vrow.replace('<div class="dh-fb"',
+                                            f'<div id="dh-el-{variant["element"]}" class="dh-fb"', 1)
+                        suffix = variant["element"][len(prior) + 1:]
+                        variant_markup.append(
+                            '<div class="dh-idea-variant">'
+                            f'<p class="dh-versus-label"><b class="dh-now">{html_escape(suffix)}</b></p>'
+                            + vrow + "</div>")
+                        grouped_already.add(variant["element"])
+                    out.append(
+                        '<div class="dh-idea-group">'
+                        f'<p class="dh-versus-label"><b>{html_escape(txt["before"])}</b></p>'
+                        + rows[prior].replace('<div class="dh-fb"',
+                                              '<div class="dh-fb dh-fb-before"', 1)
+                        + '<div class="dh-idea-variants">' + "".join(variant_markup) + "</div>"
+                        + "</div>")
+                    continue
+                if prior:
                     out.append(
                         '<div class="dh-versus">'
                         f'<p class="dh-versus-label"><b>{html_escape(txt["before"])}</b></p>'

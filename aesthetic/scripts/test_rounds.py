@@ -64,13 +64,25 @@ class RoundsThatDoNotEarnTheirPlace(unittest.TestCase):
                          ("type.silkscreen", 0, None, "proposed"))
         bh.check_round_earns_its_place(decisions, {"type.silkscreen"})
 
-    def test_two_redraws_of_one_element_are_wallpaper(self):
+    def test_up_to_three_redraws_of_one_element_are_allowed(self):
+        # Up to MAX_VARIANTS_PER_IDEA genuine variants of one idea render
+        # grouped together -- comparing them side by side is the point.
         decisions = live(("art.trama", 2, "like", "proposed"),
                          ("art.trama.limpia", 0, None, "proposed"),
                          ("art.trama.real", 0, None, "proposed"))
+        bh.check_round_earns_its_place(
+            decisions, {"art.trama.limpia", "art.trama.real"})
+
+    def test_a_fourth_redraw_of_one_element_is_still_wallpaper(self):
+        decisions = live(("art.trama", 2, "like", "proposed"),
+                         ("art.trama.a", 0, None, "proposed"),
+                         ("art.trama.b", 0, None, "proposed"),
+                         ("art.trama.c", 0, None, "proposed"),
+                         ("art.trama.d", 0, None, "proposed"))
         with self.assertRaises(bh.HarnessError) as caught:
             bh.check_round_earns_its_place(
-                decisions, {"art.trama.limpia", "art.trama.real"})
+                decisions,
+                {"art.trama.a", "art.trama.b", "art.trama.c", "art.trama.d"})
         self.assertIn("art.trama", str(caught.exception))
 
     def test_one_redraw_each_of_two_elements_is_a_round_not_wallpaper(self):
@@ -80,6 +92,23 @@ class RoundsThatDoNotEarnTheirPlace(unittest.TestCase):
                          ("cover.spine.remaches", 0, None, "proposed"))
         bh.check_round_earns_its_place(
             decisions, {"art.trama.limpia", "cover.spine.remaches"})
+
+
+class ARoundMustFitInOneSitting(unittest.TestCase):
+    """The 3-6 element cohort convention was prose only -- nothing capped
+    `len(cohort)`, and the round zone never folds, so a round could grow
+    past what a reader could actually judge in one pass."""
+
+    def test_a_cohort_at_the_limit_is_allowed(self):
+        bh.check_cohort_size({f"e{i}" for i in range(bh.MAX_COHORT_SIZE)})
+
+    def test_a_cohort_over_the_limit_is_refused(self):
+        with self.assertRaises(bh.HarnessError) as caught:
+            bh.check_cohort_size({f"e{i}" for i in range(bh.MAX_COHORT_SIZE + 1)})
+        self.assertIn(str(bh.MAX_COHORT_SIZE + 1), str(caught.exception))
+
+    def test_an_empty_cohort_is_fine(self):
+        bh.check_cohort_size(set())
 
 
 class ARoundMustAskARealQuestion(unittest.TestCase):
@@ -163,6 +192,32 @@ class AnAgentPlaceholderIsNotAScore(unittest.TestCase):
             bh.record_decision(root, "x", "proposed", 1, "segunda", [], source="agent")
             entry = bh.load_decisions(output)["elements"][0]
             self.assertFalse(entry["scored"])
+
+    def test_bookmark_round_trips_and_survives_an_unrelated_update(self):
+        # Rank, sentiment, and verdict updates must never clear a standing
+        # bookmark -- it is a 4th independent signal (docs/adr/0001), not a
+        # value tucked inside one of the other three.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.harness(root)
+            bh.record_decision(root, "x", "proposed", 1, "evidencia", [],
+                               source="user", bookmarked=True)
+            self.assertTrue(bh.load_decisions(output)["elements"][0]["bookmarked"])
+            # Omitting `bookmarked` on a later call must KEEP it set, exactly
+            # like KEEP_SENTIMENT does for sentiment.
+            bh.record_decision(root, "x", "proposed", 3, "otra vez", [], source="user")
+            self.assertTrue(bh.load_decisions(output)["elements"][0]["bookmarked"],
+                            "an update that says nothing about the bookmark must not clear it")
+            bh.record_decision(root, "x", "proposed", 3, "quitado", [],
+                               source="user", bookmarked=False)
+            self.assertFalse(bh.load_decisions(output)["elements"][0]["bookmarked"])
+
+    def test_a_new_element_with_no_opinion_on_bookmark_defaults_unbookmarked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = self.harness(root)
+            bh.record_decision(root, "fresh", "proposed", 1, "evidencia", [], source="agent")
+            self.assertFalse(bh.load_decisions(output)["elements"][0]["bookmarked"])
 
     def test_the_row_paints_no_star_the_user_did_not_set(self):
         # Legacy rows carry scored=True from before the write path was fixed,
@@ -342,6 +397,23 @@ class PreviewsMustBeVisible(unittest.TestCase):
         source = inspect.getsource(bh.render_html_preview)
         self.assertIn("trim_to_content", source,
                       "the fallback renderer must crop its letterboxed output")
+
+    def test_chrome_and_qlmanage_have_separate_timeout_budgets(self):
+        """A hung or GPU-flaky Chrome process used to eat the WHOLE shared
+        timeout before falling back to qlmanage, turning one bad shot into
+        the worst-case wait for every shot in a round. Chrome gets its own,
+        much shorter budget; qlmanage keeps the original one. Driving a real
+        hung Chrome process from a unit test is not worth it (see the crop
+        test above), so assert the wiring directly, the same way."""
+        import inspect
+        sig = inspect.signature(bh.render_html_preview)
+        self.assertIn("chrome_timeout", sig.parameters)
+        self.assertLess(sig.parameters["chrome_timeout"].default,
+                        sig.parameters["timeout"].default,
+                        "Chrome's budget must be shorter than qlmanage's fallback budget")
+        source = inspect.getsource(bh.render_html_preview)
+        self.assertIn("timeout=chrome_timeout", source,
+                      "the Chrome subprocess call must use its own timeout, not the shared one")
 
     def test_cropping_a_full_bleed_render_changes_nothing(self):
         # Chrome output has no margin: its bounding box is the whole image, so

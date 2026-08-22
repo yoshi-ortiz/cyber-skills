@@ -541,7 +541,7 @@ function handleRequest(req, res) {
       try { data = JSON.parse(body || '{}'); } catch (e) { data = {}; }
       const text = String(data.text || '').slice(0, 200);
       const state = data.state === 'idle' ? 'idle' : 'active';
-      lastAgent = { type: 'dh-agent', text, state };
+      lastAgent = { type: 'dh-agent', text, state, updatedAt: Date.now() };
       broadcast(lastAgent);
       res.writeHead(204, securityHeaders());
       res.end();
@@ -569,7 +569,27 @@ function handleRequest(req, res) {
 // ========== WebSocket Connection Handling ==========
 
 const clients = new Set();
-let lastAgent = { type: 'dh-agent', text: '', state: 'idle' };
+let lastAgent = { type: 'dh-agent', text: '', state: 'idle', updatedAt: Date.now() };
+
+// A push can go stale: a run that hangs or gets interrupted without the
+// owning process dying (see ownerAlive() below) otherwise leaves lastAgent
+// stuck "active" for up to IDLE_TIMEOUT_MS (4 hours), which reads as "still
+// working" long after the agent has actually stopped. AGENT_STALE_MS is a
+// much shorter, independent window: past it, an "active" status is treated
+// as idle until a fresh heartbeat arrives. Override with BRAINSTORM_AGENT_STALE_MS.
+const AGENT_STALE_MS = (() => {
+  const ms = Number(process.env.BRAINSTORM_AGENT_STALE_MS);
+  return Number.isFinite(ms) && ms > 0 ? ms : 3 * 60 * 1000;
+})();
+
+// Pure so it's unit-testable without a live server. Returns the SAME object
+// reference when nothing changes, so a caller can cheaply detect a flip via
+// `!==` instead of a deep comparison.
+function effectiveAgentState(agent, now, staleMs) {
+  if (!agent || agent.state !== 'active') return agent;
+  if (now - (agent.updatedAt || 0) <= staleMs) return agent;
+  return { type: agent.type, text: '', state: 'idle', updatedAt: agent.updatedAt };
+}
 
 function handleUpgrade(req, socket) {
   if (!isAuthorized(req) || !isAllowedWebSocketOrigin(req)) { socket.destroy(); return; }
@@ -595,7 +615,8 @@ function handleUpgrade(req, socket) {
   try {
     socket.write(encodeFrame(OPCODES.TEXT,
       Buffer.from(JSON.stringify({ type: 'dh-state', state: currentSignals() }))));
-    socket.write(encodeFrame(OPCODES.TEXT, Buffer.from(JSON.stringify(lastAgent))));
+    socket.write(encodeFrame(OPCODES.TEXT,
+      Buffer.from(JSON.stringify(effectiveAgentState(lastAgent, Date.now(), AGENT_STALE_MS)))));
   } catch (e) { /* a socket that dies mid-handshake is not an error worth logging */ }
 
   socket.on('data', (chunk) => {
@@ -703,6 +724,7 @@ function reduceSignals(raw) {
     if ('sentiment' in e) s.sentiment = e.sentiment;
     if (e.verdict === 'completed' || e.verdict === 'approved') s.verdict = 'completed';
     else if (e.verdict === 'proposed' || e.verdict === 'rejected') s.verdict = null;
+    if ('bookmark' in e) s.bookmark = !!e.bookmark;
   }
   return out;
 }
@@ -908,9 +930,14 @@ function startServer() {
   }
 
   // Periodically exit if the owner process died or we've been idle too long.
+  // Same tick also corrects a stale "active" status for tabs already open —
+  // the replay in handleUpgrade only helps a NEW connection, not one that's
+  // been sitting on a status pushed minutes ago.
   const lifecycleCheck = setInterval(() => {
     if (!ownerAlive()) shutdown('owner process exited');
     else if (Date.now() - lastActivity > IDLE_TIMEOUT_MS) shutdown('idle timeout');
+    const fresh = effectiveAgentState(lastAgent, Date.now(), AGENT_STALE_MS);
+    if (fresh !== lastAgent) { lastAgent = fresh; broadcast(lastAgent); }
   }, LIFECYCLE_CHECK_MS);
   lifecycleCheck.unref();
 
@@ -994,6 +1021,8 @@ module.exports = {
   updateThemeSpec,
   reduceSignals,
   startContentWatcher,
+  effectiveAgentState,
+  AGENT_STALE_MS,
   OPCODES,
   MAX_FRAME_PAYLOAD_BYTES
 };

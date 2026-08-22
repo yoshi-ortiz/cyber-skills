@@ -24,3 +24,13 @@ Every concept is listed in [index.md](index.md). Operational contracts describe
 this skill; Golden Rule references additionally carry independent academic or
 standards evidence. Machine verification checks provenance and reachability, not
 the truth or aesthetic value of a claim.
+
+## If this repo ever grows a CLAUDE.md
+
+None exists here today -- this directory and `SKILL.md` already carry the
+skill's own doctrine and conventions. If one is ever added, it must stay a
+minimal index of pointers to context docs, the same role [index.md](index.md)
+already plays for this bundle, and never carry doctrine, workflow detail, or
+skill-specific guidance of its own. That content belongs in `SKILL.md` or a
+file here, not duplicated into a CLAUDE.md where it can drift out of sync and
+contaminate the skill's own conventions with unrelated repo-wide context.

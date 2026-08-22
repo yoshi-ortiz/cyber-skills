@@ -305,6 +305,29 @@ class ServerLiveStateTest(unittest.TestCase):
                 ["node", "-e", source], capture_output=True, text=True, timeout=3)
         self.assertEqual(completed.returncode, 0, completed.stderr or completed.stdout)
 
+    def test_active_status_goes_stale_after_the_configured_window(self) -> None:
+        """A run that hangs or gets interrupted without the owning process
+        dying otherwise leaves the status bar reading "active" for up to the
+        4-hour owner-death/idle-timeout fallback. effectiveAgentState is the
+        much shorter, independent staleness check that corrects this."""
+        server = json.dumps(str(ROOT / "companion" / "server.cjs"))
+        source = (
+            f"const s=require({server});"
+            "const active={type:'dh-agent',text:'Redrawing the cover',state:'active',updatedAt:1000};"
+            "const fresh=s.effectiveAgentState(active,1000+60000,180000);"
+            "if(fresh.state!=='active'||fresh!==active)process.exit(1);"
+            "const stale=s.effectiveAgentState(active,1000+200000,180000);"
+            "if(stale.state!=='idle'||stale.text!=='')process.exit(2);"
+            "const idle={type:'dh-agent',text:'',state:'idle',updatedAt:1000};"
+            "const idleStill=s.effectiveAgentState(idle,1000+999999,180000);"
+            "if(idleStill!==idle)process.exit(3);"
+            "const missingTimestamp={type:'dh-agent',text:'x',state:'active'};"
+            "const treated=s.effectiveAgentState(missingTimestamp,2000000,180000);"
+            "if(treated.state!=='idle')process.exit(4);"
+        )
+        completed = subprocess.run(["node", "-e", source], capture_output=True, text=True)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_live_replay_ignores_rank_carried_by_sentiment(self) -> None:
         server = json.dumps(str(ROOT / "companion" / "server.cjs"))
         events = json.dumps(
@@ -315,6 +338,39 @@ class ServerLiveStateTest(unittest.TestCase):
         source = (
             f"const s=require({server});const x=s.reduceSignals({events});"
             "if(x['core.idea'].stars!==4||x['core.idea'].sentiment!=='dislike')process.exit(1);"
+        )
+        completed = subprocess.run(["node", "-e", source], capture_output=True, text=True)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_bookmark_folds_independently_of_rank_and_sentiment(self) -> None:
+        """A bookmark is its own signal (docs/adr/0001) -- toggling it must
+        not disturb whatever rank or sentiment is already on record, and a
+        later rank/sentiment event must not clear a standing bookmark."""
+        server = json.dumps(str(ROOT / "companion" / "server.cjs"))
+        events = json.dumps(
+            '{"type":"rank","element":"core.idea","stars":3}\n'
+            '{"type":"sentiment","element":"core.idea","sentiment":"like","stars":0}\n'
+            '{"type":"bookmark","element":"core.idea","bookmark":true}\n'
+        )
+        source = (
+            f"const s=require({server});const x=s.reduceSignals({events});"
+            "const e=x['core.idea'];"
+            "if(e.bookmark!==true||e.stars!==3||e.sentiment!=='like')process.exit(1);"
+        )
+        completed = subprocess.run(["node", "-e", source], capture_output=True, text=True)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_unbookmarking_does_not_touch_other_signals(self) -> None:
+        server = json.dumps(str(ROOT / "companion" / "server.cjs"))
+        events = json.dumps(
+            '{"type":"bookmark","element":"core.idea","bookmark":true}\n'
+            '{"type":"rank","element":"core.idea","stars":5}\n'
+            '{"type":"bookmark","element":"core.idea","bookmark":false}\n'
+        )
+        source = (
+            f"const s=require({server});const x=s.reduceSignals({events});"
+            "const e=x['core.idea'];"
+            "if(e.bookmark!==false||e.stars!==5)process.exit(1);"
         )
         completed = subprocess.run(["node", "-e", source], capture_output=True, text=True)
         self.assertEqual(completed.returncode, 0, completed.stderr)

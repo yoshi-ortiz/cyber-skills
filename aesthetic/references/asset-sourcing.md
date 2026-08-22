@@ -15,7 +15,7 @@ Do not spend inference effort rebuilding common visual assets, and never halluci
 ## Resolution order
 
 1. Reuse an asset already present in the project or corpus.
-2. Fetch the smallest suitable asset from a pinned open-source library or primary archive.
+2. Fetch the smallest suitable asset from a pinned open-source library or primary archive -- a version- or commit-pinned CDN URL (Google Fonts at a specific version, a pinned jsdelivr/unpkg/cdnjs path) qualifies here for rapid iteration; an unversioned or `latest`-aliased CDN URL does not, because it is not actually pinned.
 3. Generate it procedurally only when the desired form is genuinely custom and the procedure is deterministic.
 4. Otherwise omit it and report the missing asset.
 

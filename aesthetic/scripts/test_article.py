@@ -23,6 +23,22 @@ def live(*rows: tuple) -> dict:
                          for e, s, m, st in rows]}
 
 
+class ARoundMustFitInOneSitting(unittest.TestCase):
+    """`render_article` refuses an oversized cohort itself, not only the CLI
+    path -- so the gate fires for every caller, including a direct call like
+    this test's, not just `bootstrap_harness.py article`."""
+
+    def test_render_article_refuses_a_cohort_past_the_limit(self):
+        rows = [(f"e{i}", 0, None, "proposed") for i in range(bh.MAX_COHORT_SIZE + 1)]
+        decisions = live(*rows)
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(bh.HarnessError) as caught:
+                bh.render_article(Path(tmp), decisions,
+                                  {row[0] for row in rows}, "too-big", "en", None,
+                                  "Fichas", "Which reads best?")
+        self.assertIn(str(bh.MAX_COHORT_SIZE + 1), str(caught.exception))
+
+
 class TheArticleAsRendered(unittest.TestCase):
     """Checks against the emitted markup. A rule that reads correctly in the
     source and is dropped by the CSS parser is the defect, not the source."""
@@ -141,7 +157,12 @@ class TheArticleAsRendered(unittest.TestCase):
         # broken across three ragged lines.
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
                           self.article(), re.S).group(1)
-        floor = re.search(r"repeat\(auto-fit,\s*minmax\((\d+)px", style)
+        # Scoped to .dh-swatches specifically -- a later, unrelated
+        # `auto-fit,minmax(...)` grid elsewhere in the sheet (e.g. the
+        # idea-variant strip) must not be what this regex happens to match.
+        swatches = re.search(r"\.dh-swatches\{.*?\}", style, re.S)
+        self.assertIsNotNone(swatches, "the .dh-swatches rule went missing")
+        floor = re.search(r"repeat\(auto-fit,\s*minmax\((\d+)px", swatches.group(0))
         self.assertIsNotNone(floor, "the swatch grid stopped declaring a column floor")
         self.assertGreaterEqual(int(floor.group(1)), 240)
 
@@ -359,6 +380,42 @@ class TheCardNamesTheDesignNotTheToken(unittest.TestCase):
             None, None, None, "es")
         self.assertIn('<code class="dh-token">cover.object</code>', markup)
         self.assertIn('class="dh-id">Un objeto grande<', markup)
+
+    def a_row(self, bookmarked) -> str:
+        return bh.render_feedback_controls(
+            {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
+             "elements": [{"element": "cover.object", "stars": 2, "sentiment": None,
+                           "state": "proposed", "scored": True, "source": "user",
+                           "bookmarked": bookmarked}]},
+            None, None, None, "en")
+
+    def test_a_bookmarked_element_renders_the_control_lit(self):
+        markup = self.a_row(True)
+        self.assertIn("data-bookmark", markup)
+        # A 4th independent signal, not folded into an existing one -- must
+        # never share a class with sentiment/verdict's own `.on` markers.
+        match = re.search(r'<span data-bookmark[^>]*>', markup)
+        self.assertIsNotNone(match)
+        self.assertIn('class="on"', match.group(0))
+
+    def test_an_unbookmarked_element_renders_the_control_unlit(self):
+        markup = self.a_row(False)
+        match = re.search(r'<span data-bookmark[^>]*>', markup)
+        self.assertIsNotNone(match)
+        self.assertNotIn('class="on"', match.group(0))
+
+    def test_an_element_missing_the_field_entirely_defaults_unlit(self):
+        # Ledgers written before this feature existed have no "bookmarked"
+        # key at all -- must read as unbookmarked, not crash.
+        markup = bh.render_feedback_controls(
+            {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
+             "elements": [{"element": "cover.object", "stars": 2, "sentiment": None,
+                           "state": "proposed", "scored": True, "source": "user"}]},
+            None, None, None, "en")
+        match = re.search(r'<span data-bookmark[^>]*>', markup)
+        self.assertIsNotNone(match)
+        self.assertNotIn('class="on"', match.group(0))
+
 
 class TheArticleFitsItsContainer(unittest.TestCase):
     """The same row renders in a 1180px article and in a companion pane a third
@@ -622,21 +679,22 @@ class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
         self.assertIn("Give your critique and directions", live)
         self.assertNotIn("&lt;idle&gt;", live)
 
-    def test_status_dot_is_orange_while_designing_green_once_idle(self):
-        """Orange means the content on screen may still change underneath
-        the visible one -- it must stay orange for the whole time the agent
-        is inferring, and only turn green once it actually goes idle. The
-        reverse (green while still working) reads as "all good" while a new
-        design is still being written."""
+    def test_status_dot_is_green_while_designing_orange_once_idle(self):
+        """Green means the agent is actively producing work -- the content
+        on screen may still change underneath the visible one. Orange means
+        idle: the agent is done for now and it's safe to chat. The reverse
+        (orange while still working) reads as "still syncing" when the
+        agent hasn't even started answering yet, or "all clear" once it
+        actually has."""
         markup = self.markup("Redrawing the cover", working=True)
         css = re.search(r'\.dh-live\[data-state="active"\] \.dh-live-label::before\{background:(#[0-9a-fA-F]+)\}',
                         markup)
         self.assertIsNotNone(css)
-        self.assertEqual(css.group(1), "#f0a020")
+        self.assertEqual(css.group(1), "#2ecc71")
         css_idle = re.search(r'\.dh-live\[data-state="idle"\] \.dh-live-label::before\{background:(#[0-9a-fA-F]+)\}',
                              markup)
         self.assertIsNotNone(css_idle)
-        self.assertEqual(css_idle.group(1), "#2ecc71")
+        self.assertEqual(css_idle.group(1), "#f0a020")
 
     def test_the_page_listens_for_a_live_status_push(self):
         """`--status` is baked at publish time. Without a listener the bar
@@ -972,6 +1030,47 @@ class PreviewsUseTheRecordedCanonicalAsset(unittest.TestCase):
         # class, which is what let their `.title` rules collide site-wide.
         self.assertNotIn(scope_b, frag_a.split("</style>")[0])
         self.assertNotIn(scope_a, frag_b.split("</style>")[0])
+
+    def test_multiple_redraws_of_one_incumbent_render_grouped_not_repeated(self):
+        """Two or more variants of ONE idea share a single "before" card
+        instead of each getting its own standalone before/after block --
+        that's the whole point of allowing more than one redraw per round
+        (see MAX_VARIANTS_PER_IDEA)."""
+        decisions = live(("art.trama", 2, "like", "proposed"),
+                         ("art.trama.limpia", 0, None, "proposed"),
+                         ("art.trama.real", 0, None, "proposed"))
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = bh.render_article(
+                Path(tmp), decisions, {"art.trama.limpia", "art.trama.real"},
+                "trama", "en", None, "T", "Which reads better?")
+        self.assertEqual(markup.count('class="dh-idea-group"'), 1,
+                         "three related proposals must render as ONE group, not three cards")
+        self.assertEqual(markup.count('class="dh-versus"'), 0,
+                         "a grouped round must not also emit the single-variant wrapper")
+        group = re.search(r'<div class="dh-idea-group">(.*?)</div>\s*</section>', markup, re.S)
+        self.assertIsNotNone(group)
+        chunk = group.group(1)
+        # The shared incumbent's row appears exactly once, not once per variant.
+        self.assertEqual(chunk.count('data-element="art.trama"'), 1)
+        self.assertIn('class="dh-idea-variants"', chunk)
+        self.assertEqual(chunk.count('class="dh-idea-variant"'), 2)
+        # Each variant is labelled by its own distinguishing suffix, not a
+        # generic "Variant A/B" the reader can't map back to an id.
+        self.assertIn(">limpia<", chunk)
+        self.assertIn(">real<", chunk)
+
+    def test_a_single_redraw_still_renders_the_plain_before_after_card(self):
+        """The common case (one idea, one redraw) must render exactly as it
+        did before grouping existed -- no group wrapper for a group of one."""
+        decisions = live(("art.trama", 2, "like", "proposed"),
+                         ("art.trama.limpia", 0, None, "proposed"))
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = bh.render_article(
+                Path(tmp), decisions, {"art.trama.limpia"},
+                "trama", "en", None, "T", "Better?")
+        self.assertEqual(markup.count('class="dh-versus"'), 1)
+        self.assertNotIn('class="dh-idea-group"', markup)
+        self.assertNotIn('class="dh-idea-variants"', markup)
 
     def test_versus_rows_survive_nested_divs_inside_html_comps(self):
         """Row extraction must not stop at the first </div> inside a preview."""
