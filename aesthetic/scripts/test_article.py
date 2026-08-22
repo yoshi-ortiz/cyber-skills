@@ -622,6 +622,22 @@ class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
         self.assertIn("Give your critique and directions", live)
         self.assertNotIn("&lt;idle&gt;", live)
 
+    def test_status_dot_is_orange_while_designing_green_once_idle(self):
+        """Orange means the content on screen may still change underneath
+        the visible one -- it must stay orange for the whole time the agent
+        is inferring, and only turn green once it actually goes idle. The
+        reverse (green while still working) reads as "all good" while a new
+        design is still being written."""
+        markup = self.markup("Redrawing the cover", working=True)
+        css = re.search(r'\.dh-live\[data-state="active"\] \.dh-live-label::before\{background:(#[0-9a-fA-F]+)\}',
+                        markup)
+        self.assertIsNotNone(css)
+        self.assertEqual(css.group(1), "#f0a020")
+        css_idle = re.search(r'\.dh-live\[data-state="idle"\] \.dh-live-label::before\{background:(#[0-9a-fA-F]+)\}',
+                             markup)
+        self.assertIsNotNone(css_idle)
+        self.assertEqual(css_idle.group(1), "#2ecc71")
+
     def test_the_page_listens_for_a_live_status_push(self):
         """`--status` is baked at publish time. Without a listener the bar
         cannot say what the agent is doing while the designer waits."""
@@ -932,6 +948,30 @@ class PreviewsUseTheRecordedCanonicalAsset(unittest.TestCase):
         self.assertIn(bh.COMP_SCOPE_CLASS, frag)
         self.assertNotRegex(frag, r"(?<![\w-])body\s*\{")
         self.assertIn("Hi", frag)
+
+    def test_comp_css_scope_is_unique_per_element_not_shared_globally(self):
+        """Two comps sharing a class name (`.title` is a common convention)
+        must not let one comp's rule win inside the other comp once both are
+        embedded on the same page -- `@scope (.dh-comp-scope)` alone matches
+        every comp's wrapper, so a later comp's `.title{font-size:28px}`
+        silently overrode an earlier comp's `.title{font-size:16px}`."""
+        raw_a = ("<html><head><style>body{inline-size:510px;block-size:660px}"
+                  ".title{font-size:16px}</style></head><body><p class='title'>A</p></body></html>")
+        raw_b = ("<html><head><style>body{inline-size:510px;block-size:660px}"
+                  ".title{font-size:28px}</style></head><body><p class='title'>B</p></body></html>")
+        frag_a, _, _ = bh.html_comp_fragment(raw_a, "comp.a")
+        frag_b, _, _ = bh.html_comp_fragment(raw_b, "comp.b")
+        scope_a = f"{bh.COMP_SCOPE_CLASS}-{bh.comp_scope_id('comp.a')}"
+        scope_b = f"{bh.COMP_SCOPE_CLASS}-{bh.comp_scope_id('comp.b')}"
+        self.assertNotEqual(scope_a, scope_b)
+        self.assertIn(scope_a, frag_a)
+        self.assertIn(scope_b, frag_b)
+        self.assertIn(f"@scope (.{scope_a})", frag_a)
+        self.assertIn(f"@scope (.{scope_b})", frag_b)
+        # Neither fragment's <style> block references the OTHER comp's scope
+        # class, which is what let their `.title` rules collide site-wide.
+        self.assertNotIn(scope_b, frag_a.split("</style>")[0])
+        self.assertNotIn(scope_a, frag_b.split("</style>")[0])
 
     def test_versus_rows_survive_nested_divs_inside_html_comps(self):
         """Row extraction must not stop at the first </div> inside a preview."""

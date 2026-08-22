@@ -1645,8 +1645,24 @@ def preferred_preview_path(project_root: Path, preview_path: Path, element: str)
 COMP_SCOPE_CLASS = "dh-comp-scope"
 
 
-def scope_comp_css(css: str) -> str:
-    """Rewrite comp CSS so it cannot restyle the companion frame.
+def comp_scope_id(element: str) -> str:
+    """A CSS-safe, per-element scope class suffix.
+
+    Two comps that both use `.title` or `.mini` (a common authoring
+    convention across similar comps) must not fight over which one's rule
+    wins on a page that embeds many comps at once. `@scope` only isolates
+    against elements OUTSIDE the scope root -- every comp sharing the same
+    root class (`.dh-comp-scope`) is not outside any other comp's scope, so
+    their `.title` rules collided globally and the wrong comp's font-size
+    (or any other property) could win by source order. Hashing the element
+    id keeps the class valid regardless of dots or other characters in it.
+    """
+    return hashlib.sha256(element.encode("utf-8")).hexdigest()[:12]
+
+
+def scope_comp_css(css: str, scope_class: str = COMP_SCOPE_CLASS) -> str:
+    """Rewrite comp CSS so it cannot restyle the companion frame or leak
+    into a different comp embedded elsewhere on the same page.
 
     Comps are drawn as standalone HTML pages with `body { width: 510px }`.
     Inlined verbatim, every thumbnail overwrites the frame's body and the
@@ -1656,6 +1672,9 @@ def scope_comp_css(css: str) -> str:
     `@scope` is a descendant of the root, so `.dh-comp-scope { background }`
     never matched the host. The drawing went blank (white on the lightbox,
     transparent on the card). `:scope` is the host.
+
+    `scope_class` must be unique PER COMP, not the shared `dh-comp-scope`
+    class alone -- see `comp_scope_id`.
     """
     if not css.strip():
         return css
@@ -1664,7 +1683,7 @@ def scope_comp_css(css: str) -> str:
     css = re.sub(r"(?<![\w-])body(?![\w-])", ":scope", css)
     if "@scope" in css:
         return css
-    return f"@scope (.{COMP_SCOPE_CLASS}) {{\n{css}\n}}\n"
+    return f"@scope (.{scope_class}) {{\n{css}\n}}\n"
 
 
 def _css_px(css: str, names: tuple[str, ...]) -> float | None:
@@ -1676,8 +1695,13 @@ def _css_px(css: str, names: tuple[str, ...]) -> float | None:
     return None
 
 
-def html_comp_fragment(raw: str) -> tuple[str, float, float]:
-    """Body + styles from a comp file, and its declared page size."""
+def html_comp_fragment(raw: str, element: str = "") -> tuple[str, float, float]:
+    """Body + styles from a comp file, and its declared page size.
+
+    `element` seeds a per-comp scope class (see `comp_scope_id`) so that two
+    comps embedded on the same page never fight over a shared class name
+    like `.title` or `.mini`.
+    """
     width, height = 850.0, 1100.0
     if re.search(r"<html", raw, re.I):
         styles = "".join(re.findall(r"<style[^>]*>(.*?)</style>", raw, re.S | re.I))
@@ -1689,9 +1713,10 @@ def html_comp_fragment(raw: str) -> tuple[str, float, float]:
         width = _css_px(styles, ("inline-size", "width")) or width
         height = (_css_px(styles, ("block-size", "min-block-size",
                                    "min-height", "height")) or height)
-        scoped = scope_comp_css(styles)
+        scope_class = f"{COMP_SCOPE_CLASS}-{comp_scope_id(element)}" if element else COMP_SCOPE_CLASS
+        scoped = scope_comp_css(styles, scope_class)
         return (f"<style>{scoped}</style>"
-                f'<div class="{COMP_SCOPE_CLASS}">{body}</div>'), width, height
+                f'<div class="{COMP_SCOPE_CLASS} {scope_class}">{body}</div>'), width, height
     return raw, width, height
 
 
@@ -1802,7 +1827,7 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
         fragment = re.sub(r"<svg\b", '<svg preserveAspectRatio="xMidYMid meet" '
                           'style="width:100%;height:100%;display:block"', fragment, count=1)
         return f"{tag}{fragment}</div>"
-    body, comp_width, comp_height = html_comp_fragment(fragment)
+    body, comp_width, comp_height = html_comp_fragment(fragment, element)
     return (f'{tag}<div class="dh-shot-inner" data-comp-w="{comp_width}" '
             f'data-comp-h="{comp_height}" style="{preview_inner_style(comp_width, comp_height)}">'
             f'{body}</div></div>')
@@ -2792,8 +2817,12 @@ dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
 .dh-live-label::before{content:'';display:inline-block;inline-size:8px;block-size:8px;
  border-radius:50%;margin-inline-end:6px;vertical-align:middle;
  box-shadow:0 0 0 1px rgba(255,255,255,.5)}
-.dh-live[data-state="active"] .dh-live-label::before{background:#2ecc71}
-.dh-live[data-state="idle"] .dh-live-label::before{background:#f0a020}
+/* Orange means the agent is still inferring -- the content on screen may
+   still change -- and only turns green once it goes idle (done, waiting on
+   you). The reverse reads as "all good" while a new design is still being
+   written underneath the visible one. */
+.dh-live[data-state="active"] .dh-live-label::before{background:#f0a020}
+.dh-live[data-state="idle"] .dh-live-label::before{background:#2ecc71}
 .dh-live-detail{font-size:11px;line-height:1.35;opacity:.88;max-inline-size:36ch;
  margin:0;padding:0;overflow-wrap:anywhere}
 .dh-live[data-state="idle"] .dh-live-detail{opacity:.88}
