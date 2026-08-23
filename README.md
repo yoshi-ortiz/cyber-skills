@@ -1,263 +1,423 @@
 <div align="center">
 
-![Cyber Skills — Intelligent + Easy Prompts](assets/cover.png)
+![Cyber Skills · Intelligent + Easy Prompts](assets/cover.png)
 
 **Tested prompts created by a silly deterministic nerd**
 
 [![release](https://img.shields.io/badge/release-0.9--beta-8b5cf6?style=flat-square&labelColor=1e1b4b)](https://github.com/yoshi-ortiz/cyber-skills/releases)
 [![repo](https://img.shields.io/badge/repo-yoshi--ortiz%2Fcyber--skills-0ea5e9?style=flat-square&labelColor=1e1b4b)](https://github.com/yoshi-ortiz/cyber-skills)
-[![skills](https://img.shields.io/badge/skills-2-6366f1?style=flat-square&labelColor=1e1b4b)](https://github.com/yoshi-ortiz/cyber-skills#-skills)
-[![python](https://img.shields.io/badge/python-stdlib%20only-16213e?style=flat-square&labelColor=1e1b4b)](aesthetic/SKILL.md)
-[![token tested](https://img.shields.io/badge/token%20tested-pending-f59e0b?style=flat-square&labelColor=44403c)](#goals)
-[![cybersecurity tested](https://img.shields.io/badge/cybersecurity%20tested-pending-f59e0b?style=flat-square&labelColor=44403c)](#goals)
-[![publish](https://img.shields.io/badge/publish-main%20%E2%86%90%20dev-312e81?style=flat-square&labelColor=1e1b4b)](tools/CONTEXT.md)
+[![prompts](https://img.shields.io/badge/prompts-2%20stable%20%C2%B7%204%20experiments-6366f1?style=flat-square&labelColor=1e1b4b)](#-collection)
+[![python](https://img.shields.io/badge/python-stdlib%20only-16213e?style=flat-square&labelColor=1e1b4b)](#-experiments)
+[![cybersecurity tested](https://img.shields.io/badge/cybersecurity%20tested-pending-f59e0b?style=flat-square&labelColor=44403c)](#-experiments)
+[![publish](https://img.shields.io/badge/publish-main%20%C2%B7%20alpha%20%E2%86%90%20dev-312e81?style=flat-square&labelColor=1e1b4b)](tools/CONTEXT.md)
 
-Python stdlib only · Plug and play
+🇬🇧 **English** | 🇪🇸 [Spanish](README.es.md) | 🇯🇵 日本語 (coming soon)
 
 </div>
 
 ---
 
-## What is this?
+A **skill prompt** is a set of written instructions your AI assistant reads before
+it answers you. Same assistant, different specialist: one that already knows how
+you like to work and does not need to be re-briefed every morning.
 
-**cyber-skills** is a collection of [Agent SKILLS](https://github.com/vercel-labs/skills) — expert prompts a coding agent runs when `/inserted` during chat or loaded on tool context search. The main skill is **Aesthetic**: a local design-review loop with a browser ranking companion. Everything else here is optional misc.
+You do not write code to use one. You install a folder, start a new chat, and say
+its name. Everything after the install is optional reading.
+
+## 📒 COLLECTION
+
+Grouped by when you need one, not by how finished it is.
+
+<table>
+  <colgroup>
+    <col width="180">
+    <col>
+  </colgroup>
+  <tr><td colspan="2" align="center"><h4>📀 Setup once</h4><p>Install it once, every assistant carries it</p></td></tr>
+  <tr><td><a href="#-starter-pack">📦 <strong>/starter-pack</strong></a></td><td>One toolkit across every AI app you use</td></tr>
+  <tr><td colspan="2" align="center"><h4>💼 Planning</h4><p>Before you start building</p></td></tr>
+  <tr><td><a href="#-genesis">📁 <strong>/genesis</strong></a></td><td>Plans before it builds, and proves the thing runs</td></tr>
+  <tr><td><a href="#-knowledge">📚 <strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td></tr>
+  <tr><td colspan="2" align="center"><h4>🤖 Token sessions</h4><p>Where you spend a working session</p></td></tr>
+  <tr><td><a href="#-aesthetic">🧑‍🎨 <strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td></tr>
+  <tr><td colspan="2" align="center"><h4>🤡 Silly</h4><p>Call by fun names</p></td></tr>
+  <tr><td><a href="#-silly">😆 <strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td></tr>
+  <tr><td><a href="#-silly">🇪🇸 <strong>/silly</strong> español</a></td><td>Add commands in Spanish</td></tr>
+  <tr><td><a href="#-ora">🇪🇸 <strong>/ora</strong></a></td><td>Rewrites your assistant's conclusions in plain Spanish</td></tr>
+</table>
+
+Stable prompts sit under [SKILL PROMPTS](#-skill-prompts). The rest are
+[EXPERIMENTS](#-experiments), installed by hand.
 
 ---
 
-## 🖨️ Install
+# 📦 INSTALL
 
-Pick **one** path. All end with skill files on disk and a **new chat** in your agent (skills load at session start, not mid-conversation).
+Both paths end the same way: files on disk, then a **new chat**. Assistants read
+their skills when a conversation starts, never in the middle of one.
 
-**A)** Add as an app plugin (manual path)  
-**B)** Add and sync with [Vercel Skills CLI](https://github.com/vercel-labs/skills) *(recommended)*  
-**C)** Clone this repository *(same as step 1 in A)*
+Repo: `https://github.com/yoshi-ortiz/cyber-skills`
 
-### A — Add as a plugin
+### A) Add to your Agent Plugins
 
-Register the skill folder with your agent — each app has its own skills directory.
-
-1. **Get the files** — clone or submodule:
-
-   ```bash
-   git clone https://github.com/yoshi-ortiz/cyber-skills.git
-   ```
-
-2. **Link the skill** into the agent path:
-
-   | Agent | Typical skills path | What to link or copy |
-   | --- | --- | --- |
-   | Cursor | `~/.cursor/skills/aesthetic` | `cyber-skills/aesthetic/` |
-   | Claude Code | `~/.claude/skills/aesthetic` | same |
-   | Codex / others | see agent docs | same folder contents |
-
-   Symlink example (Cursor):
-
-   ```bash
-   ln -s "$(pwd)/cyber-skills/aesthetic" ~/.cursor/skills/aesthetic
-   ```
-
-3. **Open a new chat** and invoke the skill by name or with a prompt like: *“Use aesthetic — give me the ranking URL first.”*
-
-> **Note:** Path A does not run the Vercel installer’s agent detection. You place the folder where *your* agent reads skills. Path B does that for you.
-
-### B — Vercel sync script (recommended)
-
-Uses [`npx skills add`](https://github.com/vercel-labs/skills). Works from any terminal; no clone required.
+Every assistant keeps its skills in one folder. Clone the repo, then put the skill
+folder inside it, by copy or by symlink.
 
 ```bash
-# List skills in this repo
-npx skills add yoshi-ortiz/cyber-skills --list
-
-# Install Aesthetic globally → Cursor
-npx skills add yoshi-ortiz/cyber-skills --skill aesthetic -g -a cursor -y
-
-# Same skill → multiple agents
-npx skills add yoshi-ortiz/cyber-skills --skill aesthetic -g \
-  -a cursor -a claude-code -a codex -y
-
-# Optional misc skill (Spanish voice)
-npx skills add yoshi-ortiz/cyber-skills --skill ora -g -a cursor -y
+git clone -b dev https://github.com/yoshi-ortiz/cyber-skills.git
+ln -s "$(pwd)/cyber-skills/aesthetic" ~/.cursor/skills/aesthetic
 ```
+
+| Assistant | Skills folder |
+| --- | --- |
+| Cursor | `~/.cursor/skills/` |
+| Claude Code | `~/.claude/skills/` |
+| Codex and others | check that app's docs |
+
+Use this path for anything under EXPERIMENTS. Those live on the `dev` branch only,
+which is what `-b dev` fetches.
+
+### B) Add and sync via Vercel `CLI Script` (recommended) 💯
+
+[`npx skills add`](https://github.com/vercel-labs/skills) finds your assistants and
+installs into each one for you. No clone.
+
+```bash
+npx skills add yoshi-ortiz/cyber-skills --all
+```
+
+`--all` installs every skill on this branch into every assistant it detects,
+no prompts.
+
+<details>
+<summary><b>Flags, and what this path cannot reach</b></summary>
+
+`--all` is shorthand for `--skill '*' --agent '*' -y`: every skill on this
+branch, into every assistant `skills` detects, no prompts. Each row below
+narrows one part of that.
 
 | Flag | What it does |
 | --- | --- |
-| `-g`, `--global` | User-level install (`~/.cursor/skills/`, `~/.claude/skills/`, …) — not tied to one project |
-| `-a`, `--agent <id>` | **Target agent.** Repeat per agent. Files land only where that agent looks for skills. |
-| `-s`, `--skill <name>` | Folder in this repo: `aesthetic`, `ora` |
-| `-y`, `--yes` | Non-interactive; skip prompts |
+| `-s`, `--skill <name>` | One skill, by its folder name. Repeatable. |
+| `-a`, `--agent <id>` | One assistant: `claude-code`, `cursor`, `codex`, `opencode`, `zed`, `pi`, or `antigravity`. Repeatable. |
+| `-g`, `--global` | Install for your user, not one project |
+| `-l`, `--list` | Print what is here, install nothing |
+| `-y`, `--yes` | Skip the confirmation prompt on its own |
 
-Common `-a` values: `cursor`, `claude-code`, `codex`, `opencode`, `zed`, `pi`, `antigravity`.
+This path reads the `main` branch, which holds stable prompts only. Experiments
+never appear here. Use path A for those.
 
----
-
-## Index
-
-1. [Aesthetic](#aesthetic) — design ranking companion (main skill)
-2. [Ora](#ora) — Spanish conclusion voice (misc)
+</details>
 
 ---
 
-# 📚 Skills
+# ✨ SKILL PROMPTS
 
-## /Aesthetic
+Stable. Installed by path B, supported, safe to rely on.
 
-![Aesthetic ranking companion — screenshot placeholder](assets/aesthetic-companion.svg)
+## 📦 /starter-pack
 
-*Ranking article in the local companion — replace `assets/aesthetic-companion.svg` with a real capture.*
+One toolkit, every assistant. If you use more than one AI app, this keeps them
+equipped the same way, from one list instead of app by app.
 
 | | |
 | --- | --- |
-| **Package** | [aesthetic/](aesthetic/) |
-| **Entry** | [aesthetic/SKILL.md](aesthetic/SKILL.md) |
-| **Invoke** | Agent-auto · also via agent UI default prompt in [agents/openai.yaml](aesthetic/agents/openai.yaml) |
-| **Runs on** | Your **project** directory (never this repo) |
+| **Package** | [starter-pack/](starter-pack/) · entry [starter-pack/SKILL.md](starter-pack/SKILL.md) |
+| **Invoke** | You only. Say `starter-pack`. |
+| **Needs** | The [harness](https://github.com/yoshi-ortiz/harness-core) it drives, plus Homebrew or a clone |
+| **Channel** | `main` |
 
-#### Description
+<details>
+<summary><b>Full spec</b></summary>
 
-Design and art direction that reads as **intentional, not templated**. The agent proposes HTML/CSS comps, renders PNGs, publishes a ranking page in a local browser companion, and reads stars / likes back into a durable ledger that shapes the next cohort. Grounded in design fundamentals, optional multimodal corpus, and element-level user feedback — not a single vibes score.
+A reference skill: no scripts, no state. It teaches an assistant to operate
+`yoshi-ortiz/harness-core`, whose `collection.yaml` lists the skills and MCP
+servers every assistant on your machine should carry.
 
-**You:** open the companion URL, rank 3–6 proposals, leave notes.  
-**Agent:** infer direction, publish the next testable cohort, repeat.
+| Covers | What it holds |
+| --- | --- |
+| Install | `brew tap`, `brew install`, `harness init`, and the clone alternative |
+| Where the list lives | Checkout versus Homebrew paths, and the local overlay that wins on conflict |
+| Adding a skill | Why a hand edit installs nothing, why a full name list rots, why `--all` is banned |
+| Adding an MCP server | One transport per server, secrets by environment variable only |
+| Standard versus situational | What every assistant gets, against opt-in groups behind `--with` |
+| Releasing | Tag the repo, bump the Homebrew formula |
 
-#### Arguments
+</details>
 
-Natural-language modes (context clues in chat — not CLI flags):
+## 🇪🇸 /ora
+
+Rewrites your assistant's conclusions into plain Latin American Spanish: short
+bullets, light humour, no hedging. Facts, code, and file paths stay exactly as
+written.
+
+| | |
+| --- | --- |
+| **Package** | [ora/](ora/) · entry [ora/SKILL.md](ora/SKILL.md) |
+| **Invoke** | You only. Say `ora` to start, `modo normal` to stop. |
+| **Needs** | Nothing. One file, no scripts. |
+| **Channel** | `main` |
+
+<details>
+<summary><b>Full spec</b></summary>
+
+| Trigger | Effect |
+| --- | --- |
+| `ora` | Rewrites the next reply |
+| `ora on` | Holds for the session |
+| `ora full` | Translates the whole reply, not just the conclusions |
+| `ora off` · `modo normal` · `stop ora` | Back to the default voice |
+
+| Goal | Claim |
+| --- | --- |
+| Comprehension | A non-expert understands the conclusion on first read |
+| Scan time | Whole reply scannable in about 10 seconds |
+| Fidelity | No invented facts for humour. Code, paths, and errors stay verbatim. |
+| Locale | Natural Latin American Spanish, no unsolicited English drift |
+| Exit | Stops cleanly on `off` |
+
+</details>
+
+---
+
+# 🧪 EXPERIMENTS
+
+Not on the stable branch. Real work, real tests, unfinished edges. Install by
+hand from `dev` (path A). Links in this section resolve on `dev`.
+
+## 📁 /genesis
+
+Builds like an engineer who writes things down. It asks what you actually want
+before it touches code, keeps a live list of what is done and what is stuck, and
+**will not call anything finished until it has watched it run**.
+
+| | |
+| --- | --- |
+| **Package** | [genesis/](genesis/) · entry [genesis/SKILL.md](genesis/SKILL.md) |
+| **Invoke** | You only. Say `genesis`. |
+| **Needs** | Nothing. It writes plain Markdown into your project. |
+| **Runs on** | **Your** project folder, never this repo |
+| **Channel** | `alpha` |
+
+<details>
+<summary><b>Full spec: seven steps, the files they write, and the promotion gate</b></summary>
+
+Run at the start of a project, at the start of a feature, or backwards as an
+audit of work already underway.
+
+| Step | What it refuses |
+| --- | --- |
+| Interview before you architect | A boundary drawn from a one-line request |
+| Promote the requirement to a spec | A contract that changes while you build against it |
+| Fetch what you do not know | Implementing a fast-moving dependency from memory |
+| Source before you write | Hand-drawn SVG, hand-rolled boilerplate, blind layout |
+| Build inside the boundary | Hacking through a module wall to force a quick fix |
+| Prove it, then say it | A passing linter reported as a working feature |
+| Update the state, immediately | A roadmap that was only true the day it was written |
+
+**Files, in your project.** `ROADMAP.md` the burndown, `BUGS.md` incidents each
+closed with a root cause, `CHANGELOG.md` semver, `docs/REQUIREMENTS.md` raw and
+append-only, `docs/SPEC/` the promoted contracts, `docs/GLOSSARY.md` one
+immutable term per concept, `docs/knowledge/` owned by [/knowledge](#-knowledge).
+
+**Doctrine**, loaded only when a step names it:
+[references/index.md](genesis/references/index.md) covers the scope interview
+and modular architecture, the sourcing contract, and what counts as evidence.
+
+**Promotion gate.** The doctrine is written and untested.
+
+| Goal | Claim |
+| --- | --- |
+| Interview discipline | It asks before it architects, on a request short enough to guess at |
+| Topology | A cold project ends the first run with every file above populated |
+| State fidelity | An item reaches `DONE` only with runtime evidence quoted in the same turn |
+| Root cause | No `BUGS.md` entry closes on a null check where the pipeline was the cause |
+| Sourcing | It reaches for a component library before writing a component, and says why when it does not |
+| Audit mode | Pointed at an existing project, it reports drift and changes nothing |
+
+</details>
+
+## 📚 /knowledge
+
+Reads the manual so it stops guessing. When your assistant needs to know how
+some tool or product works, it looks it up, saves a short **cited** note in your
+project, and reads that note next time instead of inventing an answer.
+
+| | |
+| --- | --- |
+| **Package** | [knowledge/](knowledge/) · entry [knowledge/SKILL.md](knowledge/SKILL.md) |
+| **Invoke** | Your assistant starts it when research needs keeping. You can also name it. |
+| **Also answers to** | `enciclopedia`, once [/silly](#-silly) installs it |
+| **Needs** | Python 3 (stdlib only) |
+| **Runs on** | **Your** project folder, never this repo |
+| **Channel** | `alpha` |
+
+<details>
+<summary><b>Full spec: format, script, and the promotion gate</b></summary>
+
+Notes use **Open Knowledge Format 0.2**: one concept per file, YAML
+frontmatter, `index.md` at the door. The spec is cached in
+[references/okf-0.2.md](knowledge/references/okf-0.2.md) so the skill never
+refetches it. Output lands in `docs/knowledge/` in **your** project.
+
+```bash
+python3 knowledge/scripts/okf.py new <url> --root docs/knowledge --by claude/opus-5
+python3 knowledge/scripts/okf.py check --root docs/knowledge
+```
+
+`new` fetches, writes the stub with `resource`, `generated`, and `sources`
+filled in, and prints the extract. `check` refuses a file with no frontmatter,
+a file with no `type`, a concept missing from `index.md`, and an index link
+that resolves to nothing.
+
+The script stops short of summarising on purpose. A script that condensed a
+page would be writing the one part of a note that has to be produced by
+something that understood the source. Rules for the human half:
+[distilling.md](knowledge/references/distilling.md).
+
+**Promotion gate.**
+
+| Goal | Claim |
+| --- | --- |
+| Conformance | Every note it writes passes `okf.py check` without a hand edit |
+| Traceability | No sentence in a note lacks support in the `sources` it declares |
+| Compression | A note is shorter than a careful reading of its source, and still answers the question |
+| Version fidelity | The version a claim held for is named, and checked against the dependency manifest |
+| Scope | Notes describe sources. Project decisions stay out of them. |
+
+</details>
+
+## 🧑‍🎨 /aesthetic
+
+![Aesthetic ranking companion](assets/aesthetic-companion.svg)
+
+Design that reads as **intentional, not templated**. Your assistant draws 3 to 6
+versions of a screen and publishes them to a page in your browser. **You rank
+them and leave notes, in your own words.** It reads that back and draws the next
+round against it. Nothing is scored by vibes.
+
+| | |
+| --- | --- |
+| **Package** | [aesthetic/](aesthetic/) · entry [aesthetic/SKILL.md](aesthetic/SKILL.md) |
+| **Invoke** | Your assistant starts it when the work is visual. You can also name it. |
+| **Needs** | Python 3 (stdlib only) · Node for the local ranking page |
+| **Runs on** | **Your** project folder, never this repo |
+| **Channel** | `alpha` |
+
+First reply you should get: a URL, a session key, and one question. If it opens
+with setup chatter instead, that is a bug.
+
+<details>
+<summary><b>Full spec: modes, scripts, doctrine, and the promotion gate</b></summary>
+
+**Modes**, said in chat, not typed as flags.
 
 | Mode | When |
 | --- | --- |
-| `continue` | Resume from latest ledger state; one new 3–6 element cohort |
+| `continue` | Resume from the ledger. One new round of 3 to 6 elements. |
 | `critique` | Report mismatches without changing ranks or scope |
 | `prototype` | Draw and publish comps for ranking |
 | `observe` | Ingest a reference folder as corpus evidence |
 
-Project paths (every script also accepts `--help`):
-
-| Argument | Used by | Meaning |
-| --- | --- | --- |
-| `--project-root` | all harness scripts | Root of the **target project** (where `project.json`, ledger, and comps live) |
-| `--source-root` | `init`, `observe` | Absolute path to read-only inspiration / corpus folder |
-| `--cohort` | `article`, `review_delivery` | Comma-separated element ids for this round (max 6) |
-| `--companion-ledger` | `adopt` | Path to companion click log (usually `.superpowers/brainstorm/decisions.jsonl`) |
-
-Agent handoff shape (first reply, no preamble): URL · session key · project-language review ask — see [user-communication.md](aesthetic/references/user-communication.md).
-
-#### Scripts
-
-Runtime entry points (stdlib Python 3). Full flag lists: [references/commands.md](aesthetic/references/commands.md).
-
-| Script | Role |
-| --- | --- |
-| [bootstrap_harness.py](aesthetic/scripts/bootstrap_harness.py) | Companion, ledger, article, publish |
-| [editorial_workflow.py](aesthetic/scripts/editorial_workflow.py) | Corpus, preferences, direction, burndown |
-| [golden_rules.py](aesthetic/scripts/golden_rules.py) | Rule coverage gate on a design spec |
-| [review_delivery.py](aesthetic/scripts/review_delivery.py) | Staged review PNGs; rejects generic / drifted comps |
-| [brief_workflow.py](aesthetic/scripts/brief_workflow.py) | Element brief generation |
-| [burndown_view.py](aesthetic/scripts/burndown_view.py) | Burndown inspection |
-| [companion_doctor.py](aesthetic/scripts/companion_doctor.py) | Companion health diagnostics |
-| [asset_contract.py](aesthetic/scripts/asset_contract.py) | Asset provenance checks |
-
-`bootstrap_harness.py` **subcommands:** `open` · `init` · `validate` · `decide` · `describe` · `retire` · `adopt` · `shoot` · `article` · `embed` · `publish` · `status` · `controls` · `preflight` · `doctor` · `stats` · `audit-svg` · `self-test`
-
-`editorial_workflow.py` **subcommands:** `observe` · `seed` · `preferences` · `direction` · `scope` · `advance` · `status`
-
-**Companion (Node, vendored):** [companion/](aesthetic/companion/) — `install.sh`, `start-server.sh`, `server.cjs` · contract: [companion-contract.md](aesthetic/references/companion-contract.md)
-
-Minimal first run:
-
 ```bash
-python3 <skill>/scripts/bootstrap_harness.py init --project-root <project>
-python3 <skill>/scripts/bootstrap_harness.py open --project-root <project>
+python3 aesthetic/scripts/bootstrap_harness.py init --project-root <project>
+python3 aesthetic/scripts/bootstrap_harness.py open --project-root <project>
 ```
 
-#### References
+`bootstrap_harness.py` runs the companion, ledger, article, and publish.
+`editorial_workflow.py` runs corpus, preferences, direction, and burndown. Six
+more scripts cover rules, delivery, briefs, and diagnostics. Every one answers
+`--help`, and the full flag reference is
+[references/commands.md](aesthetic/references/commands.md).
 
-Self-contained doctrine under [aesthetic/references/](aesthetic/references/) (OKF 0.2). Index: [references/index.md](aesthetic/references/index.md).
+**Doctrine.** Self-contained, OKF 0.2, indexed at
+[references/index.md](aesthetic/references/index.md): golden rules and design
+fundamentals, inference and critique, production contracts, and the capability
+model. Vocabulary:
+[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Companion server,
+vendored Node: [companion/](aesthetic/companion/).
 
-| Group | Docs |
-| --- | --- |
-| Golden rules | [golden-rules.md](aesthetic/references/golden-rules.md), [graphic-design-fundamentals.md](aesthetic/references/graphic-design-fundamentals.md), [aesthetics-philosophy.md](aesthetic/references/aesthetics-philosophy.md), [art-history.md](aesthetic/references/art-history.md) |
-| Inference | [sentiment-analysis.md](aesthetic/references/sentiment-analysis.md), [interpret-art.md](aesthetic/references/interpret-art.md), [loop.md](aesthetic/references/loop.md), [anti-slop.md](aesthetic/references/anti-slop.md), [stats.md](aesthetic/references/stats.md) |
-| Contracts | [commands.md](aesthetic/references/commands.md), [companion-contract.md](aesthetic/references/companion-contract.md), [editorial-workflow.md](aesthetic/references/editorial-workflow.md), [asset-sourcing.md](aesthetic/references/asset-sourcing.md), [verification.md](aesthetic/references/verification.md) |
-| Capability | [domain-profiles.md](aesthetic/references/domain-profiles.md), [design-tools.md](aesthetic/references/design-tools.md), [implementation-spec.md](aesthetic/references/implementation-spec.md) |
-| Comms | [user-communication.md](aesthetic/references/user-communication.md) |
-
-Vocabulary: [UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md)
-
-#### Goals
-
-Targets for a first public publish — aspirational until backed by hard regression tests. Token and cybersecurity audit badges above stay **pending** until those suites exist.
+**Promotion gate.** The badges above read **pending** until these hold under
+regression tests.
 
 | Goal | Claim |
 | --- | --- |
-| Round-trip feedback | User rank in companion → `adopt` → `preferences` reflects it without signal collapse |
-| Cohort discipline | Published rounds stay within 3–6 rankable elements |
+| Round-trip feedback | Your rank, then `adopt`, then `preferences` reflects it without signal collapse |
+| Cohort discipline | Published rounds stay within 3 to 6 rankable elements |
 | Independence | Stars, likes, lifecycle, and missing feedback never merge into one score |
-| Golden-rule coverage | Direction spec passes `golden_rules.py --min-coverage 0.8` before build |
-| Accessibility | Text ≥ 4.5:1 and controls ≥ 3:1 contrast before publish |
+| Accessibility | Text at 4.5:1 and controls at 3:1 contrast before publish |
 | Honest delivery | `review_delivery.py` rejects generic, explanatory-only, or hash-drifted proposals |
-| Subject fidelity | Comp reads as *this* product with logo removed; fails on unrelated-product swap |
-| Article fidelity | Hero, graph, TOC, four sections, slideshow, and burndown survive every publish |
-| Handoff clarity | First reply delivers URL + key + project-language ask with no setup preamble |
+| Subject fidelity | A comp reads as *this* product with the logo removed |
+| Handoff clarity | First reply is URL, key, and a question. No setup preamble. |
 
----
+</details>
 
-## /ora 🇪🇸
+## 😆 /silly
+
+Lets a skill answer to a second name: `knowledge` in Spanish is
+`/enciclopedia`. **Only the name is translated**, never the skill, so there is
+no second copy to drift. Nothing is installed until you ask for a language.
 
 | | |
 | --- | --- |
-| **Package** | [ora/](ora/) |
-| **Entry** | [ora/SKILL.md](ora/SKILL.md) |
-| **Invoke** | **User-only** (`disable-model-invocation: true`) — say `ora` to start |
-| **Locale** | Spanish (Latino) sessions only |
+| **Package** | [silly/](silly/) · entry [silly/SKILL.md](silly/SKILL.md) |
+| **Invoke** | You only. Say `silly`, or `comandos en espanol`. |
+| **Needs** | Python 3 (stdlib only) |
+| **Runs on** | Your installed skills folder, never this repo |
+| **Channel** | `alpha` |
 
-#### Description
+<details>
+<summary><b>Full spec: the manifest, the tool, and the promotion gate</b></summary>
 
-Rewrites agent conclusions into simple Latino Spanish: short bullets, light comic tone, a few meaning-carrying emojis. Cuts hedges and process chatter; keeps facts, code, and paths exact. Not part of the design harness — optional voice for Spanish-speaking users.
+A skill answers to the name in its own `SKILL.md` and to nothing else, so a
+second name means a second file declaring it. A directory symlink cannot do
+this: the `SKILL.md` inside still names the original, and the new command never
+appears. The alias is therefore a one-file stub pointing at the real skill.
 
-#### Arguments
+Declared on the skill being renamed, never in a central registry:
 
-| Trigger | Effect |
-| --- | --- |
-| `ora` (or user invokes skill) | Active for every user-facing reply until stopped |
-| `stop ora` · `modo normal` · `normal mode` | Return to default voice |
+```yaml
+translations:
+  es: enciclopedia
+aliases:
+  - nerd-mode
+```
 
-No CLI scripts. No project-root. No companion.
+Both blocks are optional. A declared name must be lower case, unique across the
+package, and **present in that skill's own description**, or the assistant has
+never heard the word and the alias file changes nothing. The index gate refuses
+all three failures.
 
-#### Scripts
+```bash
+python3 silly/scripts/alias.py list   --root ~/.cursor/skills
+python3 silly/scripts/alias.py link   --root ~/.cursor/skills --lang es
+python3 silly/scripts/alias.py unlink --root ~/.cursor/skills
+```
 
-None.
+`link --fun` installs the playful names instead. `--dry-run` prints without
+touching anything. It refuses to write over a directory it did not create, and
+`unlink` removes only its own stubs.
 
-#### References
+**Declared today:** `knowledge` answers to `enciclopedia` in Spanish.
 
-None — single-file skill (`SKILL.md` only).
-
-#### Goals
+**Promotion gate.**
 
 | Goal | Claim |
 | --- | --- |
-| Comprehension | Non-expert understands the conclusion on first read |
-| Scan time | Whole reply scannable in under ~10 seconds |
-| Fidelity | No invented facts for humor; code/paths/errors stay verbatim |
-| Locale | Natural Latino American Spanish; no unsolicited English drift |
-| Exit | Stops cleanly on `stop ora` / `modo normal` |
+| Trigger | An installed alias fires the real skill from a cold chat, by name alone |
+| Safety | No run ever overwrites or removes a skill it did not write |
+| Opt-in | Nothing lands in a skills folder that was not asked for by language or by `--fun` |
+| Reversibility | `unlink` leaves the folder exactly as it was found |
+| Locality | The manifest stays on the skill being renamed. This never becomes a registry. |
 
-```bash
-npx skills add yoshi-ortiz/cyber-skills --skill ora -g -a cursor -y
-```
+</details>
 
 ---
 
-# License and development
+<div align="center">
 
 Please consider CC attribution if you build on this work.
 
-| Branch | Contents |
-| --- | --- |
-| `dev` | Full tree — tests, burndown, ADRs, publication tooling |
-| `main` | Fog-free skill payload agents load |
+Contributors: [CONTEXT.md](CONTEXT.md) · [ROADMAP.md](ROADMAP.md) · [aesthetic/AGENTS.md](aesthetic/AGENTS.md)
 
-```bash
-python3 tools/publish.py --out /tmp/published --check
-```
-
-Skill development: [aesthetic/AGENTS.md](aesthetic/AGENTS.md) · traps: [ROADMAP.md](ROADMAP.md)
+</div>
