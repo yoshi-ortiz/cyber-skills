@@ -135,11 +135,11 @@ def languages(readme: Path) -> list[tuple[str, str | None]]:
 
 # A skill row in the index, in either shape the README has used. Markdown:
 # `| [📦 **/name**](#-name) | ... |`, decoration before the bold marker
-# optional. HTML, for a table that joins group headers into one table via
-# `colspan`: `<a href="#-name">...`. Group header rows (`<th colspan="2">`,
-# or a markdown row with no link) match neither and are correctly skipped.
+# optional. HTML: `<a href="#-name"><strong>/name</strong>`, required right
+# after the href so a group header's own link -- `<a href="#-name">Title</a>`,
+# no leading slash, no `<strong>` -- does not also count as that skill's row.
 _INDEX_ROW = re.compile(r"\|\s*\[[^\[\]]*\*\*/([a-z0-9-]+)\*\*"
-                        r'|href="#-([a-z0-9-]+)"')
+                        r'|href="#-([a-z0-9-]+)">\s*<strong>/')
 
 
 def index_order(readme: Path) -> list[str]:

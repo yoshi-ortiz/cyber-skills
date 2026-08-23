@@ -17,12 +17,17 @@
 
 ---
 
-A **skill prompt** is a set of written instructions your AI assistant reads before
-it answers you. Same assistant, different specialist: one that already knows how
+A **skill prompt** is a set of written instructions your AI agent reads before
+it answers you. Same agent, different specialist: one that already knows how
 you like to work and does not need to be re-briefed every morning.
 
 You do not write code to use one. You install a folder, start a new chat, and say
 its name. Everything after the install is optional reading.
+
+- [Index](#-collection)
+- [Installation](#-install)
+- [Skills](#-skill-prompts)
+- [Coming soon](#-experiments)
 
 ## 📒 COLLECTION
 
@@ -30,20 +35,20 @@ Grouped by when you need one, not by how finished it is.
 
 <table>
   <colgroup>
-    <col width="180">
+    <col width="220">
     <col>
   </colgroup>
-  <tr><td colspan="2" align="center"><h4>📀 Setup once</h4><p>Install it once, every assistant carries it</p></td></tr>
-  <tr><td><a href="#-starter-pack">📦 <strong>/starter-pack</strong></a></td><td>One toolkit across every AI app you use</td></tr>
-  <tr><td colspan="2" align="center"><h4>💼 Planning</h4><p>Before you start building</p></td></tr>
-  <tr><td><a href="#-genesis">📁 <strong>/genesis</strong></a></td><td>Plans before it builds, and proves the thing runs</td></tr>
-  <tr><td><a href="#-knowledge">📚 <strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td></tr>
-  <tr><td colspan="2" align="center"><h4>🤖 Token sessions</h4><p>Where you spend a working session</p></td></tr>
-  <tr><td><a href="#-aesthetic">🧑‍🎨 <strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td></tr>
-  <tr><td colspan="2" align="center"><h4>🤡 Silly</h4><p>Call by fun names</p></td></tr>
-  <tr><td><a href="#-silly">😆 <strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td></tr>
-  <tr><td><a href="#-silly">🇪🇸 <strong>/silly</strong> español</a></td><td>Add commands in Spanish</td></tr>
-  <tr><td><a href="#-ora">🇪🇸 <strong>/ora</strong></a></td><td>Rewrites your assistant's conclusions in plain Spanish</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-starter-pack">📀 Setup once</a><br><small>Install it once, every AI app carries it</small></h3></td></tr>
+  <tr><td nowrap>📦 <a href="#-starter-pack"><strong>/starter-pack</strong></a></td><td>One toolkit across every AI app you use</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-genesis">💼 Planning</a><br><small>Before you start building</small></h3></td></tr>
+  <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Plans before it builds, and proves the thing runs</td></tr>
+  <tr><td nowrap>📚 <a href="#-knowledge"><strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-aesthetic">🤖 Token sessions</a><br><small>Where you spend a working session</small></h3></td></tr>
+  <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Call by fun names</small></h3></td></tr>
+  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Add commands in Spanish</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Rewrites your agent's conclusions in plain Spanish</td></tr>
 </table>
 
 Stable prompts sit under [SKILL PROMPTS](#-skill-prompts). The rest are
@@ -53,14 +58,14 @@ Stable prompts sit under [SKILL PROMPTS](#-skill-prompts). The rest are
 
 # 📦 INSTALL
 
-Both paths end the same way: files on disk, then a **new chat**. Assistants read
+Both paths end the same way: files on disk, then a **new chat**. AI apps read
 their skills when a conversation starts, never in the middle of one.
 
 Repo: `https://github.com/yoshi-ortiz/cyber-skills`
 
 ### A) Add to your Agent Plugins
 
-Every assistant keeps its skills in one folder. Clone the repo, then put the skill
+Every AI app keeps its skills in one folder. Clone the repo, then put the skill
 folder inside it, by copy or by symlink.
 
 ```bash
@@ -68,7 +73,7 @@ git clone -b dev https://github.com/yoshi-ortiz/cyber-skills.git
 ln -s "$(pwd)/cyber-skills/aesthetic" ~/.cursor/skills/aesthetic
 ```
 
-| Assistant | Skills folder |
+| AI app | Skills folder |
 | --- | --- |
 | Cursor | `~/.cursor/skills/` |
 | Claude Code | `~/.claude/skills/` |
@@ -79,27 +84,27 @@ which is what `-b dev` fetches.
 
 ### B) Add and sync via Vercel `CLI Script` (recommended) 💯
 
-[`npx skills add`](https://github.com/vercel-labs/skills) finds your assistants and
+[`npx skills add`](https://github.com/vercel-labs/skills) finds your AI apps and
 installs into each one for you. No clone.
 
 ```bash
 npx skills add yoshi-ortiz/cyber-skills --all
 ```
 
-`--all` installs every skill on this branch into every assistant it detects,
+`--all` installs every skill on this branch into every AI app it detects,
 no prompts.
 
 <details>
 <summary><b>Flags, and what this path cannot reach</b></summary>
 
 `--all` is shorthand for `--skill '*' --agent '*' -y`: every skill on this
-branch, into every assistant `skills` detects, no prompts. Each row below
+branch, into every AI app `skills` detects, no prompts. Each row below
 narrows one part of that.
 
 | Flag | What it does |
 | --- | --- |
 | `-s`, `--skill <name>` | One skill, by its folder name. Repeatable. |
-| `-a`, `--agent <id>` | One assistant: `claude-code`, `cursor`, `codex`, `opencode`, `zed`, `pi`, or `antigravity`. Repeatable. |
+| `-a`, `--agent <id>` | One AI app: `claude-code`, `cursor`, `codex`, `opencode`, `zed`, `pi`, or `antigravity`. Repeatable. |
 | `-g`, `--global` | Install for your user, not one project |
 | `-l`, `--list` | Print what is here, install nothing |
 | `-y`, `--yes` | Skip the confirmation prompt on its own |
@@ -117,7 +122,7 @@ Stable. Installed by path B, supported, safe to rely on.
 
 ## 📦 /starter-pack
 
-One toolkit, every assistant. If you use more than one AI app, this keeps them
+One toolkit, every AI app. If you use more than one, this keeps them
 equipped the same way, from one list instead of app by app.
 
 | | |
@@ -130,9 +135,9 @@ equipped the same way, from one list instead of app by app.
 <details>
 <summary><b>Full spec</b></summary>
 
-A reference skill: no scripts, no state. It teaches an assistant to operate
+A reference skill: no scripts, no state. It teaches an agent to operate
 `yoshi-ortiz/harness-core`, whose `collection.yaml` lists the skills and MCP
-servers every assistant on your machine should carry.
+servers every AI app on your machine should carry.
 
 | Covers | What it holds |
 | --- | --- |
@@ -140,14 +145,14 @@ servers every assistant on your machine should carry.
 | Where the list lives | Checkout versus Homebrew paths, and the local overlay that wins on conflict |
 | Adding a skill | Why a hand edit installs nothing, why a full name list rots, why `--all` is banned |
 | Adding an MCP server | One transport per server, secrets by environment variable only |
-| Standard versus situational | What every assistant gets, against opt-in groups behind `--with` |
+| Standard versus situational | What every AI app gets, against opt-in groups behind `--with` |
 | Releasing | Tag the repo, bump the Homebrew formula |
 
 </details>
 
 ## 🇪🇸 /ora
 
-Rewrites your assistant's conclusions into plain Latin American Spanish: short
+Rewrites your agent's conclusions into plain Latin American Spanish: short
 bullets, light humour, no hedging. Facts, code, and file paths stay exactly as
 written.
 
@@ -239,14 +244,14 @@ and modular architecture, the sourcing contract, and what counts as evidence.
 
 ## 📚 /knowledge
 
-Reads the manual so it stops guessing. When your assistant needs to know how
+Reads the manual so it stops guessing. When your agent needs to know how
 some tool or product works, it looks it up, saves a short **cited** note in your
 project, and reads that note next time instead of inventing an answer.
 
 | | |
 | --- | --- |
 | **Package** | [knowledge/](knowledge/) · entry [knowledge/SKILL.md](knowledge/SKILL.md) |
-| **Invoke** | Your assistant starts it when research needs keeping. You can also name it. |
+| **Invoke** | Your agent starts it when research needs keeping. You can also name it. |
 | **Also answers to** | `enciclopedia`, once [/silly](#-silly) installs it |
 | **Needs** | Python 3 (stdlib only) |
 | **Runs on** | **Your** project folder, never this repo |
@@ -291,7 +296,7 @@ something that understood the source. Rules for the human half:
 
 ![Aesthetic ranking companion](assets/aesthetic-companion.svg)
 
-Design that reads as **intentional, not templated**. Your assistant draws 3 to 6
+Design that reads as **intentional, not templated**. Your agent draws 3 to 6
 versions of a screen and publishes them to a page in your browser. **You rank
 them and leave notes, in your own words.** It reads that back and draws the next
 round against it. Nothing is scored by vibes.
@@ -299,7 +304,7 @@ round against it. Nothing is scored by vibes.
 | | |
 | --- | --- |
 | **Package** | [aesthetic/](aesthetic/) · entry [aesthetic/SKILL.md](aesthetic/SKILL.md) |
-| **Invoke** | Your assistant starts it when the work is visual. You can also name it. |
+| **Invoke** | Your agent starts it when the work is visual. You can also name it. |
 | **Needs** | Python 3 (stdlib only) · Node for the local ranking page |
 | **Runs on** | **Your** project folder, never this repo |
 | **Channel** | `alpha` |
@@ -384,7 +389,7 @@ aliases:
 ```
 
 Both blocks are optional. A declared name must be lower case, unique across the
-package, and **present in that skill's own description**, or the assistant has
+package, and **present in that skill's own description**, or the agent has
 never heard the word and the alias file changes nothing. The index gate refuses
 all three failures.
 

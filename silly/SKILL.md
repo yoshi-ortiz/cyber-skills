@@ -23,7 +23,7 @@ python3 <skill>/scripts/alias.py list --root ~/.cursor/skills
 python3 <skill>/scripts/alias.py link --root ~/.cursor/skills --lang es
 ```
 
-`--root` is the assistant's own skills folder: `~/.cursor/skills`,
+`--root` is the AI app's own skills folder: `~/.cursor/skills`,
 `~/.claude/skills`, or whatever that app uses. Run it once per folder.
 
 | Want | Run |
@@ -36,7 +36,7 @@ python3 <skill>/scripts/alias.py link --root ~/.cursor/skills --lang es
 
 `--dry-run` on `link` and `unlink` prints without touching anything.
 
-Then **tell the user to start a new chat.** Assistants read their skills at
+Then **tell the user to start a new chat.** AI apps read their skills at
 session start, so nothing installed mid-conversation exists yet.
 
 ## What it will not do
@@ -69,7 +69,7 @@ aliases:
 | `translations` | Language code to name | One name per language. The name must be lower case, and it must appear in the skill's own `description`, or saying it triggers nothing. |
 | `aliases` | A list of playful names | Same rule. A name nobody can trigger is decoration. |
 
-The description rule is not a style preference. The assistant chooses a skill
+The description rule is not a style preference. The agent chooses a skill
 by reading descriptions, so a name absent from every description is a name it
 has never heard of, alias file or not.
 

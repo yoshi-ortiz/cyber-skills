@@ -68,16 +68,26 @@ def test() -> None:
     assert case(HEADER + BODY.replace("".join(rows), swapped)) == 1
 
     # an HTML index table (group headers joined via colspan) is read the same
+    def html_row(name: str) -> str:
+        return (f'<tr><td><a href="#-{name}"><strong>/{name}</strong></a>'
+                f"</td><td>row</td></tr>\n")
+
     html_index = ("## Index\n\n<table>\n"
-                  + "".join(f'<tr><td><a href="#-{name}">{name}</a></td>'
-                           f"<td>row</td></tr>\n" for name in grouped())
+                  + "".join(html_row(name) for name in grouped())
                   + "</table>\n\n")
     assert case(HEADER + html_index + BODY[len(INDEX):]) == 0
     html_swapped = "".join(
-        [f'<tr><td><a href="#-{n}">{n}</a></td><td>row</td></tr>\n'
-         for n in [grouped()[1], grouped()[0]] + grouped()[2:]])
+        html_row(n) for n in [grouped()[1], grouped()[0]] + grouped()[2:])
     bad_html_index = "## Index\n\n<table>\n" + html_swapped + "</table>\n\n"
     assert case(HEADER + bad_html_index + BODY[len(INDEX):]) == 1
+
+    # a group header's own link -- no leading slash, no <strong> -- is not
+    # mistaken for that skill's row and does not get counted twice
+    with_header = ("## Index\n\n<table>\n"
+                   f'<tr><th colspan="2"><a href="#-{grouped()[0]}">Title</a></th></tr>\n'
+                   + "".join(html_row(name) for name in grouped())
+                   + "</table>\n\n")
+    assert case(HEADER + with_header + BODY[len(INDEX):]) == 0
 
     # the Spanish README indexing the skill under its English name anyway
     assert case(HEADER + BODY, translation=HEADER + BODY) == 1
