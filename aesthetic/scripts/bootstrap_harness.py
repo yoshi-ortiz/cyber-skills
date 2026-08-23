@@ -260,6 +260,7 @@ STRINGS = {
                      "directions \u2014 we'll generate new designs and improvements.",
         "key-done": "done", "key-open": "well drawn, open", "key-weak": "needs work",
         "key-unscored": "unscored", "key-asked": "this round", "key-anti": "set aside",
+        "bar-attempts": "{count} drawings of this idea",
         "before": "what stands now", "after": "proposed instead", "brand-new": "new, nothing to beat",
         "empty-zone": "Nothing here yet.", "zone-count": "elements",
         "execution-of": "execution of", "stars-of": "of", "execution-quality": "execution quality",
@@ -273,6 +274,11 @@ STRINGS = {
         "brief-now": "Now", "brief-more": "{count} more after this",
         "brief-save": "Save answer", "brief-saved": "Saved",
         "brief-placeholder": "Answer in your own words",
+        "tags-title": "Reference tags", "tags-count": "{left} folder(s) left",
+        "tags-aspects": "Useful for", "tags-stance": "Stance",
+        "tags-quality": "Quality", "tags-save": "Save tag", "tags-saved": "Saved",
+        "tag-pursue": "pursue", "tag-avoid": "avoid",
+        "tag-finished": "finished", "tag-sketch": "rough sketch",
         "zero-title": "zero stars: terrible, but it still stands",
         "zero-label": "zero stars for {element}: terrible execution",
     },
@@ -326,6 +332,7 @@ STRINGS = {
         "hero-improve": "descartados",
         "key-done": "terminado", "key-open": "bien dibujado, abierto", "key-weak": "por mejorar",
         "key-unscored": "sin puntuar", "key-asked": "esta ronda", "key-anti": "descartado",
+        "bar-attempts": "{count} dibujos de esta idea",
         "before": "lo que hay ahora", "after": "se propone en su lugar",
         "brand-new": "nuevo, no compite con nada",
         "temp-caption": "Una barra por elemento, de peor a mejor ejecución \u2014 pulsa una para "
@@ -348,6 +355,12 @@ STRINGS = {
         "brief-now": "Ahora", "brief-more": "{count} más después de esta",
         "brief-save": "Guardar respuesta", "brief-saved": "Guardado",
         "brief-placeholder": "Responde con tus propias palabras",
+        "tags-title": "Etiquetas de referencia", "tags-count": "faltan {left} carpeta(s)",
+        "tags-aspects": "Sirve para", "tags-stance": "Postura",
+        "tags-quality": "Calidad", "tags-save": "Guardar etiqueta",
+        "tags-saved": "Guardado",
+        "tag-pursue": "perseguir", "tag-avoid": "evitar",
+        "tag-finished": "terminado", "tag-sketch": "boceto",
         "zero-title": "cero estrellas: pésimo, pero sigue en pie",
         "zero-label": "cero estrellas para {element}: pésima ejecución",
     },
@@ -390,7 +403,12 @@ def companion_agent(project_root: Path | None) -> tuple[str, str]:
 
 
 def save_companion_agent(project_root: Path, url: str = "", name: str = "") -> None:
+    # No project.json means there is no project to remember this against. That
+    # used to raise, which nothing noticed while only Cursor was ever detected
+    # and the save path stayed unreached on a bare directory.
     path = project_root / "spec" / "design-harness" / "project.json"
+    if not path.is_file():
+        return
     data = json.loads(path.read_text(encoding="utf-8"))
     if url.strip():
         data["companionAgentUrl"] = url.strip()
@@ -399,12 +417,58 @@ def save_companion_agent(project_root: Path, url: str = "", name: str = "") -> N
     write_json(path, data)
 
 
+# Which app is running this. Only Cursor was ever detected, so every other host
+# fell through to whatever a previous run had saved and the header confidently
+# named the wrong app. A host that ships no deep link still gets to name itself.
+AGENT_HOSTS = (("CLAUDECODE", "Claude Code"), ("CURSOR_TRACE_ID", "Cursor"))
+
+
 def agent_context_from_env() -> tuple[str, str]:
     """Best-effort agent identity when the CLI did not pass one."""
     url = (os.environ.get("CURSOR_AGENT_URL") or os.environ.get("AGENT_URL") or "").strip()
     name = (os.environ.get("CURSOR_AGENT_NAME") or os.environ.get("AGENT_NAME")
             or os.environ.get("CURSOR_MODEL") or "").strip()
+    if not name:
+        name = next((label for var, label in AGENT_HOSTS if os.environ.get(var)), "")
     return url, name
+
+
+def ensure_brief(project_root: Path) -> bool:
+    """Create the project's brief the first time the companion opens.
+
+    `brief_workflow` has been complete and tested since it was written and has
+    never once rendered, because `SKILL.md` names no command that creates a
+    brief and `render_brief` returns nothing without one. Starting it here
+    costs the entry point no bytes, and `open` already means "get this project
+    ready to be looked at".
+    """
+    if not (project_root / "spec" / "design-harness").is_dir():
+        return False
+    try:
+        import brief_workflow
+        if brief_workflow.load_brief(project_root) is not None:
+            return False
+        brief_workflow.save_brief_spec(project_root, brief_workflow.default_brief(
+            time.strftime("%Y-%m-%dT%H:%M:%S%z"), project_language(project_root)))
+        return True
+    except (ImportError, OSError, ValueError):
+        return False
+
+
+def resolve_agent(url: str, name: str, project_root: Path) -> tuple[str, str]:
+    """Agent identity, taken whole from one source.
+
+    Resolving the URL and the name independently is what put `Claude Code`
+    beside a `cursor://` deep link in a real `project.json`: the name came from
+    one run and the link from another. Sources are tried in order and the first
+    that says anything supplies both halves, so the pair always agrees.
+    """
+    for candidate in ((url.strip(), name.strip()),
+                      agent_context_from_env(),
+                      companion_agent(project_root)):
+        if candidate[0] or candidate[1]:
+            return candidate
+    return "", ""
 
 
 def agent_display_parts(name: str, url: str = "") -> tuple[str, str]:
@@ -2269,11 +2333,10 @@ def open_board(project_root: Path, status: str = "",
                agent_url: str = "", agent_name: str = "") -> str:
     """Bring the companion up and return its URL. Stdout of the verb is this string."""
     project_root = project_root.resolve()
-    env_url, env_name = agent_context_from_env()
-    agent_url = agent_url.strip() or env_url
-    agent_name = agent_name.strip() or env_name
+    agent_url, agent_name = resolve_agent(agent_url, agent_name, project_root)
     if agent_url or agent_name:
         save_companion_agent(project_root, agent_url, agent_name)
+    ensure_brief(project_root)
     url = read_board_url(project_root)
     if not url or not board_is_up(url):
         url = start_companion(project_root)
@@ -3653,6 +3716,66 @@ def incumbent_of(element: str, known: set[str]) -> str:
     return ""
 
 
+def lineage_root_of(element: str, known: set[str]) -> str:
+    """The original idea an element descends from, following incumbents up.
+
+    `incumbent_of` answers one step -- what this drawing replaces. A third and
+    fourth pass at the same idea form a chain, and the chart needs the whole
+    chain to say "these five bars are five attempts at one thing" rather than
+    five separate concerns.
+    """
+    seen = {element}
+    current = element
+    while True:
+        parent = incumbent_of(current, known - {current})
+        if not parent or parent in seen:
+            return current
+        seen.add(parent)
+        current = parent
+
+
+def parent_item_of(element: str) -> str:
+    """The item a round's work sits under: the id's first dotted segment.
+
+    `cover.layout.two-column` and `cover.ring.kicker` are both work on the
+    cover. `type.heading.serif` is not -- it is a different parent item, and a
+    round that proposes both is redesigning two things at once.
+    """
+    return element.split(".")[0]
+
+
+def check_round_stays_in_scope(cohort: set[str]) -> None:
+    """Refuse a round whose cohort spans more than one parent item.
+
+    A round is one object being worked on. Left unenforced, an inference pass
+    reads a whole ledger, reasons across every surface in it, and returns a
+    thin proposal for each -- the expensive failure: a long run, wide reasoning
+    and minimal drawings, because attention that should have gone into one
+    cover went into six unrelated things.
+
+    `check_cohort_size` caps how MANY elements a round may carry and says
+    nothing about whether they belong together; the foundation-span check in
+    `render_article` asks a related question but can be answered with `--asks`.
+    Scope is not a prose problem, so this one has no escape hatch: a round that
+    spans two parent items is two rounds.
+    """
+    if len(cohort) < 2:
+        return
+    by_item: dict[str, list[str]] = {}
+    for element in sorted(cohort):
+        by_item.setdefault(parent_item_of(element), []).append(element)
+    if len(by_item) == 1:
+        return
+    spans = "; ".join(f"{item} ({', '.join(members)})"
+                      for item, members in sorted(by_item.items()))
+    raise HarnessError(
+        f"this round spans {len(by_item)} parent items: {spans}. A round is one "
+        "object -- a cover, a type system, an illustration set -- so proposing "
+        "across two of them oversteps the one being judged and spends the run "
+        "on breadth the user did not ask for. Split it into one round per "
+        "parent item.")
+
+
 MAX_VARIANTS_PER_IDEA = 3
 
 
@@ -3718,7 +3841,11 @@ def check_round_earns_its_place(decisions: dict[str, object], cohort: set[str]) 
             "round replaces (`decide --supersedes`) instead of stacking another variant "
             "beside them, or ask about a different element.")
 
-    if not polish:
+    # Asking about nothing is not a round proposing new ideas over unanswered
+    # feedback; it is redrawing the page as it already stands. Refusing it left
+    # no way to regenerate the article after a code change without inventing a
+    # cohort, which is why a workaround snippet lived in ROADMAP.md.
+    if not cohort or not polish:
         return
     touches_polish = any(c in polish or incumbents.get(c) in polish for c in cohort)
     if touches_polish:
@@ -3819,20 +3946,24 @@ def render_article(project_root: Path, decisions: dict[str, object],
         # Older installed copies have no project theme module. Their original
         # safe article fallbacks remain intact.
         workflow = None
-    stored_url, stored_name = companion_agent(project_root)
-    agent_url = agent_url.strip() or stored_url
-    raw_name = agent_name.strip() or stored_name
+    agent_url, raw_name = resolve_agent(agent_url, agent_name, project_root)
     agent_app, agent_model = agent_display_parts(raw_name, agent_url)
     agent_name = agent_display_line(raw_name, agent_url)
     cohort = cohort or set()
     check_asks(asks, cohort, language or project_language(project_root))
     check_cohort_size(cohort)
+    check_round_stays_in_scope(cohort)
     check_unique_cohort_previews(decisions, cohort)
     # A cohort is one surface or one problem. Three elements drawn from three
     # different foundations, under a name that claims a shared surface, is a
     # batch of errands -- and the page cannot say what it is asking, so the
     # agent ends up explaining the round in prose the user never asked for.
     # Either the domain is evident from the ledger, or it has to be stated.
+    #
+    # `--asks` answers THIS check, which is about a round that needs explaining.
+    # It does not answer `check_round_stays_in_scope` above, which is about a
+    # round that should not exist as one round -- no sentence makes two parent
+    # items into one object.
     domains = sorted({foundation_of(e) for e in cohort})
     if len(domains) > 2 and not asks.strip():
         raise HarnessError(
@@ -3871,7 +4002,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
             return "dh-thigh"
         return f'dh-t{entry["stars"]}'
 
-    def bar(entry: dict[str, object]) -> str:
+    def bar(entry: dict[str, object], attempts: int = 1) -> str:
         stars = "--" if not entry.get("scored") else entry["stars"]
         asked = entry["element"] in cohort
         # The old tooltip read `family.tab.spine-step.grupo-color -- 1/5 --
@@ -3881,12 +4012,15 @@ def render_article(project_root: Path, decisions: dict[str, object],
         # slideshow rather than scrolling to a row.
         name = bar_names.get(entry["element"]) or display_name(entry)
         label = f'{name} — {stars}/{STAR_RANGE[1]}'
+        if attempts > 1:
+            label = f'{label} — {txt["bar-attempts"].format(count=attempts)}'
         if asked:
             label = f'{txt["zone-round"]}: {label}'
         return (f'<a class="{bar_class(entry)}" href="#dh-el-{html_escape(entry["element"])}"'
                 f'{" data-asked=\"1\"" if asked else ""} '
                 f'data-el="{html_escape(entry["element"])}" '
                 f'data-name="{html_escape(name)}" '
+                f'{f"data-variants=\"{attempts}\" " if attempts > 1 else ""}'
                 f'data-score="{stars}" '
                 # `aria-label`, never `title`: a `title` made the browser draw a
                 # SECOND tooltip in the OS font, on top of the key row.
@@ -3901,8 +4035,35 @@ def render_article(project_root: Path, decisions: dict[str, object],
         anti = 1 if zone_of(entry, cohort) == "antipattern" else 0
         return (anti, -int(entry.get("stars") or 0), entry["element"])
 
-    ordered_bars = sorted(live, key=bar_order)
-    bars = "".join(bar(e) for e in ordered_bars)
+    # One bar per IDEA, not per attempt. Every redraw used to keep its own bar
+    # forever -- a superseded drawing is still `live` for the strip's purposes
+    # -- so the chart grew without bound and said "twenty-eight concerns" when
+    # the truth was eight ideas, some of them drawn four times. The round zone
+    # has grouped variants under their incumbent since it was written; this is
+    # the same grouping, applied to the strip that summarises the whole ledger.
+    lineages: dict[str, list[dict[str, object]]] = {}
+    for entry in live:
+        lineages.setdefault(lineage_root_of(entry["element"], known_ids), []).append(entry)
+
+    def speaks_for(members: list[dict[str, object]]) -> dict[str, object]:
+        # This round's ask speaks for its own lineage: it carries the `?` and
+        # the outline, and hiding it behind an ancestor would make the one
+        # thing being asked about the one thing the strip could not show.
+        # Otherwise the standing drawing speaks, best execution first.
+        return sorted(members, key=lambda e: (
+            0 if e["element"] in cohort else 1,
+            0 if e["state"] not in ("superseded", "rejected") else 1,
+            -int(e.get("stars") or 0),
+            e["element"]))[0]
+
+    attempts: dict[str, int] = {}
+    speakers: list[dict[str, object]] = []
+    for members in lineages.values():
+        speaker = speaks_for(members)
+        attempts[speaker["element"]] = len(members)
+        speakers.append(speaker)
+    ordered_bars = sorted(speakers, key=bar_order)
+    bars = "".join(bar(e, attempts.get(e["element"], 1)) for e in ordered_bars)
     asking = len([e for e in live if e["element"] in cohort])
     # Three figures the reader can act on, in the order they matter: what is
     # being asked now, what is still moving, and what is known to need another
@@ -3938,7 +4099,12 @@ def render_article(project_root: Path, decisions: dict[str, object],
         live_label = txt["bar-active-label"]
         live_icon, live_detail = split_status_icon(live_status, "🎨")
     designing_display = (round_label or cohort_name).strip()
-    out = [ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
+    # The screen is a fragment, so its encoding rode entirely on whoever served
+    # it. Opened from disk, or served by anything that omits the header, every
+    # accent in a Spanish project rendered as mojibake. Declaring it here makes
+    # the artifact say what it is wherever it ends up.
+    out = ['<meta charset="utf-8">',
+           ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
            TOC_SCRIPT, SHOT_FIT_SCRIPT, LIGHTBOX_SCRIPT, LIVE_SCRIPT,
            f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
            f'data-cheer-text="{html_escape(txt["done-cheer"])}" '
@@ -3974,17 +4140,26 @@ def render_article(project_root: Path, decisions: dict[str, object],
     # Keep the original article as the only presentation. The small workflow
     # module supplies durable project scope; it must never render a competing
     # website. A missing spec simply means this older project has no burndown.
-    # The brief leads the burndown: it is what the work is measured against,
-    # and it is the one section the user can act on without waiting for a
-    # render. `WorkflowError` subclasses ValueError, so the existing catch
-    # already covers a corrupt spec on both.
+    # `WorkflowError` subclasses ValueError, so the existing catch already
+    # covers a corrupt spec on both.
+    #
+    # Built here, rendered under the round. The round is what the page is
+    # asking for; a five-question form standing above it buried the ask behind
+    # homework. Below it the reading order is what stands, rank it, then
+    # sharpen the foundations if you want to.
     try:
         import brief_workflow
         brief_markup = brief_workflow.render_brief(project_root, txt)
     except (ImportError, OSError, ValueError):
         brief_markup = ""
-    if brief_markup:
-        out.append(brief_markup)
+    # Reference tags are the other half of what the user tells the agent, so
+    # they render beside the brief rather than at opposite ends of the page.
+    # Both stay quiet until they have something to ask about.
+    try:
+        import corpus_tags
+        tags_markup = corpus_tags.render_corpus_tags(project_root, txt)
+    except (ImportError, OSError, ValueError):
+        tags_markup = ""
     if workflow:
         try:
             burndown_markup = workflow.render_burndown(project_root)
@@ -4171,6 +4346,8 @@ def render_article(project_root: Path, decisions: dict[str, object],
         if seen_foundation is not None and zone in FOLDING_ZONES:
             out.append("</details>")
         out.append("</section>")
+        if zone == "round":
+            out.extend(m for m in (brief_markup, tags_markup) if m)
     # A designer finishing a page of scores has no idea what happens next.
     # The bar says it, stays put, and counts what is still unscored.
     unscored_now = len([e for e in live if not e.get("scored")])
@@ -5225,6 +5402,30 @@ def main() -> int:
             adopted, skipped = adopt_companion(args.project_root, args.companion_ledger)
             print(f"Adopted {adopted} ranked decision(s); skipped {skipped} "
                   f"interaction(s) with no design-element id or usable signal.")
+            # Everything else the user typed arrives on the same trip. Folding
+            # these in here rather than as extra SKILL.md commands keeps the
+            # entry cost at zero: `adopt` already means "read what the user
+            # told us", and the companion writes all of it to one directory.
+            try:
+                import brief_workflow
+                said, _ = brief_workflow.adopt_brief_inbox(
+                    args.project_root,
+                    args.project_root / ".superpowers" / "brainstorm"
+                    / brief_workflow.BRIEF_INBOX_FILE)
+                if said:
+                    print(f"Adopted {said} brief answer(s).")
+            except (ImportError, OSError, ValueError):
+                pass
+            try:
+                import corpus_tags
+                tags_in, _ = corpus_tags.adopt_inbox(
+                    args.project_root, args.project_root / corpus_tags.DEFAULT_INBOX)
+                rows = corpus_tags.digest_rows(args.project_root)
+                if tags_in or any(r["aspect"] != "untagged" for r in rows):
+                    print(f"Adopted {tags_in} corpus tag(s).")
+                    sys.stdout.write(corpus_tags.render_digest(rows))
+            except (ImportError, OSError, ValueError):
+                pass
         elif args.command == "preflight":
             split = lambda raw: [i.strip() for i in raw.split(",") if i.strip()]
             matrix = record_preflight(args.project_root, split(args.available), split(args.missing))

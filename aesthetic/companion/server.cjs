@@ -159,6 +159,32 @@ const MIME_TYPES = {
   '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml'
 };
 
+// Every POST here read its own body the same way, with the same 8KB cap and
+// the same swallow-and-default parse. One copy.
+function readJsonBody(req, done) {
+  let body = '';
+  req.on('data', chunk => { body += chunk; if (body.length > 8192) req.destroy(); });
+  req.on('end', () => {
+    let data = {};
+    try { data = JSON.parse(body || '{}'); } catch (e) { data = {}; }
+    done(data);
+  });
+}
+
+// The browser appends; Python owns the schema and adopts on its own schedule.
+// Returns false when the queue could not be written, so the caller answers 500
+// instead of telling the user their tag was saved when it was not.
+function queueLine(name, payload) {
+  try {
+    fs.appendFileSync(path.join(path.dirname(SESSION_DIR), name),
+      JSON.stringify(payload) + '\n');
+    return true;
+  } catch (e) {
+    console.error(`Failed to queue ${name}:`, e.message);
+    return false;
+  }
+}
+
 // ========== Templates and Constants ==========
 
 function waitingPage() {
@@ -534,11 +560,7 @@ function handleRequest(req, res) {
   } else if (req.method === 'POST' && pathname === '/agent') {
     // Live status for the bottom bar. Does not write a screen, so it cannot
     // steal the newest-mtime route the way a republish would.
-    let body = '';
-    req.on('data', chunk => { body += chunk; if (body.length > 4096) req.destroy(); });
-    req.on('end', () => {
-      let data = {};
-      try { data = JSON.parse(body || '{}'); } catch (e) { data = {}; }
+    readJsonBody(req, data => {
       const text = String(data.text || '').slice(0, 200);
       const state = data.state === 'idle' ? 'idle' : 'active';
       lastAgent = { type: 'dh-agent', text, state, updatedAt: Date.now() };
@@ -546,15 +568,40 @@ function handleRequest(req, res) {
       res.writeHead(204, securityHeaders());
       res.end();
     });
+  } else if (req.method === 'POST' && pathname === '/corpus') {
+    // Which folders of the user's inspiration matter, and for what. Queued,
+    // not applied: corpus_tags.py owns the vocabulary, so an unknown aspect is
+    // refused in one language rather than two that drift.
+    readJsonBody(req, data => {
+      const group = String(data.group || '').slice(0, 400);
+      const aspects = (Array.isArray(data.aspects) ? data.aspects : [])
+        .slice(0, 8).map(a => String(a).slice(0, 40));
+      if (!group || !aspects.length) {
+        res.writeHead(400, securityHeaders({ 'Content-Type': 'application/json; charset=utf-8' }));
+        res.end(JSON.stringify({ error: 'group and aspects are required' }));
+        return;
+      }
+      const queued = queueLine('corpus-tags-inbox.jsonl', {
+        at: String(data.at || new Date().toISOString()).slice(0, 40),
+        group, aspects,
+        stance: String(data.stance || 'pursue').slice(0, 20),
+        quality: String(data.quality || 'finished').slice(0, 20),
+        note: String(data.note || '').slice(0, 280),
+      });
+      if (!queued) {
+        res.writeHead(500, securityHeaders());
+        res.end();
+        return;
+      }
+      touchActivity();
+      res.writeHead(204, securityHeaders());
+      res.end();
+    });
   } else if (req.method === 'POST' && pathname === '/brief') {
     // The user's own prose. Queued, not applied: brief_workflow.py owns the
     // schema, exactly as it owns decisions.jsonl for scoring. Validating here
     // too would put the same rules in two languages and let them drift.
-    let body = '';
-    req.on('data', chunk => { body += chunk; if (body.length > 8192) req.destroy(); });
-    req.on('end', () => {
-      let data = {};
-      try { data = JSON.parse(body || '{}'); } catch (e) { data = {}; }
+    readJsonBody(req, data => {
       const id = String(data.id || '').slice(0, 120);
       const answer = String(data.answer || '').slice(0, 4000);
       if (!id || !answer) {
@@ -562,15 +609,12 @@ function handleRequest(req, res) {
         res.end(JSON.stringify({ error: 'id and answer are required' }));
         return;
       }
-      const line = JSON.stringify({
+      const queued = queueLine('brief-inbox.jsonl', {
         eventId: String(data.eventId || `b-${Date.now()}`).slice(0, 120),
         at: String(data.at || new Date().toISOString()).slice(0, 40),
         id, answer,
-      }) + '\n';
-      try {
-        fs.appendFileSync(path.join(path.dirname(SESSION_DIR), 'brief-inbox.jsonl'), line);
-      } catch (e) {
-        console.error('Failed to queue brief answer:', e.message);
+      });
+      if (!queued) {
         res.writeHead(500, securityHeaders());
         res.end();
         return;

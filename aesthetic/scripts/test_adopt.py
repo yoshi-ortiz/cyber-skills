@@ -852,30 +852,57 @@ class TheArticleIsADesignSystem(unittest.TestCase):
             self.assertIn("__dhOpenSlide", script,
                           "the chart and the thumbnails must share one opener")
 
+    def one_folder(self, root: Path) -> dict:
+        """Three foundations under ONE parent item.
+
+        The foundation-span check and `check_round_stays_in_scope` used to be
+        indistinguishable in these tests, because the fixture cohort spanned
+        three foundations AND three parent items -- so whichever check ran
+        first was the one being tested. Everything here sits under `folder`,
+        which reaches the foundation check with scope already satisfied.
+        """
+        self.system(root)
+        for element in ("folder.type.display", "folder.palette.warm",
+                        "folder.voice.labels"):
+            bh.record_decision(root, element, "proposed", 1, "fixture", [])
+        return bh.load_decisions(root / "spec" / "design-harness")
+
+    SCATTERED = {"folder.type.display", "folder.palette.warm", "folder.voice.labels"}
+
     def test_a_cohort_spanning_many_foundations_is_refused(self):
         """Three elements from three foundations under a name claiming a shared
         surface is a batch of errands. The page cannot say what it asks, so the
         agent ends up explaining the round in prose instead."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self.system(root)
-            bh.record_decision(root, "voice.labels", "proposed", 1, "fixture", [])
-            decisions = bh.load_decisions(root / "spec" / "design-harness")
-            scattered = {"type.display", "cover.weak", "voice.labels"}
+            decisions = self.one_folder(root)
             with self.assertRaises(bh.HarnessError) as caught:
-                bh.render_article(root, decisions, scattered)
+                bh.render_article(root, decisions, self.SCATTERED)
             self.assertIn("one surface or one problem", str(caught.exception))
 
     def test_stating_what_they_share_is_accepted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            decisions = self.one_folder(root)
+            markup = bh.render_article(root, decisions, self.SCATTERED,
+                                       asks="Everything the folder says out loud.")
+            self.assertIn("Everything the folder says out loud.", markup)
+
+    def test_asks_does_not_buy_a_round_out_of_its_parent_item(self):
+        """`--asks` answers the foundation-span check: it explains a round that
+        needs explaining. It must not answer scope, because no sentence turns
+        two objects into one round -- that is how a long run ends up spread
+        across every surface in the ledger."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
             self.system(root)
             bh.record_decision(root, "voice.labels", "proposed", 1, "fixture", [])
             decisions = bh.load_decisions(root / "spec" / "design-harness")
-            markup = bh.render_article(root, decisions,
-                                       {"type.display", "cover.weak", "voice.labels"},
-                                       asks="Everything the cover says out loud.")
-            self.assertIn("Everything the cover says out loud.", markup)
+            with self.assertRaises(bh.HarnessError) as caught:
+                bh.render_article(root, decisions,
+                                  {"type.display", "cover.weak", "voice.labels"},
+                                  asks="Everything the cover says out loud.")
+            self.assertIn("parent items", str(caught.exception))
 
     def test_a_single_domain_cohort_needs_no_sentence_and_names_itself(self):
         with tempfile.TemporaryDirectory() as tmp:

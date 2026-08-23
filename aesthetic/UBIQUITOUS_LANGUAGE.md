@@ -56,6 +56,10 @@ _Avoid_: Mixed score, average
 
 ## Progress
 
+**Loop**:
+The evidence-backed creative cycle: frame, direct, declare, build, critique, capture.
+_Avoid_: Workflow, pipeline, process
+
 **Scope event**:
 An append-only record that adds, moves, resolves, reopens, or discards an epic or element.
 _Avoid_: Mutable counter, inferred timestamp
@@ -132,9 +136,42 @@ _Avoid_: Source accuracy, popularity
 A cached machine record that a named resource was reachable at a time, with its locator and response metadata.
 _Avoid_: Truth certificate, peer review
 
+## Contexts and scope
+
+**Subject**:
+The one product or page a round is working on.
+_Avoid_: Product, project, client
+
+**Parent item**:
+The element id prefix a Subject's work sits under, such as `cover` for `cover.layout.two-column`.
+_Avoid_: Category, folder, group
+
+**Round Scope**:
+The boundary confining a round's proposals to one parent item.
+_Avoid_: Global scope, cross-project inference
+
+**Design-Inference Context**:
+An agent running `SKILL.md` to produce creative decisions.
+_Avoid_: Using the skill, runtime
+
+**Repo-Dev Context**:
+An agent changing this skill's own code, contracts, or tests.
+_Avoid_: Developing the skill, dev mode
+
+**Context bleed**:
+One context's vocabulary framing the other's decisions.
+_Avoid_: Contamination
+
+## Flagged ambiguities
+
+- "Workflow" names the Burndown scripts (`editorial_workflow.py`,
+  `brief_workflow.py`), never the creative cycle. Say **Loop** for the cycle.
+
 ## Invariants
 
 - Rank, sentiment, and lifecycle never write one another.
+- A round's proposals stay under one parent item.
+- Neither context's doctrine frames the other's decisions.
 - User feedback outranks agent inference.
 - Like plus high rank is a positive anchor.
 - Like plus low rank requests polish of the same idea.

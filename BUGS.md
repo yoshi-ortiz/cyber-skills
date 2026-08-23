@@ -4,7 +4,9 @@ Live incidents. Each entry carries a one-sentence root cause, because a fix
 written against a symptom comes back.
 
 Status: `open` (reproduced, not fixed) · `fixed` (shipped with a guard) ·
-`unverified` (reported, not yet reproduced) · `external` (outside this repo).
+`unverified` (reported, not yet reproduced) · `not reproducible` (measured
+against a real project and absent) · `superseded by <id>` (real, but the
+useful form of it lives elsewhere) · `external` (outside this repo).
 
 Fog. Lives on `dev`, never published to `main`.
 
@@ -114,27 +116,403 @@ qlmanage's 45s, so a flaky render costs roughly a third as much.
 
 ---
 
-## B-009 · Round proposals reported as overlapping · unverified
+## B-009 · Round proposals reported as overlapping · not reproducible
 
 **Symptom.** Reported repeatedly: proposals appear to render over one another.
 
-**Investigation.** Measured the suspected comp directly:
-`bodyScrollW == bodyClientW == 510`, all three cards inside the sheet. No
-overflow. An overflow gate was built against this hypothesis and then deleted,
-because the hypothesis was disproven and the gate would have added a second
-Chrome render per comp against the loudest complaint about slow runs.
+**Measured, 2026-08-22**, against the real `keynote-performance` ledger (26
+elements, 27 rendered rows, served over HTTP at 1280px). Zero overlapping
+pairs among rows that actually paint, and nothing covered by another element.
 
-**Next.** Needs a screenshot of the specific round that overlaps.
+**Why it keeps looking real.** A naive `getBoundingClientRect()` sweep reports
+six overlapping pairs, 1050px wide and 10-154px tall. Every one is a phantom.
+The backlog is the only folding zone, and its 14 rows sit inside a closed
+`<details class="dh-acc">`, whose contents are display-locked under
+`content-visibility: hidden`. Locked subtrees still return plausible rects, so
+the rows appear to be 154px tall inside a 109px box and to "escape" it. They
+never paint. Filtering by
+`checkVisibility({contentVisibilityAuto: true})` drops 14 of 27 rows and every
+overlap with them.
+
+The earlier `510` figure was the same class of error on the other axis: 510 is
+the comp's own internal width, not the page's. A comp is 510px scaled by
+0.184 into a ~94px thumbnail.
+
+**Conclusion.** Two investigations have now produced a confident wrong answer
+from the wrong measurement, and one of them built and deleted a guard over it.
+Do not reopen this on a rect sweep. Settle it with visibility-filtered rects
+plus `elementFromPoint`, or with a screenshot of the specific round — and if
+the report recurs, get the screenshot first.
 
 ---
 
-## B-010 · Long runs produce weak output · open
+## B-010 · Long runs produce weak output · superseded by B-017
 
 **Symptom.** The loudest complaint and the least mechanical.
 
 **Contributing causes fixed so far.** Uncapped cohort size, cross-round variant
 accumulation, and the shared Chrome/qlmanage timeout.
 
-**Next.** What remains is a craft question about the design loop. Judge it
-against a fresh round now that the rendering defects above are gone, rather
-than assuming it is still true.
+**Judged, 2026-08-22**, against the delivered artwork in `keynote-performance`
+rather than against the ledger's old scores. The output is not generically
+weak, and this entry is too vague to act on.
+
+The harness's own probe (`measure_screen.js`) over the rendered article: 27 of
+27 elements carry a visible graphic, no dead shots, worst contrast 4.61:1, no
+unreadable rules. The 158 sub-9px text nodes it counts are all *inside* comps,
+none in the chrome — a comp is 510px scaled by 0.184, so its "5px" type is
+27px in the artwork. A scaling artifact, not a legibility defect.
+
+The artwork itself carries a real system: a pink ground, a dot-matrix display
+face, a black spine rail with vertical type, punched-binder edge, numbered
+tabs. `interior.pairs.stacked-i2.ring-mark` executes it cleanly. It would read
+as this subject with the branding removed, and would not fit an unrelated
+product unchanged — the two criteria SKILL.md's done gate calls the design bar.
+
+**What is actually wrong** is one nameable craft defect, now filed as B-017.
+The user's 1-star scores are justified by that defect, not by a systemic
+weakness. Closing the vague form so it stops absorbing every complaint.
+
+---
+
+## B-011 · Round proposals overstep their parent Subject · fixed
+
+**Symptom.** A Direction or Epic proposed for one Subject (the specific
+product or page a round is working on) starts reasoning about, or restyling,
+elements that belong to a different Subject instead of staying confined to
+its own parent product.
+
+**Root cause.** `SKILL.md`'s Done gate already names the failure ("does not
+fit an unrelated product unchanged"), but nothing names or checks the
+containing boundary itself. Round scope inference has no explicit fence: an
+agent inferring what a Direction implies can reach into a sibling Subject's
+epics because no step requires resolving to exactly one Subject before
+proposing anything.
+
+**Fix.** `check_round_stays_in_scope` in `bootstrap_harness.py` refuses a
+cohort spanning more than one parent item, read off the dotted id's first
+segment by `parent_item_of`. Called from `render_article` beside
+`check_cohort_size`, so it fires for every caller and not only the CLI. No
+schema change and no migration: the id convention already carried the object.
+Deliberately no `--asks` escape — that flag answers the foundation-span
+check, which is about a round that needs explaining, not about a round that
+should be two rounds.
+
+**Guard.** `test_scope.py::ARoundMustStayOnOneObject`, plus
+`test_adopt.py::test_asks_does_not_buy_a_round_out_of_its_parent_item`
+end-to-end. Two existing tests in `test_adopt.py` had to be rewritten: their
+fixture cohort spanned three foundations *and* three parent items, so
+whichever check ran first was the one being tested. They now use a cohort
+under one `folder` parent, which reaches the foundation check with scope
+already satisfied.
+
+---
+
+## B-012 · Repo-dev vocabulary leaks into Design-Inference Context · fixed
+
+**Symptom.** An agent zoomed out over the repo picks up software-triage
+vocabulary ("root cause," "guard," "budget," "known debt") while doing design
+work, with nothing marking which files belong to which context.
+
+**Root cause.** `.audit/aesthetic-output-quality.tsv`, this file, and
+`ROADMAP.md` sit at the repo root, outside every directory's
+`admits`/`refuses` contract. `.audit/aesthetic-output-quality.tsv` is an
+append-only ledger shaped exactly like the skill's own
+`editorial-events.jsonl`, so its rows can be mistaken for Scope Events.
+`aesthetic/AGENTS.md` sits inside the skill root beside `SKILL.md` (admitted
+by `aesthetic/CONTEXT.md` itself) and is kept out of `main` only by
+`tools/fog.py`'s fog list — on `dev` it is fully in reach of a
+Design-Inference Context session.
+
+**Second root cause, and the reason nothing caught this.** `contracts.py` is
+the tool that should have. Its `walk()` skipped hidden directories by testing
+`d.name` alone, which is not ancestor-aware: `.git/refs/heads` is named
+`heads`, so a repository-root run descended into git's internals and reported
+240 directories. Scoped to `aesthetic/` the bug never showed — which is
+exactly why the checker was only ever pointed there, and why the repo root
+went uncontracted.
+
+**Fix.** `walk()` now tests every part of the path relative to the root, so
+`--root .` at the repository root reports 13 directories instead of 240. On
+that footing, three contracts were added: a root `CONTEXT.md` declaring the
+release package, its skill index, and the two contexts — naming `BUGS.md`,
+`ROADMAP.md`, `CHANGELOG.md`, and `.audit/` as Repo-Dev Context, never
+Preference Evidence or Golden Rule Evidence — plus `ora/CONTEXT.md` and
+`assets/CONTEXT.md`. The root contract ships: the repo is one release package
+indexing several skills, so the index is worth carrying to `main`.
+
+**Guard.** `test_contracts.py::HiddenDirectories`, including the inverse case
+— a root that is itself hidden must still walk its visible children.
+`python3 aesthetic/scripts/contracts.py --root .` is now the whole-repo check.
+
+---
+
+## B-013 · P0 · Long runs overstep Round Scope and burn tokens for weak output · open
+
+**Symptom.** An inference run takes too long, visibly reasons past the
+element it was asked about, and still lands on a minimal, generic design —
+tokens spent with nothing usable to show for it.
+
+**Root cause.** Three independent gaps compound:
+
+1. `editorial_workflow.py`'s cohort check (`validate_art_direction`,
+   [scripts/editorial_workflow.py:299-308](aesthetic/scripts/editorial_workflow.py))
+   only enforces size (3–6 unique ids) and, once anything is ranked, that the
+   cohort stays inside already-known preference ids. It never checks that a
+   cohort's elements share one epic — `validate_editorial_spec`
+   ([scripts/editorial_workflow.py:335-366](aesthetic/scripts/editorial_workflow.py))
+   maps each element to exactly one epic but has no Subject/parent-item field
+   at all, so nothing stops a Direction from spanning unrelated epics. This is
+   the code-level version of B-011/R-21 (Round Scope).
+2. `golden_rules.py --min-coverage` ([scripts/golden_rules.py:201-218](aesthetic/scripts/golden_rules.py))
+   is a single-shot evaluator with no memory between calls. SKILL.md's "Fix a
+   rejected spec; never bypass the gate" means the retry loop lives entirely
+   in the agent's own behavior — there is no code-enforced retry cap and
+   nothing requires a retry to narrow scope rather than re-attempt the same
+   over-broad cohort.
+3. `MAX_VARIANTS_PER_IDEA = 3` ([scripts/bootstrap_harness.py:3656](aesthetic/scripts/bootstrap_harness.py))
+   caps *live* wallpaper per idea, but nothing caps how many epics/elements a
+   single round's `direction`/`observe`/`seed` pass may touch before that
+   per-idea cap ever applies — a run can spread thin across many parent items
+   and still pass every existing check.
+
+**Partial fix shipped.** Gap 1 is closed by `check_round_stays_in_scope`
+(B-011): a round can no longer span parent items, which is the breadth that
+made these runs long. Gap 3 is unchanged but far less reachable now that a
+cohort must sit under one object.
+
+**Still open — gap 2.** There is no code-enforced retry cap. `golden_rules.py`
+remains a single-shot evaluator, and "fix a rejected spec; never bypass the
+gate" is still SKILL.md prose, so nothing requires a retry to narrow scope
+rather than re-attempt the same spec.
+
+**Measured, 2026-08-22.** The harness is not the cost. A full `article` render
+over the real 26-element `keynote-performance` ledger takes **0.19s**. Whatever
+makes a run long is model inference, not tooling — so the lever is the retry
+cap (R-24) and the scope fix already shipped, and there is nothing to optimise
+in the pipeline itself. Do not go looking for slow code here.
+
+**Guard.** Scope only: `test_scope.py`. Nothing guards retry cost yet.
+
+---
+
+## B-014 · Status chart accumulates squares instead of grouping by mutation origin · fixed
+
+**Symptom.** The published article's element grid keeps growing across
+rounds; near-identical iterations of the same idea each keep their own
+permanent square instead of collapsing under the idea they came from.
+
+**Root cause.** `render_feedback_controls`
+([scripts/bootstrap_harness.py:1989-2045](aesthetic/scripts/bootstrap_harness.py))
+groups every live row by `foundation_of(element)` — palette, typography,
+composition, etc. ([scripts/bootstrap_harness.py:186-196](aesthetic/scripts/bootstrap_harness.py))
+— or by lifecycle via `GROUP_OF`
+([scripts/bootstrap_harness.py:111-117](aesthetic/scripts/bootstrap_harness.py)),
+never by mutation lineage. A supersede chain already exists in the data model
+— `decide --supersedes` / `supersede` write `state="superseded"` and a
+`supersededBy` back-reference
+([scripts/bootstrap_harness.py:661-668](aesthetic/scripts/bootstrap_harness.py),
+[scripts/bootstrap_harness.py:819-843](aesthetic/scripts/bootstrap_harness.py))
+— but `live = [e for e in decisions["elements"] if e["state"] in GROUP_OF]`
+still includes `superseded` elements (mapped to the `"rejected"` group), so
+every retired mutation keeps rendering as its own card, just reordered to the
+bottom ("Discarded last" per `SKILL.md`), forever. `MAX_VARIANTS_PER_IDEA = 3`
+([scripts/bootstrap_harness.py:3656](aesthetic/scripts/bootstrap_harness.py))
+caps concurrently-*live* variants of one idea but explicitly excludes
+already-superseded ones from that count, so the discarded pile is unbounded.
+
+**Fix.** The strip is now built from lineage roots. `lineage_root_of` follows
+`incumbent_of` up the id chain to the original idea; each lineage emits one
+bar, and `speaks_for` picks which drawing reports it — this round's ask
+first, so the asked element keeps its `?` and outline, then the standing
+drawing, best execution first. The bar carries `data-variants="N"` and says
+so in its `aria-label`, so the history stays reachable through the existing
+hover card and slideshow instead of being repeated across the strip.
+
+This is a rendering change only: no ledger migration, no state rewrite, and
+a test asserts the ledger is byte-identical before and after. The round zone
+has grouped variants under their incumbent since it was written
+(`render_article`'s idea-grouping); this applies the same grouping to the
+strip that summarises the whole ledger.
+
+**Guard.** `test_article.py::TheChartCountsIdeasNotAttempts` (a three-deep
+chain draws one bar; the standing drawing speaks, not the best-scoring
+retired attempt) and `test_scope.py::ALineageIsFollowedToItsRoot`.
+
+---
+
+## B-015 · Companion header/bottom bar show a stale or wrong agent identity · fixed
+
+**Symptom.** The companion's header and bottom-bar aids don't reflect which
+app is actually running the round; the identity looks hardcoded to "Cursor",
+and its link target doesn't match the current session.
+
+**Root cause.** Two separate paths exist and neither is Claude-Code-aware or
+per-run-fresh:
+
+1. `agent_context_from_env`
+   ([scripts/bootstrap_harness.py:399-405](aesthetic/scripts/bootstrap_harness.py))
+   only reads `CURSOR_AGENT_URL`/`AGENT_URL`/`CURSOR_AGENT_NAME`/`AGENT_NAME`/
+   `CURSOR_MODEL` — Cursor-specific names, nothing for any other host — and is
+   only called from `open_board` ([scripts/bootstrap_harness.py:2272](aesthetic/scripts/bootstrap_harness.py)),
+   not from `render_article` at all.
+2. `render_article` ([scripts/bootstrap_harness.py:3819-3822](aesthetic/scripts/bootstrap_harness.py))
+   resolves identity as `agent_url.strip() or stored_url` /
+   `agent_name.strip() or stored_name`, where `stored_url`/`stored_name` come
+   from `companion_agent(project_root)` — whatever a previous run persisted
+   via `save_companion_agent` into `project.json`
+   ([scripts/bootstrap_harness.py:390-397](aesthetic/scripts/bootstrap_harness.py)).
+   If `--agent`/`--agent-url` aren't passed fresh on the current `article`
+   call (SKILL.md only shows them as a placeholder example, `"<App | Model>"`,
+   never a live-detection instruction — [SKILL.md:116](aesthetic/SKILL.md)),
+   the header silently keeps showing whatever was saved by an earlier run
+   under a different app, indefinitely.
+
+**The deeper cause, found while fixing it.** The URL and the name were
+resolved by two independent `or` chains, so they could come from different
+runs. That is literally what the real `project.json` held: a
+`companionAgentName` of `Claude Code` beside a `companionAgentUrl` of
+`cursor://anysphere.cursor-deeplink/prompt`. Neither value was wrong on its
+own. The pairing was.
+
+**Fix.** `resolve_agent` takes identity whole from the first source that says
+anything, in order: explicit flag, live environment, stored value. Both halves
+always come from the same place. `agent_context_from_env` gained an
+`AGENT_HOSTS` table so a host that ships no deep link still names itself
+(`CLAUDECODE` was invisible to it). `render_article` calls it too, not just
+`open_board`.
+
+Fixing this surfaced a latent crash: `save_companion_agent` read `project.json`
+without checking it exists, which never fired while only Cursor was detected
+and the save path stayed unreached on a bare directory. It now returns instead.
+
+**Guard.** `test_article.py::TheHeaderNamesWhoIsActuallyRunning`, including the
+mismatch case and the missing-project case.
+
+---
+
+## B-016 · Manifesto questionnaire and corpus tagging never appear · fixed
+
+**Symptom.** The article never shows the manifesto/brief questionnaire or
+any way for the user to tag reference material, even on projects that should
+have both.
+
+**Root cause — two distinct gaps:**
+
+1. **Brief (manifesto) is built but never invoked.** `render_brief`
+   ([scripts/brief_workflow.py:333-345](aesthetic/scripts/brief_workflow.py))
+   returns `""` whenever `load_brief(project_root)` is `None` — i.e., whenever
+   `brief start` was never run for this project — and `render_article` treats
+   an import failure the same way, silently
+   ([scripts/bootstrap_harness.py:3977-3987](aesthetic/scripts/bootstrap_harness.py)).
+   `SKILL.md` never once names `brief_workflow.py` or a `brief start` step in
+   its Loop; its only "brief" language is the unrelated *preference* brief
+   from `editorial_workflow.py preferences` ([SKILL.md:53,58](aesthetic/SKILL.md)).
+   The feature is fully implemented and tested (`test_brief_workflow.py`) but
+   orphaned from the doctrine that actually drives a run — this is not a
+   render bug, it is a wiring gap. Tracked as **R-19**.
+2. **Corpus tagging has no user-facing surface at all.** `companion/frame-template.html`,
+   `companion/helper.js`, and `companion/server.cjs` contain zero references
+   to "corpus" — every corpus concept (`observe`, `seed`, `corpus.json`) is
+   CLI/backend-only in `editorial_workflow.py`, driven by the agent reading a
+   local folder path, never by the user tagging anything in the browser.
+   There is nothing to fix here because nothing was built. Tracked as
+   **R-20**.
+
+**Fix.** Both halves shipped. Corpus tagging is `scripts/corpus_tags.py`
+(R-20, absorbing R-11 and R-12). The manifesto is wired by `ensure_brief`,
+called from `open_board` (R-19): the module was always complete, and nothing
+had ever created a brief for `render_brief` to render. `adopt` now folds the
+brief inbox in alongside the tag inbox.
+
+The tagging module avoids repeating this bug's own lesson. It is reached
+through `bootstrap_harness.py adopt`, a command `SKILL.md` already names, so
+it costs zero bytes of an entry point that was sitting at exactly its 7250
+budget — and a module nobody invokes is the thing that broke here.
+
+**Guard.** `test_corpus_tags.py`, including
+`TheSkillActuallyInvokesIt::test_bootstrap_adopt_folds_in_corpus_tags`, which
+fails if the wiring is ever removed.
+
+---
+
+## B-017 · Circular ring type breaks at the lower arc · open
+
+**Symptom.** In `cover.ring.kicker.antetitulo-arco.sin-lavado`, the circular
+`ROL · DE · LENGUAJE` ring reads correctly across the top and right, then at
+roughly the 7-to-8 o'clock position the glyphs render inverted, in the accent
+red rather than the ink, and overlapping each other. That arc reads as damage,
+not as type.
+
+**Why it matters.** This is the concrete defect behind the vague B-010. The
+element carries a thumb up and a 1-star score — the user is saying the idea is
+right and the drawing is not there yet, and they are correct: the direction is
+strong, one arc of it is broken. Its sibling `interior.pairs.stacked-i2.ring-mark`
+executes the same system cleanly, so the system is not at fault.
+
+**Not yet root-caused.** Likely per-glyph rotation past 180° without the
+counter-rotation that keeps letters upright on the lower half of a circle, but
+the comp has not been opened and read. Do that before proposing a redraw.
+
+**Guard.** None yet, and a deterministic one may not be possible — this is
+craft, judged in the render.
+
+---
+
+## B-018 · Re-rendering the current article is refused as a round · fixed
+
+**Symptom.** `article` with no `--cohort` is refused whenever the project
+carries polish debt:
+
+```
+error: 10 element(s) carry a thumb up and a low score [...] and this round improves none of them
+```
+
+**Root cause.** `check_round_earns_its_place` treats an empty cohort as a round
+that proposes nothing while polish work waits. It ends with
+`touches_polish = any(... for c in cohort)`, which is vacuously `False` for an
+empty cohort, so the refusal fires. The check is right about rounds and wrong
+about this case: asking for no elements is not proposing new ideas over
+unanswered feedback, it is redrawing the page as it already stands.
+
+**Cost.** There is no way to regenerate the article after a code change without
+inventing a cohort. `ROADMAP.md`'s working note already documents a
+`render_article` snippet to work around exactly this.
+
+**Fix.** `check_round_earns_its_place` returns early on an empty cohort,
+beside the existing `if not polish` guard. The ROADMAP workaround snippet can
+go: `article` with no `--cohort` now renders the page as it stands.
+
+**Guard.** `test_article.py::ReRenderingIsNotARound`, which also asserts a
+real round still has to answer the polish debt.
+
+---
+
+## B-019 · Chrome profiles are created per run and never removed · not reproducible
+
+**Symptom.** `keynote-performance/design/review/` holds **184 MB** across 12
+abandoned `_chrome-profile*` directories. The actual deliverables in that
+folder — 15 review PNGs — total about 1 MB, so 99.5% of it is litter, sitting
+inside the user's project rather than a temporary directory.
+
+**Root cause.** Each Chrome invocation gets a fresh profile directory beside
+the output and nothing removes it afterwards. The suffixes (`-cdp`, `-live`,
+`-live2`, `-live3`, `-live4`, `-shoot`, `-space`) show several code paths each
+minting their own.
+
+**Suspected link to B-008.** That entry blames macOS 26 beta for GPU crashes
+and a returning crash dialog. Twelve cold profiles in one project is also a
+plausible contributor: a fresh profile skips warm caches and re-runs
+first-launch work on every shoot. Worth re-testing B-008 with a single reused
+profile before treating it as purely external.
+
+**Already fixed in code; the 184 MB is residue.** The skill makes exactly one
+Chrome invocation, at `bootstrap_harness.py:1594`. It already uses
+`tempfile.mkdtemp(prefix="dh-shot-")` and already removes it in a `finally`.
+The string `_chrome-profile` appears nowhere in this repository, so the
+current code cannot produce those directories. They are leftovers from an
+earlier version or from the separate Cursor-driven automation loop B-008
+names, dated 2026-08-21 01:41-01:56.
+
+**Action.** Nothing to build. The directories are inside the user's own
+project, so reclaiming the space is their call, not a harness change.

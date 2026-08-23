@@ -81,11 +81,23 @@ def check(directory: Path) -> Report:
 
 def walk(root: Path) -> list[Report]:
     """Check `root` and every directory beneath it, one report each, in a fixed
-    order so output is comparable between runs."""
+    order so output is comparable between runs.
+
+    The hidden-directory skip is ancestor-aware. Testing `d.name` alone let the
+    walk descend into `.git/refs/heads` -- that directory is called `heads`, and
+    only its ancestor makes it noise -- so a repository-root run reported 240
+    directories, nearly all of them git's internals. Scoped to `aesthetic/` the
+    bug never showed, which is exactly why the checker was never pointed at the
+    root it was needed at.
+    """
     root = Path(root)
+
+    def hidden(directory: Path) -> bool:
+        return any(part.startswith((".", "__"))
+                   for part in directory.relative_to(root).parts)
+
     directories = [root] + sorted(
-        d for d in root.rglob("*")
-        if d.is_dir() and not d.name.startswith((".", "__")))
+        d for d in root.rglob("*") if d.is_dir() and not hidden(d))
     return [check(d) for d in directories]
 
 

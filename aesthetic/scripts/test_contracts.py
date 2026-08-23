@@ -112,6 +112,44 @@ class Incremental(unittest.TestCase):
                              contracts.check(root).violations)
 
 
+class HiddenDirectories(unittest.TestCase):
+    """The walk must skip a hidden directory AND everything under it.
+
+    Testing only the directory's own name let the walk descend into
+    `.git/refs/heads`: that directory is called `heads`, and only its ancestor
+    makes it noise. A repository-root run reported 240 directories, nearly all
+    of them git internals, which is why the checker was never pointed at the
+    root it was needed at.
+    """
+
+    def test_a_child_of_a_hidden_directory_is_not_walked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            make(root, "CONTEXT.md", CONTRACT)
+            make(root, ".git/refs/heads/main")
+            walked = {r.directory for r in contracts.walk(root)}
+            self.assertEqual(walked, {root})
+
+    def test_a_child_of_a_dunder_directory_is_not_walked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            make(root, "CONTEXT.md", CONTRACT)
+            make(root, "__pycache__/nested/thing.pyc")
+            walked = {r.directory for r in contracts.walk(root)}
+            self.assertEqual(walked, {root})
+
+    def test_a_hidden_root_still_walks_its_visible_children(self):
+        # The skip is relative to the root being checked. Checking a directory
+        # that is itself hidden (a `.claude/skills/x` checkout) must not skip
+        # everything inside it.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / ".hidden"
+            make(root, "CONTEXT.md", CONTRACT)
+            make(root, "child/thing.md")
+            walked = {r.directory for r in contracts.walk(root)}
+            self.assertEqual(walked, {root, root / "child"})
+
+
 class Rendering(unittest.TestCase):
     def test_a_nested_directory_renders_its_path_not_just_its_name(self):
         with tempfile.TemporaryDirectory() as tmp:

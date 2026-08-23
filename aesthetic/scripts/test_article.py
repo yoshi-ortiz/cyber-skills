@@ -39,6 +39,77 @@ class ARoundMustFitInOneSitting(unittest.TestCase):
         self.assertIn(str(bh.MAX_COHORT_SIZE + 1), str(caught.exception))
 
 
+class TheChartCountsIdeasNotAttempts(unittest.TestCase):
+    """The sticky strip drew one bar per element, and a superseded element is
+    still `live` for the strip's purposes -- so every redraw kept its own bar
+    forever. A ledger of eight ideas drawn four times each read as thirty-two
+    separate concerns, and the chart grew without bound.
+
+    The round zone has grouped variants under their incumbent since it was
+    written. These check the same grouping now reaches the strip.
+    """
+
+    def strip(self, decisions: dict, cohort: set[str] | None = None) -> str:
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = bh.render_article(Path(tmp), decisions, cohort or set())
+        return markup.split("dh-temp dh-temp-sticky")[1].split("</div>")[0]
+
+    def bars(self, decisions: dict, cohort: set[str] | None = None) -> list[str]:
+        return re.findall(r'data-el="([^"]+)"', self.strip(decisions, cohort))
+
+    def test_a_supersede_chain_draws_one_bar(self):
+        decisions = live(("cover.ring", 1, None, "superseded"),
+                         ("cover.ring.v2", 2, None, "superseded"),
+                         ("cover.ring.v2.v3", 4, None, "proposed"),
+                         ("palette.warm", 3, None, "approved"))
+        self.assertEqual(self.bars(decisions),
+                         ["cover.ring.v2.v3", "palette.warm"])
+
+    def test_the_standing_drawing_speaks_for_its_lineage(self):
+        # Not the ancestor, and not the best-scoring retired attempt: the one
+        # that still stands is what the strip must report.
+        decisions = live(("cover.ring", 5, None, "superseded"),
+                         ("cover.ring.v2", 1, None, "proposed"))
+        strip = self.strip(decisions)
+        self.assertIn('data-el="cover.ring.v2"', strip)
+        self.assertNotIn('data-el="cover.ring"', strip)
+
+    def test_the_bar_carries_how_many_attempts_it_stands_for(self):
+        decisions = live(("cover.ring", 1, None, "superseded"),
+                         ("cover.ring.v2", 2, None, "superseded"),
+                         ("cover.ring.v2.v3", 4, None, "proposed"))
+        self.assertIn('data-variants="3"', self.strip(decisions))
+
+    def test_an_idea_drawn_once_carries_no_variant_count(self):
+        decisions = live(("palette.warm", 3, None, "approved"))
+        self.assertNotIn("data-variants", self.strip(decisions))
+
+    def test_unrelated_ideas_keep_their_own_bars(self):
+        decisions = live(("cover.ring", 3, None, "approved"),
+                         ("palette.warm", 3, None, "approved"),
+                         ("type.display", 3, None, "approved"))
+        self.assertEqual(len(self.bars(decisions)), 3)
+
+    def test_this_rounds_ask_speaks_for_its_own_lineage(self):
+        # The asked element carries the `?` and the outline. Collapsing it
+        # behind an ancestor would hide the one thing being asked about.
+        decisions = live(("cover.ring", 5, None, "approved"),
+                         ("cover.ring.v2", 0, None, "proposed"))
+        strip = self.strip(decisions, {"cover.ring.v2"})
+        self.assertIn('data-el="cover.ring.v2"', strip)
+        self.assertIn("data-asked", strip)
+
+    def test_the_ledger_is_not_rewritten_by_the_grouping(self):
+        # A rendering change must not retire anything. Every element the ledger
+        # carried before is still there afterwards, in the same state.
+        decisions = live(("cover.ring", 1, None, "superseded"),
+                         ("cover.ring.v2", 4, None, "proposed"))
+        before = [(e["element"], e["state"]) for e in decisions["elements"]]
+        self.strip(decisions)
+        after = [(e["element"], e["state"]) for e in decisions["elements"]]
+        self.assertEqual(before, after)
+
+
 class TheArticleAsRendered(unittest.TestCase):
     """Checks against the emitted markup. A rule that reads correctly in the
     source and is dropped by the CSS parser is the defect, not the source."""
@@ -1376,3 +1447,178 @@ class ChromeFixesV34(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheHeaderNamesWhoIsActuallyRunning(unittest.TestCase):
+    """R-23/B-015. A real `project.json` carried `companionAgentName` of
+    "Claude Code" beside a `companionAgentUrl` of `cursor://...`, because the
+    name and the link were resolved from different sources."""
+
+    def project(self, root: Path, **fields) -> Path:
+        store = root / "spec" / "design-harness"
+        store.mkdir(parents=True, exist_ok=True)
+        bh.write_json(store / "project.json", {"version": bh.VERSION, **fields})
+        return root
+
+    def test_identity_is_taken_whole_from_one_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.project(Path(tmp), companionAgentName="Cursor",
+                                companionAgentUrl="cursor://deeplink")
+            with patch.dict("os.environ", {"CLAUDECODE": "1"}, clear=True):
+                url, name = bh.resolve_agent("", "", root)
+            self.assertEqual(name, "Claude Code")
+            self.assertNotIn("cursor://", url)
+
+    def test_an_explicit_flag_still_wins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.project(Path(tmp), companionAgentName="Cursor")
+            with patch.dict("os.environ", {"CLAUDECODE": "1"}, clear=True):
+                url, name = bh.resolve_agent("x://y", "Zed", root)
+            self.assertEqual((url, name), ("x://y", "Zed"))
+
+    def test_a_stored_identity_is_used_when_nothing_else_speaks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.project(Path(tmp), companionAgentName="Cursor",
+                                companionAgentUrl="cursor://deeplink")
+            with patch.dict("os.environ", {}, clear=True):
+                self.assertEqual(bh.resolve_agent("", "", root),
+                                 ("cursor://deeplink", "Cursor"))
+
+    def test_an_unknown_host_reports_nothing_rather_than_guessing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.project(Path(tmp))
+            with patch.dict("os.environ", {}, clear=True):
+                self.assertEqual(bh.resolve_agent("", "", root), ("", ""))
+
+    def test_saving_an_identity_without_a_project_is_not_fatal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bh.save_companion_agent(Path(tmp), "x://y", "Zed")
+
+
+class TheBriefIsCreatedSoItCanBeAnswered(unittest.TestCase):
+    """R-19/B-016. `brief_workflow` was complete and tested and had never
+    rendered, because nothing ever created a brief for it to render."""
+
+    def project(self, root: Path) -> Path:
+        store = root / "spec" / "design-harness"
+        store.mkdir(parents=True, exist_ok=True)
+        bh.write_json(store / "project.json", {"version": bh.VERSION, "language": "es"})
+        return root
+
+    def test_a_project_gets_a_brief(self):
+        import brief_workflow
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.project(Path(tmp))
+            self.assertTrue(bh.ensure_brief(root))
+            self.assertIsNotNone(brief_workflow.load_brief(root))
+
+    def test_the_brief_speaks_the_project_language(self):
+        import brief_workflow
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.project(Path(tmp))
+            bh.ensure_brief(root)
+            prompts = [a["prompt"] for a in brief_workflow.load_brief(root)["answers"]]
+            self.assertTrue(any("¿" in p for p in prompts))
+
+    def test_an_existing_brief_is_never_overwritten(self):
+        import brief_workflow
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.project(Path(tmp))
+            bh.ensure_brief(root)
+            brief_workflow.answer_brief(root, {
+                "eventId": "e1", "at": "2026-08-22T00:00:00-06:00",
+                "id": "ships", "answer": "un archivador"})
+            self.assertFalse(bh.ensure_brief(root))
+            answers = {a["id"]: a["answer"] for a in brief_workflow.load_brief(root)["answers"]}
+            self.assertEqual(answers["ships"], "un archivador")
+
+    def test_a_directory_that_is_not_a_project_gets_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertFalse(bh.ensure_brief(Path(tmp)))
+            self.assertFalse((Path(tmp) / "spec").exists())
+
+    def test_the_brief_reaches_the_article_once_it_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.project(Path(tmp))
+            bh.ensure_brief(root)
+            markup = bh.render_article(root, live(("cover.a", 3, None, "approved")))
+            self.assertIn("dh-brief", markup)
+
+
+class TheScreenSaysWhatEncodingItIs(unittest.TestCase):
+    """R-29. The article is a fragment, so its encoding rode on whoever served
+    it. Opened from disk, every Spanish accent became mojibake."""
+
+    def test_the_article_declares_utf8(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = bh.render_article(Path(tmp), live(("cover.a", 3, None, "approved")))
+            self.assertIn('<meta charset="utf-8">', markup)
+
+    def test_the_declaration_leads_the_document(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = bh.render_article(Path(tmp), live(("cover.a", 3, None, "approved")))
+            self.assertLess(markup.index("charset"), markup.index("<style>"))
+
+
+class ReRenderingIsNotARound(unittest.TestCase):
+    """R-27/B-018. Asking about nothing was refused as a round that proposes
+    new ideas over unanswered feedback, leaving no way to regenerate the page
+    after a code change."""
+
+    def ledger(self) -> dict:
+        return live(("cover.spine", 1, "like", "proposed"))
+
+    def test_an_empty_cohort_is_allowed_despite_polish_debt(self):
+        bh.check_round_earns_its_place(self.ledger(), set())
+
+    def test_a_real_round_still_has_to_answer_the_debt(self):
+        with self.assertRaises(bh.HarnessError):
+            bh.check_round_earns_its_place(self.ledger(), {"type.brand-new"})
+
+
+class TheAskComesBeforeTheHomework(unittest.TestCase):
+    """The brief used to stand above the round. A five-question form over the
+    one section that asks for something buried the ask behind homework."""
+
+    def article(self, root: Path) -> str:
+        store = root / "spec" / "design-harness"
+        store.mkdir(parents=True, exist_ok=True)
+        bh.write_json(store / "project.json", {"version": bh.VERSION, "language": "es"})
+        bh.ensure_brief(root)
+        # `palette.` files under a fundamental foundation, so the article
+        # actually emits a zone after the round to be ordered against.
+        return bh.render_article(root, live(("palette.a", 3, None, "approved")))
+
+    def test_the_brief_renders_below_the_round(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = self.article(Path(tmp))
+            self.assertLess(markup.index('id="dh-zone-round"'), markup.index('class="dh-brief"'))
+
+    def test_the_brief_renders_above_the_zones_that_follow_the_round(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = self.article(Path(tmp))
+            self.assertLess(markup.index('class="dh-brief"'),
+                            markup.index('id="dh-zone-fundamentals"'))
+
+    def test_the_tags_module_sits_beside_the_brief_not_at_the_far_end(self):
+        # Both are things the user tells the agent. Splitting them to opposite
+        # ends of the page made the reading order say they were different
+        # kinds of thing.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            markup = self.article(root)
+            store = root / "spec" / "design-harness"
+            bh.write_json(store / "corpus.json", {
+                "version": 1, "root": "/x", "modalities": ["image"],
+                "items": [{"id": "image-0", "path": "strong color/a.jpg",
+                           "kind": "image", "sha256": f"{0:064x}", "bytes": 1}]})
+            markup = bh.render_article(root, live(("palette.a", 3, None, "approved")))
+            self.assertLess(markup.index('id="dh-zone-round"'), markup.index('class="dh-tags"'))
+            self.assertLess(markup.index('class="dh-tags"'),
+                            markup.index('id="dh-zone-fundamentals"'))
+
+    def test_a_project_with_no_brief_still_renders_its_zones(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            markup = bh.render_article(Path(tmp), live(("cover.a", 3, None, "approved")))
+            self.assertNotIn('class="dh-brief"', markup)
+            self.assertIn('id="dh-zone-round"', markup)

@@ -126,7 +126,13 @@ def preference_brief(decisions: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
-                           preferences: Mapping[str, Any]) -> dict[str, Any]:
+                           preferences: Mapping[str, Any],
+                           accountable: Any = None) -> dict[str, Any]:
+    """`accountable` names what this spec still has to account for, given the
+    corpus items it observed or omitted. `None` keeps the original contract:
+    every item, by id. `save_art_direction` passes
+    `corpus_tags.missing_evidence`, which counts by reference FOLDER once the
+    user has tagged any."""
     if not isinstance(raw, Mapping):
         raise WorkflowError("art direction must be an object")
 
@@ -211,7 +217,12 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
         seen_corpus.add(corpus_id)
         normalized_omissions.append({"corpusItem": corpus_id,
                                      "reason": _text(omission.get("reason"), "omission.reason")})
-    missing = sorted(str(item) for item in corpus_ids - seen_corpus)
+    # Untagged projects account for every item, as they always have. Once the
+    # user has tagged their reference folders, the folder is the unit: one
+    # observation inside it accounts for it. A 135-item corpus was costing 127
+    # boilerplate omissions per round, rewritten every time.
+    missing = (sorted(str(item) for item in corpus_ids - seen_corpus)
+               if accountable is None else accountable(seen_corpus))
     if missing:
         raise WorkflowError("unaccounted corpus items: " + ", ".join(missing))
 
@@ -323,7 +334,12 @@ def save_art_direction(project_root: Path, raw: Any) -> dict[str, Any]:
     decisions_path = root / STORE / DECISIONS_FILE
     decisions = _read_json(decisions_path) if decisions_path.exists() else {"elements": []}
     preferences = preference_brief(decisions)
-    value = validate_art_direction(raw, corpus, preferences)
+    # Imported here, not at module scope: `corpus_tags` imports this module.
+    from corpus_tags import load_tags, missing_evidence
+    tags = load_tags(root)
+    value = validate_art_direction(
+        raw, corpus, preferences,
+        lambda seen: missing_evidence(corpus, tags, seen))
     try:
         validate_assets(value["assets"], {item.get("id") for item in corpus["items"]}, root)
     except AssetError as exc:
