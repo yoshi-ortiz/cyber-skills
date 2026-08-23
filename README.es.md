@@ -19,11 +19,16 @@ Solo Python estándar · Listo para usar
 ---
 
 Un **skill prompt** es un paquete de prompts definidos que tu
-asistente de IA lee antes de responderte. El mismo asistente, otro especialista:
+agent lee antes de responderte. El mismo agent, otro especialista:
 uno que ya sabe cómo trabajas y no necesita que se lo expliques cada mañana.
 
 No hace falta programar para usarlo. Instalas una carpeta, abres un chat nuevo y
 dices su nombre. Todo lo que viene después de la instalación es lectura opcional.
+
+- [Índice](#-colección)
+- [Instalación](#-instalar)
+- [Skills](#-skill-prompts)
+- [Próximamente](#-experimentos)
 
 ## 📒 COLECCIÓN
 
@@ -31,20 +36,20 @@ Agrupadas por cuándo las necesitas, no por qué tan terminadas están.
 
 <table>
   <colgroup>
-    <col width="180">
+    <col width="220">
     <col>
   </colgroup>
-  <tr><td colspan="2" align="center"><h4>📀 Configurar una vez</h4><p>Instálalo una vez y todos tus asistentes lo llevan</p></td></tr>
-  <tr><td><a href="#-starter-pack">📦 <strong>/starter-pack</strong></a></td><td>Un solo juego de herramientas en todas tus apps de IA</td></tr>
-  <tr><td colspan="2" align="center"><h4>💼 Planear</h4><p>Antes de empezar a construir</p></td></tr>
-  <tr><td><a href="#-genesis">📁 <strong>/genesis</strong></a></td><td>Planea antes de construir, y comprueba que funcione</td></tr>
-  <tr><td><a href="#-enciclopedia">📚 <strong>/enciclopedia</strong></a></td><td>Lee la documentación real y guarda una nota corta con su fuente</td></tr>
-  <tr><td colspan="2" align="center"><h4>🤖 Sesiones de tokens</h4><p>Donde se te va una sesión de trabajo</p></td></tr>
-  <tr><td><a href="#-aesthetic">🧑‍🎨 <strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td></tr>
-  <tr><td colspan="2" align="center"><h4>🤡 Silly</h4><p>Llámalas por nombres divertidos</p></td></tr>
-  <tr><td><a href="#-silly">😆 <strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td></tr>
-  <tr><td><a href="#-silly">🇪🇸 <strong>/silly</strong> español</a></td><td>Agrega comandos en español</td></tr>
-  <tr><td><a href="#-ora">🇪🇸 <strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu asistente en español sencillo</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-starter-pack">📀 Configurar una vez</a><br><small>Instálalo una vez y todas tus apps de IA lo llevan</small></h3></td></tr>
+  <tr><td nowrap>📦 <a href="#-starter-pack"><strong>/starter-pack</strong></a></td><td>Un solo juego de herramientas en todas tus apps de IA</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-genesis">💼 Planear</a><br><small>Antes de empezar a construir</small></h3></td></tr>
+  <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Planea antes de construir, y comprueba que funcione</td></tr>
+  <tr><td nowrap>📚 <a href="#-enciclopedia"><strong>/enciclopedia</strong></a></td><td>Lee la documentación real y guarda una nota corta con su fuente</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-aesthetic">🤖 Sesiones de tokens</a><br><small>Donde se te va una sesión de trabajo</small></h3></td></tr>
+  <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Llámalas por nombres divertidos</small></h3></td></tr>
+  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Agrega comandos en español</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu agent en español sencillo</td></tr>
 </table>
 
 Las versiones estables están en [SKILL PROMPTS](#-skill-prompts). El resto
@@ -55,7 +60,7 @@ son [EXPERIMENTOS](#-experimentos), de instalación manual.
 # 📦 INSTALAR
 
 Las dos opciones resultan igual: archivos en el disco y un **chat nuevo**. Los
-asistentes leen sus skills al empezar una conversación, nunca a mitad de
+las apps de IA leen sus skills al empezar una conversación, nunca a mitad de
 camino.
 
 **🧩 Plugin**
@@ -63,9 +68,9 @@ camino.
 https://github.com/yoshi-ortiz/cyber-skills
 ```
 
-### A) Agrégala a los plugins de tu asistente
+### A) Agrégala a los plugins de tu app
 
-Cada asistente guarda sus skills en una carpeta. Clona el repositorio y pon
+Cada app guarda sus skills en una carpeta. Clona el repositorio y pon
 dentro la carpeta de la skill, copiándola o con un enlace simbólico.
 
 ```bash
@@ -84,27 +89,27 @@ que es lo que trae `-b dev`.
 
 ### B) Agregar y sincronizar con el `CLI Script` de Vercel (recomendado) 💯
 
-[`npx skills add`](https://github.com/vercel-labs/skills) detecta tus asistentes e
+[`npx skills add`](https://github.com/vercel-labs/skills) detecta tus apps de IA e
 instala en cada uno por ti. Sin clonar nada.
 
 ```bash
 npx skills add yoshi-ortiz/cyber-skills --all
 ```
 
-`--all` instala todas las skills de esta rama en cada asistente que
+`--all` instala todas las skills de esta rama en cada app de IA que
 detecta, sin preguntas.
 
 <details>
 <summary><b>Opciones, y qué no alcanza esta ruta</b></summary>
 
 `--all` es un atajo de `--skill '*' --agent '*' -y`: todas las skills de
-esta rama, en cada asistente que `skills` detecta, sin preguntas. Cada fila de
+esta rama, en cada app de IA que `skills` detecta, sin preguntas. Cada fila de
 abajo reduce una parte de eso.
 
 | Opción | Qué hace |
 | --- | --- |
 | `-s`, `--skill <nombre>` | Una sola skill, por su carpeta. Repetible. |
-| `-a`, `--agent <id>` | Un solo asistente: `claude-code`, `cursor`, `codex`, `opencode`, `zed`, `pi` o `antigravity`. Repetible. |
+| `-a`, `--agent <id>` | Una sola app de IA: `claude-code`, `cursor`, `codex`, `opencode`, `zed`, `pi` o `antigravity`. Repetible. |
 | `-g`, `--global` | Instala para tu usuario, no para un solo proyecto |
 | `-l`, `--list` | Imprime lo que hay, no instala nada |
 | `-y`, `--yes` | Omite la confirmación por su cuenta |
@@ -122,7 +127,7 @@ Estables. Se instalan con la ruta B, tienen soporte y puedes confiar en ellas.
 
 ## 📦 /starter-pack
 
-Un solo juego de herramientas, todos los asistentes. Si usas más de una app de
+Un solo juego de herramientas, todas tus apps de IA. Si usas más de una
 IA, esta los mantiene equipados igual, desde una sola lista en vez de una por
 una.
 
@@ -136,9 +141,9 @@ una.
 <details>
 <summary><b>Especificación completa</b></summary>
 
-Una skill de referencia: sin scripts, sin estado. Le enseña a un asistente a
+Una skill de referencia: sin scripts, sin estado. Le enseña a un agent a
 operar `yoshi-ortiz/harness-core`, cuyo `collection.yaml` lista las skills
-y los servidores MCP que debería llevar cada asistente de tu máquina.
+y los servidores MCP que debería llevar cada app de IA de tu máquina.
 
 | Cubre | Qué contiene |
 | --- | --- |
@@ -146,14 +151,14 @@ y los servidores MCP que debería llevar cada asistente de tu máquina.
 | Dónde vive la lista | Rutas de clon frente a Homebrew, y la capa local que gana en conflicto |
 | Agregar una skill | Por qué editar a mano no instala nada, por qué una lista completa se pudre, por qué `--all` está prohibido |
 | Agregar un MCP | Un solo transporte por servidor, y secretos solo por variable de entorno |
-| Estándar frente a opcional | Lo que recibe cada asistente, contra los grupos detrás de `--with` |
+| Estándar frente a opcional | Lo que recibe cada app de IA, contra los grupos detrás de `--with` |
 | Publicar | Etiquetar el repositorio y actualizar la fórmula de Homebrew |
 
 </details>
 
 ## 🇪🇸 /ora
 
-Reescribe las conclusiones de tu asistente en español latinoamericano sencillo:
+Reescribe las conclusiones de tu agent en español latinoamericano sencillo:
 viñetas cortas, humor ligero, sin rodeos. Los datos, el código y las rutas de
 archivo quedan tal cual.
 
@@ -248,7 +253,7 @@ como evidencia.
 
 ## 📚 /enciclopedia
 
-Lee el manual para dejar de adivinar. Cuando tu asistente necesita saber cómo
+Lee el manual para dejar de adivinar. Cuando tu agent necesita saber cómo
 funciona alguna herramienta o producto, lo busca, guarda una nota corta **con su
 fuente** dentro de tu proyecto, y la próxima vez lee esa nota en vez de
 inventarse la respuesta.
@@ -256,7 +261,7 @@ inventarse la respuesta.
 | | |
 | --- | --- |
 | **Paquete** | [knowledge/](knowledge/) · entrada [knowledge/SKILL.md](knowledge/SKILL.md) |
-| **Invocación** | Tu asistente la inicia cuando hay investigación que conviene guardar. También puedes nombrarla. |
+| **Invocación** | Tu agent la inicia cuando hay investigación que conviene guardar. También puedes nombrarla. |
 | **Nombre original** | `knowledge`. El nombre en español lo instala [/silly](#-silly). |
 | **Requiere** | Python 3 (solo biblioteca estándar) |
 | **Trabaja sobre** | **Tu** carpeta de proyecto, nunca este repositorio |
@@ -301,7 +306,7 @@ entendió la fuente. Reglas para la mitad humana:
 
 ![Aesthetic ranking companion](assets/aesthetic-companion.svg)
 
-Diseño que se lee como **intencional, no como plantilla**. Tu asistente dibuja
+Diseño que se lee como **intencional, no como plantilla**. Tu agent dibuja
 de 3 a 6 versiones de una pantalla y las publica en una página de tu navegador.
 **Tú las ordenas y dejas notas, con tus palabras.** Las lee de vuelta y dibuja
 la siguiente ronda contra eso. Nada se califica por vibra.
@@ -309,7 +314,7 @@ la siguiente ronda contra eso. Nada se califica por vibra.
 | | |
 | --- | --- |
 | **Paquete** | [aesthetic/](aesthetic/) · entrada [aesthetic/SKILL.md](aesthetic/SKILL.md) |
-| **Invocación** | Tu asistente la inicia cuando el trabajo es visual. También puedes nombrarla. |
+| **Invocación** | Tu agent la inicia cuando el trabajo es visual. También puedes nombrarla. |
 | **Requiere** | Python 3 (solo estándar) · Node para la página local de ranking |
 | **Trabaja sobre** | **Tu** carpeta de proyecto, nunca este repositorio |
 | **Canal** | `alpha` |
@@ -397,7 +402,7 @@ aliases:
 
 Los dos bloques son opcionales. Un nombre declarado tiene que ir en minúsculas,
 ser único en el paquete, y **aparecer en la descripción de esa misma
-skill**, o el asistente nunca ha oído la palabra y el archivo no cambia
+skill**, o el agent nunca ha oído la palabra y el archivo no cambia
 nada. La puerta del índice rechaza los tres casos.
 
 ```bash
