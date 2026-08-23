@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """The README index is a promise; this is what keeps it one.
 
-Five ways an index rots: a skill ships and nobody adds it, a skill is pulled
-back to alpha in `fog.py` while the README still calls it stable, a
-translation falls a skill behind, the table groups a skill nowhere or out of
-order, or a declared name promises a trigger nothing answers to. Same bug
-every time -- the index disagreeing with the repository -- so one gate.
+Ways an index rots: a skill ships and nobody adds it, a skill is pulled back
+to alpha in `fog.py` while the README still calls it stable, a translation
+falls a skill behind, the table groups a skill nowhere or out of order, or a
+declared name promises a trigger nothing answers to. Same bug every time --
+the index disagreeing with the repository -- so one gate. It also runs
+`loanwords.py`, which owns what a translation may not translate.
 
-A skill may also declare its own name in another language, in its `SKILL.md`
+A skill may declare its own name in another language, in its `SKILL.md`
 frontmatter. The gate then insists the translated README uses that name and
-that the skill's own description carries it, because a name a reader can say
-and the skill will not answer to is worse than no translation.
+that the skill's description carries it: a name the skill will not answer to
+is worse than no translation.
 
-An `also:` entry adds a second index row for a trigger phrase the
-description already documents -- `comandos en espanol` for `silly` -- without
-claiming a second name. The anchor still points at the one real skill, and the
-trigger still has to appear in that description.
+An `also:` entry adds a second index row for a trigger the description
+already documents, without claiming a second name: the anchor still points at
+the one real skill.
 
-It also refuses the em dash: not a native speaker's clause boundary, unlike a
-colon, a full stop, or a pair of commas, so the README uses those instead.
+It refuses the em dash too: not a native speaker's clause boundary, unlike a
+colon, a full stop, or commas.
 
     python3 tools/index_gate.py
 """
@@ -36,6 +36,7 @@ from fog import ALPHA_SKILLS
 # implementation here could disagree with `alias.py`, and a gate that passes
 # while the tool fails is the one bug this file exists to prevent.
 from alias import frontmatter
+from loanwords import check as localised_terms
 
 # Section index, not section title: translations rename these headings.
 STABLE, EXPERIMENTAL = 1, 2
@@ -156,6 +157,8 @@ def gate(root: Path) -> int:
     readme = root / "README.md"
     present = skills(root)
     specs = {name: spec(root / name / "SKILL.md") for name in present}
+
+    problems.extend(localised_terms(root))
 
     for path in sorted(root.glob("README*.md")):
         dashes = [n for n, line in enumerate(path.read_text(encoding="utf-8")

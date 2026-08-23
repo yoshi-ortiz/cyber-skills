@@ -18,7 +18,7 @@ Solo Python estándar · Listo para usar
 
 ---
 
-Un **prompt de habilidad** es un conjunto de instrucciones escritas que tu
+Un **skill prompt** es un conjunto de instrucciones escritas que tu
 asistente de IA lee antes de responderte. El mismo asistente, otro especialista:
 uno que ya sabe cómo trabajas y no necesita que se lo expliques cada mañana.
 
@@ -42,12 +42,12 @@ Agrupadas por cuándo las necesitas, no por qué tan terminadas están.
   <tr><td colspan="2" align="center"><h4>🤖 Sesiones de tokens</h4><p>Donde se te va una sesión de trabajo</p></td></tr>
   <tr><td><a href="#-aesthetic">🧑‍🎨 <strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td></tr>
   <tr><td colspan="2" align="center"><h4>🤡 Silly</h4><p>Llámalas por nombres divertidos</p></td></tr>
-  <tr><td><a href="#-silly">😆 <strong>/silly</strong></a></td><td>Deja que una habilidad responda a un segundo nombre, en tu idioma o solo uno más bonito</td></tr>
+  <tr><td><a href="#-silly">😆 <strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td></tr>
   <tr><td><a href="#-silly">🇪🇸 <strong>/silly</strong> español</a></td><td>Agrega comandos en español</td></tr>
   <tr><td><a href="#-ora">🇪🇸 <strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu asistente en español sencillo</td></tr>
 </table>
 
-Las estables están en [PROMPTS DE HABILIDAD](#-prompts-de-habilidad). El resto
+Las estables están en [SKILL PROMPTS](#-skill-prompts). El resto
 son [EXPERIMENTOS](#-experimentos), de instalación manual.
 
 ---
@@ -55,22 +55,22 @@ son [EXPERIMENTOS](#-experimentos), de instalación manual.
 # 📦 INSTALAR
 
 Las dos rutas terminan igual: archivos en el disco y un **chat nuevo**. Los
-asistentes leen sus habilidades al empezar una conversación, nunca a mitad de
+asistentes leen sus skills al empezar una conversación, nunca a mitad de
 camino.
 
 Repositorio: `https://github.com/yoshi-ortiz/cyber-skills`
 
 ### A) Agrégala a los plugins de tu asistente
 
-Cada asistente guarda sus habilidades en una carpeta. Clona el repositorio y pon
-dentro la carpeta de la habilidad, copiándola o con un enlace simbólico.
+Cada asistente guarda sus skills en una carpeta. Clona el repositorio y pon
+dentro la carpeta de la skill, copiándola o con un enlace simbólico.
 
 ```bash
 git clone -b dev https://github.com/yoshi-ortiz/cyber-skills.git
 ln -s "$(pwd)/cyber-skills/aesthetic" ~/.cursor/skills/aesthetic
 ```
 
-| Asistente | Carpeta de habilidades |
+| Asistente | Carpeta de skills |
 | --- | --- |
 | Cursor | `~/.cursor/skills/` |
 | Claude Code | `~/.claude/skills/` |
@@ -88,32 +88,32 @@ instala en cada uno por ti. Sin clonar nada.
 npx skills add yoshi-ortiz/cyber-skills --all
 ```
 
-`--all` instala todas las habilidades de esta rama en cada asistente que
+`--all` instala todas las skills de esta rama en cada asistente que
 detecta, sin preguntas.
 
 <details>
 <summary><b>Opciones, y qué no alcanza esta ruta</b></summary>
 
-`--all` es un atajo de `--skill '*' --agent '*' -y`: todas las habilidades de
+`--all` es un atajo de `--skill '*' --agent '*' -y`: todas las skills de
 esta rama, en cada asistente que `skills` detecta, sin preguntas. Cada fila de
 abajo reduce una parte de eso.
 
 | Opción | Qué hace |
 | --- | --- |
-| `-s`, `--skill <nombre>` | Una sola habilidad, por su carpeta. Repetible. |
+| `-s`, `--skill <nombre>` | Una sola skill, por su carpeta. Repetible. |
 | `-a`, `--agent <id>` | Un solo asistente: `claude-code`, `cursor`, `codex`, `opencode`, `zed`, `pi` o `antigravity`. Repetible. |
 | `-g`, `--global` | Instala para tu usuario, no para un solo proyecto |
 | `-l`, `--list` | Imprime lo que hay, no instala nada |
 | `-y`, `--yes` | Omite la confirmación por su cuenta |
 
-Esta ruta lee la rama `main`, que solo tiene las habilidades estables. Los
+Esta ruta lee la rama `main`, que solo tiene las skills estables. Los
 experimentos nunca aparecen ahí. Para esos, usa la ruta A.
 
 </details>
 
 ---
 
-# ✨ PROMPTS DE HABILIDAD
+# ✨ SKILL PROMPTS
 
 Estables. Se instalan con la ruta B, tienen soporte y puedes confiar en ellas.
 
@@ -133,15 +133,15 @@ una.
 <details>
 <summary><b>Especificación completa</b></summary>
 
-Una habilidad de referencia: sin scripts, sin estado. Le enseña a un asistente a
-operar `yoshi-ortiz/harness-core`, cuyo `collection.yaml` lista las habilidades
+Una skill de referencia: sin scripts, sin estado. Le enseña a un asistente a
+operar `yoshi-ortiz/harness-core`, cuyo `collection.yaml` lista las skills
 y los servidores MCP que debería llevar cada asistente de tu máquina.
 
 | Cubre | Qué contiene |
 | --- | --- |
 | Instalación | `brew tap`, `brew install`, `harness init` y la alternativa con clon |
 | Dónde vive la lista | Rutas de clon frente a Homebrew, y la capa local que gana en conflicto |
-| Agregar una habilidad | Por qué editar a mano no instala nada, por qué una lista completa se pudre, por qué `--all` está prohibido |
+| Agregar una skill | Por qué editar a mano no instala nada, por qué una lista completa se pudre, por qué `--all` está prohibido |
 | Agregar un MCP | Un solo transporte por servidor, y secretos solo por variable de entorno |
 | Estándar frente a opcional | Lo que recibe cada asistente, contra los grupos detrás de `--with` |
 | Publicar | Etiquetar el repositorio y actualizar la fórmula de Homebrew |
@@ -361,8 +361,8 @@ se sostenga bajo pruebas de regresión.
 
 ## 😆 /silly
 
-Deja que una habilidad responda a un segundo nombre: `knowledge` en español es
-`/enciclopedia`. **Solo se traduce el nombre**, nunca la habilidad, así que no
+Deja que una skill responda a un segundo nombre: `knowledge` en español es
+`/enciclopedia`. **Solo se traduce el nombre**, nunca la skill, así que no
 hay una segunda copia que se desincronice. Nada se instala hasta que pides un
 idioma.
 
@@ -371,19 +371,19 @@ idioma.
 | **Paquete** | [silly/](silly/) · entrada [silly/SKILL.md](silly/SKILL.md) |
 | **Invocación** | Solo tú. Di `silly`, o `comandos en espanol`. |
 | **Requiere** | Python 3 (solo biblioteca estándar) |
-| **Trabaja sobre** | Tu carpeta de habilidades instaladas, nunca este repositorio |
+| **Trabaja sobre** | Tu carpeta de skills instaladas, nunca este repositorio |
 | **Canal** | `alpha` |
 
 <details>
 <summary><b>Especificación completa: el manifiesto, la herramienta y la puerta de entrada</b></summary>
 
-Una habilidad responde al nombre que dice su propio `SKILL.md` y a ningún otro,
+Una skill responde al nombre que dice su propio `SKILL.md` y a ningún otro,
 así que un segundo nombre significa un segundo archivo que lo declare. Un enlace
 simbólico de carpeta no sirve: el `SKILL.md` de adentro sigue nombrando al
 original, y el comando nuevo nunca aparece. Por eso el alias es un archivo
-mínimo que apunta a la habilidad real.
+mínimo que apunta a la skill real.
 
-Se declara en la habilidad que se renombra, nunca en un registro central:
+Se declara en la skill que se renombra, nunca en un registro central:
 
 ```yaml
 translations:
@@ -394,7 +394,7 @@ aliases:
 
 Los dos bloques son opcionales. Un nombre declarado tiene que ir en minúsculas,
 ser único en el paquete, y **aparecer en la descripción de esa misma
-habilidad**, o el asistente nunca ha oído la palabra y el archivo no cambia
+skill**, o el asistente nunca ha oído la palabra y el archivo no cambia
 nada. La puerta del índice rechaza los tres casos.
 
 ```bash
@@ -413,11 +413,11 @@ propios archivos.
 
 | Objetivo | Compromiso |
 | --- | --- |
-| Disparo | Un alias instalado ejecuta la habilidad real desde un chat nuevo, solo con el nombre |
-| Seguridad | Ninguna corrida sobrescribe ni borra una habilidad que no escribió |
+| Disparo | Un alias instalado ejecuta la skill real desde un chat nuevo, solo con el nombre |
+| Seguridad | Ninguna corrida sobrescribe ni borra una skill que no escribió |
 | Opcional | Nada llega a la carpeta sin haberse pedido por idioma o con `--fun` |
 | Reversibilidad | `unlink` deja la carpeta exactamente como la encontró |
-| Localidad | El manifiesto se queda en la habilidad que se renombra. Esto nunca se vuelve un registro. |
+| Localidad | El manifiesto se queda en la skill que se renombra. Esto nunca se vuelve un registro. |
 
 </details>
 

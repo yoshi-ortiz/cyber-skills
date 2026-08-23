@@ -99,6 +99,27 @@ particular. Every skill belongs to exactly one group, and the table lists them
 in that order in every language. Grouping by channel was the alternative and it
 answers a question nobody arrives with.
 
+### What a translation may not translate
+
+```bash
+python3 tools/loanwords.py
+```
+
+Some nouns name parts of the machinery, and the machinery is in English
+everywhere the reader will meet it again: the flag is `--skill`, the file is
+`SKILL.md`, the folder is `~/.claude/skills/`, and the assistant's own
+settings screen says "skills". A Spanish reader who learns `habilidad` has
+learned a synonym for the word they actually need, and can search for none of
+it. So `skill` stays `skill`, and `LOANWORDS` in `tools/loanwords.py` is the
+list: currently `skill`, `agent`, `prompt`, and `token`.
+
+This is narrower than a style rule and deliberately so. `asistente` for
+"assistant" is fine, because no flag, path, or screen ever says "assistant"
+back at the reader. The test is not "is this a technical word" but "will the
+reader see the English form somewhere else and need to connect the two".
+
+`index_gate.py` runs this check, so the one command still covers everything.
+
 ### Second names
 
 A skill may declare its own name in another language, or a playful one, in its
