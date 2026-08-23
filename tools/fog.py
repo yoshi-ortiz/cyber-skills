@@ -42,6 +42,15 @@ FOG_FILES_EXTRA = (
     "aesthetic/scripts/verify_references.py",
 )
 
+# Skills not ready for a stable tree. They stay on `dev` and ship on the alpha
+# channel; `main` carries nothing under them, KEEP_ALWAYS included.
+ALPHA_SKILLS = (
+    "aesthetic",
+    "genesis",
+    "knowledge",
+    "silly",
+)
+
 # Never fog, whatever else matches. The skill's own instructional payload is
 # the reason `main` exists at all.
 KEEP_ALWAYS = (
@@ -52,10 +61,18 @@ KEEP_ALWAYS = (
 )
 
 
-def is_fog(relative: str) -> bool:
+def is_alpha(relative: str) -> bool:
+    """True when this path belongs to a skill that has not reached `main`."""
+    return any(relative == skill or relative.startswith(skill + "/")
+               for skill in ALPHA_SKILLS)
+
+
+def is_fog(relative: str, channel: str = "main") -> bool:
     """True when this repo-relative path must not reach a published tree."""
     path = PurePosixPath(relative)
     text = path.as_posix()
+    if channel == "main" and is_alpha(text):
+        return True
     if text in KEEP_ALWAYS:
         return False
     if text in FOG_FILES or text in FOG_FILES_EXTRA:
@@ -82,4 +99,8 @@ def reasons() -> dict[str, str]:
         "test_*.py": "the correctness guard runs on dev; no consuming agent runs it",
         "aesthetic/scripts/contracts.py": "development tooling",
         "aesthetic/scripts/verify_references.py": "development tooling",
+        "aesthetic": "alpha channel; not published to main",
+        "genesis": "alpha channel; not published to main",
+        "knowledge": "alpha channel; not published to main",
+        "silly": "alpha channel; not published to main",
     }

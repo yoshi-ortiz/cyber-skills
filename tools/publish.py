@@ -8,6 +8,7 @@ does not, so forgetting is not one of the available outcomes.
 
     python3 tools/publish.py --out /tmp/published        # inspect it
     python3 tools/publish.py --out /tmp/published --check # and verify it
+    python3 tools/publish.py --out /tmp/alpha --channel alpha --check
 
 Nothing here touches git. Producing the tree and moving a branch to it are
 separate acts, so a bad publish is a directory you delete rather than a
@@ -28,7 +29,7 @@ from fog import is_fog
 SKIP_DIRS = {".git", "__pycache__"}
 
 
-def published_paths(root: Path) -> list[Path]:
+def published_paths(root: Path, channel: str = "main") -> list[Path]:
     """Every file that belongs in a published tree, repo-relative."""
     keep = []
     for path in sorted(root.rglob("*")):
@@ -39,17 +40,17 @@ def published_paths(root: Path) -> list[Path]:
             continue
         if relative.name == ".DS_Store":
             continue
-        if is_fog(relative.as_posix()):
+        if is_fog(relative.as_posix(), channel):
             continue
         keep.append(relative)
     return keep
 
 
-def publish(root: Path, out: Path) -> tuple[int, int]:
+def publish(root: Path, out: Path, channel: str = "main") -> tuple[int, int]:
     """Copy the published tree to `out`. Returns (kept, skipped)."""
     every = [p.relative_to(root) for p in sorted(root.rglob("*")) if p.is_file()
              and not any(part in SKIP_DIRS for part in p.relative_to(root).parts)]
-    keep = published_paths(root)
+    keep = published_paths(root, channel)
     if out.exists():
         shutil.rmtree(out)
     for relative in keep:
@@ -64,16 +65,19 @@ def main() -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--channel", default="main", choices=("main", "alpha"),
+                        help="main drops alpha skills; alpha carries them")
     parser.add_argument("--check", action="store_true",
                         help="verify the result carries no fog")
     args = parser.parse_args()
     root = args.root.resolve()
-    kept, skipped = publish(root, args.out.resolve())
-    print(f"Published {kept} file(s) to {args.out}; left {skipped} fog file(s) on dev.")
+    kept, skipped = publish(root, args.out.resolve(), args.channel)
+    print(f"Published {kept} file(s) to {args.out} on the {args.channel} channel; "
+          f"left {skipped} file(s) on dev.")
     if args.check:
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         from check_publication import check
-        return check(args.out.resolve())
+        return check(args.out.resolve(), args.channel)
     return 0
 
 
