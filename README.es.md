@@ -2,7 +2,7 @@
 
 ![Cyber Skills · Intelligent + Easy Prompts](assets/cover.png)
 
-**Prompts probados, hechos por un nerd determinista y algo bobo**
+**Prompts verificados, hechos por un nerd determinista con sentido del humor**
 
 [![release](https://img.shields.io/badge/release-0.9--beta-8b5cf6?style=flat-square&labelColor=1e1b4b)](https://github.com/yoshi-ortiz/cyber-skills/releases)
 [![repo](https://img.shields.io/badge/repo-yoshi--ortiz%2Fcyber--skills-0ea5e9?style=flat-square&labelColor=1e1b4b)](https://github.com/yoshi-ortiz/cyber-skills)
@@ -18,7 +18,7 @@ Solo Python estándar · Listo para usar
 
 ---
 
-Un **skill prompt** es un conjunto de instrucciones escritas que tu
+Un **skill prompt** es un paquete de prompts definidos que tu
 asistente de IA lee antes de responderte. El mismo asistente, otro especialista:
 uno que ya sabe cómo trabajas y no necesita que se lo expliques cada mañana.
 
@@ -47,18 +47,21 @@ Agrupadas por cuándo las necesitas, no por qué tan terminadas están.
   <tr><td><a href="#-ora">🇪🇸 <strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu asistente en español sencillo</td></tr>
 </table>
 
-Las estables están en [SKILL PROMPTS](#-skill-prompts). El resto
+Las versiones estables están en [SKILL PROMPTS](#-skill-prompts). El resto
 son [EXPERIMENTOS](#-experimentos), de instalación manual.
 
 ---
 
 # 📦 INSTALAR
 
-Las dos rutas terminan igual: archivos en el disco y un **chat nuevo**. Los
+Las dos opciones resultan igual: archivos en el disco y un **chat nuevo**. Los
 asistentes leen sus skills al empezar una conversación, nunca a mitad de
 camino.
 
-Repositorio: `https://github.com/yoshi-ortiz/cyber-skills`
+**🧩 Plugin**
+```
+https://github.com/yoshi-ortiz/cyber-skills
+```
 
 ### A) Agrégala a los plugins de tu asistente
 
