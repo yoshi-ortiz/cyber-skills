@@ -18,6 +18,17 @@ Solo Python estándar · Listo para usar
 
 ---
 
+## 🤔 ¿Te sirve esto?
+
+Pregúntale a lo mismo donde lo vas a instalar. Pega esto en Claude Code,
+Cursor o la app de IA que uses. Lee el repositorio, te dice qué hace cada
+prompt y te acompaña a instalar los que quieras.
+
+```
+What's this plugin for? Should I install it?
+https://github.com/yoshi-ortiz/cyber-skills
+```
+
 Un **skill prompt** es un paquete de prompts definidos que tu
 agent lee antes de responderte. El mismo agent, otro especialista:
 uno que ya sabe cómo trabajas y no necesita que se lo expliques cada mañana.
