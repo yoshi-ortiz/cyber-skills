@@ -92,14 +92,24 @@ def manifested(root: Path) -> list[tuple[str, str, str, str]]:
     return found
 
 
+def quoted(value: str) -> str:
+    """A double-quoted YAML scalar.
+
+    A description is prose, and prose contains `: `, which YAML reads as a
+    nested mapping and every parser then rejects. The whole file is skipped
+    when that happens, so the alias silently does not exist.
+    """
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
 def stub(alias: str, canonical: str, kind: str, description: str) -> str:
     """The whole alias. A name, why it exists, and where the work lives."""
     label = "another language" if kind != "fun" else "a name that is nicer to type"
     return "\n".join([
         "---",
         f"name: {alias}",
-        f"description: The {canonical} skill under {label}. Say {alias} to run it. "
-        f"{description}",
+        "description: " + quoted(f"The {canonical} skill under {label}. "
+                                 f"Say {alias} to run it. {description}"),
         f"{MARKER}: {canonical}",
         "disable-model-invocation: true",
         "---",

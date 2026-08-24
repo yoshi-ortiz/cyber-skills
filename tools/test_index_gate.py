@@ -137,6 +137,18 @@ def test() -> None:
             "---\nname: old-name\nalias_of: ora\n---\n")
         assert gate(root) == 0
 
+    # an unquoted `: ` in frontmatter is a nested mapping to YAML, so a real
+    # parser skips the file and the skill silently does not exist
+    assert case(HEADER + BODY,
+                translation=HEADER + BODY,
+                manifest="---\nname: knowledge\n"
+                         "description: Distils sources: docs, specs, notes.\n---\n") == 1
+    # quoted is fine
+    assert case(HEADER + BODY,
+                translation=HEADER + BODY,
+                manifest='---\nname: knowledge\n'
+                         'description: "Distils sources: docs, specs, notes."\n---\n') == 0
+
     print("OK")
 
 

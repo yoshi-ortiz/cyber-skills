@@ -5,18 +5,13 @@ Ways an index rots: a skill ships and nobody adds it, a skill goes alpha in
 `fog.py` while the README still calls it stable, a translation falls a skill
 behind, the table groups a skill nowhere or out of order, or a declared name
 promises a trigger nothing answers to. Same bug every time, so one gate. It
-also runs `loanwords.py`, which owns what a translation may not translate.
+A skill may declare a second index row with `also:` in its `SKILL.md`, for a
+trigger its description already documents; the anchor still points at the one
+real skill.
 
-A skill may declare its own name in another language, in its `SKILL.md`
-frontmatter. The gate insists the translated README uses that name and that
-the skill's description carries it: a name the skill will not answer to is
-worse than no translation.
-
-An `also:` entry adds a second index row for a trigger the description
-already documents; the anchor still points at the one real skill.
-
-It refuses the em dash too: not a native speaker's clause boundary, unlike a
-colon, a full stop, or commas.
+It refuses the em dash. `manifest_gate.py` owns frontmatter validity and
+`loanwords.py` owns what a translation may not translate; both run from here,
+so one command still covers everything.
 
     python3 tools/index_gate.py
 """
@@ -35,6 +30,7 @@ from fog import ALPHA_SKILLS
 # while the tool fails is the one bug this file exists to prevent.
 from alias import MARKER, frontmatter
 from loanwords import check as localised_terms
+from manifest_gate import check as manifest_problems
 
 # Section index, not section title: translations rename these headings.
 STABLE, EXPERIMENTAL = 1, 2
@@ -58,11 +54,8 @@ def grouped() -> list[str]:
 
 
 def skills(root: Path) -> list[str]:
-    """Every skill directory: a SKILL.md that is not an alias to another one.
-
-    A shipped alias has a SKILL.md too, so it would otherwise demand its own
-    group and row. `alias.py` skips it on the same key.
-    """
+    """Every skill dir: a SKILL.md that is not an alias. A shipped alias has
+    one too, and would otherwise demand its own group and row."""
     return sorted(p.name for p in root.iterdir()
                   if p.is_dir() and (p / "SKILL.md").is_file()
                   and not frontmatter(p / "SKILL.md")[0].get(MARKER))
@@ -77,8 +70,8 @@ def spec(path: Path) -> Spec:
 
 
 def second_names(entry: Spec) -> dict[str, str]:
-    """Every declared second *name*, as name -> language or `fun`. Not `also`:
-    those are not names, and nothing installs them."""
+    """Second *names*, as name -> language or `fun`. Not `also`, which is a
+    row rather than a name."""
     _, translations, aliases, _also = entry
     return {name: code for code, name in translations.items()} | \
            {name: "fun" for name in aliases}
@@ -136,10 +129,9 @@ def languages(readme: Path) -> list[tuple[str, str | None]]:
     return []
 
 
-# A skill row, in either shape the README has used. Markdown:
-# `| [📦 **/name**](#-name) | ... |`. HTML: `<a href="#-name"><strong>/name`,
-# the `<strong>/` required right after the href so a group header's own link
-# does not also count as that skill's row.
+# A skill row, either shape. Markdown `| [📦 **/name**](#-name) |`, or HTML
+# `<a href="#-name"><strong>/name`. The `<strong>/` must follow the href so a
+# group header's own link is not counted as that skill's row.
 _INDEX_ROW = re.compile(r"\|\s*\[[^\[\]]*\*\*/([a-z0-9-]+)\*\*"
                         r'|href="#-([a-z0-9-]+)">\s*<strong>/')
 
@@ -182,30 +174,7 @@ def gate(root: Path) -> int:
         if name not in present:
             problems.append(f"GROUPS names {name!r}, which is not a skill directory")
 
-    claimed: dict[str, str] = {}
-    for name, entry in specs.items():
-        description = entry[0].get("description", "")
-        for trigger, _note in also_rows(entry):
-            if trigger not in description:
-                problems.append(
-                    f"{name}/SKILL.md offers an also-row for {trigger!r} but its "
-                    f"description never says it; the row would promise a trigger "
-                    f"that fires nothing")
-        for second, code in second_names(entry).items():
-            if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", second):
-                problems.append(f"{name}/SKILL.md declares {second!r} as a second "
-                                f"name; use lower case, digits, and hyphens only")
-            if second not in description:
-                problems.append(
-                    f"{name}/SKILL.md offers {second!r} as its {code} name but its "
-                    f"description never says it; the word would trigger nothing")
-            if second in present:
-                problems.append(f"{name}/SKILL.md claims {second!r}, which is "
-                                f"already a skill directory")
-            if second in claimed:
-                problems.append(f"{name}/ and {claimed[second]}/ both claim the "
-                                f"second name {second!r}")
-            claimed[second] = name
+    problems.extend(manifest_problems(root, present))
 
     titles, placed = read_index(readme)
     if titles != list(SECTIONS):
