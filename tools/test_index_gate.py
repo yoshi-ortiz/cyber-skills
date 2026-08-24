@@ -15,7 +15,7 @@ INDEX = ("## Index\n\n| | |\n| --- | --- |\n"
          + "".join(f"| [**/{name}** 🎨](#-{name}) | row |\n" for name in grouped())
          + "\n")
 BODY = (INDEX + "# 📦 INSTALL\n\n"
-        "# ✨ SKILL PROMPTS\n\n## 🎒 /starter-pack\n\n## 🇪🇸 /ora\n\n"
+        "# ✨ SKILL PROMPTS\n\n## 🎒 /kit\n\n## 🇪🇸 /ora\n\n"
         "# 🧪 EXPERIMENTS\n\n## 🧬 /genesis\n\n## 📚 /knowledge\n\n"
         "## 🎨 /aesthetic\n\n## 🃏 /silly\n")
 
@@ -124,6 +124,18 @@ def test() -> None:
     assert case(with_also, translation=with_also,
                 manifest="---\nname: knowledge\ndescription: Distils sources."
                          "\nalso:\n  - reads the docs :: An extra index row\n---\n") == 1
+
+    # a shipped alias directory is not a skill: it has a SKILL.md, but
+    # `alias_of` means it wears another skill's name and needs no group,
+    # no index row, and no section of its own
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        build(root, HEADER + BODY, HEADER + BODY.replace("/knowledge",
+                                                         "/enciclopedia"))
+        (root / "old-name").mkdir()
+        (root / "old-name" / "SKILL.md").write_text(
+            "---\nname: old-name\nalias_of: ora\n---\n")
+        assert gate(root) == 0
 
     print("OK")
 

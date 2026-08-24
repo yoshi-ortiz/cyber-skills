@@ -1,19 +1,17 @@
 ---
-purpose: a user-invoked guide to the harness that installs every other skill
-admits: SKILL.md, and any reference this skill alone needs
-refuses: aesthetic doctrine, design vocabulary, anything from another skill in this package
-max_file_bytes: 8000
+purpose: one shipped alias, so the skill's original name keeps working
+admits: SKILL.md, and nothing else
+refuses: instructions of its own; every word of them belongs to kit/
+max_file_bytes: 2000
 ---
 
-# Starter pack
+# starter-pack
 
-One file, one job: hand an agent the operating manual for the collection that
-arms it. It describes another repository, `yoshi-ortiz/harness-core`, and holds
-no logic of its own. Nothing here runs; the harness does the running.
+A stub, in the shape [silly/scripts/alias.py](../silly/scripts/alias.py) writes:
+a name, an `alias_of` pointing at the skill that holds the work, and no
+content. It ships in the published tree instead of being installed on demand,
+which is the one thing that separates it from an alias `/silly` would make.
 
-User-invoked on purpose. It fires when someone types its name, so it costs no
-context on the turns nobody asked for it, which is the whole argument for a
-reference skill that is read a few times a month.
-
-It ships in the same package as [aesthetic/](../aesthetic/) and shares nothing
-with it.
+The rename to `kit/` happened after this name was published. Deleting it would
+break every agent that already carries it, and an empty directory costs less
+than that.

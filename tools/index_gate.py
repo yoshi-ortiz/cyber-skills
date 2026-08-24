@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """The README index is a promise; this is what keeps it one.
 
-Ways an index rots: a skill ships and nobody adds it, a skill is pulled back
-to alpha in `fog.py` while the README still calls it stable, a translation
-falls a skill behind, the table groups a skill nowhere or out of order, or a
-declared name promises a trigger nothing answers to. Same bug every time --
-the index disagreeing with the repository -- so one gate. It also runs
-`loanwords.py`, which owns what a translation may not translate.
+Ways an index rots: a skill ships and nobody adds it, a skill goes alpha in
+`fog.py` while the README still calls it stable, a translation falls a skill
+behind, the table groups a skill nowhere or out of order, or a declared name
+promises a trigger nothing answers to. Same bug every time, so one gate. It
+also runs `loanwords.py`, which owns what a translation may not translate.
 
 A skill may declare its own name in another language, in its `SKILL.md`
-frontmatter. The gate then insists the translated README uses that name and
-that the skill's description carries it: a name the skill will not answer to
-is worse than no translation.
+frontmatter. The gate insists the translated README uses that name and that
+the skill's description carries it: a name the skill will not answer to is
+worse than no translation.
 
 An `also:` entry adds a second index row for a trigger the description
-already documents, without claiming a second name: the anchor still points at
-the one real skill.
+already documents; the anchor still points at the one real skill.
 
 It refuses the em dash too: not a native speaker's clause boundary, unlike a
 colon, a full stop, or commas.
@@ -35,7 +33,7 @@ from fog import ALPHA_SKILLS
 # The gate reads a manifest with the same parser that acts on it. A second
 # implementation here could disagree with `alias.py`, and a gate that passes
 # while the tool fails is the one bug this file exists to prevent.
-from alias import frontmatter
+from alias import MARKER, frontmatter
 from loanwords import check as localised_terms
 
 # Section index, not section title: translations rename these headings.
@@ -47,7 +45,7 @@ SECTIONS = ("INSTALL", "SKILL PROMPTS", "EXPERIMENTS")
 # or nothing in particular. Labels are English and translations rename them,
 # so the gate compares order, never the words.
 GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("Set up once", ("starter-pack",)),
+    ("Set up once", ("kit",)),
     ("Plan a project", ("genesis", "knowledge")),
     ("Run a session", ("aesthetic",)),
     ("Odds and ends", ("silly", "ora")),
@@ -60,9 +58,14 @@ def grouped() -> list[str]:
 
 
 def skills(root: Path) -> list[str]:
-    """Every skill directory in the repo -- a directory with a SKILL.md."""
+    """Every skill directory: a SKILL.md that is not an alias to another one.
+
+    A shipped alias has a SKILL.md too, so it would otherwise demand its own
+    group and row. `alias.py` skips it on the same key.
+    """
     return sorted(p.name for p in root.iterdir()
-                  if p.is_dir() and (p / "SKILL.md").is_file())
+                  if p.is_dir() and (p / "SKILL.md").is_file()
+                  and not frontmatter(p / "SKILL.md")[0].get(MARKER))
 
 
 Spec = tuple[dict[str, str], dict[str, str], list[str], list[tuple[str, str]]]
@@ -133,11 +136,10 @@ def languages(readme: Path) -> list[tuple[str, str | None]]:
     return []
 
 
-# A skill row in the index, in either shape the README has used. Markdown:
-# `| [📦 **/name**](#-name) | ... |`, decoration before the bold marker
-# optional. HTML: `<a href="#-name"><strong>/name</strong>`, required right
-# after the href so a group header's own link -- `<a href="#-name">Title</a>`,
-# no leading slash, no `<strong>` -- does not also count as that skill's row.
+# A skill row, in either shape the README has used. Markdown:
+# `| [📦 **/name**](#-name) | ... |`. HTML: `<a href="#-name"><strong>/name`,
+# the `<strong>/` required right after the href so a group header's own link
+# does not also count as that skill's row.
 _INDEX_ROW = re.compile(r"\|\s*\[[^\[\]]*\*\*/([a-z0-9-]+)\*\*"
                         r'|href="#-([a-z0-9-]+)">\s*<strong>/')
 

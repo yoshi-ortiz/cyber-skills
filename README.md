@@ -38,8 +38,9 @@ Grouped by when you need one, not by how finished it is.
     <col width="220">
     <col>
   </colgroup>
-  <tr><td colspan="2" align="center"><h3><a href="#-starter-pack">📀 Setup once</a><br><small>Install it once, every AI app carries it</small></h3></td></tr>
-  <tr><td nowrap>📦 <a href="#-starter-pack"><strong>/starter-pack</strong></a></td><td>One toolkit across every AI app you use</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-kit">📀 Setup once</a><br><small>Install it once, every AI app carries it</small></h3></td></tr>
+  <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>One toolkit across every AI app you use</td></tr>
+  <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>Same skill, its original name</td></tr>
   <tr><td colspan="2" align="center"><h3><a href="#-genesis">💼 Planning</a><br><small>Before you start building</small></h3></td></tr>
   <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Plans before it builds, and proves the thing runs</td></tr>
   <tr><td nowrap>📚 <a href="#-knowledge"><strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td></tr>
@@ -120,15 +121,16 @@ never appear here. Use path A for those.
 
 Stable. Installed by path B, supported, safe to rely on.
 
-## 📦 /starter-pack
+## 📦 /kit
 
 One toolkit, every AI app. If you use more than one, this keeps them
 equipped the same way, from one list instead of app by app.
 
 | | |
 | --- | --- |
-| **Package** | [starter-pack/](starter-pack/) · entry [starter-pack/SKILL.md](starter-pack/SKILL.md) |
-| **Invoke** | You only. Say `starter-pack`. |
+| **Package** | [kit/](kit/) · entry [kit/SKILL.md](kit/SKILL.md) |
+| **Invoke** | You only. Say `kit` to set it up, `kit sync` to update it, `kit fix` when something broke. |
+| **Also answers to** | `starter-pack`, its original name. Ships as an alias, nothing to install. |
 | **Needs** | The [harness](https://github.com/yoshi-ortiz/harness-core) it drives, plus Homebrew or a clone |
 | **Channel** | `main` |
 
@@ -139,6 +141,15 @@ A reference skill: no scripts, no state. It teaches an agent to operate
 `yoshi-ortiz/harness-core`, whose `collection.yaml` lists the skills and MCP
 servers every AI app on your machine should carry.
 
+| Argument | What it does |
+| --- | --- |
+| `kit`, `install`, `setup`, `init`, `start` | Sets the harness up and arms every AI app. Bare `kit` means this. |
+| `sync`, `update`, `refresh`, `upgrade` | Re-arms every AI app with the current list. This is the update. |
+| `fix`, `doctor`, `repair`, `troubleshoot`, `conflict` | Works out why something installed wrong, or why two things collided. |
+
+Installing a machine that is already set up syncs it, so it never has to ask
+you which one you meant.
+
 | Covers | What it holds |
 | --- | --- |
 | Install | `brew tap`, `brew install`, `harness init`, and the clone alternative |
@@ -146,6 +157,7 @@ servers every AI app on your machine should carry.
 | Adding a skill | Why a hand edit installs nothing, why a full name list rots, why `--all` is banned |
 | Adding an MCP server | One transport per server, secrets by environment variable only |
 | Standard versus situational | What every AI app gets, against opt-in groups behind `--with` |
+| Fixing | A symptom table: failed source, silently skipped server, stale copy after a rename, two skills of one name |
 | Releasing | Tag the repo, bump the Homebrew formula |
 
 </details>
