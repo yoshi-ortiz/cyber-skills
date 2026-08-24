@@ -70,48 +70,31 @@ Stable prompts sit under [SKILL PROMPTS](#-skill-prompts). The rest are
 
 # 📦 INSTALL
 
-Both paths end the same way: files on disk, then a **new chat**. AI apps read
-their skills when a conversation starts, never in the middle of one.
+One command. It finds every AI app you have and installs into each one. No
+clone, no folders, nothing to configure.
 
-Repo: `https://github.com/yoshi-ortiz/cyber-skills`
-
-### A) Add to your Agent Plugins
-
-Every AI app keeps its skills in one folder. Clone the repo, then put the skill
-folder inside it, by copy or by symlink.
+**Everything, experiments included:**
 
 ```bash
-git clone -b dev https://github.com/yoshi-ortiz/cyber-skills.git
-ln -s "$(pwd)/cyber-skills/aesthetic" ~/.cursor/skills/aesthetic
+npx skills add https://github.com/yoshi-ortiz/cyber-skills/tree/dev -g --all
 ```
 
-| AI app | Skills folder |
-| --- | --- |
-| Cursor | `~/.cursor/skills/` |
-| Claude Code | `~/.claude/skills/` |
-| Codex and others | check that app's docs |
-
-Use this path for anything under EXPERIMENTS. Those live on the `dev` branch only,
-which is what `-b dev` fetches.
-
-### B) Add and sync via Vercel `CLI Script` (recommended) 💯
-
-[`npx skills add`](https://github.com/vercel-labs/skills) finds your AI apps and
-installs into each one for you. No clone.
+**Only the stable ones:**
 
 ```bash
-npx skills add yoshi-ortiz/cyber-skills --all
+npx skills add yoshi-ortiz/cyber-skills -g --all
 ```
 
-`--all` installs every skill on this branch into every AI app it detects,
-no prompts.
+Then **start a new chat**. AI apps read their skills when a conversation
+begins, never in the middle of one. That is the whole install.
 
 <details>
-<summary><b>Flags, and what this path cannot reach</b></summary>
+<summary><b>Installing less than everything</b></summary>
 
-`--all` is shorthand for `--skill '*' --agent '*' -y`: every skill on this
-branch, into every AI app `skills` detects, no prompts. Each row below
-narrows one part of that.
+`--all` is shorthand for `--skill '*' --agent '*' -y`, meaning every skill into
+every app with no prompts. It does **not** imply `-g`, so without it the skills
+install into whatever folder your terminal happens to be sitting in and no app
+finds them. Keep the `-g`. Each flag below narrows one part of that.
 
 | Flag | What it does |
 | --- | --- |
@@ -121,8 +104,16 @@ narrows one part of that.
 | `-l`, `--list` | Print what is here, install nothing |
 | `-y`, `--yes` | Skip the confirmation prompt on its own |
 
-This path reads the `main` branch, which holds stable prompts only. Experiments
-never appear here. Use path A for those.
+A plain `yoshi-ortiz/cyber-skills` reads the `main` branch, which carries the
+stable prompts only. The `/tree/dev` URL reads the development branch, which
+carries those plus everything under EXPERIMENTS.
+
+Skills land in `~/.agents/skills/`. Claude Code and Pi are linked from there
+by the CLI itself. **Cursor, Codex, and Antigravity are not**, so if you use
+one of those and the skills do not show up, that is why. [/kit](#-kit) installs
+the bridge that closes the gap and re-runs it after every install.
+
+To remove one later: `npx skills remove <name>`.
 
 </details>
 

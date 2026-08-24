@@ -71,52 +71,31 @@ son [EXPERIMENTOS](#-experimentos), de instalación manual.
 
 # 📦 INSTALAR
 
-Las dos opciones resultan igual: archivos en el disco y un **chat nuevo**. Los
-las apps de IA leen sus skills al empezar una conversación, nunca a mitad de
-camino.
+Un solo comando. Encuentra todas tus apps de IA e instala en cada una. Sin
+clonar, sin carpetas, sin configurar nada.
 
-**🧩 Plugin**
-```
-https://github.com/yoshi-ortiz/cyber-skills
-```
-
-### A) Agrégala a los plugins de tu app
-
-Cada app guarda sus skills en una carpeta. Clona el repositorio y pon
-dentro la carpeta de la skill, copiándola o con un enlace simbólico.
+**Todo, experimentos incluidos:**
 
 ```bash
-git clone -b dev https://github.com/yoshi-ortiz/cyber-skills.git
-ln -s "$(pwd)/cyber-skills/aesthetic" ~/.cursor/skills/aesthetic
+npx skills add https://github.com/yoshi-ortiz/cyber-skills/tree/dev -g --all
 ```
 
-| Asistente | Carpeta de skills |
-| --- | --- |
-| Cursor | `~/.cursor/skills/` |
-| Claude Code | `~/.claude/skills/` |
-| Codex y otros | revisa la documentación de esa aplicación |
-
-Esta es la ruta para todo lo que esté en EXPERIMENTOS. Solo vive en la rama `dev`,
-que es lo que trae `-b dev`.
-
-### B) Agregar y sincronizar con el `CLI Script` de Vercel (recomendado) 💯
-
-[`npx skills add`](https://github.com/vercel-labs/skills) detecta tus apps de IA e
-instala en cada uno por ti. Sin clonar nada.
+**Solo lo estable:**
 
 ```bash
-npx skills add yoshi-ortiz/cyber-skills --all
+npx skills add yoshi-ortiz/cyber-skills -g --all
 ```
 
-`--all` instala todas las skills de esta rama en cada app de IA que
-detecta, sin preguntas.
+Después abre un **chat nuevo**. Las apps de IA leen sus skills al empezar una
+conversación, nunca a mitad de camino. Eso es toda la instalación.
 
 <details>
-<summary><b>Opciones, y qué no alcanza esta ruta</b></summary>
+<summary><b>Instalar menos que todo</b></summary>
 
-`--all` es un atajo de `--skill '*' --agent '*' -y`: todas las skills de
-esta rama, en cada app de IA que `skills` detecta, sin preguntas. Cada fila de
-abajo reduce una parte de eso.
+`--all` es un atajo de `--skill '*' --agent '*' -y`, o sea todas las skills en
+todas las apps y sin preguntas. **No** incluye `-g`, así que sin eso las skills
+caen en la carpeta donde tengas parada la terminal y ninguna app las encuentra.
+Deja el `-g`. Cada opción de abajo reduce una parte de eso.
 
 | Opción | Qué hace |
 | --- | --- |
@@ -126,8 +105,16 @@ abajo reduce una parte de eso.
 | `-l`, `--list` | Imprime lo que hay, no instala nada |
 | `-y`, `--yes` | Omite la confirmación por su cuenta |
 
-Esta ruta lee la rama `main`, que solo tiene las skills estables. Los
-experimentos nunca aparecen ahí. Para esos, usa la ruta A.
+`yoshi-ortiz/cyber-skills` a secas lee la rama `main`, que lleva solo las
+skills estables. La URL con `/tree/dev` lee la rama de desarrollo, que lleva
+esas más todo lo que está en EXPERIMENTOS.
+
+Las skills caen en `~/.agents/skills/`. Claude Code y Pi quedan enlazados
+desde ahí por el CLI. **Cursor, Codex y Antigravity no**, así que si usas
+alguno de esos y las skills no aparecen, por eso es. [/kit](#-kit) instala el
+puente que cierra ese hueco y lo vuelve a correr después de cada instalación.
+
+Para quitar una después: `npx skills remove <nombre>`.
 
 </details>
 
