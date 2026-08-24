@@ -39,8 +39,9 @@ Agrupadas por cuándo las necesitas, no por qué tan terminadas están.
     <col width="220">
     <col>
   </colgroup>
-  <tr><td colspan="2" align="center"><h3><a href="#-starter-pack">📀 Configurar una vez</a><br><small>Instálalo una vez y todas tus apps de IA lo llevan</small></h3></td></tr>
-  <tr><td nowrap>📦 <a href="#-starter-pack"><strong>/starter-pack</strong></a></td><td>Un solo juego de herramientas en todas tus apps de IA</td></tr>
+  <tr><td colspan="2" align="center"><h3><a href="#-kit">📀 Configurar una vez</a><br><small>Instálalo una vez y todas tus apps de IA lo llevan</small></h3></td></tr>
+  <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>Un solo juego de herramientas en todas tus apps de IA</td></tr>
+  <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>La misma skill, con su nombre original</td></tr>
   <tr><td colspan="2" align="center"><h3><a href="#-genesis">💼 Planear</a><br><small>Antes de empezar a construir</small></h3></td></tr>
   <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Planea antes de construir, y comprueba que funcione</td></tr>
   <tr><td nowrap>📚 <a href="#-enciclopedia"><strong>/enciclopedia</strong></a></td><td>Lee la documentación real y guarda una nota corta con su fuente</td></tr>
@@ -125,7 +126,7 @@ experimentos nunca aparecen ahí. Para esos, usa la ruta A.
 
 Estables. Se instalan con la ruta B, tienen soporte y puedes confiar en ellas.
 
-## 📦 /starter-pack
+## 📦 /kit
 
 Un solo juego de herramientas, todas tus apps de IA. Si usas más de una
 IA, esta los mantiene equipados igual, desde una sola lista en vez de una por
@@ -133,8 +134,9 @@ una.
 
 | | |
 | --- | --- |
-| **Paquete** | [starter-pack/](starter-pack/) · entrada [starter-pack/SKILL.md](starter-pack/SKILL.md) |
-| **Invocación** | Solo tú. Di `starter-pack`. |
+| **Paquete** | [kit/](kit/) · entrada [kit/SKILL.md](kit/SKILL.md) |
+| **Invocación** | Solo tú. Di `kit` para configurarlo, `kit sync` para actualizarlo y `kit fix` cuando algo se rompió. |
+| **También responde a** | `starter-pack`, su nombre original. Viene incluido, no hay que instalarlo. |
 | **Requiere** | El [harness](https://github.com/yoshi-ortiz/harness-core) que maneja, más Homebrew o un clon |
 | **Canal** | `main` |
 
@@ -145,6 +147,15 @@ Una skill de referencia: sin scripts, sin estado. Le enseña a un agent a
 operar `yoshi-ortiz/harness-core`, cuyo `collection.yaml` lista las skills
 y los servidores MCP que debería llevar cada app de IA de tu máquina.
 
+| Argumento | Qué hace |
+| --- | --- |
+| `kit`, `install`, `setup`, `init`, `start` | Instala el harness y arma cada app de IA. `kit` a secas hace esto. |
+| `sync`, `update`, `refresh`, `upgrade` | Vuelve a armar cada app de IA con la lista actual. Esta es la actualización. |
+| `fix`, `doctor`, `repair`, `troubleshoot`, `conflict` | Averigua por qué algo se instaló mal, o por qué dos cosas chocaron. |
+
+Instalar una máquina que ya está lista la sincroniza, así que nunca tiene que
+preguntarte cuál de las dos querías.
+
 | Cubre | Qué contiene |
 | --- | --- |
 | Instalación | `brew tap`, `brew install`, `harness init` y la alternativa con clon |
@@ -152,6 +163,7 @@ y los servidores MCP que debería llevar cada app de IA de tu máquina.
 | Agregar una skill | Por qué editar a mano no instala nada, por qué una lista completa se pudre, por qué `--all` está prohibido |
 | Agregar un MCP | Un solo transporte por servidor, y secretos solo por variable de entorno |
 | Estándar frente a opcional | Lo que recibe cada app de IA, contra los grupos detrás de `--with` |
+| Arreglar | Una tabla de síntomas: fuente que falló, servidor omitido en silencio, copia vieja tras un cambio de nombre, dos skills con un mismo nombre |
 | Publicar | Etiquetar el repositorio y actualizar la fórmula de Homebrew |
 
 </details>

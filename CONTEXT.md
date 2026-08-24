@@ -26,7 +26,8 @@ another.
 | [knowledge/](knowledge/) | External sources distilled into a cited OKF bundle | its own, unrelated | alpha |
 | [ora/](ora/) | Spanish conclusion voice | its own, unrelated | main |
 | [silly/](silly/) | Installs the second names other skills declare | its own, unrelated | alpha |
-| [starter-pack/](starter-pack/) | Operating guide for the harness that installs everything else | its own, unrelated | main |
+| [kit/](kit/) | Operating guide for the harness that installs everything else | its own, unrelated | main |
+| [starter-pack/](starter-pack/) | A shipped alias, so `kit`'s original name keeps working | none; it holds no instructions | main |
 | [tools/](tools/) | Builds the published trees from `dev` | Repo-Dev | fog |
 | [assets/](assets/) | README imagery | neither; nothing reads it at runtime | main |
 
