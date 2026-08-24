@@ -17,6 +17,17 @@
 
 ---
 
+## 🤔 Should you install this?
+
+Ask the thing you would be installing it into. Paste this into Claude Code,
+Cursor, or whichever AI app you use. It reads the repo, tells you what each
+prompt actually does, and walks you through installing the ones you want.
+
+```
+What's this plugin for? Should I install it?
+https://github.com/yoshi-ortiz/cyber-skills
+```
+
 A **skill prompt** is a set of written instructions your AI agent reads before
 it answers you. Same agent, different specialist: one that already knows how
 you like to work and does not need to be re-briefed every morning.
