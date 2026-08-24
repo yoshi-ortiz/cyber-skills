@@ -1,6 +1,6 @@
 ---
 name: starter-pack
-description: The kit skill under its original name. Say starter-pack to run it. Operating guide for the agent-skills harness: install it, sync it, extend it, ship it.
+description: "The kit skill under its original name. Say starter-pack to run it. Operating guide for the harness-core loadout. Install it, sync it, extend it, ship it."
 alias_of: kit
 disable-model-invocation: true
 ---
