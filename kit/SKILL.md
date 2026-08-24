@@ -17,10 +17,33 @@ also:
 Never ask which. Install ends in the same command Sync runs, so installing a
 machine that is already set up syncs it instead of breaking it.
 
-Everything below those two sections is reference. Read a section when the task
-names it, not before.
+Everything below the three modes is reference. Read one when the task names it.
 
 Every agent on this machine runs the same **loadout**: the skills and MCP servers that give it reach beyond its own weights. `collection.yaml` records that loadout, `install.harness.sh` arms every agent with it by calling each agent's own CLI. One collection, one harness. Source of truth for anything not here: [the harness README](https://github.com/yoshi-ortiz/harness-core).
+
+## Report it while it runs
+
+Both Install and Sync fan out over every source and every app. That takes
+minutes. The harness prints `[i/N]` per unit, so keep the whole log:
+
+```bash
+harness --agents 2>&1 | tee /tmp/kit.log
+```
+
+**Never pipe it through `tail` or `head`.** That discards the failures and
+replaces the harness exit code with the pager's, so a run that died at source
+11 of 30 reads as a clean success.
+
+If it outruns your tool timeout, background it, say so in chat, and report
+position rather than going quiet:
+
+```bash
+grep '^\[' /tmp/kit.log | tail -1
+```
+
+It ends in a verdict. Either `✓ 30/30 armed`, or the list of what failed and a
+non-zero exit. A failure never stops the run, so the rest is already armed and
+a re-run only has to clear what it named.
 
 ## Install
 
@@ -33,11 +56,11 @@ harness --agents                 # arms every agent. init alone arms nothing.
 
 macOS and Homebrew for Linux. Or clone the repo and run `./install.harness.sh` in place; it needs [yq](https://github.com/mikefarah/yq) and Node, both pulled in by the formula.
 
-`init` is read-only: it reports which `header_env` secrets are set and which optional groups exist, then prints `--agents` as the next step. Run it first so a missing secret surfaces before a fan-out, but never stop there.
+`init` is read-only. Run it first so a missing secret surfaces before the fan-out, never instead of the fan-out.
 
 ## Sync
 
-Re-running the install **is** the update. `--agents` walks every source in the manifest and reinstalls it at its current version, so one command re-arms every agent with the latest of everything.
+Re-running the install **is** the update. `--agents` reinstalls every source at its current version.
 
 ```bash
 brew upgrade harness-core        # the harness itself, when installed that way
@@ -110,13 +133,6 @@ Omit the top-level `agents:` key and every agent the CLI detects gets the loadou
 
 ## Release
 
-Tag here, bump the formula in [yoshi-ortiz/homebrew-harness-core](https://github.com/yoshi-ortiz/homebrew-harness-core). One tag here, one commit there.
-
-```bash
-git tag v0.1.0 && git push --tags
-curl -sL https://github.com/yoshi-ortiz/harness-core/archive/refs/tags/v0.1.0.tar.gz | shasum -a 256
-```
-
-The digest goes in `sha256`, the tag in `url`, both in `Formula/harness-core.rb`.
-
-Windows is not packaged. The harness is bash and writes POSIX config paths, so it runs under WSL as a Linux install.
+Tagging the harness and bumping the Homebrew formula is documented once, in
+[the harness README](https://github.com/yoshi-ortiz/harness-core#releasing).
+Copying it here is how the two drift.
