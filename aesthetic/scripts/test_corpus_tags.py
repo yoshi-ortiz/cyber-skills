@@ -6,6 +6,7 @@ every round, because nothing recorded which references the user actually
 cared about.
 """
 import json
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -282,6 +283,63 @@ class TheModuleRendersOrStaysQuiet(unittest.TestCase):
             markup = ct.render_corpus_tags(root)
             for aspect in ct.ASPECTS:
                 self.assertIn(f'value="{aspect}"', markup)
+
+    def test_the_folder_question_shows_three_representative_thumbnails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store = root / STORE
+            source = root / "references"
+            store.mkdir(parents=True)
+            source.mkdir()
+            items = []
+            for index in range(5):
+                path = source / f"{index}.jpg"
+                payload = f"image-{index}".encode()
+                path.write_bytes(payload)
+                items.append({
+                    "id": f"image-{index}", "path": f"covers/{index}.jpg",
+                    "kind": "image", "mediaType": "image/jpeg",
+                    "sha256": hashlib.sha256(payload).hexdigest(),
+                    "inspectPath": str(path), "bytes": len(payload),
+                })
+            (store / "corpus.json").write_text(json.dumps({
+                "version": 1, "root": str(source), "modalities": ["image"],
+                "items": items,
+            }), encoding="utf-8")
+
+            markup = ct.render_corpus_tags(root)
+
+            self.assertEqual(markup.count('class="dh-tags-thumb"'), 3)
+            self.assertIn("/files/corpus-", markup)
+            self.assertNotIn(str(source), markup)
+
+    def test_publish_stages_only_hash_verified_corpus_thumbnails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store = root / STORE
+            source = root / "references"
+            target = root / "content"
+            store.mkdir(parents=True)
+            source.mkdir()
+            good = source / "good.jpg"
+            bad = source / "bad.jpg"
+            good.write_bytes(b"good")
+            bad.write_bytes(b"tampered")
+            (store / "corpus.json").write_text(json.dumps({
+                "version": 1, "items": [
+                    {"path": "covers/good.jpg", "kind": "image",
+                     "mediaType": "image/jpeg", "inspectPath": str(good),
+                     "sha256": hashlib.sha256(b"good").hexdigest()},
+                    {"path": "covers/bad.jpg", "kind": "image",
+                     "mediaType": "image/jpeg", "inspectPath": str(bad),
+                     "sha256": hashlib.sha256(b"original").hexdigest()},
+                ],
+            }), encoding="utf-8")
+
+            staged = ct.stage_corpus_thumbnails(root, target)
+
+            self.assertEqual(len(staged), 1)
+            self.assertEqual(staged[0].read_bytes(), b"good")
 
 
 if __name__ == "__main__":

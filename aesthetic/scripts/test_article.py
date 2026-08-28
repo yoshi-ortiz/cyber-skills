@@ -33,9 +33,9 @@ class ARoundMustFitInOneSitting(unittest.TestCase):
         decisions = live(*rows)
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(bh.HarnessError) as caught:
-                bh.render_article(Path(tmp), decisions,
-                                  {row[0] for row in rows}, "too-big", "en", None,
-                                  "Fichas", "Which reads best?")
+                bh.render_article(Path(tmp), decisions, {row[0] for row in rows},
+                                  cohort_name="too-big", language="en", title="Fichas",
+                                  asks="Which reads best?")
         self.assertIn(str(bh.MAX_COHORT_SIZE + 1), str(caught.exception))
 
 
@@ -126,7 +126,8 @@ class TheArticleAsRendered(unittest.TestCase):
             entry["implemented"] = "se removieron los grupos opacity=0.13 y la barra de lomo"
         with tempfile.TemporaryDirectory() as tmp:
             return bh.render_article(Path(tmp), decisions, {"cover.spine.remaches"},
-                                     "lomo", "es", None, "Fichas", "Remaches.")
+                                     cohort_name="lomo", language="es", title="Fichas",
+                                     asks="Remaches.")
 
     def test_every_stylesheet_comment_is_closed(self):
         # Two separate half-changes shipped because an unclosed `/*` swallowed
@@ -169,7 +170,8 @@ class TheArticleAsRendered(unittest.TestCase):
             with self.assertRaises(bh.HarnessError) as caught:
                 bh.render_article(Path(tmp), decisions,
                                   {"cover.object.first", "cover.object.second"},
-                                  "object", "en", asks="Which drawing works better?")
+                                  cohort_name="object", language="en",
+                                  asks="Which drawing works better?")
         self.assertIn("same drawing", str(caught.exception).lower())
 
     def test_the_lightbox_holds_no_state_of_its_own(self):
@@ -260,20 +262,10 @@ class TheArticleAsRendered(unittest.TestCase):
                       "the sub-line must not generate a box, or its label and value "
                       "are trapped in a row of their own instead of joining the grid")
 
-    def test_every_provenance_value_has_its_own_element(self):
-        # A bare text node cannot be placed in a grid column. Without this the
-        # value falls back to an anonymous item and the table silently un-aligns.
-        markup = self.article()
-        opened = markup.count('<span class="dh-desc dh-sub">')
-        self.assertTrue(opened, "the article rendered no provenance lines")
-        # Anchor on each opening tag and look at what immediately follows the
-        # label. A loose `.*?` here matched across two sub-lines and let an
-        # unwrapped value pass.
-        wrapped = re.findall(r'<span class="dh-desc dh-sub"><b>[^<]*</b><span>', markup)
-        self.assertEqual(len(wrapped), opened,
-                         f"{opened - len(wrapped)} provenance value(s) are bare text nodes; "
-                         "a text node cannot be placed in a grid column, so the table "
-                         "silently un-aligns")
+    def test_no_provenance_sub_lines_reach_the_reader(self):
+        # Provenance is bookkeeping. It stays in the ledger; the card carries
+        # the design, not a trace of who proposed it and when.
+        self.assertNotIn('<span class="dh-desc dh-sub">', self.article())
 
     def test_the_spacing_scale_is_declared_before_it_is_used(self):
         markup = self.article()
@@ -306,8 +298,9 @@ class TheArticleSpeaksToADesigner(unittest.TestCase):
                          entry("voice.shouty", 1, "dislike")]}                # rejected
         with tempfile.TemporaryDirectory() as tmp:
             return bh.render_article(Path(tmp), decisions, {"core.idea.redraw"},
-                                     "tab-por-color", lang, None, "Fichas",
-                                     "Does the coloured tab beat the one you liked?")
+                                     cohort_name="tab-por-color", language=lang,
+                                     title="Fichas",
+                                     asks="Does the coloured tab beat the one you liked?")
 
     def test_the_hero_answers_who_what_which_project_and_what_now(self):
         markup = self.article()
@@ -328,8 +321,8 @@ class TheArticleSpeaksToADesigner(unittest.TestCase):
         self.assertNotIn("dh-designing-label", style)
         self.assertNotIn("dh-designing-value", style)
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "round-slug", "en", None, "Fichas", "Ask.",
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="round-slug", language="en", title="Fichas", asks="Ask.",
             round_label="Posiciones de página")
         meta = markup.split('class="dh-hero-meta">')[1].split("</div>")[0]
         self.assertIn("Posiciones de página", meta)
@@ -441,15 +434,15 @@ class TheCardNamesTheDesignNotTheToken(unittest.TestCase):
         self.assertNotEqual(names["cover.object"], names["cover.object.sin-colision"])
         self.assertIn("sin colision", names["cover.object.sin-colision"])
 
-    def test_the_id_is_still_emitted_as_a_tag(self):
-        # It stays the ledger's key and the thing to quote back to the agent.
+    def test_the_id_stays_a_binding_not_visible_copy(self):
         markup = bh.render_feedback_controls(
             {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
              "elements": [{"element": "cover.object", "stars": 2, "sentiment": None,
                            "state": "proposed", "scored": True, "source": "user",
                            "description": "un objeto grande"}]},
             None, None, None, "es")
-        self.assertIn('<code class="dh-token">cover.object</code>', markup)
+        self.assertNotIn('<code class="dh-token">', markup)
+        self.assertIn('data-element="cover.object"', markup)
         self.assertIn('class="dh-id">Un objeto grande<', markup)
 
     def a_row(self, bookmarked) -> str:
@@ -494,11 +487,12 @@ class TheArticleFitsItsContainer(unittest.TestCase):
 
     def style(self) -> str:
         markup = bh.render_article(
-            Path("/tmp"), {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
+            Path("/tmp"),
+            {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
                            "elements": [{"element": "core.idea", "stars": 2,
                                          "sentiment": "like", "state": "proposed",
                                          "scored": True, "source": "user"}]},
-            set(), "", "en", None, "Fichas", "Ask.")
+            set(), cohort_name="", language="en", title="Fichas", asks="Ask.")
         return markup
 
     def test_the_container_is_an_ancestor_never_the_row_itself(self):
@@ -555,8 +549,8 @@ class TheRoundHeaderNamesTheObject(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             markup = bh.render_article(
                 Path(tmp), decisions, {"cover.object.character-drawn"},
-                "objeto", "es", None, "Performance Ejecutivo",
-                "¿Se lee como personaje?")
+                cohort_name="objeto", language="es", title="Performance Ejecutivo",
+                asks="¿Se lee como personaje?")
             tag = markup.split('class="dh-tag">')[1].split("</p>")[0]
             self.assertIn("Micrófono", tag)
             self.assertNotEqual(tag.lower(), "objeto")
@@ -569,7 +563,7 @@ class TheRoundHeaderNamesTheObject(unittest.TestCase):
             markup = bh.render_article(
                 Path(tmp), decisions,
                 {"cover.object.character-drawn", "cover.layout.two-column"},
-                "objeto", "es")
+                cohort_name="objeto", language="es")
             domain = markup.split('class="dh-domain">')[1].split("</p>")[0]
             self.assertEqual(domain.count("<span>"), 1,
                              "two foundation pills stacked topics the round does not have")
@@ -578,7 +572,8 @@ class TheRoundHeaderNamesTheObject(unittest.TestCase):
         decisions = live(("artsource.pixel.trama", 1, None, "proposed"))
         with tempfile.TemporaryDirectory() as tmp:
             markup = bh.render_article(
-                Path(tmp), decisions, {"artsource.pixel.trama"}, "objeto", "es")
+                Path(tmp), decisions, {"artsource.pixel.trama"}, cohort_name="objeto",
+                language="es")
             round_zone = markup.split('id="dh-zone-round"')[1].split("</section>")[0]
             self.assertIn("dh-round-icon", round_zone)
             self.assertIn("<circle cx=\"9\" cy=\"8\" r=\"2\"/>", round_zone,
@@ -726,63 +721,18 @@ class OpenPutsTheUrlInChat(unittest.TestCase):
 
 
 class TheBottomBarShowsWhatTheAgentIsDoing(unittest.TestCase):
-    def markup(self, status: str = "", working: bool = False) -> str:
+    def markup(self, working: bool = False) -> str:
         return bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.", status, agent_working=working)
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.", agent_working=working)
 
-    def test_a_status_line_lands_in_the_live_bar(self):
-        markup = self.markup("Redrawing the cover", working=True)
-        live = markup.split('class="dh-live"')[1].split("</i>")[0]
-        self.assertIn('data-state="active"', live)
-        self.assertIn("Designing", live)
-        self.assertIn("Redrawing the cover", live)
-        self.assertIn("dh-live-label", live)
-        self.assertNotIn("dh-live-tag", live)
-        self.assertNotIn("&lt;active&gt;", live)
-
-    def test_idle_copy_does_not_force_a_working_dot(self):
-        markup = self.markup("Ready to score")
-        live = markup.split('class="dh-live"')[1].split("</i>")[0]
-        self.assertIn('data-state="idle"', live)
-        self.assertIn("Waiting for your chat directions", live)
-        self.assertIn("dh-live-label", live)
-        self.assertIn("Give your critique and directions", live)
-        self.assertNotIn("&lt;idle&gt;", live)
-
-    def test_status_dot_is_green_while_designing_orange_once_idle(self):
-        """Green means the agent is actively producing work -- the content
-        on screen may still change underneath the visible one. Orange means
-        idle: the agent is done for now and it's safe to chat. The reverse
-        (orange while still working) reads as "still syncing" when the
-        agent hasn't even started answering yet, or "all clear" once it
-        actually has."""
-        markup = self.markup("Redrawing the cover", working=True)
-        css = re.search(r'\.dh-live\[data-state="active"\] \.dh-live-label::before\{background:(#[0-9a-fA-F]+)\}',
-                        markup)
-        self.assertIsNotNone(css)
-        self.assertEqual(css.group(1), "#2ecc71")
-        css_idle = re.search(r'\.dh-live\[data-state="idle"\] \.dh-live-label::before\{background:(#[0-9a-fA-F]+)\}',
-                             markup)
-        self.assertIsNotNone(css_idle)
-        self.assertEqual(css_idle.group(1), "#f0a020")
-
-    def test_the_page_listens_for_a_live_status_push(self):
-        """`--status` is baked at publish time. Without a listener the bar
-        cannot say what the agent is doing while the designer waits."""
-        script = re.search(r"<script>/\* dh-live \*/(.*?)</script>",
-                           self.markup(), re.S)
-        self.assertIsNotNone(script, "the article lost its live-status script")
-        self.assertIn("dh-agent", script.group(1))
-
-    def test_live_status_reserves_a_fixed_icon_column(self):
-        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
-                          self.markup(), re.S).group(1)
-        live = re.search(r"\.dh-live\{([^}]*)\}", style).group(1)
-        self.assertIn("grid-template-columns:22px minmax(0,1fr)", live)
-        self.assertNotIn("flex-direction:column", live)
-        detail = re.search(r"\.dh-live-detail\{([^}]*)\}", style).group(1)
-        self.assertNotIn("padding-inline-start", detail)
+    def test_the_page_carries_no_baked_status(self):
+        # The companion frame owns the agent's status. The article is a
+        # document, and a status baked at publish time is stale on arrival --
+        # so `render_article` no longer accepts one to bake.
+        markup = self.markup(working=True)
+        self.assertNotIn('class="dh-live"', markup)
+        self.assertIn('data-agent-state="active"', markup)
 
     def test_the_footer_credits_inspiration_not_power(self):
         markup = self.markup()
@@ -800,10 +750,11 @@ class DoctorCanStayQuiet(unittest.TestCase):
 class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
     def test_the_slideshow_clones_row_signals_instead_of_rebuilding_stars(self):
         markup = bh.render_article(
-            Path("/tmp"), {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
+            Path("/tmp"),
+            {"version": bh.VERSION, "state": "draft", "supersededCount": 0,
                            "elements": [{"element": "core.idea", "stars": 2, "sentiment": None,
                                          "state": "proposed", "scored": True, "source": "user"}]},
-            set(), "", "en", None, "F", "Ask.")
+            set(), cohort_name="", language="en", title="F", asks="Ask.")
         script = re.search(r"<script>/\* dh-lightbox \*/(.*?)</script>", markup, re.S).group(1)
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
         self.assertIn("cloneSignals", script,
@@ -829,8 +780,8 @@ class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
                       "scores belong in a footer row, not a side column")
         self.assertIn("dialog.dh-lb .dh-lb-score", style,
                       "slideshow scores must inherit the dark overlay palette")
-        self.assertIn("html:has(dialog.dh-lb[open]) .dh-bar", style,
-                      "the floating aid must not sit on top of the slideshow")
+        self.assertNotIn(".dh-bar", style,
+                         "persistent companion status must not cover the review")
         self.assertRegex(style, r"block-size:min\(\d+px,calc\(100dvh - 32px\)\)",
                          "the shell needs a definite height so the drawing cell can size")
         self.assertIn("justify-content:center", style)
@@ -839,8 +790,8 @@ class TheSlideshowPutsTheZeroWithTheRanks(unittest.TestCase):
 class CardThumbnailsScaleOnLoad(unittest.TestCase):
     def test_html_comps_get_a_shot_fit_script_before_the_lightbox(self):
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
         self.assertIn("/* dh-shot-fit */", markup,
                       "card thumbnails need the same scale math as the slideshow")
         fit = markup.index("/* dh-shot-fit */")
@@ -857,24 +808,25 @@ class TheSlideshowHeadsItselfWithAName(unittest.TestCase):
 
     def script(self) -> str:
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
         return re.search(r"<script>/\* dh-lightbox \*/(.*?)</script>", markup, re.S).group(1)
 
     def test_the_header_reads_the_rows_title_not_the_id(self):
         body = self.script()
         self.assertIn(".dh-id", body,
                       "the slideshow must take its heading from the row's name")
-        self.assertIn("dh-lb-token", body,
-                      "the id still ships, demoted under the name")
+        self.assertNotIn("dh-lb-token", body,
+                         "machine ids remain bindings, not visible review copy")
 
 
 class DoneLooksLikeDone(unittest.TestCase):
     def markup(self) -> str:
         return bh.render_article(
-            Path("/tmp"), live(("core.idea", 5, "like", "completed"),
+            Path("/tmp"),
+            live(("core.idea", 5, "like", "completed"),
                                ("core.other", 2, "like", "approved")),
-            set(), "", "en", None, "F", "Ask.")
+            set(), cohort_name="", language="en", title="F", asks="Ask.")
 
     def test_the_finish_flag_is_a_glyph_not_a_hex_escape(self):
         # This file learned it once already: a CSS hex escape came back out of
@@ -918,8 +870,8 @@ class TheSlideshowFitsItsCell(unittest.TestCase):
         so a tall window stretched the page to a 0.28 aspect. Measured: 1238px
         of drawing inside a 540px frame, hanging off both edges."""
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
         rule = re.search(r"\.dh-lb-art \.dh-shot\{([^}]*)\}", style).group(1)
         self.assertIn("100cqh", rule, "height must be capped by the cell")
@@ -938,8 +890,8 @@ class TheTextOutranksTheControls(unittest.TestCase):
         "does the text still have a measure?", not "is the row narrow?" -- 96px
         of thumbnail plus 360px of controls leaves under 30ch until ~980px."""
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
         style = re.search(r"<style>/\* dh-controls \*/(.*?)</style>", markup, re.S).group(1)
         widths = [int(w) for w in re.findall(
             r"@container dh-row \(max-width: (\d+)px\)", style)]
@@ -950,49 +902,58 @@ class TheTextOutranksTheControls(unittest.TestCase):
             f"crushed; widest breakpoint is only {max(widths)}px")
 
 
-class TheBarReportsTheAgent(unittest.TestCase):
+class TheStableCompanionBoundary(unittest.TestCase):
     def test_idle_is_a_state_not_an_absence(self):
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
-        self.assertIn('data-state="idle"', markup)
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
+        self.assertIn('data-agent-state="idle"', markup)
         working = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.", "Redrawing the cover",
-            agent_working=True)
-        self.assertIn('data-state="active"', working)
-        self.assertIn("Redrawing the cover", working)
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.", agent_working=True)
+        self.assertIn('data-agent-state="active"', working)
 
     def test_the_agent_name_carries_no_dot(self):
         """Two dots on the right side of the header, reading different things,
         was the ambiguity the name row was meant to remove. The connection
         pill already has one."""
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>", markup, re.S).group(1)
         self.assertNotIn(".dh-brand-agent::before", style)
         self.assertNotIn(".dh-brand-agent[data-state", style)
 
-    def test_the_bar_does_not_report_a_todo_count(self):
+    def test_status_is_metadata_for_the_stable_frame_not_a_floating_panel(self):
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
-        bar = markup.split('class="dh-bar"')[1].split("</aside>")[0]
-        self.assertNotIn("left to score", bar,
-                         "the bar reports the agent, not a to-do tally")
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
+        self.assertIn('data-agent-state="idle"', markup)
+        self.assertNotIn('class="dh-bar"', markup)
+        self.assertNotIn('data-theme-settings', markup)
 
-    def test_theme_settings_are_collapsed_inside_the_bottom_status_aid(self):
+    def test_project_theme_cannot_restyle_the_review_surface(self):
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
-        bar = markup.split('class="dh-bar"')[1].split("</aside>")[0]
-        self.assertIn('<details class="dh-bar-settings" data-theme-settings>', bar)
-        self.assertNotIn('<details class="dh-bar-settings" data-theme-settings open', bar)
-        self.assertIn('data-follow-art-direction', bar)
-        self.assertIn('data-theme-select', bar)
-        self.assertIn('data-theme-reset', bar)
-        self.assertIn('data-theme-save', bar)
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
+        root = markup.split('class="dh-art"', 1)[1].split('>', 1)[0]
+        self.assertNotIn("style=", root)
+        self.assertNotIn("Silkscreen", root)
+
+    def test_machine_provenance_stays_out_of_visible_review_copy(self):
+        decisions = live(("core.idea", 2, "like", "proposed"))
+        decisions["elements"][0].update({
+            "description": "Try the quieter hierarchy.",
+            "evidence": 'USER: "RANKED"; previous focus: internal trace',
+            "implemented": "DOM implementation claim",
+        })
+        markup = bh.render_article(Path("/tmp"), decisions, {"core.idea"}, cohort_name="",
+                                   language="en", title="F", asks="Ask.")
+        self.assertIn('data-element="core.idea"', markup)
+        self.assertIn("Try the quieter hierarchy.", markup)
+        self.assertNotIn('USER: "RANKED"', markup)
+        self.assertNotIn("DOM implementation claim", markup)
+        self.assertNotIn('<code class="dh-token">core.idea</code>', markup)
 
 
 class PreviewsUseTheRecordedCanonicalAsset(unittest.TestCase):
@@ -1113,7 +1074,7 @@ class PreviewsUseTheRecordedCanonicalAsset(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             markup = bh.render_article(
                 Path(tmp), decisions, {"art.trama.limpia", "art.trama.real"},
-                "trama", "en", None, "T", "Which reads better?")
+                cohort_name="trama", language="en", title="T", asks="Which reads better?")
         self.assertEqual(markup.count('class="dh-idea-group"'), 1,
                          "three related proposals must render as ONE group, not three cards")
         self.assertEqual(markup.count('class="dh-versus"'), 0,
@@ -1137,8 +1098,8 @@ class PreviewsUseTheRecordedCanonicalAsset(unittest.TestCase):
                          ("art.trama.limpia", 0, None, "proposed"))
         with tempfile.TemporaryDirectory() as tmp:
             markup = bh.render_article(
-                Path(tmp), decisions, {"art.trama.limpia"},
-                "trama", "en", None, "T", "Better?")
+                Path(tmp), decisions, {"art.trama.limpia"}, cohort_name="trama",
+                language="en", title="T", asks="Better?")
         self.assertEqual(markup.count('class="dh-versus"'), 1)
         self.assertNotIn('class="dh-idea-group"', markup)
         self.assertNotIn('class="dh-idea-variants"', markup)
@@ -1167,9 +1128,8 @@ class PreviewsUseTheRecordedCanonicalAsset(unittest.TestCase):
                 ],
             }
             markup = bh.render_article(
-                root, decisions,
-                {"pages.inventory.archivador.posiciones.secuencia"},
-                "posiciones", "es", None, "T", "Ask.")
+                root, decisions, {"pages.inventory.archivador.posiciones.secuencia"},
+                cohort_name="posiciones", language="es", title="T", asks="Ask.")
             before = re.search(
                 r'<div class="dh-fb dh-fb-before"[^>]*data-element="pages\.inventory\.archivador\.posiciones"[^>]*>(.*?)</div>\s*<p class="dh-versus-label"><b class="dh-now">',
                 markup, re.S)
@@ -1189,44 +1149,20 @@ class PreviewsUseTheRecordedCanonicalAsset(unittest.TestCase):
 class TheArticleDoesNotOverflowTheFrame(unittest.TestCase):
     def test_wide_charts_scroll_and_the_article_stays_full_width(self):
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
-                          bh.render_article(Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-                                            set(), "", "en", None, "F", "Ask."),
+                          bh.render_article(Path("/tmp"),
+                                            live(("core.idea", 2, "like", "proposed")),
+                                            set(), cohort_name="", language="en",
+                                            title="F", asks="Ask."),
                           re.S).group(1)
         self.assertIn("inline-size:100%", style)
         self.assertIn("overflow-x:auto", style.replace(" ", ""))
-        self.assertIn("100dvw", style)
-
-
-class TheLiveBarStatesItselfClearly(unittest.TestCase):
-    def test_idle_and_active_use_colour_not_literal_tags(self):
-        markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.", status="Inference premise", agent_working=True)
-        live_snippet = markup.split('class="dh-live"')[1].split("</i>")[0]
-        self.assertIn('data-state="active"', live_snippet)
-        self.assertIn("Designing", live_snippet)
-        self.assertIn("Inference premise", live_snippet)
-        self.assertIn("dh-live-detail", live_snippet)
-        self.assertNotIn("dh-live-tag", markup)
-        self.assertNotIn("&lt;active&gt;", markup)
-        idle = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
-        idle_live = idle.split('class="dh-live"')[1].split("</i>")[0]
-        self.assertIn('data-state="idle"', idle_live)
-        self.assertIn("Waiting for your chat directions", idle_live)
-        self.assertIn("Give your critique and directions", idle_live)
-        self.assertNotIn("&lt;idle&gt;", idle)
-        self.assertIn('data-active-icon="🎨"', live_snippet)
-        self.assertIn('data-idle-icon="💬"', idle_live)
-        self.assertIn('class="dh-live-copy"', live_snippet)
 
 
 class SupersededRowsStayReadable(unittest.TestCase):
     def test_rejected_opacity_is_scoped_to_the_antipattern_zone(self):
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
         style = re.search(r"<style>/\* dh-controls \*/(.*?)</style>", markup, re.S).group(1)
         self.assertIn('.dh-zone[data-zone="antipattern"] .dh-fb[data-group="rejected"]{opacity:.62}',
                       style)
@@ -1236,26 +1172,21 @@ class SupersededRowsStayReadable(unittest.TestCase):
                               "rejected opacity must only apply inside antipattern zone")
 
 
-class TheFloatingBarLinksBack(unittest.TestCase):
-    def test_the_bar_has_one_chat_return_button(self):
+class TheFrameOwnsTheAgentLink(unittest.TestCase):
+    def test_the_article_has_no_second_agent_navigation_surface(self):
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.", agent_url="https://agent.test/chat")
-        bar = markup.split('class="dh-bar"')[1].split("</aside>")[0]
-        self.assertIn("Return", bar)
-        self.assertIn('class="dh-bar-go"', bar)
-        self.assertIn('class="dh-bar-ico"', bar)
-        self.assertIn("https://agent.test/chat", bar)
-        self.assertNotIn("dh-bar-links", bar)
-        self.assertNotIn("dh-bar-foot", bar)
-        self.assertEqual(bar.count('class="dh-bar-go"'), 1)
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.",
+            agent_url="https://agent.test/chat")
+        self.assertIn('data-agent-url="https://agent.test/chat"', markup)
+        self.assertNotIn('class="dh-bar"', markup)
 
 
 class TheStickyBarReadsTopDown(unittest.TestCase):
     def test_title_then_legend_then_chart_then_sections(self):
         markup = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", "en", None, "F", "Ask.")
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language="en", title="F", asks="Ask.")
         nav = markup.split('class="dh-toc"')[1].split("</nav>")[0]
         order = [nav.index(x) for x in
                  ('dh-toc-title', 'dh-key', 'dh-temp', '<ol>')]
@@ -1270,9 +1201,9 @@ class ChromeFixesV34(unittest.TestCase):
                     agent_name="Composer", agent_url="cursor://agent")
         opts.update(kwargs)
         return bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            set(), "", opts.pop("language"), None, opts.pop("title"),
-            opts.pop("asks"), **opts)
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), set(),
+            cohort_name="", language=opts.pop("language"), title=opts.pop("title"),
+            asks=opts.pop("asks"), **opts)
 
     def test_saved_pill_uses_the_project_accent(self):
         style = re.search(r"<style>/\* dh-controls \*/(.*?)</style>",
@@ -1321,22 +1252,10 @@ class ChromeFixesV34(unittest.TestCase):
         self.assertIn(".dh-toc li::before", style)
         self.assertIn(".main{scroll-behavior:smooth}", style.replace(" ", ""))
 
-    def test_idle_detail_is_not_hidden(self):
+    def test_review_has_no_covering_corner_chip(self):
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
                           self.markup(), re.S).group(1)
-        self.assertNotIn(
-            '.dh-live[data-state="idle"] .dh-live-detail{display:none}',
-            style.replace(" ", ""))
-
-    def test_bottom_bar_is_a_corner_chip(self):
-        style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
-                          self.markup(), re.S).group(1)
-        bar = re.search(r"(?<![,-])\.dh-bar\{([^}]+)\}", style).group(1)
-        bar = bar.replace(" ", "")
-        self.assertIn("inset-inline-end:16px", bar)
-        self.assertIn("flex-direction:column", bar)
-        self.assertIn("inline-size:min(360px,calc(100dvw-32px))", bar)
-        self.assertNotIn("inset-inline:0", bar)
+        self.assertNotIn(".dh-bar", style)
 
     def test_the_lightbox_declares_the_spacing_scale_it_uses(self):
         """The dialog is appended to `document.body`, NOT inside `.dh-art`,
@@ -1368,12 +1287,8 @@ class ChromeFixesV34(unittest.TestCase):
         self.assertIn("text-align:start", copy)
         self.assertRegex(copy, r"inline-size:min\(\d+ch,100%\)")
 
-    def test_live_script_does_not_open_a_second_socket(self):
-        script = re.search(r"<script>/\* dh-live \*/(.*?)</script>",
-                           self.markup(), re.S).group(1)
-        self.assertNotIn("WebSocket", script)
-        self.assertIn("dh-agent", script)
-        self.assertIn("data-preparing", script)
+    def test_the_article_ships_no_live_status_script(self):
+        self.assertNotIn("/* dh-live */", self.markup())
 
     def test_lightbox_hides_the_companion_header(self):
         style = re.search(r"<style>/\* dh-article \*/(.*?)</style>",
@@ -1391,8 +1306,8 @@ class ChromeFixesV34(unittest.TestCase):
 
     def test_preparing_round_is_static(self):
         working = bh.render_article(
-            Path("/tmp"), live(("core.idea", 2, "like", "proposed")),
-            {"core.idea"}, "", "en", None, "F", "Does this beat what stands?",
+            Path("/tmp"), live(("core.idea", 2, "like", "proposed")), {"core.idea"},
+            cohort_name="", language="en", title="F", asks="Does this beat what stands?",
             agent_working=True)
         self.assertIn('data-preparing="1"', working)
         self.assertIn("class=\"dh-prep\"", working)

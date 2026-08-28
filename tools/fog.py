@@ -17,6 +17,10 @@ from pathlib import PurePosixPath
 
 # Exact paths, relative to the repository root.
 FOG_FILES = (
+    "CLAUDE.md",
+    "GOAL.md",
+    "SPEC.md",
+    "UBIQUITOUS_LANGUAGE.md",
     "ROADMAP.md",
     "BUGS.md",
     "CHANGELOG.md",
@@ -86,6 +90,8 @@ def is_fog(relative: str, channel: str = "main") -> bool:
 def reasons() -> dict[str, str]:
     """Why each rule exists, for the error message a check prints."""
     return {
+        "CLAUDE.md": "routes a Repo-Dev session between the burndown and the rail "
+                     "audit; a consuming agent is in neither mode",
         "ROADMAP.md": "burndown state; an agent running the skill never reads it",
         "BUGS.md": "incident history; development state",
         "CHANGELOG.md": "release history; development state",

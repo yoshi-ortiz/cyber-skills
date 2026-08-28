@@ -1,7 +1,7 @@
 ---
 purpose: one release package indexing several independent skills
-admits: skill directories that carry their own contract, the README that indexes them and its translations, publication tooling
-refuses: doctrine of its own -- every skill's conventions live inside that skill, never here
+admits: skill directories that carry their own contract, the README and translations, publication tooling, Repo-Dev rail documents
+refuses: runtime skill doctrine -- every skill's conventions live inside that skill
 ---
 
 <!-- No `max_file_bytes`. A byte budget is for a file an agent pays for on
@@ -162,6 +162,10 @@ never Golden Rule Evidence, whatever their rows look like. `.audit/` in
 particular is an append-only ledger shaped much like a skill's own scope events
 and is not one.
 
+The root rail documents (`GOAL.md`, `SPEC.md`, and
+`UBIQUITOUS_LANGUAGE.md`) are Repo-Dev Context too: they design this package's
+command surface and never become a third runtime context.
+
 None of them reach a published tree — see `tools/fog.py`, which is the list, and
 `tools/CONTEXT.md`, which explains why generating `main` beats curating it.
 
@@ -189,6 +193,12 @@ and its name to a group in `GROUPS`. Nothing else in this repository should
 need to know it exists.
 
 ```bash
-python3 aesthetic/scripts/contracts.py --root .
-python3 tools/index_gate.py
+python3 tools/check.py
 ```
+
+One runner over every gate in the repository -- contracts, unit tests, the
+harness self-test, the index and loanword gates, both publication channels, and
+`node --check` over the browser assets. It filters nothing: `contracts` and
+`self-test` are red today (R-15, and an .svg recorded as a preview), and a
+checker with an allowlist of failures it forgives is the same thing as no
+checker.

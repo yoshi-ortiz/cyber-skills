@@ -55,7 +55,7 @@ These cover most `art-direction`, `frontend-layout` and `mockup-layering` work. 
 | **Blender** | Viewport and thumbnail renders | `layer-renderer`, product and spatial mockups |
 | **Context7** | Pinned library documentation | `knowledge` |
 
-Figma and any hosted server need authorization before use. If a server is unauthorized in the current session, treat the capability as **missing**, say so, and fall back to a deterministic local path — never narrate a tool you did not run.
+Figma and any hosted server need authorization before use. If a server is unauthorized in the current session, treat the capability as **missing**, say so, and fall back to a deterministic local path — never narrate a tool you did not run. Platform, publishing, output, and AI-adapter claims follow the machine-checkable [support contract](platform-support.md).
 
 ## Why this exists
 

@@ -20,7 +20,9 @@ orphan the work, because the hash follows the bytes.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import shutil
 import sys
 from html import escape as html_escape
 from pathlib import Path
@@ -258,6 +260,55 @@ def untagged_groups(project_root: Path) -> list[tuple[str, int]]:
     return sorted(pending, key=lambda pair: (-pair[1], pair[0]))
 
 
+def representative_items(corpus: Mapping[str, Any], group: str,
+                         limit: int = 3) -> list[Mapping[str, Any]]:
+    """Deterministic first, middle, last image evidence for one folder."""
+    items = sorted((item for item in (corpus.get("items") or [])
+                    if isinstance(item, Mapping)
+                    and item.get("kind") == "image"
+                    and group_of(str(item.get("path") or "")) == group
+                    and item.get("sha256") and item.get("inspectPath")),
+                   key=lambda item: str(item.get("path") or ""))
+    if len(items) <= limit:
+        return items
+    indexes = (0, len(items) // 2, len(items) - 1)
+    return [items[index] for index in indexes[:limit]]
+
+
+def thumbnail_name(item: Mapping[str, Any]) -> str:
+    suffix = Path(str(item.get("path") or "")).suffix.lower()
+    if suffix not in (".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"):
+        suffix = ".img"
+    return f'corpus-{str(item.get("sha256"))[:20]}{suffix}'
+
+
+def stage_corpus_thumbnails(project_root: Path, content_dir: Path) -> list[Path]:
+    """Copy verified representatives beside the served article, never the corpus."""
+    try:
+        corpus = load_corpus(project_root)
+        pending = untagged_groups(project_root)
+    except (OSError, WorkflowError):
+        return []
+    if not pending:
+        return []
+    content_dir.mkdir(parents=True, exist_ok=True)
+    staged = []
+    for item in representative_items(corpus, pending[0][0]):
+        source = Path(str(item["inspectPath"]))
+        try:
+            if not source.is_file():
+                continue
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            if digest != str(item["sha256"]):
+                continue
+            target = content_dir / thumbnail_name(item)
+            shutil.copy2(source, target)
+            staged.append(target)
+        except OSError:
+            continue
+    return staged
+
+
 TAGS_STYLE = """<style>/* dh-tags */
 .dh-tags{margin:0 0 var(--s5);border:1px solid var(--dh-rule);border-radius:14px;
  padding:var(--s3) var(--s4)}
@@ -277,6 +328,10 @@ TAGS_STYLE = """<style>/* dh-tags */
 .dh-tags-folder{margin:0;font-size:17px;line-height:1.45;font-weight:700}
 .dh-tags-n{font-size:11px;
  color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+.dh-tags-thumbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+ margin-block-start:var(--s2)}
+.dh-tags-thumb{display:block;inline-size:100%;aspect-ratio:4/3;object-fit:cover;
+ border-radius:8px;border:1px solid var(--dh-rule);background:var(--dh-bg,#fff)}
 .dh-tags-set{display:flex;flex-wrap:wrap;gap:6px;margin-block-start:var(--s2);border:0;padding:0}
 .dh-tags-set legend{font-size:10px;font-weight:700;letter-spacing:.12em;
  text-transform:uppercase;padding:0;margin-block-end:5px}
@@ -358,10 +413,19 @@ def render_corpus_tags(project_root: Path, txt: Mapping[str, str] | None = None)
                     + html_escape(render_digest(rows)) + "</pre>")
     if pending:
         name, count = pending[0]
+        corpus = load_corpus(project_root)
+        thumbs = "".join(
+            f'<img class="dh-tags-thumb" src="/files/{html_escape(thumbnail_name(item))}" '
+            f'alt="{html_escape(Path(str(item.get("path") or "reference")).name)}" '
+            'loading="lazy" decoding="async">'
+            for item in representative_items(corpus, name)
+        )
+        strip = f'<div class="dh-tags-thumbs">{thumbs}</div>' if thumbs else ""
         body.append(
             f'<div class="dh-tags-asking" data-tags-group="{html_escape(name)}">'
             f'<p class="dh-tags-folder">{html_escape(name)}'
             f' <span class="dh-tags-n">{count}</span></p>'
+            + strip
             + _chips("aspect", ASPECTS, words.get("tags-aspects", "Useful for"),
                      words, True)
             + _chips("stance", STANCES, words.get("tags-stance", "Stance"),

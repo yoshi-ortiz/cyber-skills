@@ -1,27 +1,7 @@
 (function() {
   const MIN_RECONNECT_MS = 500;
   const MAX_RECONNECT_MS = 30000;
-  const TOMBSTONE_AFTER_MS = 15000; // show the "paused" overlay after this long disconnected
-
-  // The server picks every label the article renders in the project language
-  // (STRINGS in bootstrap_harness.py). This file runs after that HTML is
-  // fixed, so it cannot add new server-rendered text -- it can only choose
-  // which language its OWN status messages use, read off the article root
-  // the server already stamped with data-lang.
-  const THEME_STRINGS = {
-    en: { on: 'Update app theme on', off: 'Update app theme off',
-          selected: 'Saved theme selected', reset: 'Theme reset', themeSaved: 'Theme saved',
-          noTheme: 'No article theme is available', namePrompt: 'Saved themes',
-          nameDefault: 'Art direction', savedFallback: 'Saved with safe fallback for' },
-    es: { on: 'Actualización de tema activada', off: 'Actualización de tema desactivada',
-          selected: 'Tema guardado seleccionado', reset: 'Tema restablecido', themeSaved: 'Tema guardado',
-          noTheme: 'No hay un tema de artículo disponible', namePrompt: 'Temas guardados',
-          nameDefault: 'Dirección de arte', savedFallback: 'Guardado con respaldo seguro para' },
-  };
-  function themeStrings() {
-    const lang = (document.querySelector('.dh-art')?.dataset.lang || 'en').toLowerCase();
-    return THEME_STRINGS[lang] || THEME_STRINGS.en;
-  }
+  const TOMBSTONE_AFTER_MS = 15000;
 
   // Pure: next backoff delay (doubles, capped). Exported for unit tests.
   function nextReconnectDelay(current, max) {
@@ -76,7 +56,6 @@
   let reconnectTimer = null;
   let disconnectedSince = null;
   let everConnected = false;
-  let tombstoneShown = false;
 
   function sessionKey() {
     try {
@@ -139,40 +118,18 @@
     }
   }
 
-  // Self-styled so it works on framed and full-document screens alike.
-  function showTombstone() {
-    if (tombstoneShown) return;
-    tombstoneShown = true;
-    const el = document.createElement('div');
-    el.id = 'bs-tombstone';
-    el.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;' +
-      'align-items:center;justify-content:center;padding:2rem;text-align:center;' +
-      'background:rgba(20,20,22,0.92);color:#f5f5f7;font-family:system-ui,sans-serif';
-    el.innerHTML = '<div style="max-width:480px">' +
-      '<h2 style="margin:0 0 .5rem;font-weight:600">Companion paused</h2>' +
-      '<p style="margin:0;opacity:.85">This brainstorm companion has stopped. ' +
-      'Ask your coding agent to bring it back — this page reconnects automatically.</p></div>';
-    if (document.body) document.body.appendChild(el);
-  }
-
   function connect() {
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     setStatus(everConnected ? 'reconnecting' : 'connecting');
     ws = new WebSocket(websocketUrl());
 
     ws.onopen = () => {
-      const recovered = tombstoneShown;
       everConnected = true;
       disconnectedSince = null;
       reconnectDelay = MIN_RECONNECT_MS;
-      tombstoneShown = false;
       setStatus('connected');
       eventQueue.forEach(e => ws.send(JSON.stringify(e)));
       eventQueue = [];
-      // Recovered from a tombstoned outage (e.g. the server restarted on the same
-      // port) — reload through the keyed bootstrap when possible so the cookie is
-      // refreshed before the visible URL returns to bare /.
-      if (recovered) reloadAfterRecovery();
     };
 
     ws.onmessage = (msg) => {
@@ -193,7 +150,6 @@
       if (disconnectedSince === null) disconnectedSince = Date.now();
       if (Date.now() - disconnectedSince >= TOMBSTONE_AFTER_MS) {
         setStatus('disconnected');
-        showTombstone();
       } else {
         setStatus('reconnecting');
       }
@@ -212,141 +168,6 @@
     } else {
       eventQueue.push(event);
     }
-  }
-
-  function rgbToHex(value) {
-    const channels = String(value).match(/[\d.]+/g);
-    if (!channels || channels.length < 3) return null;
-    return '#' + channels.slice(0, 3).map(n =>
-      Math.max(0, Math.min(255, Math.round(Number(n)))).toString(16).padStart(2, '0')
-    ).join('');
-  }
-
-  function articleTheme() {
-    const art = document.querySelector('.dh-art');
-    if (!art) return null;
-    const style = getComputedStyle(art);
-    const accent = style.getPropertyValue('--dh-accent').trim();
-    return {
-      bg: rgbToHex(style.backgroundColor),
-      ink: rgbToHex(style.color),
-      accent: /^#[0-9a-f]{6}$/i.test(accent) ? accent : '#d9482a',
-      font: style.fontFamily
-    };
-  }
-
-  function applyFrameTheme(elements) {
-    if (!elements) return;
-    const root = document.documentElement.style;
-    root.setProperty('--bg-primary', elements.bg);
-    root.setProperty('--bg-secondary', elements.bg);
-    root.setProperty('--text-primary', elements.ink);
-    root.setProperty('--text-secondary', elements.ink);
-    root.setProperty('--accent', elements.accent);
-    root.setProperty('--selected-border', elements.accent);
-    root.setProperty('--chrome-bg', elements.bg);
-    root.setProperty('--chrome-ink', elements.ink);
-    root.setProperty('--chrome-muted', elements.ink);
-    root.setProperty('--chrome-rule', elements.accent);
-    root.setProperty('--app-font', elements.font);
-  }
-
-  function clearFrameTheme() {
-    const root = document.documentElement.style;
-    [
-      '--bg-primary', '--bg-secondary', '--text-primary', '--text-secondary',
-      '--accent', '--selected-border', '--chrome-bg', '--chrome-ink',
-      '--chrome-muted', '--chrome-rule', '--app-font'
-    ].forEach(name => root.removeProperty(name));
-  }
-
-  function selectedTheme(spec) {
-    return (spec.themes || []).find(theme => theme.id === spec.selected) || null;
-  }
-
-  async function themeRequest(payload) {
-    const response = await fetch('/theme', {
-      method: payload ? 'POST' : 'GET',
-      headers: payload ? { 'Content-Type': 'application/json' } : {},
-      body: payload ? JSON.stringify(payload) : undefined
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Theme request failed');
-    return data;
-  }
-
-  function wireThemeSettings() {
-    const settings = document.querySelector('[data-theme-settings]');
-    if (!settings) return;
-    const follow = settings.querySelector('[data-follow-art-direction]');
-    const select = settings.querySelector('[data-theme-select]');
-    const reset = settings.querySelector('[data-theme-reset]');
-    const save = settings.querySelector('[data-theme-save]');
-    const message = settings.querySelector('[data-theme-message]');
-    let spec = null;
-    const T = themeStrings();
-    const say = text => { message.textContent = text; };
-    const sync = value => {
-      spec = value;
-      follow.checked = Boolean(spec.followArtDirection);
-      select.replaceChildren(new Option('', ''));
-      (spec.themes || []).forEach(theme => select.add(new Option(theme.name || theme.id, theme.id)));
-      select.value = spec.selected || '';
-    };
-    themeRequest().then(value => {
-      sync(value);
-      const selected = selectedTheme(spec);
-      if (follow.checked) applyFrameTheme(selected ? selected.elements : articleTheme());
-    }).catch(error => say(error.message));
-    follow.addEventListener('change', async () => {
-      try {
-        spec = await themeRequest({ action: 'follow', enabled: follow.checked });
-        if (follow.checked) {
-          const selected = selectedTheme(spec);
-          applyFrameTheme(selected ? selected.elements : articleTheme());
-        } else {
-          clearFrameTheme();
-        }
-        say(follow.checked ? T.on : T.off);
-      } catch (error) { follow.checked = !follow.checked; say(error.message); }
-    });
-    select.addEventListener('change', async () => {
-      if (!select.value) return;
-      try {
-        sync(await themeRequest({ action: 'select', id: select.value }));
-        const selected = selectedTheme(spec);
-        if (follow.checked && selected) applyFrameTheme(selected.elements);
-        say(T.selected);
-      } catch (error) { sync(spec); say(error.message); }
-    });
-    reset.addEventListener('click', async () => {
-      try {
-        sync(await themeRequest({ action: 'reset' }));
-        clearFrameTheme();
-        say(T.reset);
-      } catch (error) { say(error.message); }
-    });
-    save.addEventListener('click', async () => {
-      const candidate = articleTheme();
-      if (!candidate) { say(T.noTheme); return; }
-      let mode = spec && spec.selected ? 'current' : 'new';
-      let id = spec && spec.selected || '';
-      let name = selectedTheme(spec || {})?.name || id;
-      if (mode === 'new') {
-        name = window.prompt(T.namePrompt, T.nameDefault) || '';
-        if (!name.trim()) return;
-        id = name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-|-$/g, '');
-      }
-      try {
-        sync(await themeRequest({ action: 'save', mode, id, name, elements: candidate }));
-        const selected = selectedTheme(spec);
-        if (follow.checked && selected) applyFrameTheme(selected.elements);
-        const issues = selected && selected.issues || [];
-        say(issues.length
-          ? T.savedFallback + ' ' + issues.map(issue => issue.element).join(', ')
-          : T.themeSaved);
-      } catch (error) { say(error.message); }
-    });
   }
 
   // Capture clicks on choice elements
@@ -492,6 +313,5 @@
   };
 
   wireAgentHeader();
-  wireThemeSettings();
   connect();
 })();

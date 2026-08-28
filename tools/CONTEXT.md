@@ -1,6 +1,6 @@
 ---
-purpose: build and verify the fog-free trees that main and alpha publish
-admits: publication tooling, the single fog list it shares, the channel split, and the index gate
+purpose: build the fog-free trees that main and alpha publish, and run every gate that verifies the repository
+admits: publication tooling, the single fog list it shares, the channel split, the index gate, the one runner over every gate, and measurement that judges the package rather than verifying it
 refuses: skill logic, doctrine, anything a published tree needs at runtime
 max_file_bytes: 12000
 ---
@@ -11,12 +11,13 @@ max_file_bytes: 12000
 `publish.py`, carrying the skills and nothing else.
 
 ```bash
-python3 tools/publish.py --out /tmp/published --check
-python3 tools/publish.py --out /tmp/alpha --channel alpha --check
-python3 tools/check_publication.py /tmp/published
-python3 tools/index_gate.py
-python3 tools/test_fog.py && python3 tools/test_index_gate.py
+python3 tools/check.py
 ```
+
+`check.py` runs every gate this repository has: the publication and index gates
+here, and the contract, unit-test, and self-test gates in `aesthetic/AGENTS.md`.
+Those two lists never referenced each other, so running either one in full still
+missed half the board. Run a subset by name: `python3 tools/check.py publish`.
 
 `fog.py` holds the list once so `publish.py` and `check_publication.py` cannot
 disagree about what fog is. It also holds `ALPHA_SKILLS`: a skill named there is

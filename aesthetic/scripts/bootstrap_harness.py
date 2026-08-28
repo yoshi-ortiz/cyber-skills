@@ -217,21 +217,9 @@ STRINGS = {
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
         "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
         "companion-kind": "Agent companion",
-        "bar-lead": "Scored what you can? Go back to your agent chat",
-        "bar-hint": "Give your critique and directions there \u2014 new designs follow",
-        "bar-return": "Return",
         "agent-working": "Agent running", "agent-idle": "Agent idle",
-        "bar-idle": "Waiting for your chat directions",
         "prep-legend": "New designs are on the way \u2014 keep scoring, your ranks save while I draw.",
-        "bar-active-label": "Designing",
-        "bar-left": "left to score", "done-cheer": "Marked as done",
-        "agent-settings": "Agent settings", "update-app-theme": "Update app theme",
-        "saved-themes": "Saved themes", "reset-theme": "Reset theme", "save-theme": "Save",
-        "no-theme": "No article theme is available", "theme-on": "Update app theme on",
-        "theme-off": "Update app theme off", "theme-selected": "Saved theme selected",
-        "theme-reset-msg": "Theme reset", "theme-name-prompt": "Saved themes",
-        "theme-name-default": "Art direction",
-        "theme-saved-fallback": "Saved with safe fallback for",
+        "done-cheer": "Marked as done",
         "credit-what": "Live companion",
         "credit-who": "Inspired from Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
         "project-label": "Project", "designing": "Designing",
@@ -296,21 +284,9 @@ STRINGS = {
         "article-title": "Aesthetic ranking", "brand": "Design Agent",
         "companion-brand": "CYBER YOSHI: SKILLS", "companion-agent": "Cyber Yoshi",
         "companion-kind": "Companion del agente",
-        "bar-lead": "¿Ya puntuaste? Vuelve al chat con tu agente",
-        "bar-hint": "Dale ahí tu crítica y tus indicaciones \u2014 luego llegan diseños nuevos",
-        "bar-return": "Volver",
         "agent-working": "Agente trabajando", "agent-idle": "Agente en pausa",
-        "bar-idle": "Esperando tus indicaciones en el chat",
         "prep-legend": "Están llegando diseños nuevos \u2014 sigue puntuando, tus puntos se guardan mientras dibujo.",
-        "bar-active-label": "Diseñando",
-        "bar-left": "por puntuar", "done-cheer": "Marcado como listo",
-        "agent-settings": "Configuración del agente", "update-app-theme": "Actualizar el tema de la app",
-        "saved-themes": "Temas guardados", "reset-theme": "Restablecer tema", "save-theme": "Guardar",
-        "no-theme": "No hay un tema de artículo disponible", "theme-on": "Actualización de tema activada",
-        "theme-off": "Actualización de tema desactivada", "theme-selected": "Tema guardado seleccionado",
-        "theme-reset-msg": "Tema restablecido", "theme-name-prompt": "Temas guardados",
-        "theme-name-default": "Dirección de arte",
-        "theme-saved-fallback": "Guardado con respaldo seguro para",
+        "done-cheer": "Marcado como listo",
         "credit-what": "Companion en vivo",
         "credit-who": "Inspired from Jesse Vincent \u00b7 github.com/obra \u00b7 Superpowers",
         "project-label": "Proyecto", "designing": "Diseñando",
@@ -1086,6 +1062,21 @@ SHOT_INLINE = ("display:block;flex:0 0 auto;inline-size:var(--dh-shot-w,96px);"
 SHOT_INNER_INLINE = ("position:absolute;inset-block-start:0;inset-inline-start:0;"
                      "inline-size:850px;block-size:1100px;transform-origin:0 0;"
                      "transform:scale(calc(var(--dh-shot-w,96px) / 850));pointer-events:none")
+SCREEN_DIR = Path(__file__).resolve().parent.parent / "screen"
+
+
+def _screen(name: str) -> str:
+    """The browser assets, wrapped in the tag that carries them into the page.
+
+    They live as real .css/.js files so an editor, a formatter, and
+    `node --check` can read them; holding them as Python string literals is what
+    grew this module past ten times its byte budget.
+    """
+    body = (SCREEN_DIR / name).read_text(encoding="utf-8")
+    tag = "style" if name.endswith(".css") else "script"
+    return f"<{tag}>{body}</{tag}>"
+
+
 STYLE_MARKER = "/* dh-controls */"
 # Bumped whenever the emitted CSS or markup changes. `embed` bakes both into the
 # screen, so a screen embedded by an older skill keeps the older bug forever and
@@ -1105,406 +1096,8 @@ VERSION_MARKER = "dh-controls-version"
 # The durable ledger stays the source of truth for `adopt`; this only keeps the
 # screen from lying to the person clicking it. Capture phase, so it reads each
 # control's state before the companion's own handler toggles it.
-REHYDRATE_SCRIPT = """<script>/* dh-rehydrate */
-(function(){
- if(window.__dhRehydrated)return; window.__dhRehydrated=1;
- /* The socket is the only store. The screen is a snapshot `embed` baked, and
-    the server already pushes the ledger's own reduction on connect and every
-    decision after it -- so a browser-local cache adds a second opinion and no
-    information. The one that used to live here read its revision stamp before
-    the rows were parsed, wrote every entry under an empty revision, and threw
-    the whole cache away on the next load: three layers of sync that had never
-    once been read back. Everything that worked was this socket. */
- /* Confirmation on the ROUND TRIP, not on the click. The score is written by
-    the companion and echoed back; flashing "saved" on mousedown would promise
-    something the ledger has not agreed to yet -- and a dropped socket is
-    exactly when the user most needs to know it did not save. */
- function flashSaved(row){
-  var strip=row.querySelector('.dh-signals'); if(!strip)return;
-  var host=document.querySelector('[data-saved]');
-  var tag=row.querySelector('.dh-saved');
-  if(!tag){tag=document.createElement('span'); tag.className='dh-saved';
-           tag.setAttribute('role','status'); strip.appendChild(tag);}
-  tag.textContent=(host&&host.getAttribute('data-saved'))||'Saved';
-  tag.setAttribute('data-on','1');
-  tag.removeAttribute('data-cheer');
-  clearTimeout(tag.__dhT);
-  tag.__dhT=setTimeout(function(){tag.removeAttribute('data-on')},2400);
- }
- function paint(row,s,live){
-  if(live)flashSaved(row);
-  if(typeof s.stars==='number'){
-   row.dataset.stars=String(s.stars); row.dataset.scored='yes';
-   /* The readout is CSS reading attr() off the strip, so the strip needs the
-      value too -- without this the number stayed at whatever was baked into
-      the page and only a refresh corrected it. */
-   var strip=row.querySelector('.dh-stars');
-   if(strip){strip.dataset.stars=String(s.stars); strip.dataset.scored='yes';}
-   row.querySelectorAll('[data-rank]').forEach(function(b){
-    var n=parseInt(b.dataset.rank,10);
-    b.classList.toggle('on', n===0 ? s.stars===0 : (n>0&&n<=s.stars));});
-  }
-  if('sentiment' in s) row.querySelectorAll('[data-sentiment]').forEach(function(b){
-    b.classList.toggle('on', b.dataset.sentiment===s.sentiment);});
-  if('bookmark' in s) row.querySelectorAll('[data-bookmark]').forEach(function(b){
-    b.classList.toggle('on', !!s.bookmark);});
-  if('verdict' in s){
-   row.querySelectorAll('[data-verdict]').forEach(function(b){
-    b.classList.toggle('on', b.dataset.verdict===s.verdict);});
-   /* Marking something done is the one act on this page that feels final, so
-      it says so louder than a rank does. */
-   if(s.verdict==='completed'){
-    row.setAttribute('data-done','1');
-    setTimeout(function(){row.removeAttribute('data-done')},800);
-    var t=row.querySelector('.dh-saved'), h=document.querySelector('[data-cheer-text]');
-    if(t){t.setAttribute('data-cheer','1');
-          t.textContent=(h&&h.getAttribute('data-cheer-text'))||t.textContent;}
-   }
-  }
-  try{document.dispatchEvent(new CustomEvent('dh-row-painted',
-    {detail:{element:row.getAttribute('data-element')}}));}catch(e){}
- }
- function rowFor(el){
-  var all=document.querySelectorAll('.dh-fb[data-element]');
-  for(var i=0;i<all.length;i++) if(all[i].getAttribute('data-element')===el) return all[i];
-  return null;}
- /* The greeting routinely beats DOMContentLoaded, and a state applied to rows
-    that do not exist yet is silently lost. Hold it until they do. */
- var ready=false, pending={};
- function applyState(st,live){
-  Object.keys(st).forEach(function(el){
-   var s=st[el]; if(!s)return;
-   if(!ready){pending[el]=s; return}
-   var row=rowFor(el); if(row)paint(row,s,live);});}
- function boot(){ready=true; var q=pending; pending={}; applyState(q);}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
- else boot();
- function fold(ev){
-  if(!ev||!ev.element)return;
-  var s={};
-  if(ev.reset===true||ev.type==='reset')s.stars=0;
-  else if(typeof ev.stars==='number')s.stars=ev.stars;
-  if('sentiment' in ev)s.sentiment=ev.sentiment;
-  if(ev.verdict==='completed'||ev.verdict==='approved')s.verdict='completed';
-  else if(ev.verdict==='proposed'||ev.verdict==='rejected')s.verdict=null;
-  if('bookmark' in ev)s.bookmark=!!ev.bookmark;
-  var one={}; one[ev.element]=s; applyState(one,true);}
- /* Ranks and thumbs are the companion's to send, and the server echoes them
-    back here. The completed toggle is NOT: a companion that only recognises
-    its own verdict words drops the click before anything is sent -- no DOM
-    change, no event, nothing in the ledger -- and the box simply refused to
-    tick. This skill owns its own vocabulary, so it delivers this one itself
-    rather than hoping the companion happens to share it. */
- var sock=null;
- document.addEventListener('click',function(e){
-  var btn=e.target.closest?e.target.closest('[data-verdict]'):null; if(!btn)return;
-  var row=btn.closest('.dh-fb[data-element]'); if(!row)return;
-  if(!sock||sock.readyState!==1)return;
-  var on=btn.classList.contains('on');
-  sock.send(JSON.stringify({type:'verdict',element:row.getAttribute('data-element'),
-   choice:row.getAttribute('data-element'),
-   verdict:on?'proposed':(btn.getAttribute('data-verdict')||'completed'),
-   text:row.getAttribute('data-label')||null,timestamp:Date.now()}));
- },true);
- /* A 4th vocabulary word the companion does not know either -- same reason
-    as `completed` above: deliver it directly instead of hoping helper.js
-    happens to recognise "bookmark". */
- document.addEventListener('click',function(e){
-  var btn=e.target.closest?e.target.closest('[data-bookmark]'):null; if(!btn)return;
-  var row=btn.closest('.dh-fb[data-element]'); if(!row)return;
-  if(!sock||sock.readyState!==1)return;
-  var on=btn.classList.contains('on');
-  sock.send(JSON.stringify({type:'bookmark',element:row.getAttribute('data-element'),
-   choice:row.getAttribute('data-element'),
-   bookmark:!on,
-   text:row.getAttribute('data-label')||null,timestamp:Date.now()}));
- },true);
- (function socket(){
-  var ws;
-  try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/')}
-  catch(e){return}
-  sock=ws;
-  ws.onmessage=function(e){
-   var m; try{m=JSON.parse(e.data)}catch(_){return}
-   if(m&&m.type==='dh-signal')fold(m.event);
-   else if(m&&m.type==='dh-state'&&m.state)applyState(m.state);};
-  ws.onclose=function(){sock=null;setTimeout(socket,1500)};
- })();
-})();
-</script>"""
-FEEDBACK_STYLE = """<style>/* dh-controls */
-/* Owned by the aesthetic skill. Do not restyle in a project: every local
-   patch so far has produced specificity fights and unusable controls.
-   `.dh-fb.dh-fb` doubles specificity so a host rule cannot flatten it. */
-/* Both wrappers establish the container. `controls --out` emits .dh-feedback,
-   but `embed` lifts the rows out of it into the project's own placeholder, so
-   on every embedded screen there was no container at all and the responsive
-   rule below could never match -- the signals stayed on the row and ran off
-   the right edge however narrow the description column got. */
-.dh-feedback,[data-dh-controls]{container-type:inline-size;display:flex;
- flex-direction:column;gap:6px}
-.dh-offline{display:block;background:#b00020;color:#fff;font:700 12px/1.4 ui-monospace,monospace;
- padding:9px 11px;border-radius:6px}
-:root[data-dh-live] .dh-offline{display:none}
-/* The round's scope, said out loud. `data-dh-cohort` was an attribute only:
-   doctor could read it, the user could not, so the one thing that tells them
-   which elements this round is asking about -- and which are deliberately left
-   alone -- was invisible on the screen they were scoring. */
-.dh-cohort{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin:0 0 2px;
- font:500 12px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
- color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-.dh-cohort b{font-weight:700;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
- flex:none;color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-.dh-cohort span{font-weight:700;font-size:13px;letter-spacing:-.01em;
- color:var(--dh-accent,#d9482a)}
-/* The description column carries a floor. At minmax(0,1fr) the signals column
-   took its full max-content width and squeezed the text to about 80px, where
-   `overflow-wrap:anywhere` broke every word mid-syllable -- "cover.sp / ine.righ
-   / t" -- and the strip became unreadable while every control still worked. */
-.dh-fb.dh-fb{display:grid;grid-template-columns:var(--dh-shot-w,96px) minmax(26ch,1fr) auto;
- gap:16px;
- /* `start`, not `center`. Centring the graphic, the text and the controls
-    independently gave each a different top -- 14/25/59 on one row, 14/66/59
-    on the next -- so nothing shared an edge and the misalignment MOVED with
-    the length of the description. Top-aligned, the three columns begin
-    together on every row whatever the text does. */
- align-items:start;padding:13px 15px;border:1px solid rgba(0,0,0,.14);
- border-radius:10px;background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
- font:500 13px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
- contain:layout style}
-/* Below ~560px of ROW there is no honest three-column layout: the controls
-   wrap onto their own line under the text instead of crushing it. Container
-   query, because the same row renders in a 1180px article and in a companion
-   pane a third that wide, and a viewport query cannot tell those apart.
-   Baseline since 2023; the stacked layout below is the safe default anyway. */
-/* `.dh-fb.dh-fb.dh-fb`, tripled. A legacy `@media (max-width:780px)` further
-   down sets the same property on `.dh-fb.dh-fb`, and a container rule that only
-   ties on specificity loses to it by source order -- which is why the narrow
-   layout silently never applied. */
-/* 980, not 560. The old number asked "is the row narrow?"; the question that
-   matters is "does the text still have a measure?" -- 96px of thumbnail plus
-   360px of controls plus gaps leaves under 30ch of text until about here. */
-@container dh-row (max-width: 980px){
- .dh-fb.dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
- .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-end;flex-wrap:wrap}
-}
-@container dh-row (max-width: 380px){
- .dh-fb.dh-fb.dh-fb{grid-template-columns:minmax(0,1fr)}
- .dh-fb .dh-shot{inline-size:100%;max-inline-size:220px}
- /* The strip is five 30px stars, a zero and four verdict/bookmark buttons:
-    244px of fixed touch targets, which is wider than the row itself down
-    here. They shrink rather than spill -- still comfortably above the 24px
-    minimum -- and `.dh-signals` already wraps if a line still overflows. */
- .dh-fb.dh-fb .dh-stars > *{inline-size:26px;min-inline-size:0;font-size:17px}
- .dh-fb [data-sentiment],.dh-fb [data-verdict],.dh-fb [data-bookmark],.dh-fb .dh-zero > *{
-  min-inline-size:30px;font-size:14px}
- .dh-fb .dh-signals{gap:4px}
-}
-.dh-fb.dh-fb:hover{border-color:var(--dh-ink,#111)}
-/* An invisible table, not a stack of independent rows. Each provenance line
-   used to be its own flex row, so its value began wherever its own label
-   happened to end: `PROPUESTO` is nine characters and `IMPLEMENTADO` is
-   twelve, so the two values started at different x and their wrapped lines
-   hung at different indents. One grid for the whole block puts every label
-   in a column sized to the longest of them and every value on one edge. */
-.dh-fb .dh-meta{display:grid;grid-template-columns:max-content minmax(0,1fr);
- gap:5px 10px;align-content:start;min-width:0}
-/* The id and the description are prose, not rows of the table. */
-.dh-fb .dh-head,.dh-fb .dh-desc:not(.dh-sub){grid-column:1 / -1}
-/* Five stacked lines of near-identical grey monospace is what made the strip
-   tiring to read. Hierarchy now: the id leads, the description is the line you
-   actually read, provenance is demoted to a labelled aside, and the state sits
-   beside the id instead of adding a fifth line. */
-.dh-fb .dh-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0;
- padding-inline-end:96px}
-/* The id, demoted to a tag. It is the ledger's key and the designer's noise. */
-/* Two grey pills of the same size said two unrelated things: one is a STATUS,
-   one is a machine key. The key stops being a badge -- it is the string you
-   quote back to the agent, not a label about the work. Deleting the pill is
-   also one less thing on the card. */
-.dh-fb .dh-token{grid-column:1 / -1;justify-self:start;font-size:9.5px;letter-spacing:.04em;
- padding:0;background:none;overflow-wrap:anywhere;
- color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
-.dh-fb .dh-token::before{content:"#";opacity:.55;margin-inline-end:1px}
-.dh-fb .dh-id{font-weight:700;font-size:15px;letter-spacing:-.01em;
- overflow-wrap:anywhere;color:var(--dh-ink,#111)}
-/* The status keeps the pill and earns a colour, so lifecycle is readable at a
-   glance instead of being one more grey rectangle to parse. */
-/* The status is about the card, so it sits on the card -- corner, not inline
-   after the title where it competed with the name for the reading line. */
-.dh-fb .dh-state{position:absolute;inset-block-start:8px;inset-inline-end:10px;z-index:2;
- font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
- padding:2px 7px;border-radius:999px;white-space:nowrap;font-weight:700;
- background:color-mix(in srgb, var(--dh-ink,#111) 8%, transparent);
- color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
-.dh-fb[data-group="developing"] .dh-state{background:color-mix(in srgb, #1c8b4b 16%, transparent);
- color:#166b3a}
-.dh-fb[data-group="rejected"] .dh-state{background:color-mix(in srgb, #b00020 13%, transparent);
- color:#8d1a2c}
-.dh-fb .dh-desc{font-size:13px;line-height:1.5;overflow-wrap:break-word;
- color:color-mix(in srgb, var(--dh-ink,#111) 88%, transparent)}
-/* provenance, not prose: smaller, dimmer, with a micro-label instead of a
-   run-on bold prefix inside the sentence */
-/* `display:contents` so the label and the value become cells of the meta
-   grid directly. The element still passes inherited type and colour down --
-   it just stops generating a box that would trap them in their own row. */
-.dh-fb .dh-sub{font-size:11.5px;line-height:1.45;display:contents;
- color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
-.dh-fb .dh-sub > span{grid-column:2;min-inline-size:0;overflow-wrap:break-word}
-.dh-fb .dh-sub > b{grid-column:1;font-weight:700;font-size:9px;letter-spacing:.1em;
- text-transform:uppercase;padding-top:2px;white-space:nowrap;
- color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-.dh-fb .dh-signals{display:flex;gap:8px;align-items:center}
-/* The confirmation. Takes no layout when idle, so a row does not reflow the
-   moment a score lands -- and it is announced, so it is not colour-only. */
-/* Out of flow, top-right. In the flex line it pushed the controls sideways
-   every time a score landed. */
-.dh-fb{position:relative}
-/* Opaque, and it owns the corner while it is up: it shared the spot with the
-   status chip and the two translucent pills overprinted into noise. */
-.dh-fb:has(.dh-saved[data-on]) .dh-state{opacity:0}
-.dh-fb .dh-saved{position:absolute;inset-block-start:8px;inset-inline-end:10px;z-index:3;
- font-size:10px;font-weight:700;letter-spacing:.12em;
- text-transform:uppercase;white-space:nowrap;padding:3px 8px;border-radius:999px;
- opacity:0;transform:translateY(2px);pointer-events:none;
- transition:opacity .18s ease,transform .18s ease;
- background:var(--dh-accent,#d9482a);color:#fff;
- border:1px solid color-mix(in srgb, var(--dh-accent,#d9482a) 72%, #000)}
-.dh-fb .dh-saved[data-on]{opacity:1;transform:none}
-/* One continuous strip: zero is a first-class score, not a hidden reset. */
-.dh-fb .dh-stars{display:flex;align-items:center;gap:0}
-.dh-fb .dh-stars > *{min-inline-size:30px;min-block-size:34px;display:grid;place-items:center;
- cursor:pointer;user-select:none;font-size:20px;line-height:1;border:0;background:transparent;
- color:color-mix(in srgb, var(--dh-ink,#111) 30%, transparent);transition:color .12s}
-/* Gold, not the screen's accent. A star is the same instrument on every
-   project, and tinting it with whatever accent the design happens to use made
-   the rank read as part of the artwork being judged. */
-.dh-fb .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
-/* The rank in figures. Five glyphs differing only in tint is a shape the eye
-   has to count, and at 24 rows nobody counts -- the standing score was there
-   and still unreadable at a glance. attr() off the strip means a click updates
-   it with no extra script. `--` is not-yet-judged, which a row of grey stars
-   cannot distinguish from a zero.
-   The figure runs red at 0 to green at 5, so a column of them reads as a
-   temperature before it reads as digits. */
-/* A zero scored showed twice -- the control on the left and the readout on
-   the right. The control is the one you press, so it keeps the digit. */
-.dh-fb .dh-stars[data-stars="0"]::after{content:""}
-.dh-fb .dh-stars::after{content:attr(data-stars);margin-inline-start:9px;min-inline-size:1.4ch;
- font:700 13px/1 var(--dh-font,ui-monospace,monospace);font-variant-numeric:tabular-nums;
- color:#b00020}
-.dh-fb .dh-stars[data-stars="1"]::after{color:#c2451c}
-.dh-fb .dh-stars[data-stars="2"]::after{color:#cf7a12}
-.dh-fb .dh-stars[data-stars="3"]::after{color:#b98b07}
-.dh-fb .dh-stars[data-stars="4"]::after{color:#6f9430}
-.dh-fb .dh-stars[data-stars="5"]::after{color:#1c8b4b}
-.dh-fb .dh-stars[data-scored="no"]::after{content:"--";
- color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
-/* The preview has to move the number too, or hovering shows one rank and
-   reads another. */
-.dh-fb .dh-stars:hover::after{color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
-/* Hover previews the RANK, not one glyph. Every star up to the pointer lights,
-   and the standing score steps aside for the duration so the preview is the
-   only thing being read. Without both halves, hovering the 2nd star of a
-   4-star row changed nothing at all, and hovering the 5th lit a gap-toothed
-   1,2,3,5 -- which is what "the hover is buggy" was pointing at. */
-.dh-fb .dh-stars:hover [data-rank]{color:color-mix(in srgb, var(--dh-ink,#111) 26%, transparent)}
-.dh-fb .dh-stars [data-rank]:hover,
-.dh-fb .dh-stars [data-rank]:has(~ [data-rank]:hover){color:var(--dh-star,#e0a20a)}
-/* The zero lives OUTSIDE the star strip, and stays out of the way until the
-   user actually reaches for the bottom of the scale: it surfaces on hovering
-   ONE star. It is always visible when it IS the score, so a zero already given
-   can never be mistaken for an unrated row.
-   While hidden it is also unclickable. That pairing is the whole point -- an
-   invisible-but-clickable zero sitting beside the first star is exactly how a
-   click aimed at 1 used to score 0, and a mis-hit zero used to wipe the thumb
-   and the tick along with it. Never set the opacity without the pointer-events.
-   The spacing is padding, not margin: a margin here is dead ground where
-   neither control is hovered, and the zero vanished as the pointer crossed it. */
-.dh-fb .dh-zero{display:flex;align-items:center;padding-inline-end:13px;
- border-inline-end:1px solid rgba(0,0,0,.18);opacity:0;transition:opacity .12s}
-.dh-fb [data-rank="0"]{min-inline-size:30px;min-block-size:34px;display:grid;place-items:center;
- cursor:pointer;user-select:none;border:0;background:transparent;font-size:13px;font-weight:700;
- line-height:1;color:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
- transition:color .12s;pointer-events:none}
-/* Visibility follows the ROW'S DATA, not the button's class. A companion that
-   lights every control whose rank is <= the score lights this one on any
-   score, and keying off that class made the zero flash into view on every
-   click until the echo corrected it. data-stars is right immediately. */
-.dh-fb[data-stars="0"][data-scored="yes"] .dh-zero,.dh-fb .dh-zero:hover,
-.dh-fb .dh-zero:has(:focus-visible),
-.dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover){opacity:1}
-.dh-fb[data-stars="0"][data-scored="yes"] .dh-zero [data-rank="0"],
-.dh-fb .dh-zero:hover [data-rank="0"],
-.dh-fb .dh-zero:has(:focus-visible) [data-rank="0"],
-.dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover) [data-rank="0"]{pointer-events:auto}
-.dh-fb [data-rank="0"]:hover,.dh-fb [data-rank="0"].on{color:#b00020}
-/* Green go, red stop, and the tick green with them. These hues are fixed on
-   purpose: they are the same instrument on every project, so they do not
-   follow --dh-accent into whatever palette is being judged. */
-.dh-fb [data-sentiment],.dh-fb [data-verdict],.dh-fb [data-bookmark]{min-inline-size:38px;min-block-size:34px;
- display:grid;place-items:center;cursor:pointer;user-select:none;font-size:15px;
- border:1px solid rgba(0,0,0,.22);border-radius:6px;background:transparent;line-height:1;
- transition:background .12s,color .12s,border-color .12s}
-.dh-fb [data-sentiment]:hover,.dh-fb [data-verdict]:hover,.dh-fb [data-bookmark]:hover{border-color:var(--dh-ink,#111)}
-.dh-fb [data-sentiment="like"].on{background:#1c8b4b;border-color:#126435;color:#fff}
-.dh-fb [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
-/* Its own hue -- gold, not the approve-green or dislike-red -- so a
-   bookmark never reads as a verdict on the work, only as "keep this handy". */
-.dh-fb [data-bookmark].on{background:#e0a20a;border-color:#a97600;color:#fff}
-/* The ribbon itself: a box with a notch cut out of its foot. Deterministic
-   CSS geometry, so it inherits currentColor and needs no asset. */
-.dh-ribbon{display:block;inline-size:11px;block-size:15px;background:currentColor;
- clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%);opacity:.5;
- transition:opacity .12s}
-.dh-fb [data-bookmark]:hover .dh-ribbon{opacity:.8}
-.dh-fb [data-bookmark].on .dh-ribbon{opacity:1}
-/* Approve reads as done: green fill, white tick, unmistakable. */
-.dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
-/* Completed is the one final act on the page: the tick becomes a finish flag,
-   and the card itself flashes once so the change is felt, not just seen. */
-.dh-fb [data-verdict].on > span{font-size:0}
-.dh-fb [data-verdict].on > span::after{content:"🏁";font-size:15px}
-@keyframes dh-flash{0%{background:color-mix(in srgb, #1c8b4b 26%, var(--dh-bg,#fff))}
- 100%{background:var(--dh-bg,#fff)}}
-.dh-fb[data-done]{animation:dh-flash .75s ease-out}
-.dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible,
-.dh-fb [data-verdict]:focus-visible,.dh-fb [data-bookmark]:focus-visible{
- outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
-/* A foundation heading opens a section of a design system, so it is sized like
-   one. At 11px uppercase it read as a caption and the eye slid past it -- the
-   grouping was there and invisible, which is the same as absent. The rule under
-   the heading does the separating, so the rows need no extra chrome. */
-.dh-group{margin:32px 0 12px;display:flex;align-items:baseline;gap:10px;
- padding-block-end:8px;
- border-block-end:1px solid color-mix(in srgb, var(--dh-ink,#111) 24%, transparent);
- font:700 20px/1.15 var(--dh-font,ui-monospace,monospace);letter-spacing:-.015em;
- text-transform:none;color:var(--dh-ink,#111)}
-.dh-group:first-child{margin-top:0}
-.dh-group .dh-count{font-size:11px;font-weight:700;letter-spacing:.12em;
- margin-inline-start:auto;font-variant-numeric:tabular-nums;
- color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
-/* This round is the one section the user must not scroll past. */
-.dh-group[data-group="pinned"]{border-block-end-color:var(--dh-accent,#d9482a);
- color:var(--dh-accent,#d9482a)}
-.dh-group[data-group="rejected"]{color:#b00020;opacity:.85}
-/* Rejected rows recede only in the graveyard zone. Superseded rows in a versus
-   pair carry `data-group="rejected"` for lifecycle grouping but must stay fully
-   readable -- dimming them made incumbent/proposal pairs look randomly broken. */
-.dh-zone[data-zone="antipattern"] .dh-fb[data-group="rejected"]{opacity:.62}
-.dh-zone[data-zone="antipattern"] .dh-fb[data-group="rejected"]:hover{opacity:1}
-.dh-shot{display:block;inline-size:var(--dh-shot-w,96px);aspect-ratio:8.5/11;overflow:hidden;
- position:relative;border:1px solid rgba(0,0,0,.25);border-radius:4px;background:#fff;isolation:isolate}
-.dh-shot svg{inline-size:100%;block-size:100%;display:block}
-.dh-shot img{inline-size:100%;block-size:100%;object-fit:contain;display:block}
-.dh-shot-missing{display:grid;place-items:center;text-align:center;padding:6px;
- font-size:9px;opacity:.6;block-size:100%}
-@container (max-width: 780px){
- .dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
- .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-end}
-}
-@media (prefers-reduced-motion:reduce){.dh-fb *{transition:none!important}}
-</style>"""
+REHYDRATE_SCRIPT = _screen("rehydrate.js")
+FEEDBACK_STYLE = _screen("controls.css")
 
 # The stamp rides the stylesheet because that is the one asset `embed` always
 # rewrites into the screen. On the wrapper it never survived: `embed` lifts the
@@ -2125,21 +1718,9 @@ def render_feedback_controls(decisions: dict[str, object], theme: dict[str, str]
         lines.append(f'<span class="dh-head"><span class="dh-id">'
                      f'{html_escape(names.get(element) or display_name(entry))}</span>'
                      f'<span class="dh-state">{html_escape(txt.get("state-" + str(entry["state"]), str(entry["state"])))}{unscored}</span></span>')
-        lines.append(f'<code class="dh-token">{element}</code>')
         what = str(entry.get("description") or "").strip()
-        proposed = str(entry.get("evidence") or "").strip()
-        built = str(entry.get("implemented") or "").strip()
         if what:
             lines.append(f'<span class="dh-desc">{what}</span>')
-        # Evidence that only repeats the id is noise: it printed
-        # "Propuesto: palette.role-groups-three" directly under the heading
-        # "palette.role-groups-three" on almost every row.
-        if proposed and proposed != element:
-            lines.append(f'<span class="dh-desc dh-sub"><b>{txt["proposed-by"]}</b>'
-                         f'<span>{proposed}</span></span>')
-        if built:
-            lines.append(f'<span class="dh-desc dh-sub"><b>{txt["built"]}</b>'
-                         f'<span>{built}</span></span>')
         lines.append("</span>")
         lines.append('<span class="dh-signals">')
         # Leads the strip. A bookmark is "keep this where I can find it", which
@@ -2350,789 +1931,7 @@ def open_board(project_root: Path, status: str = "",
     return url
 
 
-ARTICLE_STYLE = """<style>/* dh-article */
-/* The article takes the PROJECT's palette, never one of its own. This page sits
-   beside the artwork being judged, and chrome in a competing palette would
-   corrupt the very judgement it is collecting -- so every surface here is a
-   var() the screen already sets, and the harness supplies only structure. */
-html:has(.dh-art){scroll-behavior:smooth}
-.main{scroll-behavior:smooth}
-@media (prefers-reduced-motion:reduce){
- html:has(.dh-art){scroll-behavior:auto}
- .main{scroll-behavior:auto}
-}
-/* One spacing scale, used everywhere. Before this the page carried a dozen
-   hand-typed gaps -- zones at 56/40/44, 0/60/0 and 72/34/40, groups at 32/12,
-   specimens at 22 -- so nothing lined up with anything and the eye read the
-   rhythm as noise. Empty space only reads as design when it repeats. */
-.dh-art{--s1:8px;--s2:14px;--s3:24px;--s4:40px;--s5:64px;--s6:104px;
- --dh-rule:color-mix(in srgb, var(--dh-ink,#111) 16%, transparent);
- background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
- font:400 15px/1.55 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
- inline-size:100%;max-inline-size:min(1180px,100%);margin:0 auto;padding:0 24px var(--s6);
- box-sizing:border-box;
- /* A short article left the rest of the viewport unpainted -- the host page's
-    canvas, which is black in a dark viewer, showing under the last section. */
- min-block-size:100dvh}
-.dh-art *,.dh-art *::before,.dh-art *::after{box-sizing:inherit}
-/* Hero. The thesis is the QUESTION this round asks -- not a stat block, which
-   would say what has been counted rather than what is wanted. */
-.dh-hero{padding:40px 0 20px;border-block-end:2px solid var(--dh-ink,#111)}
-.dh-hero .dh-eyebrow{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent);margin:0 0 18px}
-.dh-hero h1{margin:0;font-size:clamp(34px,6.2vw,68px);line-height:1.02;font-weight:800;
- letter-spacing:-.035em;text-wrap:balance}
-.dh-hero h1 em{font-style:normal;color:var(--dh-accent,#d9482a)}
-/* The round, named as a round: a label, the cohort's own id in code voice, and
-   the count. Not a headline. */
-/* A proposal shown beside what it replaces. "Is this good?" has no answer;
-   "is this better than what stands?" does. */
-.dh-versus{display:flex;flex-direction:column;gap:var(--s1);margin:0 0 var(--s3);padding:var(--s3);
- border:1px solid var(--dh-rule);border-radius:14px}
-.dh-versus-label{margin:0}
-.dh-versus-label b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
- color:color-mix(in srgb, currentColor 58%, transparent)}
-.dh-versus-label b.dh-now{color:var(--dh-bg,#fff)}
-/* Not `opacity`. A light card at 70% over the round zone's dark ground blends
-   toward it and comes out muddy olive -- the "before" row looked broken rather
-   than recessed. An opaque tint recedes on any ground. */
-.dh-versus .dh-fb-before{background:color-mix(in srgb, var(--dh-ink,#111) 10%, var(--dh-bg,#fff))}
-/* Two or more genuine variants of ONE idea, grouped under a shared "before"
-   instead of each getting its own standalone .dh-versus -- comparing them
-   side by side is the point, not paging through identical-looking cards one
-   at a time. auto-fit/minmax reflows to one column on a narrow viewport
-   without a dedicated breakpoint. */
-.dh-idea-group{display:flex;flex-direction:column;gap:var(--s1);margin:0 0 var(--s3);padding:var(--s3);
- border:1px solid var(--dh-rule);border-radius:14px}
-.dh-idea-group .dh-fb-before{background:color-mix(in srgb, var(--dh-ink,#111) 10%, var(--dh-bg,#fff))}
-.dh-idea-variants{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
- gap:var(--s2);margin-block-start:var(--s1)}
-.dh-idea-variant{display:flex;flex-direction:column;gap:var(--s1)}
-/* What the round is ABOUT, in the system's own vocabulary. Without it the
-   reader has to infer the domain from three unrelated rows. */
-.dh-domain{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
-.dh-domain span{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
- padding:4px 9px;border-radius:999px;border:1px solid currentColor;opacity:.75}
-.dh-round{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:16px 0 0}
-.dh-round b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
- padding:4px 9px;border-radius:999px;background:var(--dh-accent,#d9482a);color:#fff;flex:none}
-.dh-round code{font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--dh-ink,#111)}
-.dh-round span{font-size:12px;color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
-/* Project and what is being designed: one two-column grid so the labels line up. */
-.dh-hero-meta{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 12px;
- align-items:baseline;margin:16px 0 0;max-inline-size:52ch}
-.dh-hero-meta .dh-label{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
- padding:4px 9px;border-radius:999px;flex:none;border:1px solid var(--dh-rule);
- color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);
- justify-self:end;text-align:right}
-.dh-hero-meta .dh-value{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;
- overflow-wrap:anywhere;justify-self:start;text-align:left}
-.dh-project,.dh-designing{display:none}
-/* The instruction is the point of the page: it tells a designer what to do
-   here AND what to do next. It reads at body size, not as fine print. */
-.dh-hero .dh-lede{margin:24px 0 0;max-inline-size:62ch;font-size:16px;line-height:1.6;
- color:color-mix(in srgb, var(--dh-ink,#111) 82%, transparent)}
-.dh-figures{display:flex;flex-wrap:wrap;gap:34px;margin:18px 0 0;padding:0;list-style:none}
-.dh-figures div{display:flex;flex-direction:column;gap:3px}
-.dh-figures b{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.dh-figures span{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
-/* The signature: one bar per standing element, coloured by its own score, worst
-   to best. The whole system's temperature in a single line -- real data, no
-   decoration, and it reads before a single word is read. */
-.dh-temp-wrap{margin:26px 0 0;max-inline-size:100%;overflow-x:auto;
- -webkit-overflow-scrolling:touch}
-.dh-temp{display:flex;gap:2px;block-size:12px}
-.dh-temp-wrap figcaption{margin:9px 0 0;font-size:10.5px;
- color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
-/* Every bar is the element it stands for: click it and you are at its row.
-   A chart nobody can act on is decoration, and this one is the only view of
-   the whole system that fits on one line. */
-.dh-temp a{flex:1 1 0;min-inline-size:3px;border-radius:1px;background:currentColor;
- display:grid;place-items:center;text-decoration:none;transition:transform .1s,outline-color .1s;
- outline:1px solid transparent;outline-offset:1px}
-.dh-temp a:hover,.dh-temp a:focus-visible{transform:scaleY(1.55);
- outline-color:var(--dh-ink,#111)}
-/* Its own tooltip, not the browser's: `title` waits a second, renders in the
-   OS font at the pointer, and never appears at all on a keyboard focus. This
-   one is instant, legible, and follows focus too. */
-/* `display:none`, not `opacity:0`. An absolutely positioned box still counts
-   toward scrollable overflow while invisible, so forty nowrap tooltips made the
-   companion's pane 162px wider than itself -- and it opened scrolled, with the
-   headline and the left edge of every card cut off. */
-/* A real preview card, not a line of text. The chart is the only view of the
-   whole system that fits on one line, so hovering a bar has to answer "which
-   drawing is this?" -- with the drawing. Built by script because a CSS
-   `content:` tooltip cannot hold an image. */
-.dh-chartcard{position:fixed;z-index:60;display:none;inline-size:210px;padding:10px;
- border-radius:12px;pointer-events:none;
- background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
- border:1px solid color-mix(in srgb, var(--dh-ink,#111) 22%, transparent);
- box-shadow:0 14px 44px rgba(0,0,0,.28)}
-.dh-chartcard[data-on]{display:block}
-.dh-chartcard .dh-shot{--dh-shot-w:188px;border-radius:6px;background:#fff;margin:0 0 8px}
-.dh-chartcard b{display:block;font-size:12.5px;line-height:1.3;font-weight:700;
- letter-spacing:-.01em;text-wrap:balance}
-.dh-chartcard span{display:block;margin-block-start:4px;font-size:10px;letter-spacing:.12em;
- text-transform:uppercase;color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
-.dh-temp a{cursor:zoom-in}
-/* The last bars would push their tooltip off the right edge. */
-.dh-temp a:nth-last-child(-n+8)::after{inset-inline-start:auto;inset-inline-end:0}
-.dh-temp a span{font-size:9px;font-weight:800;line-height:1;color:var(--dh-bg,#fff)}
-/* The round's own items are marked in the strip, so "what am I being asked?"
-   is answerable from the sticky bar without scrolling to find out. */
-/* This round, findable in a strip of sixty: a full ring, not a hairline. */
-/* Inside the bar, not around it. `outline-offset` pushed a ring into the gaps
-   either side, so the marked bars read as two loose boxes sitting on top of the
-   strip instead of as bars within it. */
-/* A negative outline offset draws the ring INSIDE the bar without touching the
-   gaps. The two stacked inset shadows before this were 6px of ring on a 15px
-   bar -- they ate it, and the marks came out as dark specks. */
-.dh-temp a[data-asked]{outline:2px solid var(--dh-ink,#111);outline-offset:-2px;
- box-shadow:none;min-inline-size:18px;flex-grow:2.4;border-radius:2px;z-index:1}
-.dh-temp-sticky{block-size:11px;margin:0}
-.dh-key{display:flex;flex-wrap:wrap;gap:4px 16px;margin:7px 0 0;padding:0 0 8px;
- font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
-.dh-key span{display:flex;align-items:center;gap:5px}
-.dh-key i{inline-size:11px;block-size:8px;border-radius:1px;background:currentColor;flex:none}
-.dh-key b{font-size:9px;line-height:1;padding:1px 4px;border-radius:2px;
- border:1px solid currentColor}
-.dh-toc{padding-block-end:0}
-/* The sticky bar names itself. Scrolled deep into the page, a row of pills
-   with no title does not say what the page is or what it is collecting. */
-/* Always on, bold. A fade tied to scroll state cost three debugging rounds and
-   its failure mode is the title never appearing at all -- strictly worse than
-   the redundancy it was avoiding. */
-.dh-toc-title{margin:0;padding:9px 0 0;font-size:12px;font-weight:800;
- letter-spacing:.16em;text-transform:uppercase;color:var(--dh-ink,#111)}
-/* Going well on one side, waiting on you on the other, with air between. */
-.dh-key{justify-content:flex-start}
-.dh-key-good,.dh-key-bad{display:flex;flex-wrap:wrap;gap:4px 16px}
-.dh-key-bad{margin-inline-start:auto}
-.dh-temp i{flex:1 1 0;border-radius:1px;background:currentColor;min-inline-size:2px}
-.dh-t0{color:#b00020}.dh-t1{color:#c2451c}.dh-t2{color:#cf7a12}
-.dh-t3{color:#b98b07}.dh-t4{color:#6f9430}.dh-t5{color:#1c8b4b}
-/* Solid green means DONE, and only that. A top score is a different claim --
-   beautifully drawn, question still open -- so it sits back as a faded green. */
-.dh-tdone{color:#1c8b4b}
-.dh-thigh{color:#9ec78a}
-.dh-tanti{color:#9c7078}
-.dh-tnone{color:color-mix(in srgb, var(--dh-ink,#111) 18%, transparent)}
-/* Zones. Four, and the reader must never wonder which one they are in.
-   The gap BETWEEN zones is what says "this is a different question" -- it was
-   60px, barely more than the 40px inside a group, so the sections ran into one
-   another and the page read as one undifferentiated scroll. */
-/* The rows query THIS, not themselves -- an element cannot respond to its own
-   container query, which is why the first attempt silently did nothing and the
-   controls kept overflowing a narrow row by 220px. */
-.dh-zone{padding:var(--s6) 0 0;container-type:inline-size;container-name:dh-row}
-.dh-zone > header{margin:0 0 var(--s4);max-inline-size:60ch}
-.dh-zone h2{margin:0;font-size:clamp(24px,3.4vw,36px);font-weight:800;letter-spacing:-.028em;
- text-wrap:balance}
-.dh-zone .dh-note{margin:var(--s1) 0 0;max-inline-size:52ch;font-size:13px;
- color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-.dh-zone .dh-tag{display:inline-block;margin:0 0 12px;padding:4px 10px;border-radius:999px;
- font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
- border:1px solid var(--dh-rule)}
-/* This round is the only section that asks for something, so it is the only one
-   that raises its voice: inverted, full bleed against everything else. */
-.dh-zone[data-zone="round"]{background:var(--dh-ink,#111);color:var(--dh-bg,#fff);
- margin:var(--s3) 0 0;padding:var(--s3) var(--s4) var(--s4);border-radius:16px;
- position:relative;
- /* The ground inverts here, so the rule token has to invert with it. Derived
-    from ink, it was ink-on-ink: every border inside this zone vanished. */
- --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 30%, transparent)}
-.dh-zone[data-zone="round"] .dh-tag{border-color:var(--dh-bg,#fff);background:var(--dh-accent,#d9482a);
- border-color:var(--dh-accent,#d9482a);color:#fff}
-.dh-zone[data-zone="round"] .dh-note{color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
-/* Turned-down work is kept, not displayed. It sits last and reads at low
-   contrast so the eye passes over it on the way down and can still stop when
-   it needs to -- muted, never hidden: a rejection is undone by clicking the
-   row, so the row has to stay reachable. */
-/* The SECTION recedes, not its contents. Dimming the rows made the stars and
-   thumbs inside them hard to read, and those controls are the only way a
-   rejection gets undone -- so the ground goes quiet and the rows stay at full
-   contrast on top of it. */
-.dh-zone[data-zone="antipattern"]{margin:var(--s5) 0 0;padding:var(--s4);border-radius:16px;
- background:color-mix(in srgb, var(--dh-ink,#111) 6%, var(--dh-bg,#fff));
- border:1px solid var(--dh-rule)}
-.dh-zone[data-zone="antipattern"] > header h2{font-size:clamp(19px,2.4vw,25px);font-weight:700;
- color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-.dh-zone[data-zone="antipattern"] > header .dh-note{
- color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
-.dh-zone[data-zone="antipattern"] .dh-group{
- color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-.dh-zone[data-zone="antipattern"] .dh-tag{color:#b00020;border-color:#b00020}
-.dh-empty{margin:0;font-size:13px;font-style:italic;
- color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
-/* The round's question, set as the protagonist it is. Filed as a grey note
-   under a heading it was the one sentence on the page nobody read -- and it is
-   the only thing the page is actually asking. */
-.dh-zone[data-zone="round"] > header{max-inline-size:none;text-align:center;
- margin-block-end:var(--s3)}
-.dh-zone[data-zone="round"] > header .dh-tag,
-.dh-zone[data-zone="round"] > header .dh-domain{margin-inline:auto}
-.dh-zone[data-zone="round"] > header .dh-domain{justify-content:center}
-.dh-round-icon{inline-size:34px;block-size:34px;display:block;margin:0 auto var(--s2);
- color:var(--dh-accent,#d9482a)}
-/* The section name is the label; the round's own topic is the subject, so it
-   reads larger. The question below is the ask, weighted just under it. */
-.dh-zone[data-zone="round"] > header h2{font-weight:900;letter-spacing:-.03em}
-.dh-ask{margin:var(--s2) auto 0;max-inline-size:62ch;padding:0 var(--s3);
- font-size:clamp(20px,2.6vw,27px);line-height:1.36;font-weight:600;
- letter-spacing:-.02em;text-wrap:balance;
- color:color-mix(in srgb, var(--dh-bg,#fff) 96%, transparent)}
-/* Group headings carry two different ranks. In the critical components the
-   group IS the subject -- the palette, the type -- so it reads big. In the
-   development backlog it is a folder label under an accordion, so it stays
-   bold but small. One `.dh-group` rule could not say both. */
-.dh-art .dh-zone[data-zone="fundamentals"] .dh-group{
- font-size:clamp(19px,2.2vw,26px);font-weight:800;letter-spacing:-.02em;
- text-transform:none;
- color:color-mix(in srgb, var(--dh-ink,#111) 92%, transparent)}
-.dh-art .dh-zone[data-zone="fundamentals"] .dh-group .dh-count{font-size:13px;opacity:.55}
-.dh-art .dh-zone[data-zone="backlog"] .dh-group{
- font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:none;
- color:color-mix(in srgb, var(--dh-ink,#111) 78%, transparent)}
-/* Specimens: the section shows the actual material before it shows the rows.
-   A palette section that lists ids is a list; one that shows the colours is a
-   design system. */
-/* `align-items:start`, or the grid stretches every card to the tallest and a
-   swatch with no controls carries the void where they would have been. Two of
-   three palette cards were 47% empty beige -- measured at 131px of nothing --
-   which reads as a broken layout, not as breathing room. */
-/* `auto-fit`, not `auto-fill`: auto-fill keeps the empty tracks it can fit, so
-   three swatches in a 1052px row sat in a five-column grid with 426px of dead
-   grid beside them. auto-fit collapses the empty tracks and the cards fill the
-   row they are given. */
-.dh-swatches{display:grid;/* 248px, not the 196 this grid was given before the scoring strip moved into
-      the card. The strip is five 30px stars, a zero and three verdict buttons --
-      216px of fixed touch targets that cannot shrink -- so a 196px column made
-      the grid overflow its own card by 42px at the narrow end. The card floor
-      is now whatever the controls actually need. */
- grid-template-columns:repeat(auto-fit,minmax(248px,1fr));
- align-items:start;gap:var(--s2);margin:0;padding:0;list-style:none}
-.dh-swatches li{border:1px solid var(--dh-rule);border-radius:8px;overflow:hidden;
- background:color-mix(in srgb, currentColor 7%, transparent)}
-.dh-swatches .dh-chip{display:block;block-size:76px}
-.dh-swatches .dh-vals{padding:9px 10px;display:flex;flex-direction:column;gap:2px;
- color:inherit}
-/* Scoped to the caption. `.dh-swatches span` also matched every span in the
-   scoring strip nested below -- each one dimming currentColor again, so by the
-   time a star was drawn it was ink at ten percent. */
-.dh-swatches .dh-vals b{font-size:12px;font-weight:700;letter-spacing:-.01em}
-.dh-swatches .dh-vals code{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
- color:color-mix(in srgb, currentColor 62%, transparent)}
-.dh-swatches .dh-vals > span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
- color:color-mix(in srgb, currentColor 55%, transparent)}
-.dh-faces{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
-.dh-faces .dh-face{border:1px solid var(--dh-rule);border-radius:10px;overflow:hidden;
- background:color-mix(in srgb, currentColor 7%, transparent)}
-.dh-face-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 18px;
- border-block-end:1px solid var(--dh-rule)}
-.dh-face-head b{font-size:16px;font-weight:800;letter-spacing:-.02em}
-.dh-face-head code{font-size:10.5px;color:color-mix(in srgb, currentColor 58%, transparent);
- overflow-wrap:anywhere}
-/* Controls ride inside the specimen, so the thing being judged and the way to
-   judge it are never in two different places. */
-.dh-spec-score{flex:none;margin-inline-start:auto}
-.dh-spec-score .dh-fb.dh-fb{display:block;border:0;padding:0;background:transparent;
- contain:none;content-visibility:visible;
- /* A row normally paints its own light ground and sets ink to match. Stripped
-    of that ground, it must take the zone's foreground instead -- otherwise
-    currentColor is still ink, and every rule derived from it is ink on ink. */
- color:inherit}
-/* A row paints its own light background, so its controls may key off the page
-   ink. A specimen's controls do not: they sit directly on the zone's ground,
-   which the round inverts. Ink at 30% on ink was a star strip nobody could
-   see, on the one row the round is asking about. */
-/* The controls stylesheet is emitted after this one, and a bare
-   `.dh-spec-score .dh-stars > *` merely ties with its `.dh-fb .dh-stars > *`
-   -- so the later rule won and the strip stayed invisible. Naming .dh-fb too
-   outranks it. */
-.dh-spec-score .dh-fb .dh-stars > *{color:color-mix(in srgb, currentColor 34%, transparent)}
-.dh-spec-score .dh-fb .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
-.dh-spec-score .dh-fb .dh-stars:hover [data-rank]{
- color:color-mix(in srgb, currentColor 30%, transparent)}
-.dh-spec-score .dh-fb .dh-stars[data-scored="no"]::after{
- color:color-mix(in srgb, currentColor 45%, transparent)}
-.dh-spec-score .dh-fb [data-rank="0"]{color:color-mix(in srgb, currentColor 48%, transparent)}
-.dh-spec-score .dh-fb .dh-zero{
- border-inline-end-color:color-mix(in srgb, currentColor 26%, transparent)}
-.dh-spec-score .dh-fb [data-sentiment],.dh-spec-score .dh-fb [data-verdict],
-.dh-spec-score .dh-fb [data-bookmark]{
- border-color:color-mix(in srgb, currentColor 30%, transparent);
- color:color-mix(in srgb, currentColor 70%, transparent)}
-.dh-spec-score .dh-fb [data-sentiment]:hover,
-.dh-spec-score .dh-fb [data-verdict]:hover,
-.dh-spec-score .dh-fb [data-bookmark]:hover{border-color:currentColor}
-/* A swatch column is far narrower than a control strip. Wrapping was the first
-   answer and it only moved the failure: the strip measures 328px of controls in
-   a 319px column, so it overflowed by NINE pixels and stranded the tick alone
-   on a second line -- and at the grid's 196px minimum not even the stars fit.
-   There is no width at which one line works, so the break is made on purpose:
-   a three-column grid, ranks on the first row, verdicts on the second. */
-.dh-swatches .dh-spec-score{inline-size:100%}
-.dh-swatches .dh-spec-score .dh-signals{display:grid;grid-template-columns:auto auto auto;
- justify-content:start;align-items:center;gap:6px 8px;flex-wrap:initial}
-.dh-swatches .dh-spec-score .dh-zero{grid-column:1}
-.dh-swatches .dh-spec-score .dh-stars{grid-column:2 / -1}
-/* The zero's trailing rule separated it from the stars on one line. Wrapped to
-   its own cell it became a bar dangling in empty space. */
-.dh-swatches .dh-spec-score .dh-zero{border-inline-end:0;padding-inline-end:0}
-/* No type-size override here. Shrinking the glyph does not shrink the control:
-   each star is a 30px touch target from the controls stylesheet and the strip
-   is 170px whatever the font does, so the rule was dead weight hiding the real
-   constraint -- which is the COLUMN, fixed below. */
-.dh-swatches li{display:flex;flex-direction:column}
-.dh-swatches .dh-spec-score{margin:0;padding:8px 10px 10px;border-block-start:1px solid var(--dh-rule)}
-.dh-face-head .dh-face-use{margin-inline-start:auto;font-size:9.5px;font-weight:700;
- letter-spacing:.16em;text-transform:uppercase;padding:3px 8px;border-radius:999px;
- border:1px solid var(--dh-rule);flex:none}
-/* One row per weight actually in use, each pointed at the job it does. */
-.dh-variants{margin:0;padding:0;list-style:none}
-.dh-variants li{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:13px 18px}
-.dh-variants li + li{border-block-start:1px solid var(--dh-rule)}
-.dh-variants .dh-sample{font-size:30px;line-height:1.15;letter-spacing:-.02em;
- flex:1 1 auto;min-inline-size:0;overflow-wrap:anywhere}
-.dh-variants .dh-var-meta{display:flex;flex-direction:column;gap:3px;text-align:end;
- margin-inline-start:auto;flex:none}
-.dh-variants b{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
-.dh-variants code{font-size:10px;font-variant-numeric:tabular-nums;
- color:color-mix(in srgb, currentColor 58%, transparent)}
-/* Sticky contents. The article is long by design -- four zones and every
-   foundation -- so without this the reader loses which zone they are reading,
-   and "is this settled or is this being asked?" is the one question the page
-   exists to answer. */
-.dh-toc{position:sticky;inset-block-start:0;z-index:20;margin:0;padding:0;
- background:color-mix(in srgb, var(--dh-bg,#fff) 92%, transparent);
- backdrop-filter:blur(8px);border-block-end:1px solid var(--dh-rule)}
-.dh-toc ol,.dh-toc li{display:flex;gap:4px;margin:0;padding:9px 0;list-style:none;
- overflow-x:auto;scrollbar-width:none}
-.dh-toc li{padding:0;overflow:visible}
-.dh-toc li::before,.dh-toc li::marker{content:none}
-.dh-toc ol::-webkit-scrollbar{display:none}
-.dh-toc ol a{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;
- text-decoration:none;white-space:nowrap;color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);
- font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
- border:1px solid transparent;transition:color .15s,background .15s,border-color .15s}
-.dh-toc ol a:hover{color:var(--dh-ink,#111);border-color:var(--dh-rule)}
-.dh-toc ol a em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.7}
-.dh-toc ol a[aria-current="true"]{color:var(--dh-bg,#fff);background:var(--dh-ink,#111);
- border-color:var(--dh-ink,#111)}
-/* The round is the ask, so its link is a button and everything else is a
-   place to go. It keeps that weight even when the reader is elsewhere --
-   that is the point of a call to action. */
-.dh-toc ol a[data-cta]{background:var(--dh-accent,#d9482a);border-color:var(--dh-accent,#d9482a);
- color:#fff;box-shadow:0 1px 0 color-mix(in srgb, var(--dh-ink,#111) 22%, transparent)}
-.dh-toc ol a[data-cta]:hover{filter:brightness(1.08);color:#fff}
-.dh-toc ol a[data-cta][aria-current="true"]{background:var(--dh-ink,#111);
- border-color:var(--dh-ink,#111)}
-.dh-toc ol a[data-cta] em{opacity:.85}
-.dh-ico{inline-size:13px;block-size:13px;flex:none}
-.dh-toc ol a:focus-visible,.dh-subnav a:focus-visible{
- outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
-/* Second level: sticks directly under the first, never over it. */
-/* Offset comes from the measured bar, not a number typed when it was one row
-   tall. The bar grew a strip and a key -- 47px to 93px -- and the second level
-   went on sticking underneath it, which reads as "the sub-nav disappeared". */
-.dh-subnav{position:sticky;inset-block-start:var(--dh-toc-h,47px);z-index:15;margin:0 0 20px;
- background:color-mix(in srgb, var(--dh-bg,#fff) 92%, transparent);backdrop-filter:blur(8px);
- border-block-end:1px solid var(--dh-rule)}
-.dh-subnav ol{display:flex;gap:14px;margin:0;padding:8px 0;list-style:none;
- overflow-x:auto;scrollbar-width:none}
-.dh-subnav ol::-webkit-scrollbar{display:none}
-.dh-subnav a{display:flex;align-items:baseline;gap:6px;text-decoration:none;white-space:nowrap;
- font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 0;
- border-block-end:2px solid transparent;
- color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
-.dh-subnav a:hover{color:var(--dh-ink,#111)}
-.dh-subnav a[aria-current="true"]{color:var(--dh-ink,#111);
- border-block-end-color:var(--dh-accent,#d9482a)}
-.dh-subnav em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.6}
-.dh-zone{scroll-margin-block-start:64px}
-.dh-group{scroll-margin-block-start:104px}
-/* Collapsible, and legible while collapsed. */
-.dh-acc{margin:0 0 6px}
-/* `flex-wrap`, or the thumb strip's `flex-basis:100%` is ignored on a nowrap
-   row: an 800px strip then shared a single line with the heading and crushed it
-   until "Ilustración y textura" broke across two lines in a 200px column. The
-   name gets its own line; the strip gets the full width under it. */
-.dh-acc > summary{cursor:pointer;list-style:none;align-items:center;flex-wrap:wrap;
- gap:var(--s1) var(--s2)}
-.dh-acc > summary::-webkit-details-marker{display:none}
-/* The glyph itself, not a hex escape: the escape came back out of the browser
-   as U+0015 and drew the literal text "B8" beside every group. */
-.dh-acc > summary::before{content:"▸";flex:none;font-size:13px;
- transition:transform .12s;color:color-mix(in srgb, currentColor 55%, transparent)}
-.dh-acc[open] > summary::before{transform:rotate(90deg)}
-.dh-acc > summary:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:3px}
-.dh-acc-thumbs{display:none;gap:5px;flex-wrap:wrap;flex:1 1 100%;
- margin:10px 0 2px;--dh-shot-w:38px}
-.dh-acc:not([open]) > summary .dh-acc-thumbs{display:flex}
-.dh-acc-thumbs .dh-shot{border-radius:2px}
-.dh-acc-thumbs .dh-shot-missing{font-size:6px;padding:2px}
-/* Jumped-to rows must clear the sticky bars, or the bar lands on top of the
-   row it just took you to. */
-.dh-art .dh-fb{scroll-margin-block-start:112px}
-/* Fifty-four rows of the same height, abutting at zero margin, is a wall --
-   measured: 8100px of near-identical 150px bands with no gap anywhere in it.
-   Nothing tells the eye where one judgement ends and the next begins, which is
-   the whole of "chaotic" in a page whose individual rows are fine.
-   A row paints the page's own ground, so with no gap and no edge it was not
-   even visible as an object -- the wall had no seams at all. Each row becomes
-   a card: hairline edge, real gap, and a hover the pointer can confirm.
-   Borders rather than alternating bands, because these rows share a container
-   with specimens and versus-blocks, so any nth-of-type banding would drift.
-   `+` and not a blanket margin, so the first row still sits tight under its
-   own heading -- a heading and its first row are one unit. */
-.dh-art .dh-fb + .dh-fb{margin-block-start:var(--s1)}
-.dh-art .dh-fb{border:1px solid var(--dh-rule);border-radius:10px;
- padding-inline:var(--s2);transition:border-color .12s,background .12s}
-.dh-art .dh-fb:hover{border-color:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
- background:color-mix(in srgb, var(--dh-ink,#111) 4%, var(--dh-bg,#fff))}
-/* No round-zone override. The rule above mixes ink INTO bg, so it stays
-   opaque and is already correct on both grounds -- an override built from
-   `transparent` let the inverted zone show through a row that keeps its own
-   light ground and its own dark ink, which is how hovering a proposal turned
-   it into dark text on a near-black card. This is the inverted-zone token trap
-   for the fourth time: anything here derived from the PAGE ground rather than
-   the ROW's own ground breaks the moment the section inverts. */
-/* The group heading is the hierarchy step the wall was missing: it was 12px
-   from its rows and 32px from the group above, a four-point difference the eye
-   cannot resolve. Now the step is 64 against 8, and it carries a rule.
-   The `.dh-art` prefix is load-bearing: the controls stylesheet is emitted
-   AFTER this one and sets `.dh-group` itself, so a bare selector here would
-   merely tie on specificity and lose. */
-.dh-art .dh-group{margin:var(--s5) 0 var(--s2);padding-block-end:var(--s1);
- border-block-end:1px solid var(--dh-rule);
- /* 20px bold put the group name in the same voice as the 25px section title,
-    so the page read as one long run of headings with no rank between them.
-    A group is a LABEL on a set, not a section -- it steps down decisively. */
- font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-.dh-art .dh-group .dh-count{font-size:11px;letter-spacing:0;opacity:.7}
-.dh-zone[data-zone="round"] .dh-group{
- color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
-.dh-art .dh-spec + .dh-fb,.dh-art .dh-group + .dh-fb{margin-block-start:0}
-.dh-art .dh-spec{margin:0 0 var(--s4)}
-@media (max-width:640px){
- .dh-art{padding-inline:16px}
- .dh-zone[data-zone="round"],.dh-zone[data-zone="antipattern"]{padding-inline:16px}
- .dh-faces .dh-sample{font-size:30px}
-}
-/* The slideshow. A thumbnail is 96px of an 8.5x11 sheet -- enough to recognise
-   a drawing you have already seen, nowhere near enough to JUDGE one, which is
-   what the page is asking for. So every thumbnail opens the same graphic at
-   full height with its argument beside it and its own scoring strip under
-   that, and arrows walk the whole set without going back to the scroll. */
-dialog.dh-lb:not([open]){display:none}
-/* Transparent dialog + opaque shell: clicks on the dimmed margin close the modal. */
-/* The scale is REDECLARED here, and that is load-bearing. `--s1..--s6` are
-   defined on `.dh-art`, but the dialog is appended to `document.body`, so it
-   is not a descendant of `.dh-art` and inherits none of them. Every
-   `var(--sN)` in the whole lightbox stylesheet silently resolved to nothing:
-   the shell computed `padding:0`, every zone gap collapsed, and the drawing,
-   its argument, the scoring strip and the filmstrip were left touching each
-   other with no space anywhere. That is the "cluttered slideshow" in one
-   line, and it survived several rounds of spacing edits because the edits
-   themselves were the thing being discarded. */
-dialog.dh-lb{position:fixed;inset:0;z-index:200;margin:0;padding:clamp(12px,3vw,28px);
- --s1:8px;--s2:14px;--s3:24px;--s4:40px;--s5:64px;--s6:104px;
- border:none;max-inline-size:none;max-block-size:none;inline-size:100%;block-size:100%;
- background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);color:var(--dh-bg,#fff);overflow:hidden}
-dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
-html:has(dialog.dh-lb[open]) .dh-bar,
-html:has(dialog.dh-lb[open]) .header{display:none}
-/* Gap 0, and every zone declares its OWN step. One uniform `gap` gave the
-   title, the drawing, the argument, the scoring strip and the filmstrip the
-   same 14px between them, so five unrelated things read as one undifferentiated
-   stack and the drawing never got to be the subject. The steps below are the
-   article's own scale, used as a scale: hairline inside a zone, s3 between
-   zones, and a rule wherever the change of purpose is total. */
-.dh-lb-shell{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:0;
- inline-size:min(1040px,100%);
- block-size:min(960px,calc(100dvh - 32px));max-block-size:calc(100dvh - 32px);
- margin:0 auto;padding:clamp(var(--s3),2.6vw,var(--s4));
- background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
- border-radius:14px;border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
- box-shadow:0 28px 80px rgba(0,0,0,.55);
- --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 32%, transparent)}
-.dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px;flex-wrap:nowrap;
- padding-block-end:var(--s2);margin-block-end:var(--s3);
- border-block-end:1px solid var(--dh-rule)}
-.dh-lb-count{font-size:11px;font-weight:700;letter-spacing:.16em;font-variant-numeric:tabular-nums;
- opacity:.75;flex:none}
-.dh-lb-name{display:flex;flex-direction:column;gap:2px;min-inline-size:0;flex:1 1 auto}
-.dh-lb-id{font-size:15px;font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere;
- min-inline-size:0}
-.dh-lb-token{display:none}
-.dh-lb-token::before{content:"#";opacity:.6;margin-inline-end:1px}
-.dh-lb-state{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
- padding:3px 9px;border-radius:999px;border:1px solid var(--dh-rule);flex:none;opacity:.8}
-.dh-lb-x{margin-inline-start:auto;flex:none;inline-size:34px;block-size:34px;border-radius:8px;
- border:1px solid var(--dh-rule);background:color-mix(in srgb, var(--dh-bg,#fff) 8%, transparent);
- color:inherit;font:inherit;font-size:17px;line-height:1;cursor:pointer;
- appearance:none;-webkit-appearance:none;padding:0}
-.dh-lb-x:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 16%, transparent)}
-.dh-lb-x:focus{outline:none}
-.dh-lb-x:focus-visible{outline:2px solid var(--dh-rule);outline-offset:2px}
-/* Body: image on top, copy and scoring in a footer row -- never a side column
-   that floats over the drawing in a narrow companion pane. */
-.dh-lb-body{display:flex;flex-direction:column;gap:0;min-block-size:0;overflow:hidden;
- align-items:center;width:100%}
-/* The drawing is the subject, so it takes the whole free row and the arrows
-   get out of its way: a wider gutter than the old s2, so a 40px control never
-   sits against the sheet edge it is meant to be beside. */
-.dh-lb-frame{position:relative;flex:1 1 auto;min-block-size:0;width:100%;
- display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
- gap:var(--s3)}
-/* Left-aligned inside a real measure, not centred fragments. Centring three
-   stacked lines of different lengths gives every line a different left edge,
-   which is what made the argument read as debris under the drawing rather
-   than as a paragraph about it. */
-.dh-lb-copy{font-size:13.5px;line-height:1.6;max-block-size:16vh;overflow-y:auto;
- inline-size:min(68ch,100%);margin:var(--s3) auto 0;text-align:start}
-.dh-lb-foot{display:flex;flex-direction:column;align-items:center;justify-content:center;
- gap:var(--s2);width:100%;
- margin-block-start:var(--s3);padding-block-start:var(--s3);
- border-block-start:1px solid var(--dh-rule);
- flex-wrap:nowrap;overflow-x:auto}
-.dh-lb-score-wrap{flex:none;inline-size:100%;max-inline-size:100%;
- display:flex;justify-content:center;align-items:center}
-/* The thumbnail's own markup, re-scaled. `--dh-shot-w` is what sizes a shot,
-   so the slide sets it to the frame height rather than restyling the node. */
-/* Sized by its BOX, never by the viewport. `62vh` against a tall pane made the
-   drawing 1238px wide inside a 540px frame -- it overflowed to x=-309 and hung
-   off both edges. The grid row already knows how much height there is; the
-   aspect ratio turns that into a width. */
-/* Fit inside the cell on BOTH axes. `block-size:100%` alone let the height
-   grow while the width clamped at max-inline-size, so a tall window stretched
-   the page to a 0.28 aspect instead of 0.77. Container units say the whole
-   rule in one line: take the smaller of the cell's height and the height its
-   width allows. */
-.dh-lb-art{container-type:size;block-size:100%;min-block-size:0;
- display:grid;place-items:center;overflow:hidden}
-.dh-lb-art .dh-shot{--dh-shot-w:auto;aspect-ratio:8.5/11;inline-size:auto;
- block-size:min(100cqh, 100cqw * 11 / 8.5);
- max-inline-size:100%;max-block-size:100%;position:relative;
- background:#fff;border-radius:4px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
-/* The sheet ratio belongs to a SCALED HTML COMP, which is drawn into a real
-   510x660 box and needs that box to exist. A PNG or SVG preview carries its
-   own intrinsic aspect, and forcing the sheet on it letterboxed the drawing
-   inside a tall cream slab -- the "huge empty area under the artwork" that
-   made every such slide look broken. Let the media size the box instead. */
-.dh-lb-art .dh-shot:not(:has(.dh-shot-inner)){aspect-ratio:auto;
- block-size:auto;inline-size:auto;display:grid;place-items:center}
-.dh-lb-art .dh-shot:not(:has(.dh-shot-inner)) > img,
-.dh-lb-art .dh-shot:not(:has(.dh-shot-inner)) > svg{
- display:block;max-inline-size:100%;max-block-size:100cqh;
- inline-size:auto;block-size:auto;object-fit:contain}
-.dh-lb-art .dh-shot-inner{position:absolute;inset-block-start:0;inset-inline-start:0;
- transform-origin:0 0;pointer-events:none}
-/* Quieter than the drawing it walks. At full-strength border and fill these
-   two circles read as primary controls flanking the subject. */
-.dh-lb-nav{flex:none;inline-size:40px;block-size:40px;border-radius:999px;cursor:pointer;
- border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
- background:transparent;opacity:.7;
- color:inherit;font:inherit;font-size:18px;line-height:1;
- transition:opacity .12s,background .12s,border-color .12s}
-.dh-lb-nav:hover{opacity:1;border-color:var(--dh-rule);
- background:color-mix(in srgb, var(--dh-bg,#fff) 14%, transparent)}
-.dh-lb-nav[disabled]{opacity:.25;cursor:default}
-.dh-lb-score-wrap .dh-lb-score{margin:0;inline-size:auto;max-inline-size:100%}
-.dh-lb-score-wrap .dh-lb-score .dh-signals{margin:0;flex-wrap:nowrap;justify-content:center}
-/* The lightbox clones the row strip outside `.dh-fb`, so give it a shell the
-   scoring CSS already knows. Triple-class beats `.dh-fb.dh-fb{display:grid}` in
-   dh-controls, which otherwise parks `.dh-signals` in the 96px thumb column. */
-.dh-lb-score-wrap .dh-lb-fb.dh-fb{display:flex;justify-content:center;align-items:center;
- grid-template-columns:unset;padding:0;margin:0;width:auto;max-inline-size:100%;
- border:0;background:transparent!important;box-shadow:none!important;color:inherit!important}
-.dh-lb-score-wrap .dh-lb-fb .dh-signals{position:static;display:inline-flex;flex-wrap:nowrap;
- gap:8px;justify-content:center;align-items:center;grid-column:auto;width:auto;
- max-inline-size:100%}
-dialog.dh-lb .dh-lb-score .dh-stars > *{
- color:color-mix(in srgb, var(--dh-bg,#fff) 36%, transparent)}
-dialog.dh-lb .dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
-dialog.dh-lb .dh-lb-score [data-sentiment],
-dialog.dh-lb .dh-lb-score [data-verdict],
-dialog.dh-lb .dh-lb-score [data-bookmark]{
- border-color:var(--dh-rule);
- background:color-mix(in srgb, var(--dh-ink,#111) 28%, transparent);color:inherit}
-dialog.dh-lb .dh-lb-score [data-sentiment="like"].on,
-dialog.dh-lb .dh-lb-score [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff}
-dialog.dh-lb .dh-lb-score [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
-dialog.dh-lb .dh-lb-score [data-bookmark].on{background:#e0a20a;border-color:#a97600;color:#fff}
-dialog.dh-lb .dh-lb-score .dh-stars::after{
- color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
-dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
- color:color-mix(in srgb, var(--dh-bg,#fff) 52%, transparent)}
-/* The argument leads and the provenance follows it, as a labelled pair on one
-   line rather than a label stacked over its own value. Stacked, each of the
-   two provenance lines cost three rows and the block outgrew the drawing's
-   own caption. */
-.dh-lb-copy .dh-lb-why{margin:0;opacity:.95;font-size:14px;line-height:1.55}
-.dh-lb-copy .dh-lb-sub{margin:var(--s2) 0 0;font-size:12px;opacity:.62;
- display:grid;grid-template-columns:max-content minmax(0,1fr);
- gap:var(--s1) var(--s2);align-items:baseline}
-.dh-lb-copy .dh-lb-sub b{font-weight:700;letter-spacing:.12em;text-transform:uppercase;
- font-size:9.5px;opacity:.85;white-space:nowrap}
-.dh-lb-score{padding:0;border:0}
-/* The strip is a live proxy: clicking here clicks the row's own control, so
-   the ledger has exactly one write path and the lightbox never holds state. */
-.dh-lb-score .dh-stars > *{color:color-mix(in srgb, currentColor 38%, transparent);
- cursor:pointer;font-size:21px}
-.dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
-.dh-lb-score .dh-stars{display:flex;gap:4px;align-items:center}
-.dh-lb-score .dh-stars[data-scored="no"]::after{content:"--";
- color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
-/* The zero is a rank, so it sits with the ranks instead of exiled to the
-   verdict row where it read as a fourth verdict. */
-.dh-lb-zero{margin-inline-start:6px;cursor:pointer;font:inherit;font-size:13px;
- line-height:1;padding:5px 9px;border-radius:8px;background:transparent;color:inherit;
- border:1px solid var(--dh-rule)}
-.dh-lb-zero:hover{border-color:currentColor}
-.dh-lb-acts{display:flex;gap:var(--s1);margin-block-start:var(--s2);flex-wrap:wrap}
-.dh-lb-acts button{cursor:pointer;font:inherit;font-size:15px;line-height:1;padding:7px 11px;
- border-radius:8px;border:1px solid var(--dh-rule);background:transparent;color:inherit}
-.dh-lb-acts button.on{border-color:var(--dh-accent,#d9482a);
- background:color-mix(in srgb, var(--dh-accent,#d9482a) 30%, transparent)}
-.dh-lb-acts button:hover{border-color:currentColor}
-/* Filmstrip: where you are in the set, and one click to anywhere else.
-   It is NAVIGATION, so it reads lighter than everything above it -- smaller
-   thumbs, a real gap between them, and its own rule. Eight 72px sheets at an
-   8px gap under a scoring strip at the same 14px offset made a dense band of
-   near-identical rectangles that competed with the drawing it was serving. */
-.dh-lb-strip{display:flex;gap:var(--s2);overflow-x:auto;scrollbar-width:thin;
- justify-content:center;align-items:center;width:100%;
- margin-block-start:var(--s3);padding-block-start:var(--s3);
- border-block-start:1px solid color-mix(in srgb, var(--dh-bg,#fff) 14%, transparent);
- --dh-shot-w:58px;min-block-size:calc(var(--dh-shot-w) * 11 / 8.5 + 10px)}
-.dh-lb-strip .dh-shot{cursor:pointer;opacity:.42;outline:2px solid transparent;
- outline-offset:2px;border-radius:2px;background:#fff;
- transition:opacity .12s,outline-color .12s}
-.dh-lb-strip .dh-shot:hover{opacity:.8}
-.dh-lb-strip .dh-shot[aria-current="true"]{opacity:1;outline-color:var(--dh-accent,#d9482a)}
-/* A thumbnail that opens something must say so before it is clicked. */
-.dh-art .dh-shot[data-el]{cursor:zoom-in}
-.dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
-/* Floating action bar: one place to return to the agent, not a full-width footer. */
-.dh-bar{position:fixed;inset-block-end:16px;inset-inline-end:16px;inset-inline-start:auto;
- z-index:50;inline-size:min(360px,calc(100dvw - 32px));max-inline-size:100%;box-sizing:border-box;
- display:flex;flex-direction:column;align-items:stretch;gap:8px;
- padding:12px 14px;border-radius:14px;
- font:500 13px/1.4 var(--dh-font,ui-sans-serif,system-ui,sans-serif);
- background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
- color:var(--dh-bg,#fff);
- border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 22%, transparent);
- box-shadow:0 14px 44px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
-.dh-bar b{font-weight:700;letter-spacing:-.01em}
-.dh-bar-copy{margin:0;opacity:.88}
-.dh-live{font-style:normal;display:grid;grid-template-columns:22px minmax(0,1fr);
- column-gap:8px;align-items:start;font-size:12px;letter-spacing:.02em;
- list-style:none;margin:0;padding:0}
-.dh-live-icon{display:block;inline-size:22px;min-inline-size:22px;line-height:1.2;
- text-align:center;font-family:"Apple Color Emoji","Segoe UI Emoji",sans-serif}
-.dh-live-copy{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-inline-size:0}
-.dh-live-label{display:block;font-weight:800;letter-spacing:.04em;line-height:1.2;
- color:inherit;min-inline-size:0;overflow-wrap:anywhere}
-/* A fixed dot, not a recolored label: the label's own text color stays
-   whatever the theme already proved readable, so the state signal never
-   has to re-earn its own contrast check. */
-.dh-live-label::before{content:'';display:inline-block;inline-size:8px;block-size:8px;
- border-radius:50%;margin-inline-end:6px;vertical-align:middle;
- box-shadow:0 0 0 1px rgba(255,255,255,.5)}
-/* Green means the agent is actively producing work -- the content on
-   screen may still change underneath you. Orange means idle: the agent is
-   done for now and waiting on your chat, so it's safe to interact. */
-.dh-live[data-state="active"] .dh-live-label::before{background:#2ecc71}
-.dh-live[data-state="idle"] .dh-live-label::before{background:#f0a020}
-.dh-live-detail{font-size:11px;line-height:1.35;opacity:.88;max-inline-size:36ch;
- margin:0;padding:0;overflow-wrap:anywhere}
-.dh-live[data-state="idle"] .dh-live-detail{opacity:.88}
-.dh-bar-copy span{opacity:.78}
-.dh-live-label,.dh-live-detail{opacity:1}
-/* Project theme controls belong to this status aid, not the companion header.
-   Native details keeps them collapsed until explicitly requested. */
-.dh-bar-settings{margin:2px 0 0;color:inherit;font:inherit}
-.dh-bar-settings summary{display:flex;align-items:center;justify-content:space-between;gap:12px;
- cursor:pointer;list-style:none;padding:7px 10px;border:1px solid currentColor;border-radius:8px;
- font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.9}
-.dh-bar-settings summary::-webkit-details-marker{display:none}
-.dh-bar-settings summary::after{content:'+';font-size:15px;line-height:1;font-weight:500}
-.dh-bar-settings[open] summary::after{content:'−'}
-.dh-bar-settings-panel{display:grid;gap:10px;padding:12px 2px 2px;min-inline-size:240px}
-.dh-bar-settings label{font-size:12px;font-weight:650}
-.dh-theme-switch{display:flex;align-items:center;gap:8px}
-.dh-theme-switch input{appearance:none;display:inline-grid;place-items:center;
- inline-size:36px;block-size:20px;margin:0;border:1px solid currentColor;border-radius:999px;
- background:transparent;color:inherit;cursor:pointer;transition:background .12s,border-color .12s}
-.dh-theme-switch input::before{content:'';inline-size:14px;block-size:14px;border-radius:50%;
- background:currentColor;transform:translateX(-8px);transition:transform .12s}
-.dh-theme-switch input:checked{background:var(--dh-accent,#d9482a);
- border-color:var(--dh-accent,#d9482a)}
-.dh-theme-switch input:checked::before{background:#fff;transform:translateX(8px)}
-.dh-theme-switch input:focus-visible,.dh-bar-settings select:focus-visible,
-.dh-bar-settings button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
-.dh-theme-select{display:grid;grid-template-columns:max-content minmax(0,1fr);
- gap:8px;align-items:center}
-.dh-bar-settings select{min-inline-size:0;padding:6px 26px 6px 8px;border:1px solid currentColor;
- border-radius:7px;background:transparent;color:inherit;font:inherit}
-.dh-bar-settings-actions{display:flex;gap:7px;flex-wrap:wrap}
-.dh-bar-settings button{padding:6px 9px;border:1px solid currentColor;border-radius:7px;
- background:transparent;color:inherit;font:inherit;cursor:pointer}
-.dh-bar-settings button:hover,.dh-bar-settings button:focus-visible{background:var(--dh-bg,#fff);
- color:var(--dh-ink,#111)}
-.dh-sr-only{position:absolute!important;inline-size:1px!important;block-size:1px!important;
- padding:0!important;overflow:hidden!important;clip-path:inset(50%)!important;
- white-space:nowrap!important;border:0!important}
-/* One return action: chat icon and label, hyperlinked to the agent session. */
-.dh-bar-go{display:inline-flex;align-items:center;gap:8px;flex:none;font-weight:800;
- letter-spacing:.06em;font-size:12px;padding:8px 14px;border-radius:999px;text-decoration:none;
- background:var(--dh-bg,#fff);color:var(--dh-ink,#111);margin-block-start:6px}
-.dh-bar-go:hover{filter:brightness(.94)}
-.dh-bar-go[aria-disabled="true"]{opacity:.45;pointer-events:none}
-.dh-bar-ico{inline-size:15px;block-size:15px;flex:none;opacity:.88}
-.dh-bar-go span{opacity:1}
-.dh-bar em{font-style:normal;margin-inline-start:auto;flex:none;font-size:11px;
- font-weight:700;letter-spacing:.14em;text-transform:uppercase;
- padding:4px 10px;border-radius:999px;
- background:var(--dh-accent,#d9482a);color:#fff}
-/* The bar is fixed, so the last section needs room to clear it. */
-.dh-art{padding-block-end:calc(var(--s6) + 96px)}
-/* Credit, de-protagonised: this page is the project's, not the tool's. */
-.dh-credit{margin-block-start:var(--s6);padding-block-start:var(--s3);
- border-block-start:1px solid var(--dh-rule);
- display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;
- font-size:10px;letter-spacing:.14em;text-transform:uppercase;
- color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
-.dh-credit b{font-weight:700}
-/* Completing something is the one irreversible-feeling act on the page, so it
-   gets a moment. Scaling the tick is enough -- confetti would be noise on a
-   page whose whole job is sober judgement. */
-@keyframes dh-pop{0%{transform:scale(1)}38%{transform:scale(1.32)}100%{transform:scale(1)}}
-.dh-fb [data-verdict].on{animation:dh-pop .34s ease-out}
-.dh-fb .dh-saved[data-cheer]{background:var(--dh-accent,#d9482a);
- border-color:color-mix(in srgb, var(--dh-accent,#d9482a) 72%, #000)}
-.dh-zone[data-zone="round"]{position:relative}
-/* NOT dimmed. The rows stayed fully clickable the whole time this rule was
-   here -- there is no pointer-events, disabled or inert anywhere in the
-   preparing state, and clicks during inference are sent, stored and echoed
-   normally. All the 72% opacity ever did was tell the user that the one
-   thing they could usefully do was unavailable. The banner says what is
-   happening; the work stays lit. */
-.dh-zone[data-zone="round"][data-preparing] > :not(.dh-prep){transition:none}
-.dh-prep{display:none;margin:0;max-inline-size:none;font-size:15px;
- line-height:1.4;font-weight:700;letter-spacing:.01em;text-align:center;
- pointer-events:none}
-.dh-zone[data-zone="round"][data-preparing] .dh-prep{display:block;
- position:absolute;inset:12px 12px auto;z-index:2;padding:12px 16px;border-radius:10px;
- background:color-mix(in srgb, var(--dh-ink,#111) 88%, transparent);
- color:var(--dh-bg,#fff)}
-@media (prefers-reduced-motion:reduce){.dh-art *,.dh-lb *{transition:none!important;
- animation:none!important}}
-</style>"""
+ARTICLE_STYLE = _screen("article.css")
 
 
 # Stroke icon, not an emoji: emoji ignore `color`, so a bin glyph could never
@@ -3167,115 +1966,7 @@ TRASH_ICON = ('<svg class="dh-ico" viewBox="0 0 24 24" fill="none" stroke="curre
               'stroke-width="2" stroke-linecap="round" aria-hidden="true">'
               '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>')
 
-CHAT_ICON = ('<svg class="dh-bar-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-             'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-             '<path d="M21 11.5a8.38 8.38 0 0 1-1.9 5.4 8.5 8.5 0 0 1-6.6 3.3 8.38 8.38 0 0 1-3.4-.7L3 21l1.5-5.4a8.38 8.38 0 0 1-.7-3.4 8.5 8.5 0 0 1 3.3-6.6 8.38 8.38 0 0 1 5.4-1.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>')
-
-LIVE_SCRIPT = """<script>/* dh-live */
-(function(){
- if(window.__dhLive)return; window.__dhLive=1;
- function prepRound(st){
-  var round=document.querySelector('.dh-zone[data-zone="round"]');
-  if(!round)return;
-  if(st==='active') round.setAttribute('data-preparing','1');
-  else round.removeAttribute('data-preparing');
- }
- function apply(text,state,iconText){
-  var el=document.querySelector('.dh-live'); if(!el)return;
-  var icon=el.querySelector('.dh-live-icon');
-  var label=el.querySelector('.dh-live-label');
-  var detail=el.querySelector('.dh-live-detail');
-  var st=state||'active';
-  el.setAttribute('data-state',st);
-  var idleLabel=el.getAttribute('data-idle-label')||'waiting for your chat directions';
-  var activeLabel=el.getAttribute('data-active-label')||'Designing';
-  var idleAid=el.getAttribute('data-idle-aid')||'';
-  var fallbackIcon=el.getAttribute(st==='idle'?'data-idle-icon':'data-active-icon')||'';
-  if(icon) icon.textContent=iconText||fallbackIcon;
-  if(label) label.textContent=st==='idle'?idleLabel:activeLabel;
-  if(detail) detail.textContent=st==='idle'?idleAid:(text||'');
-  prepRound(st);
- }
- function onAgent(d){
-  if(!d)return;
-  apply(d.text, d.state==='idle'?'idle':'active',d.icon||'');
- }
- window.addEventListener('dh-agent',function(ev){onAgent(ev.detail);});
- if(window.__dhLastAgent) onAgent(window.__dhLastAgent);
-})();
-</script>"""
-
-TOC_SCRIPT = """<script>/* dh-toc */
-(function(){
- if(window.__dhToc)return; window.__dhToc=1;
- /* Measured, never typed: the bar grew a title row and a key, so any constant
-    here goes stale and the active section is decided against the wrong band. */
- function barHeight(){
-  var bar=document.querySelector('.dh-toc');
-  return bar?Math.round(bar.getBoundingClientRect().height)+8:64;
- }
- function scroller(){
-  return document.querySelector('.main') || document.scrollingElement || document.documentElement;
- }
- function start(){
-  var links=[].slice.call(document.querySelectorAll('.dh-toc a[data-zone]'));
-  var zones=links.map(function(a){return document.getElementById(a.getAttribute('href').slice(1))})
-                 .filter(Boolean);
-  if(!zones.length)return;
-  function mark(id){links.forEach(function(a){
-   a.setAttribute('aria-current', a.getAttribute('href')==='#'+id ? 'true':'false');});}
-  mark(zones[0].id);
-  /* Clicking a pill marks it AT ONCE. Leaving it to the observer meant the
-     indicator lagged the click by a scroll -- which reads as a broken nav,
-     because the thing you just pressed is not the thing lit up. */
-  links.forEach(function(a){a.addEventListener('click',function(e){
-   var id=a.getAttribute('href').slice(1);
-   var zone=document.getElementById(id);
-   mark(id);
-   if(!zone)return;
-   e.preventDefault();
-   var root=scroller();
-   var top=zone.getBoundingClientRect().top + root.scrollTop - barHeight();
-   root.scrollTo({top:Math.max(0,top), behavior:'smooth'});
-  });});
-  /* Highest section still intersecting the top band wins. Picking the largest
-     visible ratio instead makes a short section that is fully on screen beat
-     the long one the reader is actually inside. */
-  if(!('IntersectionObserver' in window))return;
-  var visible={};
-  var rootEl=document.querySelector('.main');
-  var io=new IntersectionObserver(function(entries){
-   entries.forEach(function(e){visible[e.target.id]=e.isIntersecting});
-   for(var i=0;i<zones.length;i++){ if(visible[zones[i].id]){ mark(zones[i].id); return } }
-  },{root:rootEl, rootMargin:'-'+barHeight()+'px 0px -68% 0px', threshold:0});
-  zones.forEach(function(z){io.observe(z)});
-  /* The second level tracks headings, not sections, so it needs its own
-     observer -- sharing one made a heading scrolling past re-mark the zone. */
-  var subs=[].slice.call(document.querySelectorAll('.dh-subnav a[data-sub]'));
-  var heads=subs.map(function(a){return document.getElementById(a.getAttribute('href').slice(1))})
-                .filter(Boolean);
-  if(!heads.length)return;
-  function markSub(id){subs.forEach(function(a){
-   a.setAttribute('aria-current', a.getAttribute('href')==='#'+id ? 'true':'false');});}
-  markSub(heads[0].id);
-  var vis={};
-  var io2=new IntersectionObserver(function(entries){
-   entries.forEach(function(e){vis[e.target.id]=e.isIntersecting});
-   for(var i=heads.length-1;i>=0;i--){ if(vis[heads[i].id]){ markSub(heads[i].id); return } }
-  },{rootMargin:'-100px 0px -60% 0px', threshold:0});
-  heads.forEach(function(h){io2.observe(h)});
- }
- function measure(){
-  var bar=document.querySelector('.dh-toc'); if(!bar)return;
-  var art=document.querySelector('.dh-art'); if(!art)return;
-  art.style.setProperty('--dh-toc-h', Math.round(bar.getBoundingClientRect().height)+'px');
- }
- if(document.readyState==='loading')
-  document.addEventListener('DOMContentLoaded',function(){measure();start()});
- else {measure();start()}
- window.addEventListener('resize',measure);
-})();
-</script>"""
+TOC_SCRIPT = _screen("toc.js")
 
 
 # The slideshow. A 96px thumbnail is a reminder of a drawing, not a view of
@@ -3286,283 +1977,9 @@ TOC_SCRIPT = """<script>/* dh-toc */
 # write path and the companion's own rehydrator stays the only thing that
 # decides what a click means. Duplicating that logic per language is exactly
 # how the JS and Python rules drifted apart before.
-SHOT_FIT_SCRIPT = """<script>/* dh-shot-fit */
-(function(){
- if(window.__dhShotFit)return; window.__dhShotFit=1;
- /* Card thumbnails use the same scale math as the slideshow. Pure CSS
-    `transform:scale(calc(var(--dh-shot-w)/510))` on a 510×660 absolutely
-    positioned inner gets clipped by `overflow:hidden` before the transform
-    is accounted for -- grey boxes in the row, full drawings in the modal. */
- function fitShotInner(shot){
-  var inner=shot.querySelector('.dh-shot-inner');
-  if(!inner)return;
-  var cw=parseFloat(inner.getAttribute('data-comp-w'))||510;
-  var ch=parseFloat(inner.getAttribute('data-comp-h'))||660;
-  function apply(){
-   var w=shot.clientWidth, h=shot.clientHeight;
-   if(w<1||h<1)return;
-   var s=Math.min(w/cw, h/ch);
-   inner.style.transform='scale('+s+')';
-   inner.style.inlineSize=cw+'px';
-   inner.style.blockSize=ch+'px';
-   inner.style.transformOrigin='0 0';
-   inner.style.position='absolute';
-   inner.style.insetBlockStart=((h-ch*s)/2)+'px';
-   inner.style.insetInlineStart=((w-cw*s)/2)+'px';
-   inner.style.pointerEvents='none';
-  }
-  apply();
-  if(shot._dhRo)shot._dhRo.disconnect();
-  if(typeof ResizeObserver!=='undefined'){
-   var ro=new ResizeObserver(apply);
-   ro.observe(shot);
-   shot._dhRo=ro;
-  }
- }
- window.__dhFitShotInner=fitShotInner;
- function fitAll(root){
-  (root||document).querySelectorAll('.dh-shot-inner').forEach(function(inner){
-   var shot=inner.closest('.dh-shot');
-   if(shot)fitShotInner(shot);
-  });
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){fitAll()});
- else fitAll();
-})();
-</script>"""
+SHOT_FIT_SCRIPT = _screen("shot-fit.js")
 
-LIGHTBOX_SCRIPT = """<script>/* dh-lightbox */
-(function(){
- if(window.__dhLb)return; window.__dhLb=1;
- var lb,slides=[],at=0,lastFocus=null;
- function rows(){
-  var seen={},out=[];
-  [].forEach.call(document.querySelectorAll('.dh-art .dh-fb[data-element]'),function(r){
-   var id=r.getAttribute('data-element');
-   if(seen[id]||r.classList.contains('dh-fb-before'))return;
-   if(r.closest('.dh-spec-score')||!r.querySelector('.dh-shot'))return;
-   seen[id]=1; out.push(r);
-  });
-  return out;
- }
- function findRow(id){
-  var nodes=document.querySelectorAll('.dh-art .dh-fb[data-element="'+CSS.escape(id)+'"]');
-  for(var i=0;i<nodes.length;i++){
-   if(!nodes[i].closest('.dh-spec-score'))return nodes[i];
-  }
-  return null;
- }
- function slidesFor(id){
-  var row=findRow(id);
-  if(!row)return rows();
-  var zone=row.closest('.dh-zone[data-zone]');
-  if(!zone)return [row];
-  var out=[];
-  zone.querySelectorAll('.dh-fb[data-element]').forEach(function(r){
-   if(r.closest('.dh-spec-score')||!r.querySelector('.dh-shot'))return;
-   out.push(r);
-  });
-  return out.length?out:[row];
- }
- function wireProxy(node, sel){
-  node.setAttribute('data-proxy', sel);
-  node.setAttribute('role','button');
-  node.setAttribute('tabindex','0');
- }
- function cloneSignals(row, wrap){
-  var sig=row.querySelector('.dh-signals');
-  if(!sig)return;
-  var box=document.createElement('div'); box.className='dh-lb-score';
-  var shell=document.createElement('div'); shell.className='dh-fb dh-lb-fb';
-  var c=sig.cloneNode(true);
-  c.querySelectorAll('[data-rank]').forEach(function(n){
-   wireProxy(n, '.dh-stars [data-rank="'+n.getAttribute('data-rank')+'"]');
-  });
-  c.querySelectorAll('[data-sentiment]').forEach(function(n){
-   wireProxy(n, '[data-sentiment="'+n.getAttribute('data-sentiment')+'"]');
-  });
-  c.querySelectorAll('[data-verdict]').forEach(function(n){
-   wireProxy(n, '[data-verdict="'+n.getAttribute('data-verdict')+'"]');
-  });
-  c.querySelectorAll('[data-bookmark]').forEach(function(n){
-   wireProxy(n, '[data-bookmark]');
-  });
-  shell.appendChild(c); box.appendChild(shell); wrap.appendChild(box);
- }
- function indexOf(id){
-  for(var i=0;i<slides.length;i++){
-   if(slides[i].getAttribute('data-element')===id)return i;
-  }
-  return -1;
- }
- function txt(el,sel){var n=el.querySelector(sel);return n?n.textContent.trim():''}
- function prepShotClone(node){
-  var c=node.cloneNode(true);
-  c.removeAttribute('style');
-  c.className='dh-shot';
-  return c;
- }
- function fitShotInner(shot){
-  if(window.__dhFitShotInner) return window.__dhFitShotInner(shot);
- }
- function build(){
-  lb=document.createElement('dialog');
-  lb.className='dh-lb';
-  if('closedBy' in HTMLDialogElement.prototype) lb.setAttribute('closedby','any');
-  lb.setAttribute('aria-labelledby','dh-lb-title');
-  lb.innerHTML=
-   '<div class="dh-lb-shell">'+
-   '<div class="dh-lb-bar"><span class="dh-lb-count"></span>'+
-   '<span class="dh-lb-name"><b class="dh-lb-id" id="dh-lb-title"></b>'+
-   '<code class="dh-lb-token"></code></span>'+
-   '<span class="dh-lb-state"></span>'+
-   '<button class="dh-lb-x" type="button" aria-label="Cerrar">&#10005;</button></div>'+
-   '<div class="dh-lb-body"><div class="dh-lb-frame">'+
-   '<button class="dh-lb-nav" data-step="-1" type="button" aria-label="Anterior">&#8249;</button>'+
-   '<div class="dh-lb-art"></div>'+
-   '<button class="dh-lb-nav" data-step="1" type="button" aria-label="Siguiente">&#8250;</button>'+
-   '</div><div class="dh-lb-copy"></div></div>'+
-   '<div class="dh-lb-foot"><div class="dh-lb-score-wrap"></div></div>'+
-   '<div class="dh-lb-strip"></div></div>';
-  document.body.appendChild(lb);
-  lb.querySelector('.dh-lb-x').addEventListener('click',close);
-  lb.addEventListener('close',function(){
-   if(lastFocus&&lastFocus.focus)lastFocus.focus();
-  });
-  lb.addEventListener('click',function(e){
-   if(!e.target.closest('.dh-lb-shell')){close();return}
-   var nav=e.target.closest('.dh-lb-nav'); if(nav){go(at+ +nav.getAttribute('data-step'));return}
-   var th=e.target.closest('.dh-lb-strip .dh-shot');
-   if(th){go(indexOf(th.getAttribute('data-el')));return}
-   var prox=e.target.closest('[data-proxy]');
-   if(prox){
-    var row=slides[at]; if(!row)return;
-    var real=row.querySelector(prox.getAttribute('data-proxy'));
-    if(real){real.click(); setTimeout(function(){paint()},0)}
-    return;
-   }
-  });
-  document.addEventListener('keydown',function(e){
-   if(!lb.open)return;
-   if(e.key==='Escape'){close();return}
-   if(e.key==='ArrowLeft'){go(at-1)}
-   else if(e.key==='ArrowRight'){go(at+1)}
-  });
- }
- function paint(){
-  var row=slides[at]; if(!row)return;
-  var id=row.getAttribute('data-element');
-  lb.querySelector('.dh-lb-count').textContent=(at+1)+' / '+slides.length;
-  var titled=row.querySelector('.dh-id');
-  lb.querySelector('.dh-lb-id').textContent=titled?titled.textContent.trim():id;
-  lb.querySelector('.dh-lb-token').textContent=id;
-  lb.querySelector('.dh-lb-state').textContent=txt(row,'.dh-state');
-  var shot=row.querySelector('.dh-shot');
-  var art=lb.querySelector('.dh-lb-art'); art.innerHTML='';
-  if(shot){var c=prepShotClone(shot); art.appendChild(c); fitShotInner(c)}
-  var side=lb.querySelector('.dh-lb-copy'); side.innerHTML='';
-  var why=row.querySelector('.dh-desc:not(.dh-sub)');
-  if(why){var p=document.createElement('p'); p.className='dh-lb-why';
-          p.textContent=why.textContent.trim(); side.appendChild(p)}
-  [].forEach.call(row.querySelectorAll('.dh-desc.dh-sub'),function(d){
-   var p=document.createElement('p'); p.className='dh-lb-sub';
-   var b=d.querySelector('b');
-   p.innerHTML='<b></b>'; p.querySelector('b').textContent=b?b.textContent.trim():'';
-   p.appendChild(document.createTextNode(
-     d.textContent.replace(b?b.textContent:'','').trim()));
-   side.appendChild(p);
-  });
-  var scoreWrap=lb.querySelector('.dh-lb-score-wrap'); scoreWrap.innerHTML='';
-  cloneSignals(row, scoreWrap);
-  var st=lb.querySelector('.dh-lb-strip'); st.innerHTML='';
-  slides.forEach(function(r,i){
-   var s=r.querySelector('.dh-shot'); if(!s)return;
-   var c=prepShotClone(s); c.setAttribute('data-el',r.getAttribute('data-element'));
-   if(i===at)c.setAttribute('aria-current','true');
-   fitShotInner(c);
-   st.appendChild(c);
-  });
-  var cur=st.querySelector('[aria-current="true"]');
-  if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:'nearest',inline:'center'});
-  lb.querySelector('[data-step="-1"]').disabled = at<=0;
-  lb.querySelector('[data-step="1"]').disabled = at>=slides.length-1;
- }
- function go(i){ if(i<0||i>=slides.length)return; at=i; paint() }
- function open(id){
-  slides=slidesFor(id); var i=indexOf(id);
-  if(i<0)return;
-  lastFocus=document.activeElement;
-  at=i;
-  if(typeof lb.showModal==='function') lb.showModal();
-  paint();
-  requestAnimationFrame(function(){
-   var art=lb.querySelector('.dh-lb-art .dh-shot');
-   if(art)fitShotInner(art);
-   lb.querySelectorAll('.dh-lb-strip .dh-shot').forEach(function(s){fitShotInner(s)});
-  });
-  lb.querySelector('.dh-lb-x').focus();
- }
- function close(){
-  if(lb.open) lb.close();
-  if(lastFocus&&lastFocus.focus)lastFocus.focus();
- }
- function start(){
-  build();
-  window.__dhOpenSlide=open;
-  document.addEventListener('click',function(e){
-   var s=e.target.closest('.dh-art .dh-shot[data-el]');
-   if(s){e.preventDefault(); open(s.getAttribute('data-el')); return}
-   var bar=e.target.closest('.dh-temp a[data-el]');
-   if(bar){e.preventDefault(); open(bar.getAttribute('data-el'))}
-  });
-  chartCard();
-  document.addEventListener('dh-row-painted',function(e){
-   if(!lb.open||!e.detail||!e.detail.element)return;
-   var row=slides[at]; if(!row||row.getAttribute('data-element')!==e.detail.element)return;
-   paint();
-  });
- }
- function chartCard(){
-  var card=document.createElement('div');
-  card.className='dh-chartcard'; card.setAttribute('aria-hidden','true');
-  document.body.appendChild(card);
-  var hide=function(){card.removeAttribute('data-on')};
-  function show(bar){
-   var id=bar.getAttribute('data-el'); if(!id)return;
-   var row=null, all=document.querySelectorAll('.dh-art .dh-fb[data-element]');
-   for(var i=0;i<all.length;i++){
-    if(all[i].getAttribute('data-element')===id && !all[i].closest('.dh-spec-score')){row=all[i];break}
-   }
-   var shot=row&&row.querySelector('.dh-shot');
-   card.innerHTML='';
-   if(shot){var c=prepShotClone(shot); card.appendChild(c); fitShotInner(c)}
-   var name=document.createElement('b');
-   name.textContent=bar.getAttribute('data-name')||id;
-   card.appendChild(name);
-   var meta=document.createElement('span');
-   var score=bar.getAttribute('data-score');
-   meta.textContent=(score==='--'?'':score+'/5');
-   card.appendChild(meta);
-   card.setAttribute('data-on','1');
-   var r=bar.getBoundingClientRect(), w=210;
-   var left=Math.min(Math.max(8,r.left+r.width/2-w/2), innerWidth-w-8);
-   card.style.left=left+'px';
-   card.style.top=Math.min(r.bottom+10, innerHeight-card.offsetHeight-8)+'px';
-  }
-  document.addEventListener('pointerover',function(e){
-   var bar=e.target.closest&&e.target.closest('.dh-temp a[data-el]');
-   if(bar)show(bar); else if(!e.target.closest||!e.target.closest('.dh-chartcard'))hide();
-  });
-  document.addEventListener('focusin',function(e){
-   var bar=e.target.closest&&e.target.closest('.dh-temp a[data-el]');
-   if(bar)show(bar); else hide();
-  });
-  window.addEventListener('scroll',hide,{passive:true});
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
- else start();
-})();
-</script>"""
+LIGHTBOX_SCRIPT = _screen("lightbox.js")
 
 
 def _specimens(entries: list[dict[str, object]], txt: dict[str, str],
@@ -3893,7 +2310,7 @@ ZONES = ("round", "fundamentals", "backlog", "antipattern")
 SUBNAV_ZONES = ("fundamentals", "backlog")
 # The long zone folds. The round is the ask and must never be hidden; the
 # fundamentals are the system on display; antipatterns are already quiet.
-FOLDING_ZONES = ("backlog",)
+FOLDING_ZONES = ("fundamentals", "backlog", "antipattern")
 
 
 def project_title(project_root: Path | None) -> str:
@@ -3906,25 +2323,10 @@ def project_title(project_root: Path | None) -> str:
         return ""
 
 
-STATUS_ICON_RE = re.compile(
-    r"^((?:[\U0001F1E6-\U0001F1FF]{2})|"
-    r"(?:[\u2600-\u27BF\U0001F300-\U0001FAFF](?:\uFE0E|\uFE0F)?"
-    r"(?:\u200D[\u2600-\u27BF\U0001F300-\U0001FAFF](?:\uFE0E|\uFE0F)?)*))\s*")
-
-
-def split_status_icon(text: str, fallback: str) -> tuple[str, str]:
-    value = text.strip()
-    match = STATUS_ICON_RE.match(value)
-    if not match:
-        return fallback, value
-    return match.group(1), value[match.end():]
-
-
 def render_article(project_root: Path, decisions: dict[str, object],
-                   cohort: set[str] | None = None, cohort_name: str = "",
-                   language: str | None = None,
-                   theme: dict[str, str] | None = None,
-                   title: str = "", asks: str = "", status: str = "",
+                   cohort: set[str] | None = None, *,
+                   cohort_name: str = "", language: str | None = None,
+                   title: str = "", asks: str = "",
                    agent_url: str = "", agent_name: str = "",
                    round_label: str = "", agent_working: bool = False) -> str:
     """A design-system article that is also the scoring companion.
@@ -3935,17 +2337,6 @@ def render_article(project_root: Path, decisions: dict[str, object],
     the faces as type -- and the scoring row sits against the thing it judges.
     """
     txt = strings_for(language or project_language(project_root))
-    workflow = None
-    try:
-        import editorial_workflow as workflow
-        saved_theme = workflow.selected_theme(project_root)
-        candidate_theme = theme or ((saved_theme or {}).get("elements"))
-        if candidate_theme:
-            theme = workflow.validate_theme_elements(candidate_theme)["active"]
-    except (ImportError, OSError, ValueError):
-        # Older installed copies have no project theme module. Their original
-        # safe article fallbacks remain intact.
-        workflow = None
     agent_url, raw_name = resolve_agent(agent_url, agent_name, project_root)
     agent_app, agent_model = agent_display_parts(raw_name, agent_url)
     agent_name = agent_display_line(raw_name, agent_url)
@@ -3970,7 +2361,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
             "this cohort spans " + ", ".join(domains) + " -- that is a batch of errands, "
             "not a round. Narrow it to one surface or one problem, or say what they share "
             "with --asks \"<one sentence>\" so the screen can state it.")
-    generated = render_feedback_controls(decisions, theme, project_root, cohort, language)
+    generated = render_feedback_controls(decisions, None, project_root, cohort, language)
     rows = extract_feedback_rows(generated)
     style = re.search(r"<style>/\* dh-controls \*/.*?</style>", generated, re.S)
     script = re.search(r"<script>/\* dh-rehydrate \*/.*?</script>", generated, re.S)
@@ -4085,19 +2476,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
     # clothes. The hero names the artefact being designed; the round is a line
     # underneath it, which is what it actually is.
     headline = html_escape(title or project_title(project_root) or txt["article-title"])
-    theme_vars = {"--dh-bg": "bg", "--dh-ink": "ink", "--dh-accent": "accent", "--dh-font": "font"}
-    declared = "; ".join(f"{prop}: {theme[key]}"
-                         for prop, key in theme_vars.items() if (theme or {}).get(key))
-    root_style = f' style="{declared}"' if declared else ""
     agent_state = "active" if agent_working else "idle"
-    live_status = status.strip()
-    if agent_state == "idle":
-        live_label = txt["bar-idle"]
-        live_detail = txt["bar-hint"]
-        live_icon = "💬"
-    else:
-        live_label = txt["bar-active-label"]
-        live_icon, live_detail = split_status_icon(live_status, "🎨")
     designing_display = (round_label or cohort_name).strip()
     # The screen is a fragment, so its encoding rode entirely on whoever served
     # it. Opened from disk, or served by anything that omits the header, every
@@ -4105,7 +2484,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
     # the artifact say what it is wherever it ends up.
     out = ['<meta charset="utf-8">',
            ARTICLE_STYLE, style.group(0) if style else "", script.group(0) if script else "",
-           TOC_SCRIPT, SHOT_FIT_SCRIPT, LIGHTBOX_SCRIPT, LIVE_SCRIPT,
+           TOC_SCRIPT, SHOT_FIT_SCRIPT, LIGHTBOX_SCRIPT,
            f'<div class="dh-art" data-saved="{html_escape(txt["saved"])}" '
            f'data-cheer-text="{html_escape(txt["done-cheer"])}" '
            f'data-done-label="{html_escape(txt["completed"])}" '
@@ -4115,8 +2494,7 @@ def render_article(project_root: Path, decisions: dict[str, object],
            f'data-agent-label="{html_escape(agent_name)}" '
            f'data-agent-app="{html_escape(agent_app)}" '
            f'data-agent-model="{html_escape(agent_model)}" '
-           f'data-companion-kind="{html_escape(txt["companion-kind"])}"'
-           f'{root_style}>',
+           f'data-companion-kind="{html_escape(txt["companion-kind"])}">',
            '<header class="dh-hero">',
            # Read by a graphic designer, not by whoever built the harness: who
            # is asking, what this page is, which project, and what is on the
@@ -4160,13 +2538,13 @@ def render_article(project_root: Path, decisions: dict[str, object],
         tags_markup = corpus_tags.render_corpus_tags(project_root, txt)
     except (ImportError, OSError, ValueError):
         tags_markup = ""
-    if workflow:
-        try:
-            burndown_markup = workflow.render_burndown(project_root)
-        except (OSError, ValueError):
-            burndown_markup = ""
-        if burndown_markup:
-            out.append(burndown_markup)
+    try:
+        import editorial_workflow
+        burndown_markup = editorial_workflow.render_burndown(project_root)
+    except (ImportError, OSError, ValueError):
+        burndown_markup = ""
+    if burndown_markup:
+        out.append(burndown_markup)
     shown = [z for z in ZONES
              if z == "round" or any(zone_of(e, cohort) == z for e in live)]
     links = []
@@ -4348,46 +2726,12 @@ def render_article(project_root: Path, decisions: dict[str, object],
         out.append("</section>")
         if zone == "round":
             out.extend(m for m in (brief_markup, tags_markup) if m)
-    # A designer finishing a page of scores has no idea what happens next.
-    # The bar says it, stays put, and counts what is still unscored.
-    unscored_now = len([e for e in live if not e.get("scored")])
     out += [
         '<footer class="dh-credit">'
         f'<b>{html_escape(txt["credit-what"])}</b>'
         f'<span>{html_escape(txt["credit-who"])}</span>'
         "</footer>",
         "</div>",
-        '<aside class="dh-bar" role="complementary">'
-        + f'<i class="dh-live" role="status" data-state="{agent_state}" '
-        + f'data-idle-label="{html_escape(txt["bar-idle"])}" '
-        + f'data-idle-aid="{html_escape(txt["bar-hint"])}" '
-        + 'data-idle-icon="💬" data-active-icon="🎨" '
-        + f'data-active-label="{html_escape(txt["bar-active-label"])}">'
-        + f'<span class="dh-live-icon" aria-hidden="true">{html_escape(live_icon)}</span>'
-        + '<span class="dh-live-copy">'
-        + f'<span class="dh-live-label">{html_escape(live_label)}</span>'
-        + f'<span class="dh-live-detail">{html_escape(live_detail)}</span></span></i>'
-        + '<details class="dh-bar-settings" data-theme-settings>'
-          f'<summary>{html_escape(txt["agent-settings"])}</summary>'
-          '<div class="dh-bar-settings-panel">'
-          '<div class="dh-theme-switch">'
-          '<input id="dh-update-app-theme" type="checkbox" role="switch" '
-          'data-follow-art-direction>'
-          f'<label for="dh-update-app-theme">{html_escape(txt["update-app-theme"])}</label></div>'
-          '<div class="dh-theme-select">'
-          f'<label for="dh-saved-themes">{html_escape(txt["saved-themes"])}</label>'
-          '<select id="dh-saved-themes" data-theme-select><option value=""></option></select></div>'
-          '<div class="dh-bar-settings-actions">'
-          f'<button type="button" data-theme-reset>{html_escape(txt["reset-theme"])}</button>'
-          f'<button type="button" data-theme-save>{html_escape(txt["save-theme"])}</button>'
-          '</div><output class="dh-sr-only" data-theme-message aria-live="polite"></output>'
-          '</div></details>'
-        + (f'<a class="dh-bar-go" href="{html_escape(agent_url)}">'
-           f'{CHAT_ICON}<span>{html_escape(txt["bar-return"])}</span></a>'
-           if agent_url.strip()
-           else f'<span class="dh-bar-go" aria-disabled="true">'
-           f'{CHAT_ICON}<span>{html_escape(txt["bar-return"])}</span></span>')
-        + "</aside>",
     ]
     return "\n".join(part for part in out if part) + "\n"
 
@@ -4520,6 +2864,11 @@ def publish_screen(project_root: Path, screen: Path, gap_seconds: int = 5) -> Pa
         # hand anyway. One fix here covers every caller that names a path.
         content.mkdir(parents=True, exist_ok=True)
         screen = Path(shutil.copy2(screen, content / screen.name))
+    try:
+        import corpus_tags
+        corpus_tags.stage_corpus_thumbnails(project_root, content)
+    except (ImportError, OSError):
+        pass
     others = [p for p in content.glob("*.html") if p.resolve() != screen.resolve()]
     newest_other = max((p.stat().st_mtime for p in others), default=0.0)
     stamp = max(time.time(), newest_other + gap_seconds)
@@ -4981,10 +3330,10 @@ def self_test() -> None:
         # hash-pinned: a preview that changed is a preview nobody looked at.
         shots = project / "shots"
         shots.mkdir()
-        shot = shots / "cover.svg"
-        shot.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 85 110"><rect width="85" height="110" fill="#f9e7b5"/></svg>', encoding="utf-8")
+        shot = shots / "cover.html"
+        shot.write_text('<div style="width:85px;height:110px;background:#f9e7b5"></div>', encoding="utf-8")
         record_decision(project, "cover.layout.two-column", "approved", 5, "user: 'c2'", [],
-                        preview_reference(project, "shots/cover.svg"), source="user")
+                        preview_reference(project, "shots/cover.html"), source="user")
         validate_harness(project)
         with_shot = render_feedback_controls(load_decisions(output), None, project)
         if 'class="dh-shot"' not in with_shot or "#f9e7b5" not in with_shot:
@@ -4994,12 +3343,12 @@ def self_test() -> None:
         if with_shot != render_feedback_controls(load_decisions(output), None, project):
             raise HarnessError("self-test: previews broke control determinism")
         # A regenerated preview is normal work: it must be reported, not blocked.
-        shot.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 85 110"><rect fill="#000"/></svg>', encoding="utf-8")
+        shot.write_text('<div style="width:85px;height:110px;background:#000"></div>', encoding="utf-8")
         report = validate_harness(project)
         if not any("changed since it was ranked" in w for w in report["warnings"]):
             raise HarnessError("self-test: preview drift must be reported as a warning")
         record_decision(project, "cover.layout.two-column", "approved", 5, "user: 'c2'", [],
-                        preview_reference(project, "shots/cover.svg"), source="user")
+                        preview_reference(project, "shots/cover.html"), source="user")
         validate_harness(project)
         for bad in ("../outside.svg", "shots/nope.svg", "scripts/evil.py"):
             try:
@@ -5243,9 +3592,6 @@ def parser() -> argparse.ArgumentParser:
                          help="deep link back to the agent's desktop app. Left empty "
                               "the header and the bottom bar render as plain text "
                               "rather than guessing a URL scheme.")
-    article.add_argument("--status", default="",
-                        help="what the agent is doing right now, in the user's language, "
-                              "e.g. 'Redibujando la portada'. Shown live in the bottom bar.")
     article.add_argument("--working", action="store_true",
                          help="green pulsing dot while the agent is drawing; omit when waiting "
                               "on the user (idle text + orange dot)")
@@ -5256,10 +3602,6 @@ def parser() -> argparse.ArgumentParser:
                          help="the artefact being designed, in the user's own words "
                               "(stored in project.json and reused)")
     article.add_argument("--lang", default="", choices=["", *sorted(STRINGS)])
-    article.add_argument("--bg", default="")
-    article.add_argument("--ink", default="")
-    article.add_argument("--accent", default="")
-    article.add_argument("--font", default="")
     controls = subcommands.add_parser("controls", help="emit star + like/dislike controls from the ledger")
     controls.add_argument("--project-root", required=True, type=Path)
     controls.add_argument("--out", type=Path, help="write here instead of stdout")
@@ -5371,7 +3713,6 @@ def main() -> int:
                   + "). Record it with `decide --preview`.")
         elif args.command == "article":
             root = args.project_root.resolve(strict=True)
-            theme = {k: getattr(args, k) for k in ("bg", "ink", "accent", "font") if getattr(args, k)}
             cohort = {e.strip() for e in args.cohort.split(",") if e.strip()}
             decisions = load_decisions(root / "spec" / "design-harness")
             canonicalize_recorded_previews(root, decisions)
@@ -5389,11 +3730,11 @@ def main() -> int:
                 write_json(path, stored)
             if args.agent_url.strip() or args.agent.strip():
                 save_companion_agent(root, args.agent_url, args.agent)
-            markup = render_article(root, decisions,
-                                    cohort, args.cohort_name, args.lang or None, theme or None,
-                                    args.title, args.asks, args.status,
-                                    args.agent_url, args.agent, args.round_label,
-                                    args.working)
+            markup = render_article(root, decisions, cohort, cohort_name=args.cohort_name,
+                                    language=args.lang or None, title=args.title,
+                                    asks=args.asks, agent_url=args.agent_url,
+                                    agent_name=args.agent, round_label=args.round_label,
+                                    agent_working=args.working)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(markup, encoding="utf-8")
             print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "

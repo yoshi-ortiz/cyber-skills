@@ -316,8 +316,8 @@ class TheArticleCarriesTheBrief(unittest.TestCase):
                          "elements": [{"element": "core.idea", "stars": 2,
                                        "sentiment": "like", "state": "proposed",
                                        "scored": True, "source": "user"}]}
-            markup = bh.render_article(root, decisions, set(), "", "es", None,
-                                       "T", "Ask.")
+            markup = bh.render_article(root, decisions, set(), cohort_name="",
+                                       language="es", title="T", asks="Ask.")
             self.assertIn('class="dh-brief"', markup)
             self.assertIn("Un programa impreso.", markup)
             self.assertIn("Resumen del proyecto", markup,
@@ -330,8 +330,8 @@ class TheArticleCarriesTheBrief(unittest.TestCase):
                          "elements": [{"element": "core.idea", "stars": 2,
                                        "sentiment": "like", "state": "proposed",
                                        "scored": True, "source": "user"}]}
-            markup = bh.render_article(Path(tmp), decisions, set(), "", "en", None,
-                                       "T", "Ask.")
+            markup = bh.render_article(Path(tmp), decisions, set(), cohort_name="",
+                                       language="en", title="T", asks="Ask.")
             self.assertNotIn("dh-brief", markup)
 
 

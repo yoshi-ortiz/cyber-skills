@@ -220,7 +220,8 @@ class OriginalArticleWithBurndownTest(unittest.TestCase):
                 decision("composition.secondary", 2, None),
                 decision("voice.rejected", 1, "dislike", state="rejected"),
             ]}
-            markup = bh.render_article(root, decisions, {"composition.hero"}, "Hero", "en")
+            markup = bh.render_article(root, decisions, {"composition.hero"},
+                                       cohort_name="Hero", language="en")
             order = [markup.index(fragment) for fragment in (
                 'class="dh-hero"',
                 'class="dh-burndown"',

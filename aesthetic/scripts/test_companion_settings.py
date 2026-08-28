@@ -150,11 +150,11 @@ class FrameSettingsStructureTest(unittest.TestCase):
         self.assertEqual(brand_rule.get("display"), "grid")
         self.assertIn("grid-template-columns", brand_rule)
 
-    def test_saved_font_updates_the_app_but_not_the_invariant_header(self) -> None:
+    def test_article_theme_never_updates_the_stable_app_font(self) -> None:
         helper = (ROOT / "companion" / "helper.js").read_text(encoding="utf-8")
         frame = (ROOT / "companion" / "frame-template.html").read_text(encoding="utf-8")
-        self.assertIn("root.setProperty('--app-font', elements.font)", helper)
-        self.assertIn("'--app-font'", helper)
+        self.assertNotIn("setProperty('--app-font'", helper)
+        self.assertNotIn("applyFrameTheme", helper)
         self.assertIn("font-family: var(--app-font)", frame)
         header = re.search(r"\.header\s*\{(?P<body>.*?)\n\s*\}", frame, re.S)
         self.assertIsNotNone(header)
@@ -170,26 +170,14 @@ class ArticleSettingsStructureTest(unittest.TestCase):
                 "state": "proposed", "scored": False, "source": "agent",
             }],
         }
-        return bh.render_article(Path("/tmp"), decisions, {"core.idea"}, "", "en", None,
-                                 "Project", "Ask.", status, agent_working=working)
+        return bh.render_article(Path("/tmp"), decisions, {"core.idea"}, cohort_name="",
+                                 language="en", title="Project", asks="Ask.",
+                                 agent_working=working)
 
-    def test_bottom_settings_have_exact_control_vocabulary_and_a_semantic_switch(self) -> None:
+    def test_article_has_no_theme_settings_or_floating_status(self) -> None:
         document = tree(self.markup())
-        settings = document.find(**{"data-theme-settings": ""})
-        self.assertIsNotNone(settings)
-        self.assertNotIn("open", settings.attrs)
-        self.assertEqual(settings.visible_text(),
-                         "Agent settings Update app theme Saved themes Reset theme Save")
-        switch = settings.find(**{"data-follow-art-direction": ""})
-        self.assertEqual(switch.tag, "input")
-        self.assertEqual(switch.attrs.get("type"), "checkbox")
-        self.assertEqual(switch.attrs.get("role"), "switch")
-        labels = {node.attrs.get("for"): node.visible_text() for node in settings.all("label")}
-        self.assertEqual(labels.get(switch.attrs.get("id")), "Update app theme")
-        select = settings.find(**{"data-theme-select": ""})
-        self.assertEqual(labels.get(select.attrs.get("id")), "Saved themes")
-        buttons = [button.visible_text() for button in settings.all("button")]
-        self.assertEqual(buttons, ["Reset theme", "Save"])
+        self.assertIsNone(document.find(**{"data-theme-settings": ""}))
+        self.assertIsNone(document.find(**{"class": "dh-bar"}))
 
     def test_spanish_settings_panel_is_spanish_not_english(self) -> None:
         """One screen speaking two languages is the exact regression
@@ -202,16 +190,10 @@ class ArticleSettingsStructureTest(unittest.TestCase):
                 "state": "proposed", "scored": False, "source": "agent",
             }],
         }
-        markup = bh.render_article(Path("/tmp"), decisions, {"core.idea"}, "", "es", None,
-                                   "Project", "Ask.", "", agent_working=False)
-        settings = tree(markup).find(**{"data-theme-settings": ""})
-        self.assertIsNotNone(settings)
-        text = settings.visible_text()
-        for english in ("Agent settings", "Update app theme", "Saved themes",
-                        "Reset theme", "Save"):
-            self.assertNotIn(english, text)
-        self.assertIn("Configuración del agente", text)
-        self.assertIn("Guardar", text)
+        markup = bh.render_article(Path("/tmp"), decisions, {"core.idea"}, cohort_name="",
+                                   language="es", title="Project", asks="Ask.",
+                                   agent_working=False)
+        self.assertNotIn('data-theme-settings', markup)
         self.assertIn('data-lang="es"', markup)
 
     def test_hero_metadata_keys_and_values_share_an_opposed_grid_edge(self) -> None:
@@ -227,54 +209,18 @@ class ArticleSettingsStructureTest(unittest.TestCase):
         self.assertEqual(values.get("text-align"), "left")
         self.assertEqual(values.get("justify-self"), "start")
 
-    def test_live_status_keeps_emoji_out_of_the_wrapping_text_column(self) -> None:
-        document = tree(self.markup("🎨 Redrawing the cover", True))
-        status = document.find(**{"class": "dh-live"})
-        icon = status.find(**{"class": "dh-live-icon"})
-        detail = status.find(**{"class": "dh-live-detail"})
-        copy = status.find(**{"class": "dh-live-copy"})
-        self.assertEqual(icon.visible_text(), "🎨")
-        self.assertEqual(detail.visible_text(), "Redrawing the cover")
-        self.assertIs(icon.parent, status)
-        self.assertIs(copy.parent, status)
-        style_node = next(node for node in document.all("style")
-                          if "dh-article" in node.visible_text())
-        live = declarations(style_node.visible_text(), ".dh-live")
-        self.assertRegex(live.get("grid-template-columns", ""), r"^\d+px minmax\(0,1fr\)$")
+    def test_live_status_is_owned_by_the_frame(self) -> None:
+        markup = self.markup("🎨 Redrawing the cover", True)
+        self.assertIn('data-agent-state="active"', markup)
+        self.assertNotIn('class="dh-live"', markup)
 
 
-class ServerThemeSafetyTest(unittest.TestCase):
-    def test_white_on_white_rolls_back_the_offending_background(self) -> None:
-        server = json.dumps(str(ROOT / "companion" / "server.cjs"))
-        source = (
-            f"const s=require({server});"
-            "const x=s.validateThemeElements("
-            "{bg:'#ffffff',ink:'#ffffff',accent:'#eeeeee',font:'system-ui'},"
-            "{bg:'#111111',ink:'#ffffff',accent:'#73d2ff',font:'system-ui'});"
-            "if(x.active.bg!=='#111111'||x.active.ink!=='#ffffff')process.exit(1);"
-            "if(s.contrast(x.active.bg,x.active.ink)<4.5)process.exit(2);"
-        )
-        completed = subprocess.run(["node", "-e", source], capture_output=True, text=True)
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-
-    def test_select_reset_and_save_preserve_the_safe_saved_themes(self) -> None:
-        server = json.dumps(str(ROOT / "companion" / "server.cjs"))
-        with tempfile.TemporaryDirectory() as tmp:
-            source = (
-                f"process.env.BRAINSTORM_PROJECT_DIR={json.dumps(tmp)};"
-                f"const s=require({server});"
-                "const safe={bg:'#111111',ink:'#ffffff',accent:'#73d2ff',font:'system-ui'};"
-                "s.updateThemeSpec({action:'save',mode:'new',id:'one',name:'One',elements:safe});"
-                "s.updateThemeSpec({action:'save',mode:'new',id:'two',name:'Two',elements:safe});"
-                "s.updateThemeSpec({action:'select',id:'one'});"
-                "s.updateThemeSpec({action:'follow',enabled:true});"
-                "const x=s.updateThemeSpec({action:'reset'});"
-                "if(x.selected!==null||x.followArtDirection!==false||x.themes.length!==2)process.exit(1);"
-                "if(x.themes.some(t=>s.contrast(t.elements.bg,t.elements.ink)<4.5))process.exit(2);"
-            )
-            completed = subprocess.run(["node", "-e", source], capture_output=True,
-                                       text=True)
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+class ServerThemeBoundaryTest(unittest.TestCase):
+    def test_companion_server_has_no_project_theme_api(self) -> None:
+        source = (ROOT / "companion" / "server.cjs").read_text(encoding="utf-8")
+        self.assertNotIn("pathname === '/theme'", source)
+        self.assertNotIn("THEME_FILE", source)
+        self.assertNotIn("updateThemeSpec", source)
 
 
 class ServerLiveStateTest(unittest.TestCase):

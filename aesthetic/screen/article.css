@@ -1,0 +1,701 @@
+/* dh-article */
+/* Stable review chrome. Design-Inference owns preview content, never the app
+   that frames, compares, and records it. */
+html:has(.dh-art){scroll-behavior:smooth}
+.main{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){
+ html:has(.dh-art){scroll-behavior:auto}
+ .main{scroll-behavior:auto}
+}
+/* One spacing scale, used everywhere. Before this the page carried a dozen
+   hand-typed gaps -- zones at 56/40/44, 0/60/0 and 72/34/40, groups at 32/12,
+   specimens at 22 -- so nothing lined up with anything and the eye read the
+   rhythm as noise. Empty space only reads as design when it repeats. */
+.dh-art{--s1:8px;--s2:14px;--s3:24px;--s4:40px;--s5:64px;--s6:104px;
+ --dh-bg:var(--bg-secondary,#fff);--dh-ink:var(--text-primary,#1d1d1f);
+ --dh-accent:var(--accent,#0071e3);
+ --dh-font:var(--app-font,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);
+ --dh-rule:color-mix(in srgb, var(--dh-ink,#111) 16%, transparent);
+ background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
+ font:400 15px/1.55 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
+ inline-size:100%;max-inline-size:min(1180px,100%);margin:0 auto;padding:0 24px var(--s6);
+ box-sizing:border-box;
+ /* A short article left the rest of the viewport unpainted -- the host page's
+    canvas, which is black in a dark viewer, showing under the last section. */
+ min-block-size:100dvh}
+.dh-art *,.dh-art *::before,.dh-art *::after{box-sizing:inherit}
+/* Hero. The thesis is the QUESTION this round asks -- not a stat block, which
+   would say what has been counted rather than what is wanted. */
+.dh-hero{padding:40px 0 20px;border-block-end:2px solid var(--dh-ink,#111)}
+.dh-hero .dh-eyebrow{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent);margin:0 0 18px}
+.dh-hero h1{margin:0;font-size:clamp(34px,6.2vw,68px);line-height:1.02;font-weight:800;
+ letter-spacing:-.035em;text-wrap:balance}
+.dh-hero h1 em{font-style:normal;color:var(--dh-accent,#d9482a)}
+/* The round, named as a round: a label, the cohort's own id in code voice, and
+   the count. Not a headline. */
+/* A proposal shown beside what it replaces. "Is this good?" has no answer;
+   "is this better than what stands?" does. */
+.dh-versus{display:flex;flex-direction:column;gap:var(--s1);margin:0 0 var(--s3);padding:var(--s3);
+ border:1px solid var(--dh-rule);border-radius:14px}
+.dh-versus-label{margin:0}
+.dh-versus-label b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+ color:color-mix(in srgb, currentColor 58%, transparent)}
+.dh-versus-label b.dh-now{color:var(--dh-bg,#fff)}
+/* Not `opacity`. A light card at 70% over the round zone's dark ground blends
+   toward it and comes out muddy olive -- the "before" row looked broken rather
+   than recessed. An opaque tint recedes on any ground. */
+.dh-versus .dh-fb-before{background:color-mix(in srgb, var(--dh-ink,#111) 10%, var(--dh-bg,#fff))}
+/* Two or more genuine variants of ONE idea, grouped under a shared "before"
+   instead of each getting its own standalone .dh-versus -- comparing them
+   side by side is the point, not paging through identical-looking cards one
+   at a time. auto-fit/minmax reflows to one column on a narrow viewport
+   without a dedicated breakpoint. */
+.dh-idea-group{display:flex;flex-direction:column;gap:var(--s1);margin:0 0 var(--s3);padding:var(--s3);
+ border:1px solid var(--dh-rule);border-radius:14px}
+.dh-idea-group .dh-fb-before{background:color-mix(in srgb, var(--dh-ink,#111) 10%, var(--dh-bg,#fff))}
+.dh-idea-variants{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+ gap:var(--s2);margin-block-start:var(--s1)}
+.dh-idea-variant{display:flex;flex-direction:column;gap:var(--s1)}
+/* What the round is ABOUT, in the system's own vocabulary. Without it the
+   reader has to infer the domain from three unrelated rows. */
+.dh-domain{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.dh-domain span{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+ padding:4px 9px;border-radius:999px;border:1px solid currentColor;opacity:.75}
+.dh-round{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:16px 0 0}
+.dh-round b{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+ padding:4px 9px;border-radius:999px;background:var(--dh-accent,#d9482a);color:#fff;flex:none}
+.dh-round code{font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--dh-ink,#111)}
+.dh-round span{font-size:12px;color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
+/* Project and what is being designed: one two-column grid so the labels line up. */
+.dh-hero-meta{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 12px;
+ align-items:baseline;margin:16px 0 0;max-inline-size:52ch}
+.dh-hero-meta .dh-label{font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+ padding:4px 9px;border-radius:999px;flex:none;border:1px solid var(--dh-rule);
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);
+ justify-self:end;text-align:right}
+.dh-hero-meta .dh-value{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;
+ overflow-wrap:anywhere;justify-self:start;text-align:left}
+.dh-project,.dh-designing{display:none}
+/* The instruction is the point of the page: it tells a designer what to do
+   here AND what to do next. It reads at body size, not as fine print. */
+.dh-hero .dh-lede{margin:24px 0 0;max-inline-size:62ch;font-size:16px;line-height:1.6;
+ color:color-mix(in srgb, var(--dh-ink,#111) 82%, transparent)}
+.dh-figures{display:flex;flex-wrap:wrap;gap:34px;margin:18px 0 0;padding:0;list-style:none}
+.dh-figures div{display:flex;flex-direction:column;gap:3px}
+.dh-figures b{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.dh-figures span{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
+/* The signature: one bar per standing element, coloured by its own score, worst
+   to best. The whole system's temperature in a single line -- real data, no
+   decoration, and it reads before a single word is read. */
+.dh-temp-wrap{margin:26px 0 0;max-inline-size:100%;overflow-x:auto;
+ -webkit-overflow-scrolling:touch}
+.dh-temp{display:flex;gap:2px;block-size:12px}
+.dh-temp-wrap figcaption{margin:9px 0 0;font-size:10.5px;
+ color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+/* Every bar is the element it stands for: click it and you are at its row.
+   A chart nobody can act on is decoration, and this one is the only view of
+   the whole system that fits on one line. */
+.dh-temp a{flex:1 1 0;min-inline-size:3px;border-radius:1px;background:currentColor;
+ display:grid;place-items:center;text-decoration:none;transition:transform .1s,outline-color .1s;
+ outline:1px solid transparent;outline-offset:1px}
+.dh-temp a:hover,.dh-temp a:focus-visible{transform:scaleY(1.55);
+ outline-color:var(--dh-ink,#111)}
+/* Its own tooltip, not the browser's: `title` waits a second, renders in the
+   OS font at the pointer, and never appears at all on a keyboard focus. This
+   one is instant, legible, and follows focus too. */
+/* `display:none`, not `opacity:0`. An absolutely positioned box still counts
+   toward scrollable overflow while invisible, so forty nowrap tooltips made the
+   companion's pane 162px wider than itself -- and it opened scrolled, with the
+   headline and the left edge of every card cut off. */
+/* A real preview card, not a line of text. The chart is the only view of the
+   whole system that fits on one line, so hovering a bar has to answer "which
+   drawing is this?" -- with the drawing. Built by script because a CSS
+   `content:` tooltip cannot hold an image. */
+.dh-chartcard{position:fixed;z-index:60;display:none;inline-size:210px;padding:10px;
+ border-radius:12px;pointer-events:none;
+ background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
+ border:1px solid color-mix(in srgb, var(--dh-ink,#111) 22%, transparent);
+ box-shadow:0 14px 44px rgba(0,0,0,.28)}
+.dh-chartcard[data-on]{display:block}
+.dh-chartcard .dh-shot{--dh-shot-w:188px;border-radius:6px;background:#fff;margin:0 0 8px}
+.dh-chartcard b{display:block;font-size:12.5px;line-height:1.3;font-weight:700;
+ letter-spacing:-.01em;text-wrap:balance}
+.dh-chartcard span{display:block;margin-block-start:4px;font-size:10px;letter-spacing:.12em;
+ text-transform:uppercase;color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+.dh-temp a{cursor:zoom-in}
+/* The last bars would push their tooltip off the right edge. */
+.dh-temp a:nth-last-child(-n+8)::after{inset-inline-start:auto;inset-inline-end:0}
+.dh-temp a span{font-size:9px;font-weight:800;line-height:1;color:var(--dh-bg,#fff)}
+/* The round's own items are marked in the strip, so "what am I being asked?"
+   is answerable from the sticky bar without scrolling to find out. */
+/* This round, findable in a strip of sixty: a full ring, not a hairline. */
+/* Inside the bar, not around it. `outline-offset` pushed a ring into the gaps
+   either side, so the marked bars read as two loose boxes sitting on top of the
+   strip instead of as bars within it. */
+/* A negative outline offset draws the ring INSIDE the bar without touching the
+   gaps. The two stacked inset shadows before this were 6px of ring on a 15px
+   bar -- they ate it, and the marks came out as dark specks. */
+.dh-temp a[data-asked]{outline:2px solid var(--dh-ink,#111);outline-offset:-2px;
+ box-shadow:none;min-inline-size:18px;flex-grow:2.4;border-radius:2px;z-index:1}
+.dh-temp-sticky{block-size:11px;margin:0}
+.dh-key{display:flex;flex-wrap:wrap;gap:4px 16px;margin:7px 0 0;padding:0 0 8px;
+ font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
+.dh-key span{display:flex;align-items:center;gap:5px}
+.dh-key i{inline-size:11px;block-size:8px;border-radius:1px;background:currentColor;flex:none}
+.dh-key b{font-size:9px;line-height:1;padding:1px 4px;border-radius:2px;
+ border:1px solid currentColor}
+.dh-toc{padding-block-end:0}
+/* The sticky bar names itself. Scrolled deep into the page, a row of pills
+   with no title does not say what the page is or what it is collecting. */
+/* Always on, bold. A fade tied to scroll state cost three debugging rounds and
+   its failure mode is the title never appearing at all -- strictly worse than
+   the redundancy it was avoiding. */
+.dh-toc-title{margin:0;padding:9px 0 0;font-size:12px;font-weight:800;
+ letter-spacing:.16em;text-transform:uppercase;color:var(--dh-ink,#111)}
+/* Going well on one side, waiting on you on the other, with air between. */
+.dh-key{justify-content:flex-start}
+.dh-key-good,.dh-key-bad{display:flex;flex-wrap:wrap;gap:4px 16px}
+.dh-key-bad{margin-inline-start:auto}
+.dh-temp i{flex:1 1 0;border-radius:1px;background:currentColor;min-inline-size:2px}
+.dh-t0{color:#b00020}.dh-t1{color:#c2451c}.dh-t2{color:#cf7a12}
+.dh-t3{color:#b98b07}.dh-t4{color:#6f9430}.dh-t5{color:#1c8b4b}
+/* Solid green means DONE, and only that. A top score is a different claim --
+   beautifully drawn, question still open -- so it sits back as a faded green. */
+.dh-tdone{color:#1c8b4b}
+.dh-thigh{color:#9ec78a}
+.dh-tanti{color:#9c7078}
+.dh-tnone{color:color-mix(in srgb, var(--dh-ink,#111) 18%, transparent)}
+/* Zones. Four, and the reader must never wonder which one they are in.
+   The gap BETWEEN zones is what says "this is a different question" -- it was
+   60px, barely more than the 40px inside a group, so the sections ran into one
+   another and the page read as one undifferentiated scroll. */
+/* The rows query THIS, not themselves -- an element cannot respond to its own
+   container query, which is why the first attempt silently did nothing and the
+   controls kept overflowing a narrow row by 220px. */
+.dh-zone{padding:var(--s6) 0 0;container-type:inline-size;container-name:dh-row}
+.dh-zone > header{margin:0 0 var(--s4);max-inline-size:60ch}
+.dh-zone h2{margin:0;font-size:clamp(24px,3.4vw,36px);font-weight:800;letter-spacing:-.028em;
+ text-wrap:balance}
+.dh-zone .dh-note{margin:var(--s1) 0 0;max-inline-size:52ch;font-size:13px;
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-zone .dh-tag{display:inline-block;margin:0 0 12px;padding:4px 10px;border-radius:999px;
+ font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+ border:1px solid var(--dh-rule)}
+/* This round is the only section that asks for something, so it is the only one
+   that raises its voice: inverted, full bleed against everything else. */
+.dh-zone[data-zone="round"]{background:var(--dh-ink,#111);color:var(--dh-bg,#fff);
+ margin:var(--s3) 0 0;padding:var(--s3) var(--s4) var(--s4);border-radius:16px;
+ position:relative;
+ /* The ground inverts here, so the rule token has to invert with it. Derived
+    from ink, it was ink-on-ink: every border inside this zone vanished. */
+ --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 30%, transparent)}
+.dh-zone[data-zone="round"] .dh-tag{border-color:var(--dh-bg,#fff);background:var(--dh-accent,#d9482a);
+ border-color:var(--dh-accent,#d9482a);color:#fff}
+.dh-zone[data-zone="round"] .dh-note{color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
+/* Turned-down work is kept, not displayed. It sits last and reads at low
+   contrast so the eye passes over it on the way down and can still stop when
+   it needs to -- muted, never hidden: a rejection is undone by clicking the
+   row, so the row has to stay reachable. */
+/* The SECTION recedes, not its contents. Dimming the rows made the stars and
+   thumbs inside them hard to read, and those controls are the only way a
+   rejection gets undone -- so the ground goes quiet and the rows stay at full
+   contrast on top of it. */
+.dh-zone[data-zone="antipattern"]{margin:var(--s5) 0 0;padding:var(--s4);border-radius:16px;
+ background:color-mix(in srgb, var(--dh-ink,#111) 6%, var(--dh-bg,#fff));
+ border:1px solid var(--dh-rule)}
+.dh-zone[data-zone="antipattern"] > header h2{font-size:clamp(19px,2.4vw,25px);font-weight:700;
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-zone[data-zone="antipattern"] > header .dh-note{
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
+.dh-zone[data-zone="antipattern"] .dh-group{
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-zone[data-zone="antipattern"] .dh-tag{color:#b00020;border-color:#b00020}
+.dh-empty{margin:0;font-size:13px;font-style:italic;
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
+/* The round's question, set as the protagonist it is. Filed as a grey note
+   under a heading it was the one sentence on the page nobody read -- and it is
+   the only thing the page is actually asking. */
+.dh-zone[data-zone="round"] > header{max-inline-size:none;text-align:center;
+ margin-block-end:var(--s3)}
+.dh-zone[data-zone="round"] > header .dh-tag,
+.dh-zone[data-zone="round"] > header .dh-domain{margin-inline:auto}
+.dh-zone[data-zone="round"] > header .dh-domain{justify-content:center}
+.dh-round-icon{inline-size:34px;block-size:34px;display:block;margin:0 auto var(--s2);
+ color:var(--dh-accent,#d9482a)}
+/* The section name is the label; the round's own topic is the subject, so it
+   reads larger. The question below is the ask, weighted just under it. */
+.dh-zone[data-zone="round"] > header h2{font-weight:900;letter-spacing:-.03em}
+.dh-ask{margin:var(--s2) auto 0;max-inline-size:62ch;padding:0 var(--s3);
+ font-size:clamp(20px,2.6vw,27px);line-height:1.36;font-weight:600;
+ letter-spacing:-.02em;text-wrap:balance;
+ color:color-mix(in srgb, var(--dh-bg,#fff) 96%, transparent)}
+/* Group headings carry two different ranks. In the critical components the
+   group IS the subject -- the palette, the type -- so it reads big. In the
+   development backlog it is a folder label under an accordion, so it stays
+   bold but small. One `.dh-group` rule could not say both. */
+.dh-art .dh-zone[data-zone="fundamentals"] .dh-group{
+ font-size:clamp(19px,2.2vw,26px);font-weight:800;letter-spacing:-.02em;
+ text-transform:none;
+ color:color-mix(in srgb, var(--dh-ink,#111) 92%, transparent)}
+.dh-art .dh-zone[data-zone="fundamentals"] .dh-group .dh-count{font-size:13px;opacity:.55}
+.dh-art .dh-zone[data-zone="backlog"] .dh-group{
+ font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:none;
+ color:color-mix(in srgb, var(--dh-ink,#111) 78%, transparent)}
+/* Specimens: the section shows the actual material before it shows the rows.
+   A palette section that lists ids is a list; one that shows the colours is a
+   design system. */
+/* `align-items:start`, or the grid stretches every card to the tallest and a
+   swatch with no controls carries the void where they would have been. Two of
+   three palette cards were 47% empty beige -- measured at 131px of nothing --
+   which reads as a broken layout, not as breathing room. */
+/* `auto-fit`, not `auto-fill`: auto-fill keeps the empty tracks it can fit, so
+   three swatches in a 1052px row sat in a five-column grid with 426px of dead
+   grid beside them. auto-fit collapses the empty tracks and the cards fill the
+   row they are given. */
+.dh-swatches{display:grid;/* 248px, not the 196 this grid was given before the scoring strip moved into
+      the card. The strip is five 30px stars, a zero and three verdict buttons --
+      216px of fixed touch targets that cannot shrink -- so a 196px column made
+      the grid overflow its own card by 42px at the narrow end. The card floor
+      is now whatever the controls actually need. */
+ grid-template-columns:repeat(auto-fit,minmax(248px,1fr));
+ align-items:start;gap:var(--s2);margin:0;padding:0;list-style:none}
+.dh-swatches li{border:1px solid var(--dh-rule);border-radius:8px;overflow:hidden;
+ background:color-mix(in srgb, currentColor 7%, transparent)}
+.dh-swatches .dh-chip{display:block;block-size:76px}
+.dh-swatches .dh-vals{padding:9px 10px;display:flex;flex-direction:column;gap:2px;
+ color:inherit}
+/* Scoped to the caption. `.dh-swatches span` also matched every span in the
+   scoring strip nested below -- each one dimming currentColor again, so by the
+   time a star was drawn it was ink at ten percent. */
+.dh-swatches .dh-vals b{font-size:12px;font-weight:700;letter-spacing:-.01em}
+.dh-swatches .dh-vals code{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+ color:color-mix(in srgb, currentColor 62%, transparent)}
+.dh-swatches .dh-vals > span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+ color:color-mix(in srgb, currentColor 55%, transparent)}
+.dh-faces{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
+.dh-faces .dh-face{border:1px solid var(--dh-rule);border-radius:10px;overflow:hidden;
+ background:color-mix(in srgb, currentColor 7%, transparent)}
+.dh-face-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 18px;
+ border-block-end:1px solid var(--dh-rule)}
+.dh-face-head b{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.dh-face-head code{font-size:10.5px;color:color-mix(in srgb, currentColor 58%, transparent);
+ overflow-wrap:anywhere}
+/* Controls ride inside the specimen, so the thing being judged and the way to
+   judge it are never in two different places. */
+.dh-spec-score{flex:none;margin-inline-start:auto}
+.dh-spec-score .dh-fb.dh-fb{display:block;border:0;padding:0;background:transparent;
+ contain:none;content-visibility:visible;
+ /* A row normally paints its own light ground and sets ink to match. Stripped
+    of that ground, it must take the zone's foreground instead -- otherwise
+    currentColor is still ink, and every rule derived from it is ink on ink. */
+ color:inherit}
+/* A row paints its own light background, so its controls may key off the page
+   ink. A specimen's controls do not: they sit directly on the zone's ground,
+   which the round inverts. Ink at 30% on ink was a star strip nobody could
+   see, on the one row the round is asking about. */
+/* The controls stylesheet is emitted after this one, and a bare
+   `.dh-spec-score .dh-stars > *` merely ties with its `.dh-fb .dh-stars > *`
+   -- so the later rule won and the strip stayed invisible. Naming .dh-fb too
+   outranks it. */
+.dh-spec-score .dh-fb .dh-stars > *{color:color-mix(in srgb, currentColor 34%, transparent)}
+.dh-spec-score .dh-fb .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
+.dh-spec-score .dh-fb .dh-stars:hover [data-rank]{
+ color:color-mix(in srgb, currentColor 30%, transparent)}
+.dh-spec-score .dh-fb .dh-stars[data-scored="no"]::after{
+ color:color-mix(in srgb, currentColor 45%, transparent)}
+.dh-spec-score .dh-fb [data-rank="0"]{color:color-mix(in srgb, currentColor 48%, transparent)}
+.dh-spec-score .dh-fb .dh-zero{
+ border-inline-end-color:color-mix(in srgb, currentColor 26%, transparent)}
+.dh-spec-score .dh-fb [data-sentiment],.dh-spec-score .dh-fb [data-verdict],
+.dh-spec-score .dh-fb [data-bookmark]{
+ border-color:color-mix(in srgb, currentColor 30%, transparent);
+ color:color-mix(in srgb, currentColor 70%, transparent)}
+.dh-spec-score .dh-fb [data-sentiment]:hover,
+.dh-spec-score .dh-fb [data-verdict]:hover,
+.dh-spec-score .dh-fb [data-bookmark]:hover{border-color:currentColor}
+/* A swatch column is far narrower than a control strip. Wrapping was the first
+   answer and it only moved the failure: the strip measures 328px of controls in
+   a 319px column, so it overflowed by NINE pixels and stranded the tick alone
+   on a second line -- and at the grid's 196px minimum not even the stars fit.
+   There is no width at which one line works, so the break is made on purpose:
+   a three-column grid, ranks on the first row, verdicts on the second. */
+.dh-swatches .dh-spec-score{inline-size:100%}
+.dh-swatches .dh-spec-score .dh-signals{display:grid;grid-template-columns:auto auto auto;
+ justify-content:start;align-items:center;gap:6px 8px;flex-wrap:initial}
+.dh-swatches .dh-spec-score .dh-zero{grid-column:1}
+.dh-swatches .dh-spec-score .dh-stars{grid-column:2 / -1}
+/* The zero's trailing rule separated it from the stars on one line. Wrapped to
+   its own cell it became a bar dangling in empty space. */
+.dh-swatches .dh-spec-score .dh-zero{border-inline-end:0;padding-inline-end:0}
+/* No type-size override here. Shrinking the glyph does not shrink the control:
+   each star is a 30px touch target from the controls stylesheet and the strip
+   is 170px whatever the font does, so the rule was dead weight hiding the real
+   constraint -- which is the COLUMN, fixed below. */
+.dh-swatches li{display:flex;flex-direction:column}
+.dh-swatches .dh-spec-score{margin:0;padding:8px 10px 10px;border-block-start:1px solid var(--dh-rule)}
+.dh-face-head .dh-face-use{margin-inline-start:auto;font-size:9.5px;font-weight:700;
+ letter-spacing:.16em;text-transform:uppercase;padding:3px 8px;border-radius:999px;
+ border:1px solid var(--dh-rule);flex:none}
+/* One row per weight actually in use, each pointed at the job it does. */
+.dh-variants{margin:0;padding:0;list-style:none}
+.dh-variants li{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:13px 18px}
+.dh-variants li + li{border-block-start:1px solid var(--dh-rule)}
+.dh-variants .dh-sample{font-size:30px;line-height:1.15;letter-spacing:-.02em;
+ flex:1 1 auto;min-inline-size:0;overflow-wrap:anywhere}
+.dh-variants .dh-var-meta{display:flex;flex-direction:column;gap:3px;text-align:end;
+ margin-inline-start:auto;flex:none}
+.dh-variants b{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.dh-variants code{font-size:10px;font-variant-numeric:tabular-nums;
+ color:color-mix(in srgb, currentColor 58%, transparent)}
+/* Sticky contents. The article is long by design -- four zones and every
+   foundation -- so without this the reader loses which zone they are reading,
+   and "is this settled or is this being asked?" is the one question the page
+   exists to answer. */
+.dh-toc{position:sticky;inset-block-start:0;z-index:20;margin:0;padding:0;
+ background:color-mix(in srgb, var(--dh-bg,#fff) 92%, transparent);
+ backdrop-filter:blur(8px);border-block-end:1px solid var(--dh-rule)}
+.dh-toc ol,.dh-toc li{display:flex;gap:4px;margin:0;padding:9px 0;list-style:none;
+ overflow-x:auto;scrollbar-width:none}
+.dh-toc li{padding:0;overflow:visible}
+.dh-toc li::before,.dh-toc li::marker{content:none}
+.dh-toc ol::-webkit-scrollbar{display:none}
+.dh-toc ol a{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;
+ text-decoration:none;white-space:nowrap;color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);
+ font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+ border:1px solid transparent;transition:color .15s,background .15s,border-color .15s}
+.dh-toc ol a:hover{color:var(--dh-ink,#111);border-color:var(--dh-rule)}
+.dh-toc ol a em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.7}
+.dh-toc ol a[aria-current="true"]{color:var(--dh-bg,#fff);background:var(--dh-ink,#111);
+ border-color:var(--dh-ink,#111)}
+/* The round is the ask, so its link is a button and everything else is a
+   place to go. It keeps that weight even when the reader is elsewhere --
+   that is the point of a call to action. */
+.dh-toc ol a[data-cta]{background:var(--dh-accent,#d9482a);border-color:var(--dh-accent,#d9482a);
+ color:#fff;box-shadow:0 1px 0 color-mix(in srgb, var(--dh-ink,#111) 22%, transparent)}
+.dh-toc ol a[data-cta]:hover{filter:brightness(1.08);color:#fff}
+.dh-toc ol a[data-cta][aria-current="true"]{background:var(--dh-ink,#111);
+ border-color:var(--dh-ink,#111)}
+.dh-toc ol a[data-cta] em{opacity:.85}
+.dh-ico{inline-size:13px;block-size:13px;flex:none}
+.dh-toc ol a:focus-visible,.dh-subnav a:focus-visible{
+ outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+/* Second level: sticks directly under the first, never over it. */
+/* Offset comes from the measured bar, not a number typed when it was one row
+   tall. The bar grew a strip and a key -- 47px to 93px -- and the second level
+   went on sticking underneath it, which reads as "the sub-nav disappeared". */
+.dh-subnav{position:sticky;inset-block-start:var(--dh-toc-h,47px);z-index:15;margin:0 0 20px;
+ background:color-mix(in srgb, var(--dh-bg,#fff) 92%, transparent);backdrop-filter:blur(8px);
+ border-block-end:1px solid var(--dh-rule)}
+.dh-subnav ol{display:flex;gap:14px;margin:0;padding:8px 0;list-style:none;
+ overflow-x:auto;scrollbar-width:none}
+.dh-subnav ol::-webkit-scrollbar{display:none}
+.dh-subnav a{display:flex;align-items:baseline;gap:6px;text-decoration:none;white-space:nowrap;
+ font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 0;
+ border-block-end:2px solid transparent;
+ color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
+.dh-subnav a:hover{color:var(--dh-ink,#111)}
+.dh-subnav a[aria-current="true"]{color:var(--dh-ink,#111);
+ border-block-end-color:var(--dh-accent,#d9482a)}
+.dh-subnav em{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.6}
+.dh-zone{scroll-margin-block-start:64px}
+.dh-group{scroll-margin-block-start:104px}
+/* Collapsible, and legible while collapsed. */
+.dh-acc{margin:0 0 6px}
+/* `flex-wrap`, or the thumb strip's `flex-basis:100%` is ignored on a nowrap
+   row: an 800px strip then shared a single line with the heading and crushed it
+   until "Ilustración y textura" broke across two lines in a 200px column. The
+   name gets its own line; the strip gets the full width under it. */
+.dh-acc > summary{cursor:pointer;list-style:none;align-items:center;flex-wrap:wrap;
+ gap:var(--s1) var(--s2)}
+.dh-acc > summary::-webkit-details-marker{display:none}
+/* The glyph itself, not a hex escape: the escape came back out of the browser
+   as U+0015 and drew the literal text "B8" beside every group. */
+.dh-acc > summary::before{content:"▸";flex:none;font-size:13px;
+ transition:transform .12s;color:color-mix(in srgb, currentColor 55%, transparent)}
+.dh-acc[open] > summary::before{transform:rotate(90deg)}
+.dh-acc > summary:focus-visible{outline:2px solid var(--dh-accent,#d9482a);outline-offset:3px}
+.dh-acc-thumbs{display:none;gap:5px;flex-wrap:wrap;flex:1 1 100%;
+ margin:10px 0 2px;--dh-shot-w:38px}
+.dh-acc:not([open]) > summary .dh-acc-thumbs{display:flex}
+.dh-acc-thumbs .dh-shot{border-radius:2px}
+.dh-acc-thumbs .dh-shot-missing{font-size:6px;padding:2px}
+/* Jumped-to rows must clear the sticky bars, or the bar lands on top of the
+   row it just took you to. */
+.dh-art .dh-fb{scroll-margin-block-start:112px}
+/* Fifty-four rows of the same height, abutting at zero margin, is a wall --
+   measured: 8100px of near-identical 150px bands with no gap anywhere in it.
+   Nothing tells the eye where one judgement ends and the next begins, which is
+   the whole of "chaotic" in a page whose individual rows are fine.
+   A row paints the page's own ground, so with no gap and no edge it was not
+   even visible as an object -- the wall had no seams at all. Each row becomes
+   a card: hairline edge, real gap, and a hover the pointer can confirm.
+   Borders rather than alternating bands, because these rows share a container
+   with specimens and versus-blocks, so any nth-of-type banding would drift.
+   `+` and not a blanket margin, so the first row still sits tight under its
+   own heading -- a heading and its first row are one unit. */
+.dh-art .dh-fb + .dh-fb{margin-block-start:var(--s1)}
+.dh-art .dh-fb{border:1px solid var(--dh-rule);border-radius:10px;
+ padding-inline:var(--s2);transition:border-color .12s,background .12s}
+.dh-art .dh-fb:hover{border-color:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
+ background:color-mix(in srgb, var(--dh-ink,#111) 4%, var(--dh-bg,#fff))}
+/* No round-zone override. The rule above mixes ink INTO bg, so it stays
+   opaque and is already correct on both grounds -- an override built from
+   `transparent` let the inverted zone show through a row that keeps its own
+   light ground and its own dark ink, which is how hovering a proposal turned
+   it into dark text on a near-black card. This is the inverted-zone token trap
+   for the fourth time: anything here derived from the PAGE ground rather than
+   the ROW's own ground breaks the moment the section inverts. */
+/* The group heading is the hierarchy step the wall was missing: it was 12px
+   from its rows and 32px from the group above, a four-point difference the eye
+   cannot resolve. Now the step is 64 against 8, and it carries a rule.
+   The `.dh-art` prefix is load-bearing: the controls stylesheet is emitted
+   AFTER this one and sets `.dh-group` itself, so a bare selector here would
+   merely tie on specificity and lose. */
+.dh-art .dh-group{margin:var(--s5) 0 var(--s2);padding-block-end:var(--s1);
+ border-block-end:1px solid var(--dh-rule);
+ /* 20px bold put the group name in the same voice as the 25px section title,
+    so the page read as one long run of headings with no rank between them.
+    A group is a LABEL on a set, not a section -- it steps down decisively. */
+ font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-art .dh-group .dh-count{font-size:11px;letter-spacing:0;opacity:.7}
+.dh-zone[data-zone="round"] .dh-group{
+ color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
+.dh-art .dh-spec + .dh-fb,.dh-art .dh-group + .dh-fb{margin-block-start:0}
+.dh-art .dh-spec{margin:0 0 var(--s4)}
+@media (max-width:640px){
+ .dh-art{padding-inline:16px}
+ .dh-zone[data-zone="round"],.dh-zone[data-zone="antipattern"]{padding-inline:16px}
+ .dh-faces .dh-sample{font-size:30px}
+}
+/* The slideshow. A thumbnail is 96px of an 8.5x11 sheet -- enough to recognise
+   a drawing you have already seen, nowhere near enough to JUDGE one, which is
+   what the page is asking for. So every thumbnail opens the same graphic at
+   full height with its argument beside it and its own scoring strip under
+   that, and arrows walk the whole set without going back to the scroll. */
+dialog.dh-lb:not([open]){display:none}
+/* Transparent dialog + opaque shell: clicks on the dimmed margin close the modal. */
+/* The scale is REDECLARED here, and that is load-bearing. `--s1..--s6` are
+   defined on `.dh-art`, but the dialog is appended to `document.body`, so it
+   is not a descendant of `.dh-art` and inherits none of them. Every
+   `var(--sN)` in the whole lightbox stylesheet silently resolved to nothing:
+   the shell computed `padding:0`, every zone gap collapsed, and the drawing,
+   its argument, the scoring strip and the filmstrip were left touching each
+   other with no space anywhere. That is the "cluttered slideshow" in one
+   line, and it survived several rounds of spacing edits because the edits
+   themselves were the thing being discarded. */
+dialog.dh-lb{position:fixed;inset:0;z-index:200;margin:0;padding:clamp(12px,3vw,28px);
+ --s1:8px;--s2:14px;--s3:24px;--s4:40px;--s5:64px;--s6:104px;
+ border:none;max-inline-size:none;max-block-size:none;inline-size:100%;block-size:100%;
+ background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent);color:var(--dh-bg,#fff);overflow:hidden}
+dialog.dh-lb::backdrop{background:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+html:has(dialog.dh-lb[open]) .header{display:none}
+/* Gap 0, and every zone declares its OWN step. One uniform `gap` gave the
+   title, the drawing, the argument, the scoring strip and the filmstrip the
+   same 14px between them, so five unrelated things read as one undifferentiated
+   stack and the drawing never got to be the subject. The steps below are the
+   article's own scale, used as a scale: hairline inside a zone, s3 between
+   zones, and a rule wherever the change of purpose is total. */
+.dh-lb-shell{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:0;
+ inline-size:min(1040px,100%);
+ block-size:min(960px,calc(100dvh - 32px));max-block-size:calc(100dvh - 32px);
+ margin:0 auto;padding:clamp(var(--s3),2.6vw,var(--s4));
+ background:color-mix(in srgb, var(--dh-ink,#111) 94%, transparent);
+ border-radius:14px;border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
+ box-shadow:0 28px 80px rgba(0,0,0,.55);
+ --dh-rule:color-mix(in srgb, var(--dh-bg,#fff) 32%, transparent)}
+.dh-lb-bar{display:flex;align-items:center;gap:var(--s2);min-block-size:34px;flex-wrap:nowrap;
+ padding-block-end:var(--s2);margin-block-end:var(--s3);
+ border-block-end:1px solid var(--dh-rule)}
+.dh-lb-count{font-size:11px;font-weight:700;letter-spacing:.16em;font-variant-numeric:tabular-nums;
+ opacity:.75;flex:none}
+.dh-lb-name{display:flex;flex-direction:column;gap:2px;min-inline-size:0;flex:1 1 auto}
+.dh-lb-id{font-size:15px;font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere;
+ min-inline-size:0}
+.dh-lb-token{display:none}
+.dh-lb-token::before{content:"#";opacity:.6;margin-inline-end:1px}
+.dh-lb-state{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+ padding:3px 9px;border-radius:999px;border:1px solid var(--dh-rule);flex:none;opacity:.8}
+.dh-lb-x{margin-inline-start:auto;flex:none;inline-size:34px;block-size:34px;border-radius:8px;
+ border:1px solid var(--dh-rule);background:color-mix(in srgb, var(--dh-bg,#fff) 8%, transparent);
+ color:inherit;font:inherit;font-size:17px;line-height:1;cursor:pointer;
+ appearance:none;-webkit-appearance:none;padding:0}
+.dh-lb-x:hover{background:color-mix(in srgb, var(--dh-bg,#fff) 16%, transparent)}
+.dh-lb-x:focus{outline:none}
+.dh-lb-x:focus-visible{outline:2px solid var(--dh-rule);outline-offset:2px}
+/* Body: image on top, copy and scoring in a footer row -- never a side column
+   that floats over the drawing in a narrow companion pane. */
+.dh-lb-body{display:flex;flex-direction:column;gap:0;min-block-size:0;overflow:hidden;
+ align-items:center;width:100%}
+/* The drawing is the subject, so it takes the whole free row and the arrows
+   get out of its way: a wider gutter than the old s2, so a 40px control never
+   sits against the sheet edge it is meant to be beside. */
+.dh-lb-frame{position:relative;flex:1 1 auto;min-block-size:0;width:100%;
+ display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
+ gap:var(--s3)}
+/* Left-aligned inside a real measure, not centred fragments. Centring three
+   stacked lines of different lengths gives every line a different left edge,
+   which is what made the argument read as debris under the drawing rather
+   than as a paragraph about it. */
+.dh-lb-copy{font-size:13.5px;line-height:1.6;max-block-size:16vh;overflow-y:auto;
+ inline-size:min(68ch,100%);margin:var(--s3) auto 0;text-align:start}
+.dh-lb-foot{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:var(--s2);width:100%;
+ margin-block-start:var(--s3);padding-block-start:var(--s3);
+ border-block-start:1px solid var(--dh-rule);
+ flex-wrap:nowrap;overflow-x:auto}
+.dh-lb-score-wrap{flex:none;inline-size:100%;max-inline-size:100%;
+ display:flex;justify-content:center;align-items:center}
+/* The thumbnail's own markup, re-scaled. `--dh-shot-w` is what sizes a shot,
+   so the slide sets it to the frame height rather than restyling the node. */
+/* Sized by its BOX, never by the viewport. `62vh` against a tall pane made the
+   drawing 1238px wide inside a 540px frame -- it overflowed to x=-309 and hung
+   off both edges. The grid row already knows how much height there is; the
+   aspect ratio turns that into a width. */
+/* Fit inside the cell on BOTH axes. `block-size:100%` alone let the height
+   grow while the width clamped at max-inline-size, so a tall window stretched
+   the page to a 0.28 aspect instead of 0.77. Container units say the whole
+   rule in one line: take the smaller of the cell's height and the height its
+   width allows. */
+.dh-lb-art{container-type:size;block-size:100%;min-block-size:0;
+ display:grid;place-items:center;overflow:hidden}
+.dh-lb-art .dh-shot{--dh-shot-w:auto;aspect-ratio:8.5/11;inline-size:auto;
+ block-size:min(100cqh, 100cqw * 11 / 8.5);
+ max-inline-size:100%;max-block-size:100%;position:relative;
+ background:#fff;border-radius:4px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+/* The sheet ratio belongs to a SCALED HTML COMP, which is drawn into a real
+   510x660 box and needs that box to exist. A PNG or SVG preview carries its
+   own intrinsic aspect, and forcing the sheet on it letterboxed the drawing
+   inside a tall cream slab -- the "huge empty area under the artwork" that
+   made every such slide look broken. Let the media size the box instead. */
+.dh-lb-art .dh-shot:not(:has(.dh-shot-inner)){aspect-ratio:auto;
+ block-size:auto;inline-size:auto;display:grid;place-items:center}
+.dh-lb-art .dh-shot:not(:has(.dh-shot-inner)) > img,
+.dh-lb-art .dh-shot:not(:has(.dh-shot-inner)) > svg{
+ display:block;max-inline-size:100%;max-block-size:100cqh;
+ inline-size:auto;block-size:auto;object-fit:contain}
+.dh-lb-art .dh-shot-inner{position:absolute;inset-block-start:0;inset-inline-start:0;
+ transform-origin:0 0;pointer-events:none}
+/* Quieter than the drawing it walks. At full-strength border and fill these
+   two circles read as primary controls flanking the subject. */
+.dh-lb-nav{flex:none;inline-size:40px;block-size:40px;border-radius:999px;cursor:pointer;
+ border:1px solid color-mix(in srgb, var(--dh-bg,#fff) 18%, transparent);
+ background:transparent;opacity:.7;
+ color:inherit;font:inherit;font-size:18px;line-height:1;
+ transition:opacity .12s,background .12s,border-color .12s}
+.dh-lb-nav:hover{opacity:1;border-color:var(--dh-rule);
+ background:color-mix(in srgb, var(--dh-bg,#fff) 14%, transparent)}
+.dh-lb-nav[disabled]{opacity:.25;cursor:default}
+.dh-lb-score-wrap .dh-lb-score{margin:0;inline-size:auto;max-inline-size:100%}
+.dh-lb-score-wrap .dh-lb-score .dh-signals{margin:0;flex-wrap:nowrap;justify-content:center}
+/* The lightbox clones the row strip outside `.dh-fb`, so give it a shell the
+   scoring CSS already knows. Triple-class beats `.dh-fb.dh-fb{display:grid}` in
+   dh-controls, which otherwise parks `.dh-signals` in the 96px thumb column. */
+.dh-lb-score-wrap .dh-lb-fb.dh-fb{display:flex;justify-content:center;align-items:center;
+ grid-template-columns:unset;padding:0;margin:0;width:auto;max-inline-size:100%;
+ border:0;background:transparent!important;box-shadow:none!important;color:inherit!important}
+.dh-lb-score-wrap .dh-lb-fb .dh-signals{position:static;display:inline-flex;flex-wrap:nowrap;
+ gap:8px;justify-content:center;align-items:center;grid-column:auto;width:auto;
+ max-inline-size:100%}
+dialog.dh-lb .dh-lb-score .dh-stars > *{
+ color:color-mix(in srgb, var(--dh-bg,#fff) 36%, transparent)}
+dialog.dh-lb .dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
+dialog.dh-lb .dh-lb-score [data-sentiment],
+dialog.dh-lb .dh-lb-score [data-verdict],
+dialog.dh-lb .dh-lb-score [data-bookmark]{
+ border-color:var(--dh-rule);
+ background:color-mix(in srgb, var(--dh-ink,#111) 28%, transparent);color:inherit}
+dialog.dh-lb .dh-lb-score [data-sentiment="like"].on,
+dialog.dh-lb .dh-lb-score [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff}
+dialog.dh-lb .dh-lb-score [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
+dialog.dh-lb .dh-lb-score [data-bookmark].on{background:#e0a20a;border-color:#a97600;color:#fff}
+dialog.dh-lb .dh-lb-score .dh-stars::after{
+ color:color-mix(in srgb, var(--dh-bg,#fff) 72%, transparent)}
+dialog.dh-lb .dh-lb-score .dh-zero [data-rank="0"]{
+ color:color-mix(in srgb, var(--dh-bg,#fff) 52%, transparent)}
+/* The argument leads and the provenance follows it, as a labelled pair on one
+   line rather than a label stacked over its own value. Stacked, each of the
+   two provenance lines cost three rows and the block outgrew the drawing's
+   own caption. */
+.dh-lb-copy .dh-lb-why{margin:0;opacity:.95;font-size:14px;line-height:1.55}
+.dh-lb-copy .dh-lb-sub{margin:var(--s2) 0 0;font-size:12px;opacity:.62;
+ display:grid;grid-template-columns:max-content minmax(0,1fr);
+ gap:var(--s1) var(--s2);align-items:baseline}
+.dh-lb-copy .dh-lb-sub b{font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+ font-size:9.5px;opacity:.85;white-space:nowrap}
+.dh-lb-score{padding:0;border:0}
+/* The strip is a live proxy: clicking here clicks the row's own control, so
+   the ledger has exactly one write path and the lightbox never holds state. */
+.dh-lb-score .dh-stars > *{color:color-mix(in srgb, currentColor 38%, transparent);
+ cursor:pointer;font-size:21px}
+.dh-lb-score .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
+.dh-lb-score .dh-stars{display:flex;gap:4px;align-items:center}
+.dh-lb-score .dh-stars[data-scored="no"]::after{content:"--";
+ color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
+/* The zero is a rank, so it sits with the ranks instead of exiled to the
+   verdict row where it read as a fourth verdict. */
+.dh-lb-zero{margin-inline-start:6px;cursor:pointer;font:inherit;font-size:13px;
+ line-height:1;padding:5px 9px;border-radius:8px;background:transparent;color:inherit;
+ border:1px solid var(--dh-rule)}
+.dh-lb-zero:hover{border-color:currentColor}
+.dh-lb-acts{display:flex;gap:var(--s1);margin-block-start:var(--s2);flex-wrap:wrap}
+.dh-lb-acts button{cursor:pointer;font:inherit;font-size:15px;line-height:1;padding:7px 11px;
+ border-radius:8px;border:1px solid var(--dh-rule);background:transparent;color:inherit}
+.dh-lb-acts button.on{border-color:var(--dh-accent,#d9482a);
+ background:color-mix(in srgb, var(--dh-accent,#d9482a) 30%, transparent)}
+.dh-lb-acts button:hover{border-color:currentColor}
+/* Filmstrip: where you are in the set, and one click to anywhere else.
+   It is NAVIGATION, so it reads lighter than everything above it -- smaller
+   thumbs, a real gap between them, and its own rule. Eight 72px sheets at an
+   8px gap under a scoring strip at the same 14px offset made a dense band of
+   near-identical rectangles that competed with the drawing it was serving. */
+.dh-lb-strip{display:flex;gap:var(--s2);overflow-x:auto;scrollbar-width:thin;
+ justify-content:center;align-items:center;width:100%;
+ margin-block-start:var(--s3);padding-block-start:var(--s3);
+ border-block-start:1px solid color-mix(in srgb, var(--dh-bg,#fff) 14%, transparent);
+ --dh-shot-w:58px;min-block-size:calc(var(--dh-shot-w) * 11 / 8.5 + 10px)}
+.dh-lb-strip .dh-shot{cursor:pointer;opacity:.42;outline:2px solid transparent;
+ outline-offset:2px;border-radius:2px;background:#fff;
+ transition:opacity .12s,outline-color .12s}
+.dh-lb-strip .dh-shot:hover{opacity:.8}
+.dh-lb-strip .dh-shot[aria-current="true"]{opacity:1;outline-color:var(--dh-accent,#d9482a)}
+/* A thumbnail that opens something must say so before it is clicked. */
+.dh-art .dh-shot[data-el]{cursor:zoom-in}
+.dh-art .dh-shot[data-el]:hover{outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+.dh-sr-only{position:absolute!important;inline-size:1px!important;block-size:1px!important;
+ padding:0!important;overflow:hidden!important;clip-path:inset(50%)!important;
+ white-space:nowrap!important;border:0!important}
+/* Credit, de-protagonised: this page is the project's, not the tool's. */
+.dh-credit{margin-block-start:var(--s6);padding-block-start:var(--s3);
+ border-block-start:1px solid var(--dh-rule);
+ display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;
+ font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
+.dh-credit b{font-weight:700}
+/* Completing something is the one irreversible-feeling act on the page, so it
+   gets a moment. Scaling the tick is enough -- confetti would be noise on a
+   page whose whole job is sober judgement. */
+@keyframes dh-pop{0%{transform:scale(1)}38%{transform:scale(1.32)}100%{transform:scale(1)}}
+.dh-fb [data-verdict].on{animation:dh-pop .34s ease-out}
+.dh-fb .dh-saved[data-cheer]{background:var(--dh-accent,#d9482a);
+ border-color:color-mix(in srgb, var(--dh-accent,#d9482a) 72%, #000)}
+.dh-zone[data-zone="round"]{position:relative}
+/* NOT dimmed. The rows stayed fully clickable the whole time this rule was
+   here -- there is no pointer-events, disabled or inert anywhere in the
+   preparing state, and clicks during inference are sent, stored and echoed
+   normally. All the 72% opacity ever did was tell the user that the one
+   thing they could usefully do was unavailable. The banner says what is
+   happening; the work stays lit. */
+.dh-zone[data-zone="round"][data-preparing] > :not(.dh-prep){transition:none}
+.dh-prep{display:none;margin:0;max-inline-size:none;font-size:15px;
+ line-height:1.4;font-weight:700;letter-spacing:.01em;text-align:center;
+ pointer-events:none}
+.dh-zone[data-zone="round"][data-preparing] .dh-prep{display:block;
+ position:absolute;inset:12px 12px auto;z-index:2;padding:12px 16px;border-radius:10px;
+ background:color-mix(in srgb, var(--dh-ink,#111) 88%, transparent);
+ color:var(--dh-bg,#fff)}
+@media (prefers-reduced-motion:reduce){.dh-art *,.dh-lb *{transition:none!important;
+ animation:none!important}}

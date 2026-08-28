@@ -1111,11 +1111,10 @@ class TheArticleIsADesignSystem(unittest.TestCase):
         """Chrome in a competing palette corrupts the judgement it collects."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            markup = bh.render_article(root, self.system(root), theme={"bg": "#FDF6E3"})
+            markup = bh.render_article(root, self.system(root))
             style = markup.split("<style>/* dh-article */")[1].split("</style>")[0]
             self.assertNotIn("#fff5", style)
             self.assertIn("var(--dh-bg", style)
-            self.assertIn("--dh-bg: #FDF6E3", markup)
 
     def test_every_element_stays_scoreable_in_the_article(self):
         with tempfile.TemporaryDirectory() as tmp:

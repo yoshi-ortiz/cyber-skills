@@ -14,6 +14,7 @@ Standard library only. Every module answers `--help`, and every module has a
 that greps a string the generator just built proves the generator meant well and
 nothing else. See `../references/verification.md`.
 
-`bootstrap_harness.py` is over budget and known to be: it is ~1,350 lines behind a
-13-verb interface. The deep module inside it is the ledger; `init`/`preflight`/
-`validate` are scaffolding. Split it before adding to it.
+`bootstrap_harness.py` is over budget and known to be. Its CSS and JS now live in
+`../screen/`, which took 1,447 lines and 87 KB off it, and what remains is Python
+behind a 13-verb interface. The deep module inside it is the ledger;
+`init`/`preflight`/`validate` are scaffolding. Split it before adding to it.

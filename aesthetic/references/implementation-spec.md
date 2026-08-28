@@ -33,6 +33,9 @@ by inspectable evidence without becoming a generic workflow engine.
   fall back individually to their last safe values.
 - Common graphics and fonts are fetched from pinned licensed sources before any
   deterministic procedural generation. Vector paths are never invented.
+- API, MCP, desktop-automation, publishing, and output support is domain-neutral
+  and earns PASS only through the evidence contract in
+  [platform-support.md](platform-support.md).
 
 ## Boundaries
 
@@ -48,3 +51,6 @@ A disposable project fixture proves corpus integrity, independent feedback
 replay, preference states, idempotent scope history, separate burndown series,
 element-level contrast fallback, article structure, and companion controls.
 Rendered desktop and narrow screenshots remain a required human-quality check.
+The support manifest separately proves all seventeen workflow requirements;
+missing credentials or compatible interfaces remain BLOCKED rather than being
+simulated as PASS.

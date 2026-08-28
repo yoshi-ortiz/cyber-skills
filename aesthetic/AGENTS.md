@@ -7,11 +7,12 @@ For *using* the skill, read `SKILL.md`. This file is for changing it.
 Work one directory at a time.
 
 ```bash
-python3 scripts/contracts.py --root .
-python3 -m unittest discover -s scripts -p 'test_*.py'
-python3 scripts/bootstrap_harness.py self-test
+python3 ../tools/check.py     # every gate in the repository, this skill's included
 python3 scripts/golden_rules.py --design <spec.json> --min-coverage 0.8
 ```
+
+`golden_rules` stays separate: it grades one design spec, so it needs a file
+argument and has no repository-wide form for the runner to call.
 
 | Step | Answers |
 | --- | --- |
@@ -45,4 +46,6 @@ Load `modern-web-guidance` before changing article CSS or script.
 
 ## Known debt
 
-`bootstrap_harness.py` is over the 30 KB budget. Split before adding to it — do not widen the budget to silence the check.
+`bootstrap_harness.py` is over the 30 KB budget: 210 KB, down from 297 KB once the
+browser assets moved to `screen/`. Split before adding to it — do not widen the
+budget to silence the check.

@@ -36,6 +36,7 @@ You do not write code to use one. You install a folder, start a new chat, and sa
 its name. Everything after the install is optional reading.
 
 - [Index](#-collection)
+- [Main workflow](#-main-workflow)
 - [Installation](#-install)
 - [Skills](#-skill-prompts)
 - [Coming soon](#-experiments)
@@ -65,6 +66,23 @@ Grouped by when you need one, not by how finished it is.
 
 Stable prompts sit under [SKILL PROMPTS](#-skill-prompts). The rest are
 [EXPERIMENTS](#-experiments), installed by hand.
+
+## 🛤️ MAIN WORKFLOW
+
+The collection is organized around one rail: set up once, plan the work, build
+and test it, release it, then feed production evidence back into planning.
+
+| Family | SDLC phase | Place in the loop |
+| --- | --- | --- |
+| `kit` | **Day 0**, outside the loop | Set up the machine once. It is an on-ramp, not a per-feature phase. |
+| `first` | **Plan** | Establishes the domain, evidence, scope, architecture, and approved contract. |
+| `build` | **Code · Build · Test** | Implements and verifies the approved contract within the project boundary. |
+| `land` | **Release · Deploy** | Ships selected outputs and makes deployment observable and recoverable. |
+| `check` | **Monitor** → Plan | Reads progress and production evidence and returns it to planning. |
+| `fix` | **Operate**, incident response | Restores safe operation from outside the loop and returns to the affected family. |
+
+The design-specific epics and their PASS evidence live in the development
+[roadmap](ROADMAP.md); the stable branch carries only prompts ready to install.
 
 ---
 

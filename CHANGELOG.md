@@ -9,6 +9,17 @@ Fog. Lives on `dev`, never published to `main`.
 
 ### Added
 
+- **The rail.** `GOAL.md` (why), `SPEC.md` (the settled contract), and
+  `UBIQUITOUS_LANGUAGE.md` (root-scoped, distinct from `aesthetic`'s own).
+  Names two independent token-weight axes, cost and signal density, where
+  before there was one conflated number. Settles a six-family command surface
+  -- `kit`, `first`, `build`, `land`, `check`, `fix` -- fifteen typed names
+  resolving to six skills via three alias kinds (whole, anchor, ghost
+  argument), so the command count does not scale with the workflow step
+  count. Corrects the benchmark to count only model-invoked descriptions;
+  user-invoked skills spend human cognitive load, not permanent model context.
+  `build`, `land`, `check`, `fix` are
+  documented, not yet built; `ROADMAP.md`'s Rail section is the burndown.
 - **Project brief.** A deliverables-first intake the user answers in their own
   prose, in its own collapsible article section, revisable at any time, with an
   append-only change history. The page asks exactly one question at a time.

@@ -45,6 +45,7 @@ personal knowledge-vault path.
 | --- | --- |
 | [Design domain profiles](domain-profiles.md) | Evidence requirements across design domains |
 | [Design tool capabilities](design-tools.md) | Preflighted adapters and tool boundaries |
+| [Domain-neutral workflow support](platform-support.md) | PASS evidence for APIs, MCP tools, automation, outputs, and publishing |
 | [Portable evidence-backed design harness](implementation-spec.md) | Product contract, boundaries, and acceptance seam |
 
 ## Provenance verification
