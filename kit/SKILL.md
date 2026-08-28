@@ -1,6 +1,6 @@
 ---
 name: kit
-description: Operating guide for the harness-core loadout, the set of skills and MCP servers every AI app on a machine carries. Bare kit installs. Also answers to install, setup, init, start, sync, update, refresh, upgrade, fix, doctor, repair, troubleshoot, conflict, and to starter-pack, its original name. Use when the user wants the harness set up on a machine, every app re-armed with the current selection, a skill or MCP server added, or a broken collection diagnosed.
+description: Operating guide for the harness-core skill loadout every AI app on a machine carries. Bare kit installs. Also answers to install, setup, init, start, sync, update, refresh, upgrade, fix, doctor, repair, troubleshoot, conflict, and to starter-pack, its original name. Use when the user wants the harness fetched, every app re-armed with the current skill selection, a skill added, or a broken collection diagnosed.
 disable-model-invocation: true
 also:
   - starter-pack :: Same skill, its original name
@@ -19,10 +19,10 @@ Install on a machine that already has it syncs it instead of breaking it.
 
 Everything below the three modes is reference. Read one when the task names it.
 
-One collection, one harness. `collection.yaml` records which skills and MCP
-servers this machine carries, and `harness` installs them into every AI app it
-finds, including agents on another OS partition. Source of truth for anything
-not here: [the harness README](https://github.com/yoshi-ortiz/harness-core).
+One collection, one harness. `collection.yaml` records which skills this
+machine carries. Kit fetches `harness-core` from GitHub and runs
+its local script; it does not install package managers, runtimes, or shell
+hooks. Source of truth for anything not here: [the harness README](https://github.com/yoshi-ortiz/harness-core).
 
 ## Report it while it runs
 
@@ -30,7 +30,9 @@ Install and Sync fan out over every source and every app. That takes minutes.
 Keep the whole log:
 
 ```bash
-harness sync 2>&1 | tee /tmp/kit.log
+HARNESS_DIR="${HARNESS_DIR:-$HOME/.harness-core}"
+git -C "$HARNESS_DIR" pull --ff-only
+bash "$HARNESS_DIR/pony.harness.sh" sync 2>&1 | tee /tmp/kit.log
 ```
 
 **Never pipe it through `tail` or `head`.** That discards the failures and
@@ -41,37 +43,37 @@ If it outruns your tool timeout, background it, say so in chat, and report
 progress rather than going quiet. The harness prints one line per repo and ends
 in a count, so `tail -1 /tmp/kit.log` is the position.
 
-## Install
+## Fetch and sync
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yoshi-ortiz/harness-core/main/install.sh | bash
+HARNESS_DIR="${HARNESS_DIR:-$HOME/.harness-core}"
+if [[ -d "$HARNESS_DIR/.git" ]]; then
+  git -C "$HARNESS_DIR" pull --ff-only
+else
+  git clone --depth 1 https://github.com/yoshi-ortiz/harness-core.git "$HARNESS_DIR"
+fi
+bash "$HARNESS_DIR/pony.harness.sh" sync
 ```
 
-Windows uses PowerShell instead: `irm https://raw.githubusercontent.com/yoshi-ortiz/harness-core/main/install.ps1 | iex`.
-
-That one command installs the dependencies (Homebrew or winget, git, yq, nvm,
-Node, smithery), puts `harness` on the PATH, and then runs onboarding. There is
-no separate setup step to remember.
-
-`harness onboard` is the picker. It offers only the agents actually on the
-machine, and category checkboxes that start unchecked. Re-run it any time to
-change the selection. Then **tell the user to start a new chat**, because skill
+The checkout must already have `git`, `yq`, and Node/npm. Kit does
+not install them or add a PATH shim. Use the same Git fetch from Git Bash or
+PowerShell on Windows. Start a new agent session after syncing because skill
 lists are read at session start.
 
 ## Sync
 
 ```bash
-harness sync                     # install what is selected
-harness upgrade                  # pull the manifest, refresh tools, reinstall at latest
+HARNESS_DIR="${HARNESS_DIR:-$HOME/.harness-core}"
+git -C "$HARNESS_DIR" pull --ff-only
+bash "$HARNESS_DIR/pony.harness.sh" sync
 ```
 
-Both are idempotent re-fetches, so re-running is the update. `upgrade` is the
-fuller one: it pulls `collection.yaml` first, so a source added upstream since
-the last run arrives with it.
+Sync is the idempotent re-fetch. Pulling the checkout first refreshes
+`collection.yaml` and the harness code, so a source added upstream arrives with
+it. There is no separate installer upgrade path.
 
-`harness status` prints what is selected, what was detected, and how many
-skills are installed. Read it before and after, it is the cheapest check that
-a run did anything.
+`bash "$HARNESS_DIR/pony.harness.sh" status` prints what is selected, what was
+detected, and how many skills are installed. Read it before and after.
 
 ## Fix
 
@@ -82,7 +84,6 @@ matter first, which agents were detected and which categories are on.
 | --- | --- | --- |
 | A skill in the repo never arrives | Its manifest entry names a subset, so a skill added later is not in the list | Make the entry bare, or add the new name to the list |
 | A whole category is absent | `selected:` omits it | `harness onboard`, or `--all` to clear the selection |
-| An MCP server never appears | Its key is unset, so the harness skipped it rather than arm an app with a broken one | Export the variable, then `harness sync` |
 | An app cannot see a new skill | Skill lists load at session start | Start a new chat |
 | A skill behaves like an older version | A stale directory survived a rename; nothing deletes it | Remove it from that app's skills dir, then `harness sync` |
 | agy or Cursor sees nothing while Claude Code is fine | Those dirs are populated by `sync-skills.sh`, not the `skills` CLI | `harness sync`, which runs it after every install |
@@ -103,12 +104,6 @@ like a bare entry and then rots, because the repo adds a skill and the list
 silently stops handing it out. Check a repo's set with `npx skills add <repo> -l`.
 
 Never pass `--all` to `npx skills add`.
-
-## Add an MCP server
-
-`harness mcp add <server>` takes a Smithery ID. Secrets never live in
-`collection.yaml`, an unset variable skips that server rather than arming an
-app with a broken one.
 
 ## Where skills land
 

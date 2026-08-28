@@ -36,6 +36,7 @@ You do not write code to use one. You install a folder, start a new chat, and sa
 its name. Everything after the install is optional reading.
 
 - [Index](#-collection)
+- [Main workflow](#-main-workflow)
 - [Installation](#-install)
 - [Skills](#-skill-prompts)
 - [Coming soon](#-experiments)
@@ -65,6 +66,23 @@ Grouped by when you need one, not by how finished it is.
 
 Stable prompts sit under [SKILL PROMPTS](#-skill-prompts). The rest are
 [EXPERIMENTS](#-experiments), installed by hand.
+
+## 🛤️ MAIN WORKFLOW
+
+The collection is organized around one rail: set up once, plan the work, build
+and test it, release it, then feed production evidence back into planning.
+
+| Family | SDLC phase | Place in the loop |
+| --- | --- | --- |
+| `kit` | **Day 0**, outside the loop | Set up the machine once. It is an on-ramp, not a per-feature phase. |
+| `first` | **Plan** | Establishes the domain, evidence, scope, architecture, and approved contract. |
+| `build` | **Code · Build · Test** | Implements and verifies the approved contract within the project boundary. |
+| `land` | **Release · Deploy** | Ships selected outputs and makes deployment observable and recoverable. |
+| `check` | **Monitor** → Plan | Reads progress and production evidence and returns it to planning. |
+| `fix` | **Operate**, incident response | Restores safe operation from outside the loop and returns to the affected family. |
+
+The design-specific epics and their PASS evidence live in the development
+[roadmap](ROADMAP.md); the stable branch carries only prompts ready to install.
 
 ---
 
@@ -133,15 +151,15 @@ equipped the same way, from one list instead of app by app.
 | **Package** | [kit/](kit/) · entry [kit/SKILL.md](kit/SKILL.md) |
 | **Invoke** | You only. Say `kit` to set it up, `kit sync` to update it, `kit fix` when something broke. |
 | **Also answers to** | `starter-pack`, its original name. Ships as an alias, nothing to install. |
-| **Needs** | The [harness](https://github.com/yoshi-ortiz/harness-core) it drives, plus Homebrew or a clone |
+| **Needs** | Git plus the [harness](https://github.com/yoshi-ortiz/harness-core) checkout it fetches |
 | **Channel** | `main` |
 
 <details>
 <summary><b>Full spec</b></summary>
 
 A reference skill: no scripts, no state. It teaches an agent to operate
-`yoshi-ortiz/harness-core`, whose `collection.yaml` lists the skills and MCP
-servers every AI app on your machine should carry.
+`yoshi-ortiz/harness-core`, whose `collection.yaml` lists the skills every AI
+app on your machine should carry.
 
 | Argument | What it does |
 | --- | --- |
@@ -154,12 +172,11 @@ you which one you meant.
 
 | Covers | What it holds |
 | --- | --- |
-| Install | `brew tap`, `brew install`, `harness init`, and the clone alternative |
+| Fetch | Clone or fast-forward `harness-core` from GitHub, then run its local sync script |
 | Where the list lives | Checkout versus Homebrew paths, and the local overlay that wins on conflict |
 | Adding a skill | Why a hand edit installs nothing, why a full name list rots, why `--all` is banned |
-| Adding an MCP server | One transport per server, secrets by environment variable only |
 | Standard versus situational | What every AI app gets, against opt-in groups behind `--with` |
-| Fixing | A symptom table: failed source, silently skipped server, stale copy after a rename, two skills of one name |
+| Fixing | A symptom table: failed source, stale copy after a rename, two skills of one name |
 | Releasing | Tag the repo, bump the Homebrew formula |
 
 </details>
