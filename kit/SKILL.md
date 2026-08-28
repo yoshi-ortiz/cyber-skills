@@ -1,6 +1,6 @@
 ---
 name: kit
-description: Operating guide for the harness-core loadout, the set of skills and MCP servers every AI app on a machine carries. Bare kit installs. Also answers to install, setup, init, start, sync, update, refresh, upgrade, fix, doctor, repair, troubleshoot, conflict, and to starter-pack, its original name. Use when the user wants the harness set up on a machine, every app re-armed with the current selection, a skill or MCP server added, or a broken collection diagnosed.
+description: Operating guide for the harness-core skill loadout every AI app on a machine carries. Bare kit installs. Also answers to install, setup, init, start, sync, update, refresh, upgrade, fix, doctor, repair, troubleshoot, conflict, and to starter-pack, its original name. Use when the user wants the harness fetched, every app re-armed with the current skill selection, a skill added, or a broken collection diagnosed.
 disable-model-invocation: true
 also:
   - starter-pack :: Same skill, its original name
@@ -19,8 +19,8 @@ Install on a machine that already has it syncs it instead of breaking it.
 
 Everything below the three modes is reference. Read one when the task names it.
 
-One collection, one harness. `collection.yaml` records which skills and MCP
-servers this machine carries. Kit fetches `harness-core` from GitHub and runs
+One collection, one harness. `collection.yaml` records which skills this
+machine carries. Kit fetches `harness-core` from GitHub and runs
 its local script; it does not install package managers, runtimes, or shell
 hooks. Source of truth for anything not here: [the harness README](https://github.com/yoshi-ortiz/harness-core).
 
@@ -55,7 +55,7 @@ fi
 bash "$HARNESS_DIR/pony.harness.sh" sync
 ```
 
-The checkout must already have `git`, `yq`, Node/npm, and Smithery. Kit does
+The checkout must already have `git`, `yq`, and Node/npm. Kit does
 not install them or add a PATH shim. Use the same Git fetch from Git Bash or
 PowerShell on Windows. Start a new agent session after syncing because skill
 lists are read at session start.
@@ -84,7 +84,6 @@ matter first, which agents were detected and which categories are on.
 | --- | --- | --- |
 | A skill in the repo never arrives | Its manifest entry names a subset, so a skill added later is not in the list | Make the entry bare, or add the new name to the list |
 | A whole category is absent | `selected:` omits it | `harness onboard`, or `--all` to clear the selection |
-| An MCP server never appears | Its key is unset, so the harness skipped it rather than arm an app with a broken one | Export the variable, then `harness sync` |
 | An app cannot see a new skill | Skill lists load at session start | Start a new chat |
 | A skill behaves like an older version | A stale directory survived a rename; nothing deletes it | Remove it from that app's skills dir, then `harness sync` |
 | agy or Cursor sees nothing while Claude Code is fine | Those dirs are populated by `sync-skills.sh`, not the `skills` CLI | `harness sync`, which runs it after every install |
@@ -105,12 +104,6 @@ like a bare entry and then rots, because the repo adds a skill and the list
 silently stops handing it out. Check a repo's set with `npx skills add <repo> -l`.
 
 Never pass `--all` to `npx skills add`.
-
-## Add an MCP server
-
-`harness mcp add <server>` takes a Smithery ID. Secrets never live in
-`collection.yaml`, an unset variable skips that server rather than arming an
-app with a broken one.
 
 ## Where skills land
 
