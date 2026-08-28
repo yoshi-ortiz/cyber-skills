@@ -30,7 +30,7 @@ Install and Sync fan out over every source and every app. That takes minutes.
 Keep the whole log:
 
 ```bash
-HARNESS_DIR="${HARNESS_DIR:-$HOME/.harness-core}"
+HARNESS_DIR="${HARNESS_DIR:-$HOME/.skills-core}"
 git -C "$HARNESS_DIR" pull --ff-only
 bash "$HARNESS_DIR/pony.harness.sh" sync 2>&1 | tee /tmp/kit.log
 ```
@@ -46,7 +46,7 @@ in a count, so `tail -1 /tmp/kit.log` is the position.
 ## Fetch and sync
 
 ```bash
-HARNESS_DIR="${HARNESS_DIR:-$HOME/.harness-core}"
+HARNESS_DIR="${HARNESS_DIR:-$HOME/.skills-core}"
 if [[ -d "$HARNESS_DIR/.git" ]]; then
   git -C "$HARNESS_DIR" pull --ff-only
 else
@@ -63,7 +63,7 @@ lists are read at session start.
 ## Sync
 
 ```bash
-HARNESS_DIR="${HARNESS_DIR:-$HOME/.harness-core}"
+HARNESS_DIR="${HARNESS_DIR:-$HOME/.skills-core}"
 git -C "$HARNESS_DIR" pull --ff-only
 bash "$HARNESS_DIR/pony.harness.sh" sync
 ```
