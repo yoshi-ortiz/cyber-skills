@@ -8,6 +8,8 @@ import unittest
 from pathlib import Path
 
 import bootstrap_harness as bh
+import brief_workflow as bw
+import direction_context as dc
 import editorial_workflow as ew
 from asset_contract import AssetError, validate_assets
 
@@ -335,6 +337,40 @@ class EmptyCorpusStillDirectsTheWorkTest(unittest.TestCase):
             self.assertFalse((project / ew.STORE / ew.DECISIONS_FILE).exists())
             result = ew.save_art_direction(project, self.spec())
             self.assertEqual(result["grounding"], "inference")
+
+    def test_current_brief_constraints_bound_the_direction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            ew.seed_corpus(project, profile="art-direction", subject="a landing hero")
+            brief = bw.default_brief("2026-08-28T00:00:00Z")
+            next(item for item in brief["answers"] if item["id"] == "fixed")["answer"] = (
+                "layout goal.png is primary; rooms must not be copied")
+            bw.save_brief_spec(project, brief)
+            with self.assertRaisesRegex(ew.WorkflowError, "briefConstraints"):
+                ew.save_art_direction(project, self.spec())
+            spec = self.spec()
+            spec["briefConstraints"] = [{
+                "id": "fixed",
+                "answer": "layout goal.png is primary; rooms must not be copied",
+                "impact": "The composition follows the small crossing rails and omits rooms.",
+            }]
+            result = ew.save_art_direction(project, spec)
+            self.assertEqual(result["briefConstraints"], spec["briefConstraints"])
+
+    def test_inference_context_is_compact_and_includes_current_brief(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            ew.seed_corpus(project, profile="art-direction", subject="a landing hero")
+            brief = bw.default_brief("2026-08-28T00:00:00Z")
+            next(item for item in brief["answers"] if item["id"] == "fixed")["answer"] = (
+                "layout goal.png is primary; rooms must not be copied")
+            bw.save_brief_spec(project, brief)
+            context = dc.inference_context(project)
+            self.assertEqual(context["briefConstraints"], [{
+                "id": "fixed",
+                "answer": "layout goal.png is primary; rooms must not be copied",
+            }])
+            self.assertEqual(context["preferences"]["elements"], [])
 
     def test_seeding_an_empty_folder_does_not_raise(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

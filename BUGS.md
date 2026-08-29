@@ -516,3 +516,35 @@ names, dated 2026-08-21 01:41-01:56.
 
 **Action.** Nothing to build. The directories are inside the user's own
 project, so reclaiming the space is their call, not a harness change.
+
+---
+
+## B-020 · Harness hid installer security assessments during sync · external
+
+**Symptom.** `kit sync` / `harness.py sync`, 2026-08-29. `npx skills add`
+prints Gen, Socket, and Snyk assessments before installation, but the harness
+passes `-y`, ignores the table, reports the source as `ok`, and fans the result
+out to every agent directory. The captured run assessed 77 skills; 25 were not
+clean. Two had Snyk Critical Risk (`switch-project`,
+`run-acceptance-tests`), three had Gen High Risk (`shellcheck`,
+`ui-ux-pro-max`, `windows-builder`), four carried Socket alerts, and nine had
+Snyk High Risk.
+
+**Root cause.** The harness discarded the installer's assessment output, so
+operators could not see findings during `sync` or `add`. A first attempted fix
+mistakenly made findings and missing assessment tables fatal, which violated
+the collection contract: every declared source must still be installed and
+propagated. The original report singled out `graphify`; parsing the whole log
+showed that premise was false.
+
+**Upstream fix.** `harness-core` runs each installer once against the real
+agent environment, streams and captures its output, and reports every non-clean
+Gen, Socket, or Snyk row as a security advisory. Findings remain visible but do
+not convert a successful installation into a failure or suppress cross-agent
+fan-out. Actual installer and fan-out process failures remain fatal. The
+upstream audit is repository-and-skill level, not commit attestation.
+
+**Guard.** `test_risky_install_succeeds_and_fans_out` runs the real harness CLI
+against a fake risky `npx` result and proves the assessment is reported while
+the real install and `sync-skills.sh` both execute successfully. Parser checks
+cover ANSI output and names with spaces; absent tables produce no advisory.

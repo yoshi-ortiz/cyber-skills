@@ -14,6 +14,7 @@ from typing import Any, Mapping, Sequence
 
 from asset_contract import AssetError, validate_assets
 from burndown_view import BURNDOWN_STYLE
+from direction_context import load_decisions, validate_brief_constraints
 
 
 STORE = Path("spec/design-harness")
@@ -127,12 +128,9 @@ def preference_brief(decisions: Mapping[str, Any]) -> dict[str, Any]:
 
 def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
                            preferences: Mapping[str, Any],
-                           accountable: Any = None) -> dict[str, Any]:
-    """`accountable` names what this spec still has to account for, given the
-    corpus items it observed or omitted. `None` keeps the original contract:
-    every item, by id. `save_art_direction` passes
-    `corpus_tags.missing_evidence`, which counts by reference FOLDER once the
-    user has tagged any."""
+                           accountable: Any = None,
+                           brief: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Validate direction evidence; accountable may group tagged references."""
     if not isinstance(raw, Mapping):
         raise WorkflowError("art direction must be an object")
 
@@ -146,6 +144,9 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
             for index, child in enumerate(value):
                 prohibit(child, f"{path}[{index}]")
     prohibit(raw)
+
+    normalized_constraints = validate_brief_constraints(
+        raw.get("briefConstraints", []), brief, WorkflowError)
 
     corpus_ids = {item.get("id") for item in corpus.get("items", []) if isinstance(item, Mapping)}
     try:
@@ -324,6 +325,7 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
         "comparison": normalized_comparison, "selected": selected,
         "selectionRationale": _text(raw.get("selectionRationale"), "selectionRationale"),
         "cohort": cohort, "assets": assets,
+        "briefConstraints": normalized_constraints,
     }
 
 
@@ -331,15 +333,15 @@ def save_art_direction(project_root: Path, raw: Any) -> dict[str, Any]:
     root = Path(project_root)
     corpus = _read_json(root / STORE / CORPUS_FILE)
     # Nothing ranked yet is a normal first round, not a missing artifact.
-    decisions_path = root / STORE / DECISIONS_FILE
-    decisions = _read_json(decisions_path) if decisions_path.exists() else {"elements": []}
-    preferences = preference_brief(decisions)
+    preferences = preference_brief(load_decisions(root))
     # Imported here, not at module scope: `corpus_tags` imports this module.
     from corpus_tags import load_tags, missing_evidence
+    from brief_workflow import load_brief
     tags = load_tags(root)
     value = validate_art_direction(
         raw, corpus, preferences,
-        lambda seen: missing_evidence(corpus, tags, seen))
+        lambda seen: missing_evidence(corpus, tags, seen),
+        load_brief(root))
     try:
         validate_assets(value["assets"], {item.get("id") for item in corpus["items"]}, root)
     except AssetError as exc:
@@ -714,7 +716,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "seed":
             result = seed_corpus(args.project_root, args.profile, args.subject)
         elif args.command == "preferences":
-            result = preference_brief(_read_json(args.project_root / STORE / DECISIONS_FILE))
+            result = preference_brief(load_decisions(args.project_root))
             if args.out:
                 _atomic_json(args.out, result)
         elif args.command == "direction":

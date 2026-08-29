@@ -18,17 +18,8 @@ python3 <skill>/scripts/bootstrap_harness.py open --project-root . \
   --status "<emoji + project-language description of the first real design task>"
 ```
 
-First reply, no preamble:
-
-```text
-🔗 <full URL>
-🔑 <value after ?key=>
-👀 <project-language review action>
-```
-
-`open` restores the last ranking page.
-
-User-visible language comes from `project.json`.
+`open` restores the last ranking page. Follow `user-communication.md` for the
+URL-first reply and use the language in `project.json`.
 
 With a reference folder, read images and text together:
 
@@ -37,7 +28,7 @@ python3 <skill>/scripts/editorial_workflow.py observe \
   --project-root . --source-root <absolute-reference-folder>
 ```
 
-Open supported items, explain omissions. Metadata is not visual evidence.
+Open items; metadata is not visual evidence.
 
 No folder is not a stop. Seed and direct from premises:
 
@@ -46,30 +37,44 @@ python3 <skill>/scripts/editorial_workflow.py seed --project-root . \
   --profile <domain-profiles.md name> --subject "<what this is>"
 ```
 
-A premise cites [golden-rules.md](references/golden-rules.md) or a [profile](references/domain-profiles.md), names counterevidence, and stays labeled inference — never evidence. Ask for references in passing; never block.
+A premise cites [golden-rules.md](references/golden-rules.md) or a
+[profile](references/domain-profiles.md), names counterevidence, and remains
+inference. Ask for references without blocking.
 
 ## Read the user first
 
-Adopt feedback, then build the element brief.
+Adopt feedback. Record chat constraints in the brief before inference; user
+words outrank references and doctrine.
 
 ```bash
 python3 <skill>/scripts/bootstrap_harness.py adopt --project-root . \
   --companion-ledger .superpowers/brainstorm/decisions.jsonl
-python3 <skill>/scripts/editorial_workflow.py preferences --project-root . \
-  --out /tmp/aesthetic-preferences.json
+python3 <skill>/scripts/brief_workflow.py answer --project-root . \
+  --event-id <stable-id> --at <ISO-8601> --id <brief-field> --answer "<user words>"
+python3 <skill>/scripts/direction_context.py --project-root . \
+  --out /tmp/aesthetic-context.json
 ```
 
-Read [sentiment-analysis.md](references/sentiment-analysis.md). Never collapse stars, thumbs, lifecycle, or missing feedback into one score.
-
-Preferences apply per element. One liked element does not approve its epic, theme, page, or style.
+Read that context before doctrine. It is the project evidence bundle: current
+constraints, reference tags, and element feedback. With ranked elements, read
+[sentiment-analysis.md](references/sentiment-analysis.md). Never collapse stars,
+thumbs, lifecycle, or missing feedback into one score.
 
 ## Infer and rank art direction
 
-Read [golden-rules.md](references/golden-rules.md) first — it carries the formal, philosophical, and historical bodies a direction cites. Then [loop.md](references/loop.md), [interpret-art.md](references/interpret-art.md), and [anti-slop.md](references/anti-slop.md).
+Read [golden-rules.md](references/golden-rules.md), then only the indexed body
+needed by the claim. Read [loop.md](references/loop.md) for a thin/failed round,
+[interpret-art.md](references/interpret-art.md) for ambiguous evidence, and
+[anti-slop.md](references/anti-slop.md) at critique. Root `GOAL.md`, `SPEC.md`,
+`ROADMAP.md`, and `BUGS.md` are never design evidence.
 
 Declare hierarchy, composition, grid, type roles, color relationships, image register, motion purpose, and one subject-specific signature. State the aesthetic question tested. Replace "clean," "premium," or "editorial" with observable relationships and counterevidence.
 
 Select one evidence-backed hypothesis and a 3–6 element cohort. Never average direction, execution, lifecycle, or missing feedback. Reject a thesis that fits an unrelated product unchanged.
+
+Copy every `briefConstraints` item from `/tmp/aesthetic-context.json` into the
+direction spec and add its concrete `impact`. The gate rejects missing or stale
+answers.
 
 ```bash
 python3 <skill>/scripts/editorial_workflow.py direction --project-root . \
@@ -80,14 +85,14 @@ Fix a rejected spec; never bypass the gate.
 
 ## Long runs
 
-Send a project-language status update before tool-using work, not only long work, mirrored in the status aid:
+Before tool work, mirror one project-language progress line in the status aid:
 
 ```bash
 python3 <skill>/scripts/bootstrap_harness.py status --project-root . \
   --text "<emoji + visible work + why it matters>"
 ```
 
-Name the visible result and link the page. Update it as activity changes. Never report setup commands.
+Name the result, not setup commands.
 
 ## Scope the editorial burndown
 
@@ -122,7 +127,9 @@ python3 <skill>/scripts/bootstrap_harness.py status --project-root . --idle \
   --text "<project-language request to review the new designs>"
 ```
 
-Keep the graph clickable, TOC sticky, slideshow functional, and Discarded last. `review_delivery.py` takes only rankable, subject-specific proposals with a legible signature; evidence cards, explanations, generic defaults, missing files, and hash drift fail. Lead the final chat with the URL, key, and project-language review request. Attach only emitted absolute `image_path` values.
+Keep the graph, sticky TOC, slideshow, and Discarded-last order. Delivery accepts
+only subject-specific rankable proposals with a legible signature. Lead with
+the URL, key, review request, and emitted images.
 
 ## Continue and critique
 
@@ -143,4 +150,4 @@ A run is complete only when:
 7. the original article structure, scoring controls, burndown, slideshow, and responsive layout work;
 8. the user receives the current URL, key, project-language request, and emitted review images.
 
-Criteria 3–8 prove the run is safe and honest. Criteria 1–2 are the design bar: inspect the render and judge it. Passing every check and still looking templated is a failure.
+Passing checks while looking templated is failure.

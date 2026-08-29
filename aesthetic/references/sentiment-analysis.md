@@ -62,6 +62,13 @@ The `direction` command accepts this exact shape. Account for every corpus item 
 ```json
 {
   "version": 1,
+  "briefConstraints": [
+    {
+      "id": "fixed",
+      "answer": "The supplied layout reference is primary; room imagery is out of scope.",
+      "impact": "The composition follows the small diagram footprint and omits rooms."
+    }
+  ],
   "observations": [
     {
       "corpusItem": "reference.poster-01",

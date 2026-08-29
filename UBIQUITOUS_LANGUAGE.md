@@ -39,7 +39,7 @@ Flagged ambiguities.
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
 | **Token weight** | What a piece of `md`/`txt` text costs a session, on two independent axes: token cost and signal density. Never a single number. | Cost, size, expense |
-| **Token cost** | How many tokens a text spends. Deterministic: a property of the command, not of the session it runs in. Measured by byte count. | Weight, size, price |
+| **Token cost** | How many tokens a text spends under one tokenizer profile. Deterministic for the same text and profile; byte count is the explicitly estimated fallback when the target tokenizer is unavailable. | Weight, size, price |
 | **Signal density** | Whether a text's content sharpens what the model attends to or dilutes it. Not countable, judged by whether a cold reader can act on first read without re-deriving, guessing, or re-reading. | Quality, clarity, focus |
 | **Context load** | The token weight of descriptions kept in the model's context every turn so it can invoke skills autonomously. A placement cost paid by the model. | Cognitive load, description tax |
 | **Cognitive load** | What a human must remember when user-invoked skills are invisible to the model. An invocation cost paid by the human, not an axis of token weight. | Context load, signal density |
@@ -48,6 +48,33 @@ Flagged ambiguities.
 | **Rung** | One level of the cost ladder, from statusline down to a new skill, naming how cheaply an item can be carried | Tier, option, layer |
 | **Lazy detail** | Content held in `references/` and paid for only when a pointer is followed | Docs, appendix, deep dive |
 | **Fog** | Development state that stays on `dev` and never reaches a published tree | Internal docs, dev files |
+
+## Inference context
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Context compiler** | The deterministic program that resolves eligible context, counts it under a tokenizer profile, packs it by priority and pass budget, and explains every admission and omission | Retriever, neural router, prompt optimizer |
+| **Invocation path** | One route through a skill for a particular task, naming the context and inference passes that route may use | Workflow, command, mode |
+| **Semantic context** | A declared boundary around work that a body of evidence can legitimately inform, such as Repo-Dev or Design-Inference | Topic, namespace, layer |
+| **Context bundle** | The exact, ordered content compiled for one invocation path and inference pass | Prompt, corpus, context window |
+| **Loading tier** | The declared availability of content: always, invocation, conditional, or excluded | Priority, weight, publication channel |
+| **Workflow role** | What an item does in an invocation path: instruction, reference, executable, fixture, test, generated output, or evidence | File type, semantic context, loading tier |
+| **Tokenizer profile** | A named target-model tokenizer and its counting method, marked exact when the tokenizer is available and estimated otherwise | Model, encoding, token weight |
+| **Inference pass** | One bounded act inside an inference attempt, such as retaining constraints, retrieving context, proposing, generating, implementing, or verifying | Phase, stage, layer |
+| **Pass budget** | The maximum token cost one inference pass may admit under a tokenizer profile | Byte budget, context window, quota |
+| **Proof gate** | The deterministic stop that withholds an expensive inference pass until its cheapest representative artifact has passed | Approval, confidence threshold, checkpoint |
+| **Compiler trace** | The reproducible account of what each inference pass admitted, omitted, spent, and why | Log, explanation, chain of thought |
+| **Agreed tokenization** | A reviewed human judgement that a chunk's token-level rendering is legible to the target model, pinned to the sha256 of the exact text reviewed | Signal density, token cost, legibility score |
+
+## Inference outcomes
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Inference attempt** | One task execution from compiled context through artifacts and user outcome, recorded locally for comparison | Session, run, generation |
+| **Accepted result** | An inference attempt whose output the user keeps or ships without a restart or major scope correction | Successful response, completion, positive score |
+| **Context utility** | The observed usefulness of admitted context to an accepted result, kept separate from its token cost | Token weight, relevance, quality |
+| **Contamination risk** | The likelihood that content from an incompatible semantic context will frame the current work | Context derail, noise, hallucination |
+| **Learned recommendation** | A dev-only model suggestion to change a declaration, priority, pass budget, proof gate, or regression fixture; never live authority | Rule, decision, automatic optimization |
 
 ## Accumulation
 
@@ -88,6 +115,14 @@ Flagged ambiguities.
 - A **family** **drives** zero or more external skills, each of which needs an **origin** or it does not arrive.
 - A **prototype** becomes a **spec** row by being answered, never by being described in more detail.
 - **Max**, **waste**, and **stuck** are distinct failures with distinct defences, and share only their symptom.
+- A **context compiler** emits one **context bundle** and **compiler trace** per
+  **inference pass**, under one **tokenizer profile** and **pass budget**.
+- A **proof gate** separates a cheap representative pass from the expensive
+  pass it authorizes.
+- An **inference attempt** may produce an **accepted result**; only reviewed
+  attempts may support a **learned recommendation**.
+- A **learned recommendation** may propose deterministic policy, but it never
+  overrides a semantic-context boundary, proof gate, or publication rule.
 
 ## Example dialogue
 
