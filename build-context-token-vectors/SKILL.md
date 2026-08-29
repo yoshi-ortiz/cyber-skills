@@ -1,6 +1,6 @@
 ---
 name: build-context-token-vectors
-description: Derive which installed skills are actually a skill's peers, by embedding every SKILL.md and clustering the vectors with EVoC. Use before benchmarking a skill flow, so the comparison set is read off the corpus rather than assumed, and to see which skills have no peer at all.
+description: Derive which installed skills are actually a skill's peers, then tune EVoC live in a browser companion without rebuilding the embeddings. Use before benchmarking a skill flow, so the comparison set is read off the corpus rather than assumed, and to see which skills have no peer at all.
 disable-model-invocation: true
 ---
 
@@ -17,8 +17,11 @@ python3 -m venv /tmp/vectors
 /tmp/vectors/bin/python build-context-token-vectors/scripts/vectors.py --serve
 ```
 
-`--serve` writes the dashboard and opens it. `--out <file>` writes it without
-opening. Neither flag prints the tables to the terminal instead.
+`--serve` starts a loopback companion, opens it, and stays alive until Ctrl-C.
+Change any EVoC parameter in the page and press **Retune**: the companion fits
+EVoC again while reusing the loaded corpus, embeddings, projection, and nearest
+peers. `--port` changes its default port, `8932`. `--out <file>` writes a
+read-only snapshot instead. With neither flag, the tables print to the terminal.
 
 `matplotlib` is required and **not declared** by `evoc`: `evoc.label_propagation`
 imports it at module scope, so `import evoc` fails on a clean install without
@@ -31,8 +34,9 @@ each skill reports.
 
 ## Tune it
 
-Every EVoC parameter is a flag, and only the ones you set are passed, so a run
-that changed nothing says `EVoC defaults` rather than looking tuned.
+Every EVoC parameter is both a flag and a live control. Only values you set are
+passed, so a run that changed nothing says `EVoC defaults` rather than looking
+tuned. Empty live controls restore the corresponding default.
 
 | Flag | Turns |
 | --- | --- |
@@ -50,8 +54,8 @@ EVoC defaults                            8 clusters, 49 noise
 --noise-level 0.2                        7 clusters, 39 noise
 ```
 
-The page prints the settings it was built with, so a screenshot still says what
-produced it.
+The page prints the settings behind its current result, so a screenshot still
+says what produced it.
 
 ## Explore it
 
@@ -84,9 +88,10 @@ is declared in the script and is part of any result worth quoting.
 
 ## What it will not do
 
-It writes a page and nothing else. It does not author a `--flow`, edit
-`token_bench.py`, rank a skill, or record a judgement. Reading it may change
-which comparison you run next; nothing here runs one.
+The live companion writes nothing. A deliberate `--out` writes only its page.
+Neither mode authors a `--flow`, edits `token_bench.py`, ranks a skill, or
+records a judgement. Reading it may change which comparison you run next;
+nothing here runs one.
 
 Its three dependencies live in a virtual environment you create. Nothing under
 `aesthetic/scripts/` or `tools/` imports them, and this skill ships none of

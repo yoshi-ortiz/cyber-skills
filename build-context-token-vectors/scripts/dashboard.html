@@ -29,6 +29,16 @@
   input[type=search] { font:inherit; font-size:.85rem; padding:.3rem .6rem;
     border:1px solid var(--line); border-radius:.3rem; background:var(--bg);
     color:var(--fg); min-width:12rem; flex:1; }
+  .tune { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:.7rem; align-items:end; background:var(--card); border:1px solid var(--line);
+    border-radius:.5rem; padding:.8rem .9rem; margin-bottom:1rem; }
+  .knob label { display:block; color:var(--dim); font-size:.67rem;
+    text-transform:uppercase; letter-spacing:.04em; }
+  .knob input { width:100%; margin-top:.2rem; padding:.3rem .45rem;
+    border:1px solid var(--line); border-radius:.3rem; background:var(--bg);
+    color:var(--fg); font:12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .tune-action { display:flex; align-items:center; gap:.6rem; min-height:2.1rem; }
+  #tuneStatus { color:var(--dim); font-size:.75rem; }
   .stats { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.25rem; }
   .stat { background:var(--card); border:1px solid var(--line); border-radius:.5rem;
     padding:.55rem .85rem; min-width:6.5rem; }
@@ -78,6 +88,12 @@
     <input type="search" id="q" placeholder="Filter by name, peer, or cluster">
   </div>
 
+  <form id="tune" class="tune">
+    <div id="knobs" style="display:contents"></div>
+    <div class="tune-action"><button id="applyTune" type="submit">Retune</button>
+      <span id="tuneStatus" role="status"></span></div>
+  </form>
+
   <div class="stats" id="stats"></div>
 
   <figure>
@@ -106,7 +122,7 @@
   </p>
 </div>
 <script>
-const D = __DATA__;
+let D = __DATA__;
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -117,11 +133,24 @@ let layer = D.layerStats.length - 1;
 let scope = "rail";
 let selected = null;
 
-const params = Object.entries(D.params);
-$("sub").innerHTML = `${esc(D.root)} · <code>${esc(D.model)}</code> · seed ${D.seed} · ` +
-  (params.length
-    ? params.map(([k, v]) => `<code>${esc(k)}=${esc(v)}</code>`).join(" ")
-    : "<code>EVoC defaults</code>");
+function subtitle() {
+  const params = Object.entries(D.params);
+  $("sub").innerHTML = `${esc(D.root)} · <code>${esc(D.model)}</code> · seed ${D.seed} · ` +
+    (params.length
+      ? params.map(([k, v]) => `<code>${esc(k)}=${esc(v)}</code>`).join(" ")
+      : "<code>EVoC defaults</code>");
+}
+
+function tuneControls() {
+  const live = location.protocol === "http:" || location.protocol === "https:";
+  $("knobs").innerHTML = Object.entries(D.tunables || {}).map(([name, spec]) =>
+    `<div class="knob"><label title="${esc(spec.help)}">${esc(name)}
+      <input name="${esc(name)}" type="number" ${spec.type === "int" ? "step=1" : "step=any"}
+        placeholder="default ${esc(spec.default)}" value="${esc(D.params[name] ?? "")}"></label></div>`
+  ).join("");
+  $("applyTune").disabled = !live;
+  $("tuneStatus").textContent = live ? "Embeddings stay cached." : "Use --serve for live tuning.";
+}
 
 const cl = i => D.skills[i].layers[layer];
 const hue = c => c < 0 ? "var(--dim)" : `hsl(${(c * 47) % 360} 62% 52%)`;
@@ -251,5 +280,33 @@ document.addEventListener("click", e => {
 });
 $("q").addEventListener("input", () => { plot(); tables(); });
 
-stats(); draw();
+$("tune").addEventListener("submit", async e => {
+  e.preventDefault();
+  const button = $("applyTune"), status = $("tuneStatus");
+  const values = {};
+  for (const input of e.currentTarget.querySelectorAll("input[name]")) {
+    if (input.value === "") continue;
+    values[input.name] = input.step === "1" ? Number.parseInt(input.value, 10)
+                                             : Number.parseFloat(input.value);
+  }
+  button.disabled = true;
+  status.textContent = "Fitting EVoC…";
+  try {
+    const response = await fetch("/tune", {method:"POST",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(values)});
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    D = result;
+    layer = Math.min(layer, D.layerStats.length - 1);
+    selected = null;
+    subtitle(); tuneControls(); stats(); draw();
+    status.textContent = "Updated. Embeddings reused.";
+  } catch (error) {
+    status.textContent = `Not updated: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+subtitle(); tuneControls(); stats(); draw();
 </script>
