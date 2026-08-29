@@ -67,7 +67,7 @@ The route is not in `server.cjs`. That file ships on alpha and sits at 37 KB of 
 40 KB budget, so a dev-only review surface there would publish a maintainer tool
 with the skill. The companion contract allows any surface that satisfies it.
 
-`.claude/skills/tag-context/` is the one command that starts it, for an agent
+`.claude/skills/check-transformers-neural-network/` is the one command that starts it, for an agent
 working on this repository. It declares `disable-model-invocation: true`, so it
 costs a session nothing until someone types it, and `.claude/` is fog: a
 consuming agent installs skills from a published tree and does not inherit the

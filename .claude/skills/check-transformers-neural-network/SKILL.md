@@ -1,10 +1,10 @@
 ---
-name: tag-context
+name: check-transformers-neural-network
 description: Review what one inference pass actually spends. Serves the compiler trace, counts it with a real tokenizer through Transformers.js, and records reviewed judgements about each chunk. Use when tuning pass budgets, doctrine order, or which context a skill should load.
 disable-model-invocation: true
 ---
 
-# Tag context
+# Check transformers neural network
 
 Repo-Dev only. Nothing here ships on either channel.
 

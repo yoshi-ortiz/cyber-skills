@@ -21,7 +21,7 @@ def test() -> None:
         assert is_fog("spec/design-harness/inference-attempts.jsonl", channel)
         assert is_fog("aesthetic/scripts/inference-trace.json", channel)
         assert is_fog("spec/design-harness/context-tags-inbox.jsonl", channel)
-        assert is_fog(".claude/skills/tag-context/SKILL.md", channel)
+        assert is_fog(".claude/skills/check-transformers-neural-network/SKILL.md", channel)
         assert is_fog("spec/design-harness/brief.json", channel)
         assert is_fog(".superpowers/brainstorm/.server.pid", channel)
         assert is_fog("shots/landing.hero.flow.desktop.png", channel)
