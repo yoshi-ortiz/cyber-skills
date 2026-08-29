@@ -64,7 +64,7 @@ section or the argument. R-45.
 | **`build`**<br>*new* | § Clean code<br>§ QA tests<br>§ Pre-release | `build-clean-code` →§ Clean code<br>`build-qa-tests` →§ QA tests<br>`build-pre-release` →§ Pre-release<br>`to` `make` ≡ | `ponytail` — `DietrichGebert/ponytail` *(coding)*<br>`tdd`, `code-review` — `mattpocock/skills`<br>`test-driven-development`, `verification-before-completion` — `obra/superpowers`<br>`semgrep` — `semgrep/skills` *(security)* |
 | **`land`**<br>*new* | § Burndown<br>§ Release | `land-asap-burndown` ⇢ asap<br>`land-deployed-release` ⇢ deploy *(final goal)*<br>`do` `ship` `burndown` ≡ | Nothing external. The burndown state machine is the one genuinely new thing in this scheme; `ROADMAP.md` and `BUGS.md` are its store. |
 | **`check`**<br>*new* | § Progress<br>§ Ontology | `check-progress-goals` →§ Progress<br>`check-release-ontology` →§ Ontology<br>`check` ≡ | `zoom-out` — `pstack` *(R-43)*<br>`graphify` — `safishamsi/graphify` *(research)* |
-| **`fix`**<br>*new, bare* | § Fix the code<br>§ Fix the rail | `fix` bare<br>`fix-context-derail` →§ Fix the rail<br>`rail` `repair` `unstick` ≡ | `diagnosing-bugs` — `mattpocock/skills`<br>`systematic-debugging` — `obra/superpowers`<br>`poteto-mode` — `pstack` *(R-43)* |
+| **`fix`**<br>*new, bare* | § Fix the code<br>§ Fix the rail | `fix` bare<br>`fix-context-derail` →§ Fix the rail<br>`rail` `unstick` ≡ | `diagnosing-bugs` — `mattpocock/skills`<br>`systematic-debugging` — `obra/superpowers`<br>`poteto-mode` — `pstack` *(R-43)* |
 
 **The rail lives in `fix`, not `check`.** `check` reads state and reports;
 repairing a derailed context is a write, and it is the same reflex as repairing
@@ -83,6 +83,37 @@ Every one of the six, before it is done:
 | `phase` in frontmatter | Load-bearing only where skill name and phase diverge (`genesis`, `aesthetic`). Declared without a gate until R-38. There is no `weight` field: the byte cap already is the worst case, and a family's sections differ in cost. |
 | A row in the README index and every translation it offers | `tools/index_gate.py` refuses otherwise |
 | Its second names present in its own `description` | The gate refuses a name the assistant has never heard of |
+
+## A CLI script costs no context
+
+A skill's doctrine is loaded into a session. A script it names is not. `kit`
+carries the operating knowledge for a harness of a thousand lines and pays
+nothing for those lines, because the agent reads three commands and the script
+reads itself.
+
+So work that can be a script belongs in a script, and the skill spends its
+budget saying when to run it and how to read what comes back. The rule that
+follows:
+
+| Surface | What a session pays |
+| --- | --- |
+| A model-invoked `description` | Every turn, whether or not the skill runs |
+| A user-invoked `description` | Nothing. `disable-model-invocation: true` |
+| `SKILL.md` body | Once, when the skill is entered |
+| A `references/` file | Only when a pointer is followed |
+| A script the skill names | Nothing, ever. It runs in a subprocess |
+
+A script is therefore the cheapest rung on the ladder and the one to reach for
+first when the work is deterministic. The cost that remains is human: somebody
+has to know the command exists, which is what the `SKILL.md` is spending its
+bytes on.
+
+Two things this does not license. A script the agent must read to use is not
+free, so its interface belongs in `--help` and its doctrine stays out of the
+skill. And a script the agent cannot run is worth less than nothing: an
+invocation that a permission gate refuses spends the skill's bytes and returns
+no work. Name the literal command, so one standing rule can approve it, rather
+than building the path from a variable that reads as a new command every run.
 
 ## Verify
 
