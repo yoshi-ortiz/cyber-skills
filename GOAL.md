@@ -397,6 +397,17 @@ carries what R-52 settled. These are the parts it deliberately does not carry.
 | Where a verdict lives | One tracked-but-fog file, or one per pass | The click log is fog and untracked; a verdict must be fog and **tracked**, which `BUGS.md` and `ROADMAP.md` already prove is a real place. Whether seven passes share one file or take one each is a merge-conflict question, and nobody has reviewed two passes yet to produce one. | R-52 |
 | CJK in the bundle | Tokenize a Chinese fixture through the declared lens | The `bytes/4` estimate and the fragmentation argument both assume English prose. CJK runs 1.06-1.55x English under `o200k`, so a bundle carrying Chinese would move the ratio and the lens would be reporting on text the budget never modelled. Nothing in the corpus is Chinese today, which is why this is a question and not a defect. | R-52 |
 
+### Advisory clustering, unanswered parts
+
+The contract in [docs/SPEC/ADVISORY_CLUSTERING.md](docs/SPEC/ADVISORY_CLUSTERING.md)
+settles what a proposal is and what it may never do. These are the parts left open.
+
+| Item | Prototype | The question | Row |
+| --- | --- | --- | --- |
+| Where the dependency lives | One dev-only directory outside `aesthetic/scripts/` and `tools/`, or a sibling repository | `CLAUDE.md` says standard library only, and R-50 already carves out a development-only learner, so the rule is not the obstacle -- the location is. The `trace_preview.py` answer, a CDN and a browser, cannot be reused because Numba compiles Python. A fourth top-level directory that `contracts.py` must admit and both channels must drop is the cheapest candidate, and nobody has tried it. | R-53 |
+| Which embedding model | One CLIP-class model for images, one sentence model for chunks | The larger dependency is not EVoC, it is whatever produces the vectors, and it is the one that drags a checkpoint and a cache into a repository whose publication gates must reject both. Local model, or an API that leaves nothing on disk? The second trades a download for a network call inside dev tooling that is otherwise offline. | R-53 |
+| Whether EVoC earns its place | The same corpus through EVoC and through scikit-learn's own HDBSCAN | EVoC is built for millions of vectors. This corpus is 13 items now and 135 in a real project, where `base_min_cluster_size` defaults to 5. HDBSCAN is already an EVoC dependency, so the lazier option costs one package fewer and is a strict subset of what is being installed either way. If the clusters agree at this scale, the extra package is buying nothing yet. | R-53 |
+
 ## Open questions
 
 | # | Question | Why it is not settled |
