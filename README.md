@@ -35,54 +35,52 @@ you like to work and does not need to be re-briefed every morning.
 You do not write code to use one. You install a folder, start a new chat, and say
 its name. Everything after the install is optional reading.
 
-- [Index](#-collection)
-- [Main workflow](#-main-workflow)
+- [Index and main workflow](#-collection)
+- [Skill-surface index](SKILL_SPEC.md)
 - [Installation](#-install)
 - [Skills](#-skill-prompts)
 - [Coming soon](#-experiments)
 
 ## 📒 COLLECTION
 
-Grouped by when you need one, not by how finished it is.
+Grouped by when you need one, not by how finished it is. The collection is
+organized around one rail: `kit` is Day 0, `first`, `build`, and `land` move
+work forward, and `check` and `fix` are return arcs. The **Family** column says
+which stop of that rail a prompt belongs to.
 
 <table>
   <colgroup>
     <col width="220">
     <col>
+    <col width="230">
   </colgroup>
-  <tr><td colspan="2" align="center"><h3><a href="#-kit">📀 Setup once</a><br><small>Install it once, every AI app carries it</small></h3></td></tr>
-  <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>One toolkit across every AI app you use</td></tr>
-  <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>Same skill, its original name</td></tr>
-  <tr><td colspan="2" align="center"><h3><a href="#-genesis">💼 Planning</a><br><small>Before you start building</small></h3></td></tr>
-  <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Plans before it builds, and proves the thing runs</td></tr>
-  <tr><td nowrap>📚 <a href="#-knowledge"><strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td></tr>
-  <tr><td colspan="2" align="center"><h3><a href="#-aesthetic">🤖 Token sessions</a><br><small>Where you spend a working session</small></h3></td></tr>
-  <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td></tr>
-  <tr><td colspan="2" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Call by fun names</small></h3></td></tr>
-  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Add commands in Spanish</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Rewrites your agent's conclusions in plain Spanish</td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-kit">📀 Setup once</a><br><small>Install it once, every AI app carries it</small></h3></td></tr>
+  <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>One toolkit across every AI app you use</td><td><code>kit</code> · <strong>Day 0</strong>, outside the loop</td></tr>
+  <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>Same skill, its original name</td><td><code>kit</code> · <strong>Day 0</strong>, outside the loop</td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-genesis">💼 Planning</a><br><small>Before you start building</small></h3></td></tr>
+  <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Plans before it builds, and proves the thing runs</td><td><code>first</code> · <strong>Plan</strong></td></tr>
+  <tr><td nowrap>📚 <a href="#-knowledge"><strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td><td><code>first</code> · <strong>Plan</strong></td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Token sessions</a><br><small>Where you spend a working session</small></h3></td></tr>
+  <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td><td><code>first</code> · <strong>Plan</strong></td></tr>
+  <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Shows which other skills yours actually resemble, and which resemble nothing</td><td><code>build</code> · <strong>Measure</strong></td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Call by fun names</small></h3></td></tr>
+  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td><td>No family. Works anywhere on the rail.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Add commands in Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Rewrites your agent's conclusions in plain Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
+  <tr><td colspan="3" align="center"><h3>🛤️ Rest of the rail<br><small>Planned families. No installed command answers to these yet.</small></h3></td></tr>
+  <tr><td nowrap>🔨 <code>build-*</code></td><td>Implement and verify the approved contract</td><td><code>build</code> · <strong>Code · Build · Test</strong></td></tr>
+  <tr><td nowrap>🚢 <code>land-*</code></td><td>Ship selected outputs and make deployment observable</td><td><code>land</code> · <strong>Release · Deploy</strong></td></tr>
+  <tr><td nowrap>🔍 <code>check-*</code></td><td>Read progress and production evidence back into planning</td><td><code>check</code> · <strong>Monitor</strong> → Plan</td></tr>
+  <tr><td nowrap>🩹 <code>fix</code></td><td>Restore safe operation, then return to the affected family</td><td><code>fix</code> · <strong>Operate</strong>, incident response</td></tr>
 </table>
 
 Stable prompts sit under [SKILL PROMPTS](#-skill-prompts). The rest are
 [EXPERIMENTS](#-experiments), installed by hand.
 
-## 🛤️ MAIN WORKFLOW
-
-The collection is organized around one rail: set up once, plan the work, build
-and test it, release it, then feed production evidence back into planning.
-
-| Family | SDLC phase | Place in the loop |
-| --- | --- | --- |
-| `kit` | **Day 0**, outside the loop | Set up the machine once. It is an on-ramp, not a per-feature phase. |
-| `first` | **Plan** | Establishes the domain, evidence, scope, architecture, and approved contract. |
-| `build` | **Code · Build · Test** | Implements and verifies the approved contract within the project boundary. |
-| `land` | **Release · Deploy** | Ships selected outputs and makes deployment observable and recoverable. |
-| `check` | **Monitor** → Plan | Reads progress and production evidence and returns it to planning. |
-| `fix` | **Operate**, incident response | Restores safe operation from outside the loop and returns to the affected family. |
-
-The design-specific epics and their PASS evidence live in the development
-[roadmap](ROADMAP.md); the stable branch carries only prompts ready to install.
+The [skill-surface index](SKILL_SPEC.md) maps every family, alias, owner,
+status, and roadmap item. The design-specific epics and their PASS evidence live
+in the development [roadmap](ROADMAP.md). Planned names are not installed
+commands.
 
 ---
 
@@ -128,8 +126,8 @@ carries those plus everything under EXPERIMENTS.
 
 Skills land in `~/.agents/skills/`. Claude Code and Pi are linked from there
 by the CLI itself. **Cursor, Codex, and Antigravity are not**, so if you use
-one of those and the skills do not show up, that is why. [/kit](#-kit) installs
-the bridge that closes the gap and re-runs it after every install.
+one of those and the skills do not show up, that is why. `/kit` fetches
+`harness-core` and runs its local sync script after installation.
 
 To remove one later: `npx skills remove <name>`.
 
@@ -173,11 +171,11 @@ you which one you meant.
 | Covers | What it holds |
 | --- | --- |
 | Fetch | Clone or fast-forward `harness-core` from GitHub, then run its local sync script |
-| Where the list lives | Checkout versus Homebrew paths, and the local overlay that wins on conflict |
+| Where the list lives | The `harness-core` checkout and the local overlay that wins on conflict |
 | Adding a skill | Why a hand edit installs nothing, why a full name list rots, why `--all` is banned |
 | Standard versus situational | What every AI app gets, against opt-in groups behind `--with` |
 | Fixing | A symptom table: failed source, stale copy after a rename, two skills of one name |
-| Releasing | Tag the repo, bump the Homebrew formula |
+| Releasing | Read the [harness README](https://github.com/yoshi-ortiz/harness-core) for the release procedure |
 
 </details>
 
@@ -385,6 +383,49 @@ regression tests.
 | Honest delivery | `review_delivery.py` rejects generic, explanatory-only, or hash-drifted proposals |
 | Subject fidelity | A comp reads as *this* product with the logo removed |
 | Handoff clarity | First reply is URL, key, and a question. No setup preamble. |
+
+</details>
+
+## 🔬 /build-context-token-vectors
+
+Answers one question: **which other skills is yours actually like?** It reads
+every skill installed on your machine, groups them by what they say, and shows
+you where yours land. Some land next to obvious neighbours. Some land nowhere,
+which is worth knowing before you decide yours is unique.
+
+| | |
+| --- | --- |
+| **Package** | [build-context-token-vectors/](build-context-token-vectors/) · entry [build-context-token-vectors/SKILL.md](build-context-token-vectors/SKILL.md) |
+| **Invoke** | You only. Say `build-context-token-vectors`. |
+| **Needs** | Python, and three packages in a throwaway environment you create: `evoc`, `model2vec`, `matplotlib` |
+| **Runs on** | Your installed skills folder, read only |
+| **Channel** | `alpha` |
+
+<details>
+<summary><b>Full spec: what it measures, and the one thing it refuses to say</b></summary>
+
+`tools/token_bench.py` compares a skill flow against a reference flow, and a
+human picks the reference. This derives it instead: every `SKILL.md` becomes a
+vector, the vectors are clustered, and the nearest neighbours are the skills a
+benchmark should actually run against.
+
+| Output | Means |
+| --- | --- |
+| Cosine similarity | How close two skills' doctrine sits. Above 0.80 a real peer, 0.65 to 0.80 a loose one, below 0.65 no peer at all. |
+| A cluster | The skill was placed, and that cluster's other members are its neighbourhood. |
+| `noise` | It was placed nowhere. |
+| The scatter plot | Two principal components, for orientation. Clustering ran in full dimensionality, so two adjacent looking points may not be. |
+
+**It never says whether a skill is good.** `noise` means the corpus holds no
+peer, and novelty and dilution look identical from here. The judgement stays
+yours.
+
+**The seed is part of the result.** The clustering algorithm is stochastic, so
+the script declares a fixed `random_state`. Without one, two runs over the same
+skills return different groups, and a comparison set that moves is not one.
+
+**Dependencies stay outside.** Nothing in this package imports them except this
+skill's own script, and it ships none of them. That is why it stays on `alpha`.
 
 </details>
 

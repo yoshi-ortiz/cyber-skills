@@ -17,7 +17,7 @@ INDEX = ("## Index\n\n| | |\n| --- | --- |\n"
 BODY = (INDEX + "# 📦 INSTALL\n\n"
         "# ✨ SKILL PROMPTS\n\n## 🎒 /kit\n\n## 🇪🇸 /ora\n\n"
         "# 🧪 EXPERIMENTS\n\n## 🧬 /genesis\n\n## 📚 /knowledge\n\n"
-        "## 🎨 /aesthetic\n\n## 🃏 /silly\n")
+        "## 🎨 /aesthetic\n\n## 🔬 /build-context-token-vectors\n\n## 🃏 /silly\n")
 
 MANIFEST = ("---\nname: knowledge\ndescription: Distils sources, and answers to "
             "enciclopedia.\ntranslations:\n  es: enciclopedia\n---\n")

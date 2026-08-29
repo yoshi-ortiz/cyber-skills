@@ -43,7 +43,7 @@ SECTIONS = ("INSTALL", "SKILL PROMPTS", "EXPERIMENTS")
 GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Set up once", ("kit",)),
     ("Plan a project", ("genesis", "knowledge")),
-    ("Run a session", ("aesthetic",)),
+    ("Run a session", ("aesthetic", "build-context-token-vectors")),
     ("Odds and ends", ("silly", "ora")),
 )
 

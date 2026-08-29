@@ -36,36 +36,51 @@ uno que ya sabe cómo trabajas y no necesita que se lo expliques cada mañana.
 No hace falta programar para usarlo. Instalas una carpeta, abres un chat nuevo y
 dices su nombre. Todo lo que viene después de la instalación es lectura opcional.
 
-- [Índice](#-colección)
+- [Índice y flujo principal](#-colección)
+- [Índice de superficies](SKILL_SPEC.md)
 - [Instalación](#-instalar)
 - [Skills](#-skill-prompts)
 - [Próximamente](#-experimentos)
 
 ## 📒 COLECCIÓN
 
-Agrupadas por cuándo las necesitas, no por qué tan terminadas están.
+Agrupadas por cuándo las necesitas, no por qué tan terminadas están. La
+colección sigue un solo riel: `kit` es el Día 0, `first`, `build` y `land`
+avanzan el trabajo, y `check` y `fix` son arcos de regreso. La columna
+**Familia** dice a qué parada del riel pertenece cada prompt.
 
 <table>
   <colgroup>
     <col width="220">
     <col>
+    <col width="230">
   </colgroup>
-  <tr><td colspan="2" align="center"><h3><a href="#-kit">📀 Configurar una vez</a><br><small>Instálalo una vez y todas tus apps de IA lo llevan</small></h3></td></tr>
-  <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>Un solo juego de herramientas en todas tus apps de IA</td></tr>
-  <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>La misma skill, con su nombre original</td></tr>
-  <tr><td colspan="2" align="center"><h3><a href="#-genesis">💼 Planear</a><br><small>Antes de empezar a construir</small></h3></td></tr>
-  <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Planea antes de construir, y comprueba que funcione</td></tr>
-  <tr><td nowrap>📚 <a href="#-enciclopedia"><strong>/enciclopedia</strong></a></td><td>Lee la documentación real y guarda una nota corta con su fuente</td></tr>
-  <tr><td colspan="2" align="center"><h3><a href="#-aesthetic">🤖 Sesiones de tokens</a><br><small>Donde se te va una sesión de trabajo</small></h3></td></tr>
-  <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td></tr>
-  <tr><td colspan="2" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Llámalas por nombres divertidos</small></h3></td></tr>
-  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Agrega comandos en español</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu agent en español sencillo</td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-kit">📀 Configurar una vez</a><br><small>Instálalo una vez y todas tus apps de IA lo llevan</small></h3></td></tr>
+  <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>Un solo juego de herramientas en todas tus apps de IA</td><td><code>kit</code> · <strong>Día 0</strong>, fuera del flujo</td></tr>
+  <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>La misma skill, con su nombre original</td><td><code>kit</code> · <strong>Día 0</strong>, fuera del flujo</td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-genesis">💼 Planear</a><br><small>Antes de empezar a construir</small></h3></td></tr>
+  <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Planea antes de construir, y comprueba que funcione</td><td><code>first</code> · <strong>Planear</strong></td></tr>
+  <tr><td nowrap>📚 <a href="#-enciclopedia"><strong>/enciclopedia</strong></a></td><td>Lee la documentación real y guarda una nota corta con su fuente</td><td><code>first</code> · <strong>Planear</strong></td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Sesiones de tokens</a><br><small>Donde se te va una sesión de trabajo</small></h3></td></tr>
+  <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td><td><code>first</code> · <strong>Planear</strong></td></tr>
+  <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Muestra a qué otros skills se parece el tuyo, y cuál no se parece a nada</td><td><code>build</code> · <strong>Medir</strong></td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Llámalas por nombres divertidos</small></h3></td></tr>
+  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Agrega comandos en español</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu agent en español sencillo</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
+  <tr><td colspan="3" align="center"><h3>🛤️ Resto del riel<br><small>Familias planeadas. Todavía no hay comando instalado que responda a estos nombres.</small></h3></td></tr>
+  <tr><td nowrap>🔨 <code>build-*</code></td><td>Implementa y verifica el contrato aprobado</td><td><code>build</code> · <strong>Código · Build · Pruebas</strong></td></tr>
+  <tr><td nowrap>🚢 <code>land-*</code></td><td>Publica salidas y vuelve observable el despliegue</td><td><code>land</code> · <strong>Lanzar · Desplegar</strong></td></tr>
+  <tr><td nowrap>🔍 <code>check-*</code></td><td>Lee el progreso y la evidencia de producción y los devuelve a planeación</td><td><code>check</code> · <strong>Monitorear</strong> → Planear</td></tr>
+  <tr><td nowrap>🩹 <code>fix</code></td><td>Restaura la operación y vuelve a la familia afectada</td><td><code>fix</code> · <strong>Operar</strong>, respuesta a incidentes</td></tr>
 </table>
 
 Las versiones estables están en [SKILL PROMPTS](#-skill-prompts). El resto
 son [EXPERIMENTOS](#-experimentos), de instalación manual.
+
+El [índice de superficies](SKILL_SPEC.md) conecta cada familia, alias, dueño,
+estado e item del roadmap. Los nombres planeados todavía no son comandos
+instalables.
 
 ---
 
@@ -135,7 +150,7 @@ una.
 | **Paquete** | [kit/](kit/) · entrada [kit/SKILL.md](kit/SKILL.md) |
 | **Invocación** | Solo tú. Di `kit` para configurarlo, `kit sync` para actualizarlo y `kit fix` cuando algo se rompió. |
 | **También responde a** | `starter-pack`, su nombre original. Viene incluido, no hay que instalarlo. |
-| **Requiere** | El [harness](https://github.com/yoshi-ortiz/harness-core) que maneja, más Homebrew o un clon |
+| **Requiere** | Git y el checkout de [harness-core](https://github.com/yoshi-ortiz/harness-core) que obtiene |
 | **Canal** | `main` |
 
 <details>
@@ -143,7 +158,8 @@ una.
 
 Una skill de referencia: sin scripts, sin estado. Le enseña a un agent a
 operar `yoshi-ortiz/harness-core`, cuyo `collection.yaml` lista las skills
-y los servidores MCP que debería llevar cada app de IA de tu máquina.
+y las skills que debería llevar cada app de IA de tu máquina. No instala
+runtimes ni administra servidores MCP.
 
 | Argumento | Qué hace |
 | --- | --- |
@@ -156,13 +172,12 @@ preguntarte cuál de las dos querías.
 
 | Cubre | Qué contiene |
 | --- | --- |
-| Instalación | `brew tap`, `brew install`, `harness init` y la alternativa con clon |
-| Dónde vive la lista | Rutas de clon frente a Homebrew, y la capa local que gana en conflicto |
+| Obtener y sincronizar | Clonar o actualizar `harness-core` y ejecutar su script local |
+| Dónde vive la lista | El checkout de `harness-core` y la capa local que gana en conflicto |
 | Agregar una skill | Por qué editar a mano no instala nada, por qué una lista completa se pudre, por qué `--all` está prohibido |
-| Agregar un MCP | Un solo transporte por servidor, y secretos solo por variable de entorno |
 | Estándar frente a opcional | Lo que recibe cada app de IA, contra los grupos detrás de `--with` |
-| Arreglar | Una tabla de síntomas: fuente que falló, servidor omitido en silencio, copia vieja tras un cambio de nombre, dos skills con un mismo nombre |
-| Publicar | Etiquetar el repositorio y actualizar la fórmula de Homebrew |
+| Arreglar | Una tabla de síntomas: fuente que falló, copia vieja tras un cambio de nombre, dos skills con un mismo nombre |
+| Publicar | Leer el [README de harness-core](https://github.com/yoshi-ortiz/harness-core) para el procedimiento |
 
 </details>
 
@@ -374,6 +389,49 @@ se sostenga bajo pruebas de regresión.
 | Entrega honesta | `review_delivery.py` rechaza propuestas genéricas, solo explicativas o con hash desviado |
 | Fidelidad al tema | La propuesta se reconoce como *este* producto sin el logo |
 | Claridad del traspaso | La primera respuesta es URL, clave y una pregunta. Sin preámbulo. |
+
+</details>
+
+## 🔬 /build-context-token-vectors
+
+Responde una pregunta: **¿a qué otros skills se parece el tuyo?** Lee cada
+skill instalado en tu máquina, los agrupa por lo que dicen, y te muestra dónde
+cae el tuyo. Algunos caen junto a vecinos evidentes. Otros no caen en ninguna
+parte, y eso conviene saberlo antes de dar por hecho que el tuyo es único.
+
+| | |
+| --- | --- |
+| **Package** | [build-context-token-vectors/](build-context-token-vectors/) · entry [build-context-token-vectors/SKILL.md](build-context-token-vectors/SKILL.md) |
+| **Invocar** | Solo tú. Di `build-context-token-vectors`. |
+| **Necesita** | Python, y tres paquetes en un entorno desechable que creas tú: `evoc`, `model2vec`, `matplotlib` |
+| **Se ejecuta en** | Tu carpeta de skills instalados, solo lectura |
+| **Canal** | `alpha` |
+
+<details>
+<summary><b>Spec completa: qué mide, y lo único que se niega a decir</b></summary>
+
+`tools/token_bench.py` compares a skill flow against a reference flow, and a
+human picks the reference. This derives it instead: every `SKILL.md` becomes a
+vector, the vectors are clustered, and the nearest neighbours are the skills a
+benchmark should actually run against.
+
+| Output | Means |
+| --- | --- |
+| Cosine similarity | How close two skills' doctrine sits. Above 0.80 a real peer, 0.65 to 0.80 a loose one, below 0.65 no peer at all. |
+| A cluster | The skill was placed, and that cluster's other members are its neighbourhood. |
+| `noise` | It was placed nowhere. |
+| The scatter plot | Two principal components, for orientation. Clustering ran in full dimensionality, so two adjacent looking points may not be. |
+
+**It never says whether a skill is good.** `noise` means the corpus holds no
+peer, and novelty and dilution look identical from here. The judgement stays
+yours.
+
+**The seed is part of the result.** The clustering algorithm is stochastic, so
+the script declares a fixed `random_state`. Without one, two runs over the same
+skills return different groups, and a comparison set that moves is not one.
+
+**Dependencies stay outside.** Nothing in this package imports them except this
+skill's own script, and it ships none of them. That is why it stays on `alpha`.
 
 </details>
 
