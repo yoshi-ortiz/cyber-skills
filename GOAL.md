@@ -386,6 +386,17 @@ gaps: no amount of naming fixes them.
 | Leader words in `collection.yaml` | Inline comments naming the top skills and `ponytail`, `ask-matt`, `poteto` | Only `ponytail` is a manifest entry. `ask-matt` arrives incidentally through the bare `mattpocock/skills` line, and `poteto` belongs to **pstack**, which is in no manifest at all -- nor is `zoom-out`, which `check` drives. A leader word that is not a source cannot be indexed, and a clean install produces a rail with holes in it. | R-43 |
 | `alias.py` stub kinds | Two more shapes in `stub()` | Anchor and ghost-argument stubs are one line each. Does the gate still hold when a name points at a section rather than a skill? | R-45 |
 
+### Agreed tokenization, unanswered parts
+
+The contract in [docs/SPEC/AGREED_TOKENIZATION.md](docs/SPEC/AGREED_TOKENIZATION.md)
+carries what R-52 settled. These are the parts it deliberately does not carry.
+
+| Item | Prototype | The question | Row |
+| --- | --- | --- | --- |
+| The command's name | Rename `check-transformers-neural-network` to a `tokenize` name | The user reaches for `tokenize`, and the current name describes the library rather than the act. But `check` in `SPEC.md` is the **shipped** read-only phase, and this skill is fog that never publishes. Does a Repo-Dev-only command take a rail prefix it can never appear in, or does the rail simply not name it? | R-52 |
+| Where a verdict lives | One tracked-but-fog file, or one per pass | The click log is fog and untracked; a verdict must be fog and **tracked**, which `BUGS.md` and `ROADMAP.md` already prove is a real place. Whether seven passes share one file or take one each is a merge-conflict question, and nobody has reviewed two passes yet to produce one. | R-52 |
+| CJK in the bundle | Tokenize a Chinese fixture through the declared lens | The `bytes/4` estimate and the fragmentation argument both assume English prose. CJK runs 1.06-1.55x English under `o200k`, so a bundle carrying Chinese would move the ratio and the lens would be reporting on text the budget never modelled. Nothing in the corpus is Chinese today, which is why this is a question and not a defect. | R-52 |
+
 ## Open questions
 
 | # | Question | Why it is not settled |

@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "aesthetic" / "scripts"))
 
 CDN = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0"
-DEFAULT_TOKENIZER = "Xenova/gpt-4"
+DEFAULT_TOKENIZER = "Xenova/gpt-4o"
 
 INBOX = Path("spec/design-harness/context-tags-inbox.jsonl")
 
