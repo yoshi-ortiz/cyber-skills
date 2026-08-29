@@ -20,8 +20,8 @@ not render a second website.
 
 ```bash
 python3 scripts/editorial_workflow.py observe --project-root . --source-root /absolute/corpus
-python3 scripts/editorial_workflow.py preferences --project-root . \
-  --out /tmp/aesthetic-preferences.json
+python3 scripts/direction_context.py --project-root . \
+  --out /tmp/aesthetic-context.json
 python3 scripts/editorial_workflow.py direction --project-root . \
   --spec /tmp/aesthetic-art-direction.json
 python3 scripts/editorial_workflow.py scope --project-root . \
@@ -30,6 +30,34 @@ python3 scripts/editorial_workflow.py advance --project-root . \
   --event /tmp/editorial-event.json
 python3 scripts/editorial_workflow.py status --project-root .
 ```
+
+## Compiling one inference pass
+
+`direction_context.py` with no `--pass` prints the evidence bundle. With one, it
+compiles that pass: it tags every candidate with its priority, workflow role,
+semantic context, and loading tier, counts it under a tokenizer profile, packs
+it inside the declared budget, and prints the trace.
+
+```bash
+python3 scripts/direction_context.py --project-root . --pass proposal \
+  --out /tmp/aesthetic-bundle.txt --trace /tmp/aesthetic-trace.json
+python3 scripts/direction_context.py --project-root . --pass generation \
+  --proof golden-rules
+```
+
+| Flag | Holds |
+| --- | --- |
+| `--pass` | `intent`, `constraint`, `retrieval`, `proposal`, `generation`, `implementation`, `verification` |
+| `--profile` | `bytes/4` is an estimate and says so. `hf:<tokenizer id>` is exact and needs a tokenizer this skill does not ship. |
+| `--budget` | Overrides the declared budget for one run |
+| `--proof` | Names a proof that passed. `generation` waits for `golden-rules`. |
+| `--force` | Runs a gated pass anyway, when the user asked for it directly |
+| `--trace` | Writes the trace as JSON. The same project and profile write the same bytes. |
+
+Admission order is fixed: user corrections, then acceptance criteria, then
+evidence, then instructions, then doctrine. Doctrine is dropped first when the
+budget fills. A correction that does not fit raises rather than being dropped,
+because a budget is never a reason to forget what the user said.
 
 `advance` appends one validated scope event. An existing event id changes
 nothing. The established `bootstrap_harness.py article` renders the burndown.
