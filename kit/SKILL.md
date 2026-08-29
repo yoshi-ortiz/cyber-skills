@@ -1,6 +1,6 @@
 ---
 name: kit
-description: Operating guide for the harness-core skill loadout every AI app on a machine carries. Bare kit installs. Also answers to install, setup, init, start, sync, update, refresh, upgrade, fix, doctor, repair, troubleshoot, conflict, and to starter-pack, its original name. Use when the user wants the harness fetched, every app re-armed with the current skill selection, a skill added, or a broken collection diagnosed.
+description: Operating guide for the harness-core skill loadout every AI app carries. Bare kit syncs. Also answers to install, setup, init, start, sync, update, refresh, upgrade, fix, doctor, repair, troubleshoot, conflict, and starter-pack. Use to fetch the harness, re-arm apps, add a skill, or diagnose the collection.
 disable-model-invocation: true
 also:
   - starter-pack :: Same skill, its original name
@@ -10,14 +10,14 @@ also:
 
 | Say | Do |
 | --- | --- |
-| `kit`, `install`, `setup`, `init`, `start` | **Install.** Bare `kit` means this. |
-| `sync`, `update`, `refresh`, `upgrade` | **Sync.** Re-arm every app at the latest version. |
+| `kit`, `sync`, `update`, `refresh`, `upgrade`, `install`, `setup`, `init`, `start`, `starter-pack` | **Sync.** Re-arm every app at the latest version, cloning the harness first if it is missing. Bare `kit` means this, in every directory, a Repo-Dev checkout included. |
 | `fix`, `doctor`, `repair`, `troubleshoot`, `conflict` | **Fix.** Something installed wrong, or two things collided. |
 
-Never ask which. Every mode ends in the same idempotent re-fetch, so running
-Install on a machine that already has it syncs it instead of breaking it.
+Never ask which. Sync is idempotent, so there is no separate Install mode to
+pick wrong: running it where the harness already exists syncs it instead of
+breaking it. Releasing this package is Repo-Dev work and is not a mode here.
 
-Everything below the three modes is reference. Read one when the task names it.
+Everything below the two modes is reference. Read one when the task names it.
 
 One collection, one harness. `collection.toml` records which skills this
 machine carries. Kit fetches `harness-core` from GitHub and runs
@@ -30,6 +30,7 @@ Install and Sync fan out over every source and every app. That takes minutes.
 Keep the whole log:
 
 ```bash
+set -o pipefail
 git -C ~/.harness-core pull --ff-only
 python3 ~/.harness-core/harness.py sync 2>&1 | tee /tmp/kit.log
 ```
