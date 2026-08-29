@@ -16,23 +16,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fog import is_fog, reasons
-
-SKIP_DIRS = {".git", "__pycache__"}
+from fog import is_fog, reasons, walk
 
 
 def check(tree: Path, channel: str = "main") -> int:
-    found = []
-    for path in sorted(tree.rglob("*")):
-        if not path.is_file():
-            continue
-        relative = path.relative_to(tree)
-        if any(part in SKIP_DIRS for part in relative.parts):
-            continue
-        if relative.name == ".DS_Store":
-            continue
-        if is_fog(relative.as_posix(), channel):
-            found.append(relative.as_posix())
+    found = [relative.as_posix() for relative in walk(tree)
+             if is_fog(relative.as_posix(), channel)]
     if not found:
         print(f"OK: {tree} carries no development fog.")
         return 0
