@@ -227,13 +227,21 @@ session. **On path** is the `SKILL.md` bytes one end-to-end walk loads.
 
 | Flow | Skills | Context | On path |
 | --- | --- | --- | --- |
-| `ask-matt`, full flow | 9 | 937 B | 36,509 B |
-| The rail as it stands today | 6 | 1,856 B | 37,573 B |
-| | | **1.98x** | 1.03x |
+| `ask-matt`, full flow | 9 | 870 B | 36,267 B |
+| The rail as it stands today | 6 | 1,855 B | 37,405 B |
+| | | **2.13x** | 1.03x |
 
-Same work, near-identical path cost, and the rail pays **98% more** context
+Same work, near-identical path cost, and the rail pays **113% more** context
 while shipping three fewer skills. Invocation choice and model-invoked
 description length, not raw skill count, explain the difference.
+
+**The reference is a moving target, and it moved.** This table read 1.98x when
+first measured. The rail did not regress -- its context is unchanged at 1,855 B
+against 1,856 B. `ask-matt` dropped 67 bytes of description, from 937 to 870,
+and took the ratio with it. That is the argument for a re-runnable command over
+a number in a document: a benchmark against other people's work goes stale
+because of their commits, not yours, and nothing in this repository would have
+said so.
 
 **Finding 1: invocation choice comes before description length.** `ask-matt`,
 `implement`, and the other user-invoked steps contribute zero context despite
@@ -252,11 +260,11 @@ python3 tools/token_bench.py --root ~/.agents/skills \
 
 | Flow | On path |
 | --- | --- |
-| Starting at the router | 33,082 B |
-| Same work, entered directly | 21,591 B |
+| Starting at the router | 32,936 B |
+| Same work, entered directly | 21,519 B |
 | | **0.65x** |
 
-`ask-matt/SKILL.md` is 11,491 bytes: **35% of its own flow**, spent answering
+`ask-matt/SKILL.md` is 11,417 bytes: **35% of its own flow**, spent answering
 "what should I run" before any work starts. That is the price of a map, and it
 is only worth paying when the reader is actually lost.
 
