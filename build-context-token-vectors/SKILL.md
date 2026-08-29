@@ -29,6 +29,38 @@ it. Report that upstream rather than patching around it here.
 static model, default `minishlab/potion-base-8M`. `-k` sets how many neighbours
 each skill reports.
 
+## Tune it
+
+Every EVoC parameter is a flag, and only the ones you set are passed, so a run
+that changed nothing says `EVoC defaults` rather than looking tuned.
+
+| Flag | Turns |
+| --- | --- |
+| `--base-min-cluster-size` | How many points make a cluster. Lower splits, higher merges. |
+| `--n-neighbors` | The kNN graph's width. Lower sees local structure, higher sees global. |
+| `--min-samples` | The density estimate. |
+| `--noise-level` | How readily a point is called noise. |
+| `--n-epochs`, `--neighbor-scale`, `--min-similarity-threshold` | The node embedding, and where layers separate. |
+
+The useful act is comparing two settings, never trusting one:
+
+```
+EVoC defaults                            8 clusters, 49 noise
+--base-min-cluster-size 3 --n-neighbors 10   9 clusters, 53 noise
+--noise-level 0.2                        7 clusters, 39 noise
+```
+
+The page prints the settings it was built with, so a screenshot still says what
+produced it.
+
+## Explore it
+
+The dashboard is not a report. Switch **layer** to move between the resolutions
+EVoC found, coarsest first. Filter to **Local**, **All**, or **Noise**. Search by
+skill name, by a peer's name, or by a cluster id such as `c4`. Click any point or
+row to inspect one skill: its membership strength, its full neighbour list, and
+every other member of its cluster at the current layer.
+
 ## Read it
 
 | Output | Means |
