@@ -56,7 +56,9 @@ produced it.
 ## Explore it
 
 The dashboard is not a report. Switch **layer** to move between the resolutions
-EVoC found, coarsest first. Filter to **Local**, **All**, or **Noise**. Search by
+EVoC found, coarsest first. **Rail** organizes known skills as `first`, `build`,
+`land`, `check`, then the `kit` and `fix` aids; this is display metadata and
+never changes the vectors. Filter to **Local**, **All**, or **Noise**. Search by
 skill name, by a peer's name, or by a cluster id such as `c4`. Click any point or
 row to inspect one skill: its membership strength, its full neighbour list, and
 every other member of its cluster at the current layer.
@@ -88,4 +90,4 @@ which comparison you run next; nothing here runs one.
 
 Its three dependencies live in a virtual environment you create. Nothing under
 `aesthetic/scripts/` or `tools/` imports them, and this skill ships none of
-them, which is why it stays on the `alpha` channel.
+them.

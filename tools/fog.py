@@ -65,7 +65,6 @@ FOG_FILES_EXTRA = (
 # channel; `main` carries nothing under them, KEEP_ALWAYS included.
 ALPHA_SKILLS = (
     "aesthetic",
-    "build-context-token-vectors",
     "genesis",
     "knowledge",
     "silly",
@@ -160,7 +159,6 @@ def reasons() -> dict[str, str]:
         "aesthetic/scripts/contracts.py": "development tooling",
         "aesthetic/scripts/verify_references.py": "development tooling",
         "aesthetic": "alpha channel; not published to main",
-        "build-context-token-vectors": "alpha channel; not published to main",
         "genesis": "alpha channel; not published to main",
         "knowledge": "alpha channel; not published to main",
         "silly": "alpha channel; not published to main",

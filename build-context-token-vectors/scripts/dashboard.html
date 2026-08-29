@@ -114,7 +114,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c =>
 // Coarsest layer first: it is the one a reader can hold in their head, and the
 // finer layers are the drill-down rather than the entry point.
 let layer = D.layerStats.length - 1;
-let scope = "local";
+let scope = "rail";
 let selected = null;
 
 const params = Object.entries(D.params);
@@ -129,12 +129,17 @@ const tag = c => c < 0 ? '<span class="tag noise">noise</span>'
                        : `<span class="tag">c${c}</span>`;
 const meter = v =>
   `<span class="meter"><i style="width:${Math.round(v * 100)}%"></i></span>`;
+const railRank = s => s.phase ? D.railOrder.indexOf(s.phase) : D.railOrder.length;
+const railSort = (a, b) => railRank(a[0]) - railRank(b[0]) ||
+  a[0].name.localeCompare(b[0].name);
+const phaseTag = s => s.phase ? `<span class="tag">/${esc(s.phase)}</span>` : "&mdash;";
 
 function controls() {
   $("layers").innerHTML = D.layerStats.map((s, i) =>
     `<button data-layer="${i}" aria-pressed="${i === layer}">${s.clusters}c</button>`
   ).join(" ");
-  $("scopes").innerHTML = [["local", "Local"], ["all", "All"], ["noise", "Noise"]]
+  $("scopes").innerHTML = [["rail", "Rail"], ["local", "Local"],
+    ["all", "All"], ["noise", "Noise"]]
     .map(([k, t]) => `<button data-scope="${k}" aria-pressed="${k === scope}">${t}</button>`)
     .join(" ");
 }
@@ -142,13 +147,15 @@ function controls() {
 function visible() {
   const q = $("q").value.trim().toLowerCase();
   return D.skills.map((s, i) => [s, i]).filter(([s, i]) => {
+    if (scope === "rail" && !s.phase) return false;
     if (scope === "local" && !s.local) return false;
     if (scope === "noise" && cl(i) >= 0) return false;
     if (!q) return true;
     return s.name.toLowerCase().includes(q)
+      || s.phase === q || ("/" + s.phase) === q
       || ("c" + cl(i)) === q
       || s.peers.some(p => p.name.toLowerCase().includes(q));
-  });
+  }).sort(railSort);
 }
 
 function plot() {
@@ -179,7 +186,7 @@ function detail() {
   const siblings = D.skills
     .map((o, i) => [o, i]).filter(([, i]) => cl(i) === c && i !== selected && c >= 0);
   box.innerHTML = `<h3><code class="${s.local ? "local" : ""}">${esc(s.name)}</code>
-      ${tag(c)} · ${s.bytes.toLocaleString()} bytes ·
+      ${phaseTag(s)} ${tag(c)} · ${s.bytes.toLocaleString()} bytes ·
       membership ${s.strength.toFixed(3)} ${meter(s.strength)}</h3>
     <div class="peers"><b>Nearest:</b> ${s.peers.map(p =>
       `${p.sim.toFixed(3)} <b class="${p.local ? "local" : ""}">${esc(p.name)}</b>`
@@ -194,9 +201,10 @@ function tables() {
   $("tableHead").textContent =
     `${rows.length} skill${rows.length === 1 ? "" : "s"} shown`;
   $("table").innerHTML =
-    "<tr><th>Skill</th><th>Cluster</th><th>Member</th><th class='num'>Bytes</th>" +
+    "<tr><th>Phase</th><th>Skill</th><th>Cluster</th><th>Member</th><th class='num'>Bytes</th>" +
     "<th>Nearest peers, by cosine similarity</th></tr>" +
     rows.map(([s, i]) => `<tr class="row" data-i="${i}">
+      <td>${phaseTag(s)}</td>
       <td><code class="${s.local ? "local" : ""}">${esc(s.name)}</code></td>
       <td>${tag(cl(i))}</td>
       <td>${meter(s.strength)} <span class="num">${s.strength.toFixed(2)}</span></td>
@@ -217,7 +225,8 @@ function tables() {
     [...by.entries()].sort((a, b) => a[0] - b[0]).map(([c, ms]) => `<tr>
       <td>${tag(c)}</td><td class="num">${ms.length}</td>
       <td class="num">${D.persistence[c] !== undefined ? D.persistence[c].toFixed(2) : "&mdash;"}</td>
-      <td>${ms.map(m => `<code class="${m.local ? "local" : ""}">${esc(m.name)}</code>`)
+      <td>${ms.map((m, i) => [m, i]).sort(railSort).map(([m]) =>
+        `${phaseTag(m)} <code class="${m.local ? "local" : ""}">${esc(m.name)}</code>`)
         .join(", ")}</td></tr>`).join("");
 }
 
@@ -227,6 +236,7 @@ function stats() {
   const s = D.layerStats[layer], locals = D.skills.filter(x => x.local);
   $("stats").innerHTML = [
     ["skills", D.skills.length], ["clusters", s.clusters], ["noise", s.noise],
+    ["rail", D.skills.filter(x => x.phase).length],
     ["local", locals.length],
     ["local in noise", D.skills.filter((x, i) => x.local && cl(i) < 0).length],
   ].map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("");

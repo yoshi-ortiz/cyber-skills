@@ -40,6 +40,22 @@ TEMPLATE = Path(__file__).resolve().parent / "dashboard.html"
 LOCAL = ("aesthetic", "genesis", "knowledge", "ora", "silly", "kit",
          "starter-pack", "build-context-token-vectors")
 
+# Display order for the rail. This annotates the corpus after clustering; it
+# never feeds back into embeddings or EVoC.
+RAIL = (
+    ("first", ("first", "genesis", "aesthetic", "knowledge", "ask-matt",
+               "prototype", "grill-me", "grill-with-docs", "grilling",
+               "brainstorming", "context7-cli", "context7-mcp")),
+    ("build", ("build", "build-context-token-vectors", "ponytail", "tdd",
+               "code-review", "test-driven-development",
+               "verification-before-completion", "semgrep")),
+    ("land", ("land", "handoff", "claude-handoff")),
+    ("check", ("check", "zoom-out", "graphify")),
+    ("kit", ("kit", "starter-pack")),
+    ("fix", ("fix", "diagnosing-bugs", "systematic-debugging", "poteto-mode")),
+)
+RAIL_PHASE = {name: phase for phase, names in RAIL for name in names}
+
 # Declared, not defaulted. EVoC is stochastic, and a comparison set that
 # changes between two runs cannot be compared against anything.
 SEED = 42
@@ -129,6 +145,7 @@ def build(root: Path, model_name: str, k: int, params: dict) -> dict:
         skills.append({
             "name": name,
             "local": name in LOCAL,
+            "phase": RAIL_PHASE.get(name),
             "layers": [layer[i] for layer in every],
             "strength": round(float(strength[i]), 3),
             "x": round(float(coords[i][0]), 4),
@@ -141,6 +158,7 @@ def build(root: Path, model_name: str, k: int, params: dict) -> dict:
     persistence = np.asarray(getattr(model, "persistence_scores_", []), dtype=float)
     return {
         "skills": skills, "root": str(root), "model": model_name, "seed": SEED,
+        "railOrder": [phase for phase, _ in RAIL],
         "params": params,
         "persistence": [round(float(p), 3) for p in persistence.tolist()],
         "layerStats": [{"clusters": int(max(layer)) + 1,
@@ -160,12 +178,17 @@ def render(data: dict) -> str:
              f"{len(data['layerStats'])} layer(s), coarsest {top['clusters']} "
              f"clusters and {top['noise']} noise, seed {data['seed']}",
              f"{data['model']}  {data['params'] or 'EVoC defaults'}", ""]
-    for skill in data["skills"]:
+    rank = {phase: i for i, phase in enumerate(data["railOrder"])}
+    ordered = sorted(data["skills"],
+                     key=lambda skill: (rank.get(skill["phase"], len(rank)),
+                                        skill["name"]))
+    for skill in ordered:
         if not skill["local"]:
             continue
         cluster = skill["layers"][-1]
         tag = f"c{cluster}" if cluster >= 0 else "noise"
-        lines.append(f"{skill['name']}  [{tag}]  strength {skill['strength']}")
+        phase = f"/{skill['phase']} " if skill["phase"] else ""
+        lines.append(f"{phase}{skill['name']}  [{tag}]  strength {skill['strength']}")
         for peer in skill["peers"]:
             lines.append(f"   {peer['sim']:.3f} {'*' if peer['local'] else ' '} {peer['name']}")
         lines.append("")

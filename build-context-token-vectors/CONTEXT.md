@@ -16,7 +16,6 @@ It observes **position and overlap**, never quality. A skill that clusters with
 nothing is a skill the corpus holds no peer for, which is novelty or dilution
 and this cannot tell you which.
 
-Alpha, and not for a stable channel: it needs `evoc`, `model2vec`, and
-`matplotlib` in a virtual environment the user creates. The skill documents
-those, ships none of them, and nothing under `aesthetic/scripts/` or `tools/`
-imports any of them.
+It needs `evoc`, `model2vec`, and `matplotlib` in a virtual environment the user
+creates. The skill documents those, ships none of them, and nothing under
+`aesthetic/scripts/` or `tools/` imports any of them.

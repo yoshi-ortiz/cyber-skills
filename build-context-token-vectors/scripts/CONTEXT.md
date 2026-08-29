@@ -12,5 +12,5 @@ max_file_bytes: 30000
 the same shape as `tools/trace_preview.html`, so a reader who knows one knows
 the other.
 
-These are the only files in this package that import a third-party module. That
-is the whole reason this skill is alpha.
+These are the only files in this package that import a third-party module; the
+dependencies remain in the virtual environment the user creates.

@@ -139,6 +139,49 @@ To remove one later: `npx skills remove <name>`.
 
 Stable. Installed by path B, supported, safe to rely on.
 
+## 🔬 /build-context-token-vectors
+
+Answers one question: **which other skills is yours actually like?** It reads
+every skill installed on your machine, groups them by what they say, and shows
+you where yours land. Some land next to obvious neighbours. Some land nowhere,
+which is worth knowing before you decide yours is unique.
+
+| | |
+| --- | --- |
+| **Package** | [build-context-token-vectors/](build-context-token-vectors/) · entry [build-context-token-vectors/SKILL.md](build-context-token-vectors/SKILL.md) |
+| **Invoke** | You only. Say `build-context-token-vectors`. |
+| **Needs** | Python, and three packages in a throwaway environment you create: `evoc`, `model2vec`, `matplotlib` |
+| **Runs on** | Your installed skills folder, read only |
+| **Channel** | `main` |
+
+<details>
+<summary><b>Full spec: what it measures, and the one thing it refuses to say</b></summary>
+
+`tools/token_bench.py` compares a skill flow against a reference flow, and a
+human picks the reference. This derives it instead: every `SKILL.md` becomes a
+vector, the vectors are clustered, and the nearest neighbours are the skills a
+benchmark should actually run against.
+
+| Output | Means |
+| --- | --- |
+| Cosine similarity | How close two skills' doctrine sits. Above 0.80 a real peer, 0.65 to 0.80 a loose one, below 0.65 no peer at all. |
+| A cluster | The skill was placed, and that cluster's other members are its neighbourhood. |
+| `noise` | It was placed nowhere. |
+| The scatter plot | Two principal components, for orientation. Clustering ran in full dimensionality, so two adjacent looking points may not be. |
+
+**It never says whether a skill is good.** `noise` means the corpus holds no
+peer, and novelty and dilution look identical from here. The judgement stays
+yours.
+
+**The seed is part of the result.** The clustering algorithm is stochastic, so
+the script declares a fixed `random_state`. Without one, two runs over the same
+skills return different groups, and a comparison set that moves is not one.
+
+**Dependencies stay outside.** Nothing in this package imports them except this
+skill's own script, and it ships none of them.
+
+</details>
+
 ## 📦 /kit
 
 One toolkit, every AI app. If you use more than one, this keeps them
@@ -383,49 +426,6 @@ regression tests.
 | Honest delivery | `review_delivery.py` rejects generic, explanatory-only, or hash-drifted proposals |
 | Subject fidelity | A comp reads as *this* product with the logo removed |
 | Handoff clarity | First reply is URL, key, and a question. No setup preamble. |
-
-</details>
-
-## 🔬 /build-context-token-vectors
-
-Answers one question: **which other skills is yours actually like?** It reads
-every skill installed on your machine, groups them by what they say, and shows
-you where yours land. Some land next to obvious neighbours. Some land nowhere,
-which is worth knowing before you decide yours is unique.
-
-| | |
-| --- | --- |
-| **Package** | [build-context-token-vectors/](build-context-token-vectors/) · entry [build-context-token-vectors/SKILL.md](build-context-token-vectors/SKILL.md) |
-| **Invoke** | You only. Say `build-context-token-vectors`. |
-| **Needs** | Python, and three packages in a throwaway environment you create: `evoc`, `model2vec`, `matplotlib` |
-| **Runs on** | Your installed skills folder, read only |
-| **Channel** | `alpha` |
-
-<details>
-<summary><b>Full spec: what it measures, and the one thing it refuses to say</b></summary>
-
-`tools/token_bench.py` compares a skill flow against a reference flow, and a
-human picks the reference. This derives it instead: every `SKILL.md` becomes a
-vector, the vectors are clustered, and the nearest neighbours are the skills a
-benchmark should actually run against.
-
-| Output | Means |
-| --- | --- |
-| Cosine similarity | How close two skills' doctrine sits. Above 0.80 a real peer, 0.65 to 0.80 a loose one, below 0.65 no peer at all. |
-| A cluster | The skill was placed, and that cluster's other members are its neighbourhood. |
-| `noise` | It was placed nowhere. |
-| The scatter plot | Two principal components, for orientation. Clustering ran in full dimensionality, so two adjacent looking points may not be. |
-
-**It never says whether a skill is good.** `noise` means the corpus holds no
-peer, and novelty and dilution look identical from here. The judgement stays
-yours.
-
-**The seed is part of the result.** The clustering algorithm is stochastic, so
-the script declares a fixed `random_state`. Without one, two runs over the same
-skills return different groups, and a comparison set that moves is not one.
-
-**Dependencies stay outside.** Nothing in this package imports them except this
-skill's own script, and it ships none of them. That is why it stays on `alpha`.
 
 </details>
 

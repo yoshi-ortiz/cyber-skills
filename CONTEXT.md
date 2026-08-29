@@ -22,7 +22,7 @@ another.
 | Directory | What it is | Context | Channel |
 | --- | --- | --- | --- |
 | [aesthetic/](aesthetic/) | Design and art direction, ranked against evidence | Design-Inference | alpha |
-| [build-context-token-vectors/](build-context-token-vectors/) | Which installed skills are a skill's real peers | Repo-Dev | alpha |
+| [build-context-token-vectors/](build-context-token-vectors/) | Which installed skills are a skill's real peers | Repo-Dev | main |
 | [genesis/](genesis/) | Spec-driven build discipline and the files it keeps state in | its own, unrelated | alpha |
 | [knowledge/](knowledge/) | External sources distilled into a cited OKF bundle | its own, unrelated | alpha |
 | [ora/](ora/) | Spanish conclusion voice | its own, unrelated | main |
