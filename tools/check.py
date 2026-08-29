@@ -46,6 +46,7 @@ def gates(tree: Path) -> list[tuple[str, list[str]]]:
         ("loanword tests", [py, "tools/test_loanwords.py"]),
         ("runner tests", [py, "tools/test_check.py"]),
         ("token benchmark tests", [py, "tools/test_token_bench.py"]),
+        ("trace preview tests", [py, "tools/test_trace_preview.py"]),
         ("publish main", [py, "tools/publish.py", "--out", str(tree / "main"), "--check"]),
         ("publish alpha", [py, "tools/publish.py", "--out", str(tree / "alpha"),
                            "--channel", "alpha", "--check"]),
