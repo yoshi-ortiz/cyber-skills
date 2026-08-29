@@ -11,7 +11,7 @@ the skills installed; whether that is novelty or a diluted `SKILL.md` is a
 judgement no clusterer can make, which is why nothing here writes a verdict.
 
     python3 scripts/vectors.py                       # print it
-    python3 scripts/vectors.py --serve               # dashboard, and open it
+    python3 scripts/vectors.py --serve               # live dashboard, and open it
     python3 scripts/vectors.py --serve --min-cluster-size 3 --n-neighbors 10
 
 Every EVoC parameter below is a flag, because the useful act is comparing two
@@ -25,9 +25,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import webbrowser
+from dataclasses import dataclass
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 from evoc import EVoC
@@ -72,6 +76,20 @@ TUNABLE = {
     "neighbor_scale": (float, 1.0, "scales the effective neighbour count"),
     "min_similarity_threshold": (float, 0.2, "Jaccard threshold between layers"),
 }
+
+
+@dataclass(frozen=True)
+class PreparedCorpus:
+    """Expensive, parameter-independent work shared by every tuning run."""
+
+    root: Path
+    model: str
+    k: int
+    names: list[str]
+    texts: list[str]
+    vectors: np.ndarray
+    coords: np.ndarray
+    similarity: np.ndarray
 
 
 def body(text: str) -> str:
@@ -124,16 +142,22 @@ def layers(model: EVoC, fallback: np.ndarray) -> list[list[int]]:
     return found or [np.asarray(fallback, dtype=int).tolist()]
 
 
-def build(root: Path, model_name: str, k: int, params: dict) -> dict:
+def prepare(root: Path, model_name: str, k: int) -> PreparedCorpus:
     names, texts = load(root)
     if not names:
         raise SystemExit(f"no SKILL.md under {root}")
     vectors = embed(texts, model_name)
-
-    model = EVoC(random_state=SEED, **params).fit(vectors)
     coords = project(vectors)
     similarity = vectors @ vectors.T
     np.fill_diagonal(similarity, -1.0)
+    return PreparedCorpus(root, model_name, k, names, texts, vectors, coords,
+                          similarity)
+
+
+def analyze(corpus: PreparedCorpus, params: dict) -> dict:
+    """Fit only the tunable layer against one cached corpus."""
+    names, texts = corpus.names, corpus.texts
+    model = EVoC(random_state=SEED, **params).fit(corpus.vectors)
 
     strength = np.asarray(getattr(model, "membership_strengths_",
                                   np.ones(len(names))), dtype=float)
@@ -141,25 +165,30 @@ def build(root: Path, model_name: str, k: int, params: dict) -> dict:
 
     skills = []
     for i, name in enumerate(names):
-        order = np.argsort(-similarity[i])[:k]
+        order = np.argsort(-corpus.similarity[i])[:corpus.k]
         skills.append({
             "name": name,
             "local": name in LOCAL,
             "phase": RAIL_PHASE.get(name),
             "layers": [layer[i] for layer in every],
             "strength": round(float(strength[i]), 3),
-            "x": round(float(coords[i][0]), 4),
-            "y": round(float(coords[i][1]), 4),
+            "x": round(float(corpus.coords[i][0]), 4),
+            "y": round(float(corpus.coords[i][1]), 4),
             "bytes": len(texts[i]),
-            "peers": [{"name": names[j], "sim": round(float(similarity[i][j]), 3),
+            "peers": [{"name": names[j],
+                       "sim": round(float(corpus.similarity[i][j]), 3),
                        "local": names[j] in LOCAL} for j in order],
         })
 
     persistence = np.asarray(getattr(model, "persistence_scores_", []), dtype=float)
     return {
-        "skills": skills, "root": str(root), "model": model_name, "seed": SEED,
+        "skills": skills, "root": str(corpus.root), "model": corpus.model,
+        "seed": SEED,
         "railOrder": [phase for phase, _ in RAIL],
         "params": params,
+        "tunables": {name: {"type": kind.__name__, "default": default,
+                             "help": help_text}
+                     for name, (kind, default, help_text) in TUNABLE.items()},
         "persistence": [round(float(p), 3) for p in persistence.tolist()],
         "layerStats": [{"clusters": int(max(layer)) + 1,
                         "noise": int(sum(1 for c in layer if c < 0))}
@@ -167,9 +196,118 @@ def build(root: Path, model_name: str, k: int, params: dict) -> dict:
     }
 
 
+def build(root: Path, model_name: str, k: int, params: dict) -> dict:
+    """One-shot adapter retained for terminal and saved-page callers."""
+    return analyze(prepare(root, model_name, k), params)
+
+
 def page(data: dict) -> str:
     blob = json.dumps(data, ensure_ascii=False, sort_keys=True).replace("</", "<\\/")
     return TEMPLATE.read_text(encoding="utf-8").replace("__DATA__", blob)
+
+
+def validate_params(raw: object) -> dict:
+    """One JSON tuning request, normalized to EVoC's declared types."""
+    if not isinstance(raw, dict):
+        raise ValueError("parameters must be an object")
+    unknown = sorted(set(raw) - set(TUNABLE))
+    if unknown:
+        raise ValueError(f"unknown parameter: {unknown[0]}")
+    params = {}
+    for name, value in raw.items():
+        kind = TUNABLE[name][0]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"{name} must be a number")
+        if kind is int and not isinstance(value, int):
+            raise ValueError(f"{name} must be an integer")
+        value = kind(value)
+        if not math.isfinite(value):
+            raise ValueError(f"{name} must be finite")
+        if name in {"base_min_cluster_size", "n_neighbors", "min_samples", "n_epochs"} \
+                and value < 1:
+            raise ValueError(f"{name} must be at least 1")
+        if name == "neighbor_scale" and value <= 0:
+            raise ValueError("neighbor_scale must be greater than 0")
+        if name == "min_similarity_threshold" and not 0 <= value <= 1:
+            raise ValueError("min_similarity_threshold must be between 0 and 1")
+        params[name] = value
+    return params
+
+
+def companion(initial: dict, retune: Callable[[dict], dict],
+              port: int = 8932) -> tuple[HTTPServer, str]:
+    """Build the loopback adapter; the caller owns its process lifetime."""
+    state = {"data": initial}
+    server: HTTPServer
+
+    class Handler(BaseHTTPRequestHandler):
+        def send(self, code: int, payload: bytes, kind: str) -> None:
+            self.send_response(code)
+            self.send_header("Content-Type", kind)
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def do_GET(self) -> None:
+            if self.path != "/":
+                self.send(404, b'{"error":"not found"}', "application/json")
+                return
+            self.send(200, page(state["data"]).encode("utf-8"),
+                      "text/html; charset=utf-8")
+
+        def do_POST(self) -> None:
+            if self.path != "/tune":
+                self.send(404, b'{"error":"not found"}', "application/json")
+                return
+            origin = self.headers.get("Origin")
+            allowed = {None, url.rstrip("/"),
+                       url.replace("127.0.0.1", "localhost").rstrip("/")}
+            if origin not in allowed:
+                self.send(403, b'{"error":"cross-origin"}', "application/json")
+                return
+            if not self.headers.get("Content-Type", "").startswith("application/json"):
+                self.send(415, b'{"error":"expected application/json"}',
+                          "application/json")
+                return
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                self.send(400, b'{"error":"invalid content length"}',
+                          "application/json")
+                return
+            if length > 16_384:
+                self.send(413, b'{"error":"request too large"}', "application/json")
+                return
+            try:
+                params = validate_params(json.loads(self.rfile.read(length) or b"{}"))
+                data = retune(params)
+            except (ValueError, json.JSONDecodeError) as exc:
+                payload = json.dumps({"error": str(exc)[:500]}).encode()
+                self.send(400, payload, "application/json; charset=utf-8")
+                return
+            state["data"] = data
+            payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/").encode()
+            self.send(200, payload, "application/json; charset=utf-8")
+
+        def log_message(self, *args: object) -> None:
+            pass
+
+    server = HTTPServer(("127.0.0.1", port), Handler)
+    url = f"http://127.0.0.1:{server.server_port}/"
+    return server, url
+
+
+def serve(initial: dict, retune: Callable[[dict], dict], port: int) -> None:
+    server, url = companion(initial, retune, port)
+    print(f"Live vector tuning at {url}\nCtrl-C to stop.")
+    webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nstopped")
+    finally:
+        server.server_close()
 
 
 def render(data: dict) -> str:
@@ -201,7 +339,10 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("-k", type=int, default=8, help="neighbours to report")
     ap.add_argument("--out", type=Path, help="write the dashboard and exit")
-    ap.add_argument("--serve", action="store_true", help="write it and open it")
+    ap.add_argument("--serve", action="store_true",
+                    help="serve a live tuning companion and open it")
+    ap.add_argument("--port", type=int, default=8932,
+                    help="loopback port for --serve (default 8932)")
     for name, (kind, default, help_text) in TUNABLE.items():
         ap.add_argument(f"--{name.replace('_', '-')}", dest=name, type=kind,
                         default=None, help=f"{help_text} (EVoC default {default})")
@@ -212,17 +353,20 @@ def main() -> int:
     params = {name: getattr(args, name) for name in TUNABLE
               if getattr(args, name) is not None}
 
-    data = build(args.root.expanduser(), args.model, args.k, params)
-    out = args.out or (Path("/tmp/context-token-vectors.html") if args.serve else None)
-    if out is None:
+    corpus = prepare(args.root.expanduser(), args.model, args.k)
+    data = analyze(corpus, params)
+    if args.serve:
+        if args.out:
+            args.out.write_text(page(data), encoding="utf-8")
+        serve(data, lambda tuned: analyze(corpus, tuned), args.port)
+        return 0
+    if args.out is None:
         print(render(data))
         return 0
-    out.write_text(page(data), encoding="utf-8")
+    args.out.write_text(page(data), encoding="utf-8")
     top = data["layerStats"][-1]
     print(f"{len(data['skills'])} skills, {len(data['layerStats'])} layer(s), "
-          f"{top['clusters']} clusters, {top['noise']} noise -> {out}")
-    if args.serve:
-        webbrowser.open(out.resolve().as_uri())
+          f"{top['clusters']} clusters, {top['noise']} noise -> {args.out}")
     return 0
 
 
