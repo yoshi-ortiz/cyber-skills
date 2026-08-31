@@ -57,16 +57,15 @@ which stop of that rail a prompt belongs to.
   <tr><td colspan="3" align="center"><h3><a href="#-kit">📀 Setup once</a><br><small>Install it once, every AI app carries it</small></h3></td></tr>
   <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>One toolkit across every AI app you use</td><td><code>kit</code> · <strong>Day 0</strong>, outside the loop</td></tr>
   <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>Same skill, its original name</td><td><code>kit</code> · <strong>Day 0</strong>, outside the loop</td></tr>
+  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td><td>No family. Works anywhere on the rail.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Add commands in Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Rewrites your agent's conclusions in plain Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-genesis">💼 Planning</a><br><small>Before you start building</small></h3></td></tr>
   <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Plans before it builds, and proves the thing runs</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td nowrap>📚 <a href="#-knowledge"><strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Token sessions</a><br><small>Where you spend a working session</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Shows which other skills yours actually resemble, and which resemble nothing</td><td><code>build</code> · <strong>Measure</strong></td></tr>
-  <tr><td colspan="3" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Call by fun names</small></h3></td></tr>
-  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td><td>No family. Works anywhere on the rail.</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Add commands in Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Rewrites your agent's conclusions in plain Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
   <tr><td colspan="3" align="center"><h3>🛤️ Rest of the rail<br><small>Planned families. No installed command answers to these yet.</small></h3></td></tr>
   <tr><td nowrap>🔨 <code>build-*</code></td><td>Implement and verify the approved contract</td><td><code>build</code> · <strong>Code · Build · Test</strong></td></tr>
   <tr><td nowrap>🚢 <code>land-*</code></td><td>Ship selected outputs and make deployment observable</td><td><code>land</code> · <strong>Release · Deploy</strong></td></tr>

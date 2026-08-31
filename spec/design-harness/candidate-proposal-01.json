@@ -1,0 +1,19 @@
+{
+  "element": "landing.hero.flow.proposal-01",
+  "round": "hero-composition-reset",
+  "status": "unscored",
+  "source": "moodboards/ok-shots/layout goal.png",
+  "body": {"sample_line": "Install once, then move from planning to shipping without losing context.", "ink": "#1f2933", "paper": "#ffffff"},
+  "grid": "modular",
+  "gestalt": ["continuity", "proximity", "figure-ground"],
+  "register": "index",
+  "direction": {
+    "hierarchy": "headline, then compact two-rail diagram, then semantic legend",
+    "composition": "airy white field with a centered crossing diagram and small station accents",
+    "type_roles": "rounded display headline, monospace command labels, quiet sans-serif support copy",
+    "color_relationship": "yellow rails carry the eye; cyan, pink, blue, green, and orange stations mark families",
+    "signature": "the return rail is visibly straight and arrowed back through the same compact system",
+    "aesthetic_question": "Does the landing hero read as a small, immediately legible workflow diagram at thumbnail size?"
+  },
+  "provenance": {"reference": "moodboards/ok-shots/layout goal.png", "graphic_procedure": "HTML/CSS primitives; no external assets"}
+}

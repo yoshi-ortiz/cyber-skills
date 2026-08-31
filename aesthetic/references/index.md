@@ -26,6 +26,7 @@ personal knowledge-vault path.
 | [Interpret visual and multimodal evidence](interpret-art.md) | Observing a corpus or continuing an art round |
 | [Evidence-backed creative loop](loop.md) | Framing, directing, declaring, building, critiquing, and capturing |
 | [Anti-slop constraints](anti-slop.md) | Rejecting generic language, unsupported moves, or unreviewed output |
+| [Text-to-graphics loop](text-to-graphics.md) | Compiling a tagged corpus and a scene spec into checked vector output |
 | [Ledger statistics](stats.md) | Reading deterministic feedback aggregates without inventing a reward score |
 | [Designer communication](user-communication.md) | Giving non-technical designers the page, access key, progress, and a useful review action |
 

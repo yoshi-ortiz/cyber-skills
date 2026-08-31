@@ -1,0 +1,15 @@
+{
+  "element": "landing.hero.flow",
+  "body": {
+    "sample_line": "Install once, then move from planning to shipping without losing context.",
+    "ink": "#171a1f",
+    "paper": "#ffffff"
+  },
+  "grid": "modular",
+  "gestalt": [
+    "continuity",
+    "proximity",
+    "figure-ground"
+  ],
+  "register": "index"
+}

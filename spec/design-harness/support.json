@@ -1,0 +1,13 @@
+{
+  "adapters": {
+    "avge": "PASS"
+  },
+  "evidence": {
+    "avge": {
+      "at": "2026-08-30T23:48:55.302441+00:00",
+      "saw": "MCP tools/list returned create_primitive, create_line_pattern, batch, export_svg, and render_preview from AVGE Engine 0.5.14",
+      "verdict": "PASS"
+    }
+  },
+  "version": 1
+}

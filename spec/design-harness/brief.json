@@ -1,0 +1,31 @@
+{
+  "answers": [
+    {
+      "answer": "",
+      "id": "ships",
+      "prompt": "What are we actually shipping?"
+    },
+    {
+      "answer": "",
+      "id": "audience",
+      "prompt": "Who opens this, and what do they need from it?"
+    },
+    {
+      "answer": "",
+      "id": "done",
+      "prompt": "What does done look like? Name something observable."
+    },
+    {
+      "answer": "",
+      "id": "out-of-scope",
+      "prompt": "What is explicitly NOT in this?"
+    },
+    {
+      "answer": "",
+      "id": "fixed",
+      "prompt": "What cannot move? Brand, format, deadline, platform."
+    }
+  ],
+  "startedAt": "2026-08-28T18:04:13-0600",
+  "version": 1
+}

@@ -41,10 +41,9 @@ SECTIONS = ("INSTALL", "SKILL PROMPTS", "EXPERIMENTS")
 # or nothing in particular. Labels are English and translations rename them,
 # so the gate compares order, never the words.
 GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("Set up once", ("kit",)),
+    ("Set up once", ("kit", "silly", "ora")),
     ("Plan a project", ("genesis", "knowledge")),
     ("Run a session", ("aesthetic", "build-context-token-vectors")),
-    ("Odds and ends", ("silly", "ora")),
 )
 
 

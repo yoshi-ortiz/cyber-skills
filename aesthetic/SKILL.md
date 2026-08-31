@@ -5,7 +5,9 @@ description: Design and art direction that reads as intentional, not templated. 
 
 # Aesthetic ranking
 
-`continue`, `critique`, `prototype`, and `observe` are context clues.
+`continue`, `critique`, `prototype`, and `observe` are context clues. A
+requested diagram, scene, or illustration routes to
+[text-to-graphics.md](references/text-to-graphics.md).
 
 Keep the established article: hero, graph, TOC, four sections, progress chart. Never replace it with a kanban or second site.
 
@@ -83,17 +85,6 @@ python3 <skill>/scripts/editorial_workflow.py direction --project-root . \
 
 Fix a rejected spec; never bypass the gate.
 
-## Long runs
-
-Before tool work, mirror one project-language progress line in the status aid:
-
-```bash
-python3 <skill>/scripts/bootstrap_harness.py status --project-root . \
-  --text "<emoji + visible work + why it matters>"
-```
-
-Name the result, not setup commands.
-
 ## Scope the editorial burndown
 
 Read [editorial-workflow.md](references/editorial-workflow.md). Save epics in `editorial.json`, append changes to `editorial-events.jsonl`. Every element has one primary epic. Retrying an event id is a no-op.
@@ -106,7 +97,7 @@ Draw real HTML/CSS, render it, inspect the PNG at desktop and narrow widths. Jud
 python3 <skill>/scripts/golden_rules.py --design spec/design-harness/candidate.json --min-coverage 0.8
 ```
 
-Never invent SVG paths. Follow [asset-sourcing.md](references/asset-sourcing.md). Reuse a project asset, fetch a pinned licensed one, generate deterministically, or omit.
+Never invent SVG paths. Follow [asset-sourcing.md](references/asset-sourcing.md). Reuse a project asset, fetch a pinned licensed one, [generate deterministically](references/text-to-graphics.md), or omit.
 
 Before publishing, require 4.5:1 text contrast and 3:1 control contrast.
 

@@ -548,3 +548,97 @@ upstream audit is repository-and-skill level, not commit attestation.
 against a fake risky `npx` result and proves the assessment is reported while
 the real install and `sync-skills.sh` both execute successfully. Parser checks
 cover ANSI output and names with spaces; absent tables produce no advisory.
+
+## B-021 · Dashboard reports character counts as bytes · open
+
+**Symptom.** `build-context-token-vectors/scripts/vectors.py:177` emits
+`"bytes": len(texts[i])` into every per-skill record the dashboard renders.
+`texts[i]` is the frontmatter-stripped body as a `str`, so `len()` returns
+characters. Every non-ASCII skill is under-reported, and `ora/` is the Spanish
+voice skill, so the error lands on a shipped skill rather than a hypothetical
+one. The number is labelled `bytes` in the record, in the page, and in the
+terminal renderer.
+
+**Root cause.** Size is measured four ways in four places and nothing owns the
+definition. `aesthetic/scripts/contracts.py` uses `path.stat().st_size`, raw
+disk bytes including the frontmatter it exempts. `tools/token_bench.py` uses
+`len(text.encode("utf-8"))` on both the description and the whole file.
+`aesthetic/scripts/direction_context.py:149` uses
+`-(-len(text.encode("utf-8")) // ratio)`, a ceiling division into token
+estimate. `vectors.py` uses `len()` on a `str`. Four things named bytes, four
+scopes, and no module holds the one true measure, so a fifth caller will pick a
+fifth meaning.
+
+**Fix.** R-54. The corpus module returns the size alongside the record, counted
+once as `len(text.encode("utf-8"))`, and every caller reads it rather than
+recomputing. Fixing `vectors.py` alone would leave the other three disagreeing.
+
+## B-022 · CLAUDE.md reports a gate count two short of reality · open
+
+**Symptom.** `CLAUDE.md:27` reads "18/19 gates pass; `contracts` is red on
+purpose (R-15, four files over the 30 KB budget)." Running
+`python3 tools/check.py` on 2026-08-29 prints `18/20 gates pass` and
+`failing: contracts, unit tests`. The unit suite reports
+`Ran 444 tests` / `FAILED (failures=2, errors=2)`.
+
+**Root cause.** The gate list in `tools/check.py:gates()` grew and the prose in
+`CLAUDE.md` did not. Nothing checks the claim, so the file that routes every
+Repo-Dev agent tells it the suite is one known-red gate away from green when it
+is two, and the second red is undocumented. An agent reading `CLAUDE.md` to
+decide whether the tree is clean gets a wrong answer from the file whose whole
+job is routing.
+
+**Fix.** Two halves, and only the second is durable. Name the unit failures and
+either fix them or record them the way `contracts` is recorded. Then make the
+count derivable rather than transcribed: `check.py` already knows its own gate
+count, so `CLAUDE.md` should cite the command instead of a number, the same
+argument `GOAL.md` makes for a re-runnable benchmark over a number in a
+document.
+
+## B-023 · The companion's live test runs in no gate · open
+
+**Symptom.** `build-context-token-vectors/scripts/test_vectors_live.py` exists,
+passes when invoked directly, and is executed by nothing. `tools/check.py`
+names each `tools/test_*.py` individually in `gates()` and has no entry for it.
+The unit gate is `unittest discover -s aesthetic/scripts`, which never descends
+into `build-context-token-vectors/`, and the file is script-style
+(`if __name__ == "__main__": test()`) rather than unittest, so discovery would
+skip it even if pointed there.
+
+**Root cause.** Three test conventions coexist with no rule saying which
+applies where. `aesthetic/scripts/test_*.py` are unittest and found by
+discovery; `tools/test_*.py` are script-style and found by being listed by
+hand; `build-context-token-vectors/scripts/test_vectors_live.py` is
+script-style and listed nowhere, which is the intersection that runs never. The
+untested behaviour is not incidental: the test covers the tuning companion's
+cross-origin refusal (`Origin: https://example.com` must 403), its unknown
+parameter path (400), and that invalid input never reaches the `retune` seam.
+Those are the security properties of a server bound on loopback.
+
+**Fix.** R-57. Add it to `gates()` in the same shape as the `tools/` tests,
+which is the smallest change, and record the convention so the next skill that
+ships a test does not land in the same gap.
+
+## B-024 · A saved dashboard offers Retune controls that post into nothing · open
+
+**Symptom.** `build-context-token-vectors/scripts/dashboard.html` decides
+whether tuning is available by sniffing the protocol:
+
+```js
+const live = location.protocol === "http:" || location.protocol === "https:";
+$("applyTune").disabled = !live;
+```
+
+A page written with `--out` and then opened over any local static server, which
+is the ordinary way to view a saved HTML file, satisfies that test. The Retune
+controls render enabled and `POST /tune` into a server that is not there.
+
+**Root cause.** Liveness is a property of the server that rendered the page,
+and the page infers it from the client's URL scheme instead of being told. The
+server already re-renders the page from in-memory state on every `GET /` under
+`--serve`, so it is the one component that knows the answer and the one that
+never says so.
+
+**Fix.** `page(data)` takes the liveness flag and writes it into the data blob;
+the client reads it rather than sniffing. One parameter, and it removes a
+class of confusion rather than one instance of it.

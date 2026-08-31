@@ -58,16 +58,15 @@ avanzan el trabajo, y `check` y `fix` son arcos de regreso. La columna
   <tr><td colspan="3" align="center"><h3><a href="#-kit">📀 Configurar una vez</a><br><small>Instálalo una vez y todas tus apps de IA lo llevan</small></h3></td></tr>
   <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>Un solo juego de herramientas en todas tus apps de IA</td><td><code>kit</code> · <strong>Día 0</strong>, fuera del flujo</td></tr>
   <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>La misma skill, con su nombre original</td><td><code>kit</code> · <strong>Día 0</strong>, fuera del flujo</td></tr>
+  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Agrega comandos en español</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu agent en español sencillo</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-genesis">💼 Planear</a><br><small>Antes de empezar a construir</small></h3></td></tr>
   <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Planea antes de construir, y comprueba que funcione</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td nowrap>📚 <a href="#-enciclopedia"><strong>/enciclopedia</strong></a></td><td>Lee la documentación real y guarda una nota corta con su fuente</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Sesiones de tokens</a><br><small>Donde se te va una sesión de trabajo</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Muestra a qué otros skills se parece el tuyo, y cuál no se parece a nada</td><td><code>build</code> · <strong>Medir</strong></td></tr>
-  <tr><td colspan="3" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Llámalas por nombres divertidos</small></h3></td></tr>
-  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Agrega comandos en español</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu agent en español sencillo</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
   <tr><td colspan="3" align="center"><h3>🛤️ Resto del riel<br><small>Familias planeadas. Todavía no hay comando instalado que responda a estos nombres.</small></h3></td></tr>
   <tr><td nowrap>🔨 <code>build-*</code></td><td>Implementa y verifica el contrato aprobado</td><td><code>build</code> · <strong>Código · Build · Pruebas</strong></td></tr>
   <tr><td nowrap>🚢 <code>land-*</code></td><td>Publica salidas y vuelve observable el despliegue</td><td><code>land</code> · <strong>Lanzar · Desplegar</strong></td></tr>

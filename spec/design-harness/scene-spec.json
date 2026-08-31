@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "element": "landing.hero.flow",
+  "layout": "isometric-x",
+  "road": {
+    "shape": "infinity-horizontal",
+    "direction": "clockwise",
+    "sequence": [
+      "/first",
+      "/build",
+      "/land",
+      "/check",
+      "/first"
+    ]
+  },
+  "mainRooms": [
+    {
+      "id": "/first",
+      "position": "upper-left",
+      "palette": [
+        "cyan",
+        "turquoise"
+      ],
+      "boss": "Acid Rockstar"
+    },
+    {
+      "id": "/build",
+      "position": "lower-left",
+      "palette": [
+        "magenta",
+        "hot-pink"
+      ],
+      "boss": "Tech-Bro CEO"
+    },
+    {
+      "id": "/land",
+      "position": "upper-right",
+      "palette": [
+        "cobalt",
+        "operational-blue"
+      ],
+      "boss": "Retro Mission Commander"
+    },
+    {
+      "id": "/check",
+      "position": "lower-right",
+      "palette": [
+        "emerald",
+        "project-green"
+      ],
+      "boss": "Scrum Oracle"
+    }
+  ],
+  "kiosks": [
+    {
+      "id": "/kit",
+      "position": "left-center",
+      "palette": "ghost-pastel-peach",
+      "boss": "Token Influencer"
+    },
+    {
+      "id": "/fix",
+      "position": "right-center",
+      "palette": "ghost-pastel-blue-gray",
+      "boss": "Chief Bug Doctor"
+    }
+  ],
+  "billboards": {
+    "/first": "/first SKETCH",
+    "/build": "/build CODE",
+    "/land": "/land DEPLOY",
+    "/check": "/check REVIEW",
+    "/kit": "/kit EQUIP",
+    "/fix": "/fix REPAIR"
+  },
+  "inventoryRef": "moodboards/storytelling/rooms-inventory.md",
+  "styleRefDirs": [
+    "moodboards/cartoon",
+    "moodboards/isometric cartoon"
+  ],
+  "wireframeRef": "moodboards/wireframe sketches/Group 47.png",
+  "positions": {
+    "upper-left": {
+      "x": 0.04,
+      "y": 0.06,
+      "width": 0.38,
+      "depth": 0.32,
+      "height": 0.06
+    },
+    "lower-left": {
+      "x": 0.04,
+      "y": 0.52,
+      "width": 0.38,
+      "depth": 0.32,
+      "height": 0.06
+    },
+    "upper-right": {
+      "x": 0.52,
+      "y": 0.06,
+      "width": 0.38,
+      "depth": 0.32,
+      "height": 0.06
+    },
+    "lower-right": {
+      "x": 0.52,
+      "y": 0.52,
+      "width": 0.38,
+      "depth": 0.32,
+      "height": 0.06
+    },
+    "left-center": {
+      "x": 0.19,
+      "y": 0.44,
+      "width": 0.14,
+      "depth": 0.1,
+      "height": 0.04
+    },
+    "right-center": {
+      "x": 0.67,
+      "y": 0.44,
+      "width": 0.14,
+      "depth": 0.1,
+      "height": 0.04
+    }
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "items": [
+    {
+      "bytes": 391342,
+      "id": "image-605bc295b111",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "kind": "image",
+      "mediaType": "image/png",
+      "path": "cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "sha256": "f792a330bd19431320883a5d6e30a104b9da3f0085a6f5b8313f8dcdb5aec318"
+    },
+    {
+      "bytes": 402851,
+      "id": "image-09d4736f9156",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/isometric cartoon/Pasted 2026-08-28 at 5.52.41 p.m..png",
+      "kind": "image",
+      "mediaType": "image/png",
+      "path": "isometric cartoon/Pasted 2026-08-28 at 5.52.41 p.m..png",
+      "sha256": "b068c43373dabc51ffab806305b9f5a17c60b2bc2ac5e6aafe5acd31c22ecd9d"
+    },
+    {
+      "bytes": 306057,
+      "id": "image-9a93b2b1a6bb",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/isometric cartoon/Pasted 2026-08-28 at 5.52.47 p.m..png",
+      "kind": "image",
+      "mediaType": "image/png",
+      "path": "isometric cartoon/Pasted 2026-08-28 at 5.52.47 p.m..png",
+      "sha256": "e3085a5ebb3f9421d97eb7b487f0112df3e6f5469b19aaf8d3d410782bfcd978"
+    },
+    {
+      "bytes": 409584,
+      "id": "image-ee2da3a6d590",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/isometric cartoon/Pasted 2026-08-28 at 5.53.24 p.m..png",
+      "kind": "image",
+      "mediaType": "image/png",
+      "path": "isometric cartoon/Pasted 2026-08-28 at 5.53.24 p.m..png",
+      "sha256": "0db3a04569a3f16cab479ea4922b1038d445ff0bee346ed58a58b4ce170dc459"
+    },
+    {
+      "bytes": 9922,
+      "id": "text-57a28cedce86",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/art prompt.txt",
+      "kind": "text",
+      "mediaType": "text/plain",
+      "path": "llm-shots/art prompt.txt",
+      "sha256": "ebf4b101ca9fe4c77aeb3e41bc473f50170f8a4cec785c17350b22b477191c6d",
+      "textExcerpt": "Create a polished 16:9 isometric editorial infographic illustrating the inventory supplied below as one coherent miniature DevOps world.\n\nUse the attached reference images for visual language and composition only. Preserve their strongest visual qualities: clean 2.5D axonometric/isometric rooms, crisp dark outlines, flat vector-like color fills, simple geometric forms, charming miniature characters, readable silhouettes, playful visual metaphors, minimal shading, and a warm off-white background. The result should feel like a sophisticated illustrated magazine infographic: cute, witty, busy, and highly legible—not photorealistic, not 3D-rendered, not pixel art, and not childish clip art.\n\nCOMPOSITION AND GEOMETRY\n\nShow exactly six labeled spaces:\n\n* `/first` — upper left\n* `/build` — lower left\n* `/land` — upper right\n* `/check` — lower right\n* `/kit` — upper center\n* `/fix` — lower center\n\nThe four main rooms—`/first`, `/build`, `/land`, and `/check`—must have identical dimensions, identical isometric perspective, symmetrical rectangular footprints, equal visual weight, and matching wall heights. Arrange them precisely around the center so their positions form a balanced isometric X composition.\n\nThe two smaller kiosks—`/kit` and `/fix`—must also match one another in scale, footprint, perspective, and architectural treatment. Center `/kit` above the road crossing and `/fix` below it. They remain separate kiosks inside the open negative spaces of the infinity diagram.\n\nBuild a continuous yellow road shaped like a complete horizontal infinity symbol. The road must:\n\n* Include the central X crossing.\n* Include the missing curved outer-left connection from `/first` to `/build`.\n* Include the missing curved outer-right connection from `/land` to `/check`.\n* Maintain one consistent width and isometric thickness.\n* Form one uninterrupted, closed figure-eight loop.\n* Carry traffic in only one direction.\n* Use repeated, clearly oriented white arrows with no opposing arrows.\n* Follow this exact continuous sequence: `/first` → `/build` → `/land` → `/check` → `/first`.\n* Pass behind or beside rooms cleanly without visually merging into their floors.\n* Never branch, dead-end, or become a two-way road.\n\nMake the central crossover unmistakable while preserving a clean diagrammatic silhouette. The complete infinity road should be readable immediately from a distance.\n\nROOM COLOR SYSTEM\n\nUse saturated but harmonious flat fills for the four main rooms:\n\n* `/first`: bright cyan and turquoise\n* `/build`: vivid magenta and hot pink\n* `/land`: deep cobalt and operational blue\n* `/check`: fresh emerald and project green\n\nUse much softer, low-contrast pastel fills for the kiosks:\n\n* `/kit`: pale peach, warm cream, powder coral, and soft apricot\n* `/fix`: pale blue-gray, lavender-gray, warm ivory, and a hint of blush\n\nThe kiosk colors should create a deliberately faded-looking effect through their light fill values, but the artwork itself must remain crisp, fully opaque, sharply outlined, and professionally printed. Do not use transparency, blur, haze, washed-out linework, or actual fading.\n\nVISUAL STORYTELLING\n\nTreat every room as a miniature stage filled with grouped visual tokens from its inventory. Translate the inventory into clear characters, props, furniture, and compact comedic vignettes rather than displaying the inventory as written text.\n\nFor every room:\n\n* The first character listed is the room’s boss protagonist.\n* Make that protagonist the strongest visual anchor through pose, placement, silhouette, costume, or a special prop.\n* Keep all specifically mentioned characters, items, furniture, and situations.\n* Group related objects into readable clusters rather than scattering them randomly.\n* Show several small simultaneous stories without making the room illegible.\n* Use exaggerated scale for selected hero props and visual jokes.\n* Give characters varied expressive poses and clear interactions.\n* Keep faces simple, charming, and readable."
+    },
+    {
+      "bytes": 828725,
+      "id": "image-d44d2ac81373",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/best ugly shot.png",
+      "kind": "image",
+      "mediaType": "image/png",
+      "path": "llm-shots/best ugly shot.png",
+      "sha256": "b07dd7361cde9fa568b6cd2d8a135537a342e8b8259407967ea2bb3f0521e961"
+    },
+    {
+      "bytes": 130266,
+      "id": "image-558e44271c41",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/clear layout.png",
+      "kind": "image",
+      "mediaType": "image/png",
+      "path": "llm-shots/clear layout.png",
+      "sha256": "4e0e61d8727371e963491fc2f5874df68a646cacc2f591c929c4c74ff548c814"
+    },
+    {
+      "bytes": 239602,
+      "id": "image-e060fe402798",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/fucked shots/watermarked_img_1601036776744645981.jpg",
+      "kind": "image",
+      "mediaType": "image/jpeg",
+      "path": "llm-shots/fucked shots/watermarked_img_1601036776744645981.jpg",
+      "sha256": "3db0f51e41e094cd302f7cffe107bde0ff3b0a09daaa7d8f305d0977da0a26bc"
+    },
+    {
+      "bytes": 881388,
+      "id": "image-baf36e96a0b5",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/good room space, wrong roads.png",
+      "kind": "image",
+      "mediaType": "image/png",
+      "path": "llm-shots/good room space, wrong roads.png",
+      "sha256": "a35fbe910ae5e802eed34f47ae6a7ccc4fd4c94cb6a36b750eba330c1bcbfcd2"
+    },
+    {
+      "bytes": 26752,
+      "id": "text-967a09e3cd51",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/prompts/Room Inventory Write.md",
+      "kind": "text",
+      "mediaType": "text/markdown",
+      "path": "llm-shots/prompts/Room Inventory Write.md",
+      "sha256": "9e2c679998fec7041b53c51511224fa0d8398fb45d49b86d2a5f1cc66758d7b2",
+      "textExcerpt": "Create one polished 16:9 isometric editorial infographic of a miniature DevOps world. Use the attached reference only for its clean illustrated style; explicitly correct its undersized, crowded rooms and broken road topology.\n\nNON-NEGOTIABLE PRIORITY ORDER\n\n1. Four large, spacious main rooms.\n2. One complete, unmistakable, one-way infinity road.\n3. Two extremely pale pastel kiosks.\n4. Clear protagonists and complete grouped inventory scenes.\n5. Exact billboard text.\n\nDo not sacrifice the first three priorities to include extra tiny details. Preserve every inventory item listed below by grouping related items into readable clusters, wall displays, furniture, and shared vignettes. Do not omit characters, furniture, props, or comedic situations.\n\nSCALE AND CANVAS OCCUPANCY\n\nThe four main rooms must be LARGE open-sided isometric dioramas, not tiny boxes.\n\n- `/first`, `/build`, `/land`, and `/check` must each occupy approximately 28–31% of the canvas width and 35–39% of the canvas height.\n- Together, the four main rooms should dominate approximately 75% of the visual area.\n- Use a close, full composition with only a narrow warm off-white outer margin.\n- Each room must have a broad floor, two tall open-cutaway walls, generous walking space, and clearly separated activity zones.\n- All four rooms must have identical footprints, wall heights, perspective, and visual weight.\n- Characters and hero props must be large enough to read at full-image scale.\n- Limit each main room to approximately 5–7 visible human characters, but combine additional inventory characters into grouped silhouettes, statues, mascots, animals, or shared scenes rather than deleting them.\n- Never shrink a room to create more negative space.\n- Never render the rooms as small cubes, booths, huts, or isolated storefronts.\n\nPlace the four equal main rooms in a precise symmetrical X arrangement:\n\n- `/first`: large upper-left room\n- `/build`: large lower-left room\n- `/land`: large upper-right room\n- `/check`: large lower-right room\n\nPlace two matching small kiosks inside the open centers of the infinity loops:\n\n- `/kit`: upper center\n- `/fix`: lower center\n\nThe kiosks may be smaller than the main rooms, but must remain large enough to show their protagonist, counter, billboard, and all required hero props.\n\nTHE ROAD MUST BE DRAWN FIRST\n\nBefore placing any architecture, establish one single, continuous yellow ribbon road shaped exactly like a horizontal infinity symbol: `∞`.\n\nThis is one closed road, not four spokes and not an X-shaped intersection with dead ends.\n\nThe road must contain:\n\n- A complete rounded left outer loop.\n- A complete rounded right outer loop.\n- Two diagonal sections crossing once at the exact center.\n- One clean over-under crossover at the center so the road remains visually traceable.\n- No gaps behind rooms.\n- No branches.\n- No terminals.\n- No disconnected segments.\n- No duplicated roads.\n- No ordinary four-way intersection.\n\nThe left outer curve must visibly connect `/first` to `/build`.\\\nThe right outer curve must visibly connect `/land` to `/check`.\n\nThe road follows one uninterrupted clockwise workflow:\n\n`/first` → down the left outer curve → `/build` → diagonally through the center → `/land` → down the right outer curve → `/check` → diagonally through the center → `/first`\n\nPlace repeated white directional arrows along the yellow road. Every arrow must point in that same sequence. No arrow may point backward or contradict another arrow. Use at least one arrow on each outer curve and one arrow on each diagonal section. The entire infinity loop and its one-way direction must be understandable immediately from a thumbnail view.\n\nRooms sit beside the road and connect through short entrances, but must never interrupt, conceal, replace, or terminate the road.\n\nKIOSK COLOR TREATMENT\n\nThe `/kit` and `/fix` kiosks must look deliberately ghost-pale compared with the four saturated main rooms.\n\nUse fully opaque but extremely light fills, approximately 5–10%"
+    },
+    {
+      "bytes": 10617,
+      "id": "text-50e7a05ac6af",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/prompts/deterministic-prompt.txt",
+      "kind": "text",
+      "mediaType": "text/plain",
+      "path": "llm-shots/prompts/deterministic-prompt.txt",
+      "sha256": "25ce93aafb2671228ba0b2231681b29a63055efda6317c5e7bee6e0a8ac7db27",
+      "textExcerpt": "Create a polished 16:9 isometric editorial infographic illustrating a miniature DevOps world.\n\nUse the reference images for visual language and composition only. Preserve their strongest visual qualities: clean 2.5D axonometric/isometric rooms, crisp dark outlines, flat vector-like color fills, simple geometric forms, charming miniature characters, readable silhouettes, playful visual metaphors, minimal shading, and a warm off-white background. The result should feel like a sophisticated illustrated magazine infographic: cute, witty, busy, and highly legible—not photorealistic, not 3D-rendered, not pixel art, and not childish clip art.\n\nCOMPOSITION AND GEOMETRY\nShow exactly six labeled spaces:\n* `/first` — upper left\n* `/build` — lower left\n* `/land` — upper right\n* `/check` — lower right\n* `/kit` — upper center\n* `/fix` — lower center\n\nThe four main rooms (`/first`, `/build`, `/land`, `/check`) must have identical dimensions, identical isometric perspective, symmetrical rectangular footprints, equal visual weight, and matching wall heights. Arrange them precisely around the center so their positions form a balanced isometric X composition.\n\nThe two smaller kiosks (`/kit`, `/fix`) must match one another in scale, footprint, perspective, and architectural treatment. Center `/kit` above the road crossing and `/fix` below it. They remain separate kiosks inside the open negative spaces of the infinity diagram.\n\nBuild a continuous yellow road shaped like a complete horizontal infinity symbol. The road must:\n* Include the central X crossing.\n* Include the missing curved outer-left connection from `/first` to `/build`.\n* Include the missing curved outer-right connection from `/land` to `/check`.\n* Maintain one consistent width and isometric thickness.\n* Form one uninterrupted, closed figure-eight loop.\n* Carry traffic in only one direction.\n* Use repeated, clearly oriented white arrows with no opposing arrows.\n* Follow this exact continuous sequence: `/first` → `/build` → `/land` → `/check` → `/first`.\n* Pass behind or beside rooms cleanly without visually merging into their floors.\n* Never branch, dead-end, or become a two-way road.\n\nMake the central crossover unmistakable while preserving a clean diagrammatic silhouette. The complete infinity road should be readable immediately from a distance.\n\nROOM COLOR SYSTEM\nUse saturated but harmonious flat fills for the four main rooms:\n* `/first`: bright cyan and turquoise\n* `/build`: vivid magenta and hot pink\n* `/land`: deep cobalt and operational blue\n* `/check`: fresh emerald and project green\n\nUse much softer, low-contrast pastel fills for the kiosks:\n* `/kit`: pale peach, warm cream, powder coral, and soft apricot\n* `/fix`: pale blue-gray, lavender-gray, warm ivory, and a hint of blush\n\nThe kiosk colors should create a deliberately faded-looking effect through their light fill values, but the artwork itself must remain crisp, fully opaque, sharply outlined, and professionally printed. Do not use transparency, blur, haze, washed-out linework, or actual fading.\n\nVISUAL STORYTELLING\nTreat every room as a miniature stage filled with grouped visual tokens from its inventory. Translate the inventory into clear characters, props, furniture, and compact comedic vignettes rather than displaying the inventory as written text.\n\nFor every room:\n* The first character listed is the room’s boss protagonist.\n* Make that protagonist the strongest visual anchor through pose, placement, silhouette, costume, or a special prop.\n* Keep all specifically mentioned characters, items, furniture, and situations.\n* Group related objects into readable clusters rather than scattering them randomly.\n* Show several small simultaneous stories without making the room illegible.\n* Use exaggerated scale for selected hero props and visual jokes.\n* Give characters varied expressive poses and clear interactions.\n* Keep faces simple, charming, and readable.\n* Include diverse characters without making any individual look lik"
+    },
+    {
+      "bytes": 2940,
+      "id": "text-e040726a3568",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/prompts/graphics-prompt.json",
+      "kind": "text",
+      "mediaType": "application/json",
+      "path": "llm-shots/prompts/graphics-prompt.json",
+      "sha256": "bfa1fe287ea7a9ea64b6359f4ccd320823160ed2f6b0dcb1efa8a74d0ee15bbf",
+      "textExcerpt": "{\n  \"aspect_ratio\": \"16:9\",\n  \"background\": \"warm off-white\",\n  \"negative_prompt\": \"photorealistic, glossy 3D, pixel art, monochrome, broken road, dead-end road, small rooms, cramped cubes\",\n  \"prompt\": \"Clean 2.5D isometric editorial infographic. Crisp dark outlines, flat vector\\nfills, simple faces, warm off-white background. Cute witty magazine style \\u2014\\nnot photorealistic, not glossy 3D, not pixel art, not stock art.\\n\\nWIREFRAME REF: moodboards/wireframe sketches/Group 47.png\\n\\nMatch composition only; fix undersized rooms and broken road.\",\n  \"slices\": {\n    \"agy\": \"Clean 2.5D isometric editorial infographic. Crisp dark outlines, flat vector\\nfills, simple faces, warm off-white background. Cute witty magazine style \\u2014\\nnot photorealistic, not glossy 3D, not pixel art, not stock art.\\n\\nWIREFRAME REF: moodboards/wireframe sketches/Group 47.png\\n\\nMatch composition only; fix undersized rooms and broken road.\",\n    \"avge\": \"GEOMETRY ONLY \\u2014 no character inventory prose.\\nLayout: isometric-x.\\nRoad: horizontal infinity, one-way /first \\u2192 /build \\u2192 /land \\u2192 /check \\u2192 /first.\\nFour equal main rooms (~75% canvas), two ghost-pastel kiosks in loop centers.\\nMain rooms:\\n- /first at upper-left (cyan, turquoise)\\n- /build at lower-left (magenta, hot-pink)\\n- /land at upper-right (cobalt, operational-blue)\\n- /check at lower-right (emerald, project-green)\\nKiosks:\\n- /kit at upper-center (ghost-pastel-peach)\\n- /fix at lower-center (ghost-pastel-blue-gray)\\nBillboards (exact text):\\n- /build: /build CODE\\n- /check: /check REVIEW\\n- /first: /first SKETCH\\n- /fix: /fix REPAIR\\n- /kit: /kit EQUIP\\n- /land: /land DEPLOY\",\n    \"geometry\": \"GEOMETRY ONLY \\u2014 no character inventory prose.\\nLayout: isometric-x.\\nRoad: horizontal infinity, one-way /first \\u2192 /build \\u2192 /land \\u2192 /check \\u2192 /first.\\nFour equal main rooms (~75% canvas), two ghost-pastel kiosks in loop centers.\\nMain rooms:\\n- /first at upper-left (cyan, turquoise)\\n- /build at lower-left (magenta, hot-pink)\\n- /land at upper-right (cobalt, operational-blue)\\n- /check at lower-right (emerald, project-green)\\nKiosks:\\n- /kit at upper-center (ghost-pastel-peach)\\n- /fix at lower-center (ghost-pastel-blue-gray)\\nBillboards (exact text):\\n- /build: /build CODE\\n- /check: /check REVIEW\\n- /first: /first SKETCH\\n- /fix: /fix REPAIR\\n- /kit: /kit EQUIP\\n- /land: /land DEPLOY\",\n    \"style\": \"Clean 2.5D isometric editorial infographic. Crisp dark outlines, flat vector\\nfills, simple faces, warm off-white background. Cute witty magazine style \\u2014\\nnot photorealistic, not glossy 3D, not pixel art, not stock art.\",\n    \"svgmaker\": \"Clean 2.5D isometric editorial infographic. Crisp dark outlines, flat vector\\nfills, simple faces, warm off-white background. Cute witty magazine style \\u2014\\nnot photorealistic, not glossy 3D, not pixel art, not stock art.\"\n  },\n  \"style\": \"isometric editorial infographic\"\n}\n"
+    },
+    {
+      "bytes": 684,
+      "id": "text-2301d4e1b855",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/prompts/slices/geometry.txt",
+      "kind": "text",
+      "mediaType": "text/plain",
+      "path": "llm-shots/prompts/slices/geometry.txt",
+      "sha256": "f74ecf07a30d0339f897e0e63299486e730c62c9054df3002ff97aa37f1a4580",
+      "textExcerpt": "GEOMETRY ONLY — no character inventory prose.\nLayout: isometric-x.\nRoad: horizontal infinity, one-way /first → /build → /land → /check → /first.\nFour equal main rooms (~75% canvas), two ghost-pastel kiosks in loop centers.\nMain rooms:\n- /first at upper-left (cyan, turquoise)\n- /build at lower-left (magenta, hot-pink)\n- /land at upper-right (cobalt, operational-blue)\n- /check at lower-right (emerald, project-green)\nKiosks:\n- /kit at upper-center (ghost-pastel-peach)\n- /fix at lower-center (ghost-pastel-blue-gray)\nBillboards (exact text):\n- /build: /build CODE\n- /check: /check REVIEW\n- /first: /first SKETCH\n- /fix: /fix REPAIR\n- /kit: /kit EQUIP\n- /land: /land DEPLOY\n"
+    },
+    {
+      "bytes": 1482,
+      "id": "text-fa43828186d2",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/prompts/slices/manifest.json",
+      "kind": "text",
+      "mediaType": "application/json",
+      "path": "llm-shots/prompts/slices/manifest.json",
+      "sha256": "f8e948959e450348109c9a30bfb2cf1082cbc361a3ef6b737f82ec81b660c525",
+      "textExcerpt": "{\n  \"element\": \"landing.hero.flow\",\n  \"geometry\": \"GEOMETRY ONLY \\u2014 no character inventory prose.\\nLayout: isometric-x.\\nRoad: horizontal infinity, one-way /first \\u2192 /build \\u2192 /land \\u2192 /check \\u2192 /first.\\nFour equal main rooms (~75% canvas), two ghost-pastel kiosks in loop centers.\\nMain rooms:\\n- /first at upper-left (cyan, turquoise)\\n- /build at lower-left (magenta, hot-pink)\\n- /land at upper-right (cobalt, operational-blue)\\n- /check at lower-right (emerald, project-green)\\nKiosks:\\n- /kit at upper-center (ghost-pastel-peach)\\n- /fix at lower-center (ghost-pastel-blue-gray)\\nBillboards (exact text):\\n- /build: /build CODE\\n- /check: /check REVIEW\\n- /first: /first SKETCH\\n- /fix: /fix REPAIR\\n- /kit: /kit EQUIP\\n- /land: /land DEPLOY\",\n  \"moodboard\": \"Clean 2.5D isometric editorial infographic. Crisp dark outlines, flat vector\\nfills, simple faces, warm off-white background. Cute witty magazine style \\u2014\\nnot photorealistic, not glossy 3D, not pixel art, not stock art.\\n\\nWIREFRAME REF: moodboards/wireframe sketches/Group 47.png\\n\\nMatch composition only; fix undersized rooms and broken road.\",\n  \"sceneSpecHash\": \"a87f142626962326b235fd025d9653ed9ad3b3e8d3c4175a5ade136b9e5a7782\",\n  \"style\": \"Clean 2.5D isometric editorial infographic. Crisp dark outlines, flat vector\\nfills, simple faces, warm off-white background. Cute witty magazine style \\u2014\\nnot photorealistic, not glossy 3D, not pixel art, not stock art.\",\n  \"version\": 1\n}\n"
+    },
+    {
+      "bytes": 342,
+      "id": "text-af2880f62aad",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/prompts/slices/moodboard.txt",
+      "kind": "text",
+      "mediaType": "text/plain",
+      "path": "llm-shots/prompts/slices/moodboard.txt",
+      "sha256": "4e577f7ec42098b3119c209c3654b52e73365fe082c1db6bbce278bf30e2a1f5",
+      "textExcerpt": "Clean 2.5D isometric editorial infographic. Crisp dark outlines, flat vector\nfills, simple faces, warm off-white background. Cute witty magazine style —\nnot photorealistic, not glossy 3D, not pixel art, not stock art.\n\nWIREFRAME REF: moodboards/wireframe sketches/Group 47.png\n\nMatch composition only; fix undersized rooms and broken road.\n"
+    },
+    {
+      "bytes": 220,
+      "id": "text-cfb705230238",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/llm-shots/prompts/slices/style.txt",
+      "kind": "text",
+      "mediaType": "text/plain",
+      "path": "llm-shots/prompts/slices/style.txt",
+      "sha256": "90b617ba9fc35e31953c18c49440cbf230e85d55b4e593d5625e07f31b594c33",
+      "textExcerpt": "Clean 2.5D isometric editorial infographic. Crisp dark outlines, flat vector\nfills, simple faces, warm off-white background. Cute witty magazine style —\nnot photorealistic, not glossy 3D, not pixel art, not stock art.\n"
+    },
+    {
+      "bytes": 29857,
+      "id": "text-a42163c9a79d",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/storytelling/rooms-inventory.md",
+      "kind": "text",
+      "mediaType": "text/markdown",
+      "path": "storytelling/rooms-inventory.md",
+      "sha256": "419c4bf5d16be2e6b96edc36c7cb36df2087e7488f66a0655b83f9879d94d05b",
+      "textExcerpt": "## `/first` — Ideation studio\n\n| Characters                                                                                                                                                                                         | Items and furniture                                                                                                                           | Hilarious comical situations                                                                                                                  |\n| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |\n| **Room boss protagonist: Acid Rockstar** — flamboyant creative director in a performative, aggressively loud-color outfit; tinted glasses, wild hair, dramatic boots, and permanent stage presence | Protagonistic museum frame, spotlight, presentation pedestal, color-swatch accessories, absurdly expressive pointer                           | Treats every rough sketch like a stadium encore; dramatically unveils a sticky note while the team applauds as if a masterpiece has been born |\n| Technical graphics advertising illustrator; precise, serious, surrounded by rulers and interface references                                                                                        | Drafting desk, pen display, technical pencils, rulers, ad-layout sheets, grids, icon sheets, typography specimens                             | Attempts to draw one perfectly straight line while the Acid Rockstar keeps demanding “more emotional geometry”                                |\n| Tiny cartoonists, wireframe artists, color assistants, and one exhausted junior designer                                                                                                           | Communal craft table, markers, scissors, glue, papers, notebooks, wireframes, cartoon sketches, color samples, miniature prototypes           | Everyone edits the same mascot simultaneously until it has twelve eyes, three slogans, and no identifiable target audience                    |\n| Thinking philosopher statue, silently cast as the studio’s senior strategic advisor                                                                                                                | Classical Thinker-style statue on a museum plinth, tiny plaque, optional sticky note on its knee                                              | Receives credit whenever an idea succeeds and remains conveniently silent whenever a campaign fails                                           |\n| Color-palette presentation crew                                                                                                                                                                    | Huge color-palette poster station, movable swatch panels, material samples, oversized color chips                                             | A five-person committee debates two nearly identical shades of turquoise while the deadline quietly leaves the building                       |\n| Digital painting operator working at an absurd scale                                                                                                                                               | Huge MS Paint display monitor, giant cursor, pixel-art toolbar, desktop computer, chunky mouse                                                | Accidentally selects the paint bucket and turns the entire campaign neon orange; the boss declares it “fearless”                              |\n| Museum-wall curator and framed cartoon mascots                         "
+    },
+    {
+      "bytes": 30945,
+      "id": "image-7ef76224cfb7",
+      "inspectPath": "/Users/bebote-pro/Development/cyber-skills/moodboards/wireframe sketches/Group 47.png",
+      "kind": "image",
+      "mediaType": "image/png",
+      "path": "wireframe sketches/Group 47.png",
+      "sha256": "7482e867442f7bcd001882372dec028f32c93156c7a22b7e73771adb191b6af7"
+    }
+  ],
+  "modalities": [
+    "image",
+    "text"
+  ],
+  "root": "/Users/bebote-pro/Development/cyber-skills/moodboards",
+  "version": 1
+}

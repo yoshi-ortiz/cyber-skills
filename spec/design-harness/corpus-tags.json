@@ -1,0 +1,95 @@
+{
+  "tags": {
+    "0db3a04569a3f16cab479ea4922b1038d445ff0bee346ed58a58b4ce170dc459": {
+      "aspects": [
+        "illustration"
+      ],
+      "at": "2026-08-30T22:46:19.794527+00:00",
+      "group": "isometric cartoon",
+      "note": "",
+      "quality": "finished",
+      "stance": "pursue"
+    },
+    "419c4bf5d16be2e6b96edc36c7cb36df2087e7488f66a0655b83f9879d94d05b": {
+      "aspects": [
+        "voice"
+      ],
+      "at": "2026-08-30T22:46:19.794527+00:00",
+      "group": "storytelling",
+      "note": "inventory truth; compile to scene-spec only",
+      "quality": "sketch",
+      "stance": "pursue"
+    },
+    "4e0e61d8727371e963491fc2f5874df68a646cacc2f591c929c4c74ff548c814": {
+      "aspects": [
+        "composition"
+      ],
+      "at": "2026-08-30T22:46:19.794527+00:00",
+      "group": "llm-shots",
+      "note": "good layout; rooms undersized",
+      "quality": "finished",
+      "stance": "pursue"
+    },
+    "7482e867442f7bcd001882372dec028f32c93156c7a22b7e73771adb191b6af7": {
+      "aspects": [
+        "composition"
+      ],
+      "at": "2026-08-30T22:46:19.794527+00:00",
+      "group": "wireframe sketches",
+      "note": "layout wireframe",
+      "quality": "sketch",
+      "stance": "pursue"
+    },
+    "a35fbe910ae5e802eed34f47ae6a7ccc4fd4c94cb6a36b750eba330c1bcbfcd2": {
+      "aspects": [
+        "composition"
+      ],
+      "at": "2026-08-30T22:46:19.794527+00:00",
+      "group": "llm-shots",
+      "note": "good room scale; road topology fail",
+      "quality": "finished",
+      "stance": "pursue"
+    },
+    "b068c43373dabc51ffab806305b9f5a17c60b2bc2ac5e6aafe5acd31c22ecd9d": {
+      "aspects": [
+        "illustration"
+      ],
+      "at": "2026-08-30T22:46:19.794527+00:00",
+      "group": "isometric cartoon",
+      "note": "",
+      "quality": "finished",
+      "stance": "pursue"
+    },
+    "b07dd7361cde9fa568b6cd2d8a135537a342e8b8259407967ea2bb3f0521e961": {
+      "aspects": [
+        "illustration"
+      ],
+      "at": "2026-08-30T22:46:19.794527+00:00",
+      "group": "llm-shots",
+      "note": "monochrome; bad roads; ugly cartoons",
+      "quality": "finished",
+      "stance": "avoid"
+    },
+    "e3085a5ebb3f9421d97eb7b487f0112df3e6f5469b19aaf8d3d410782bfcd978": {
+      "aspects": [
+        "illustration"
+      ],
+      "at": "2026-08-30T22:46:19.794527+00:00",
+      "group": "isometric cartoon",
+      "note": "",
+      "quality": "finished",
+      "stance": "pursue"
+    },
+    "f792a330bd19431320883a5d6e30a104b9da3f0085a6f5b8313f8dcdb5aec318": {
+      "aspects": [
+        "illustration"
+      ],
+      "at": "2026-08-30T22:46:19.794527+00:00",
+      "group": "cartoon",
+      "note": "",
+      "quality": "finished",
+      "stance": "pursue"
+    }
+  },
+  "version": 1
+}

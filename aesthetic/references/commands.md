@@ -149,6 +149,27 @@ the whole cohort under `design/review`, and publishes only after every render
 passes. It rejects missing, changed, duplicated, explanatory, or generic
 proposals. Final chat uses only the emitted absolute `image_path` values.
 
+## Drawing a scene deterministically
+
+When a design calls for a diagram whose geometry is truth rather than taste,
+compile it instead of prompting for it. Full doctrine in
+[text-to-graphics.md](text-to-graphics.md).
+
+```bash
+python3 scripts/text_to_graphics.py --project-root . status   # the one next action
+python3 scripts/text_to_graphics.py --project-root . init     # observe, seed-tags, compile, export-avge
+```
+
+`status` is the whole flow. It reads the artifacts, prints one action and the
+reason it fired, and exits 2 while anything is outstanding. Run it, do what it
+names, run it again. The remaining verbs are `observe`, `seed-tags`, `compile`,
+`export-avge`, `preflight`, `build`, `gate`, and `moodboard`; `status` decides
+which one is next, so do not sequence them by hand.
+
+`preflight` records an adapter probe you ran yourself and refuses a verdict with
+no evidence. `moodboard` calls the agy CLI for raster exploration only, and its
+output never reaches `shots/`.
+
 ## Statistics
 
 See [stats.md](stats.md) for field semantics, cohort selection, and the command.

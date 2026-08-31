@@ -1,0 +1,138 @@
+Create a polished 16:9 isometric editorial infographic illustrating the inventory supplied below as one coherent miniature DevOps world.
+
+Use the attached reference images for visual language and composition only. Preserve their strongest visual qualities: clean 2.5D axonometric/isometric rooms, crisp dark outlines, flat vector-like color fills, simple geometric forms, charming miniature characters, readable silhouettes, playful visual metaphors, minimal shading, and a warm off-white background. The result should feel like a sophisticated illustrated magazine infographic: cute, witty, busy, and highly legible—not photorealistic, not 3D-rendered, not pixel art, and not childish clip art.
+
+COMPOSITION AND GEOMETRY
+
+Show exactly six labeled spaces:
+
+* `/first` — upper left
+* `/build` — lower left
+* `/land` — upper right
+* `/check` — lower right
+* `/kit` — upper center
+* `/fix` — lower center
+
+The four main rooms—`/first`, `/build`, `/land`, and `/check`—must have identical dimensions, identical isometric perspective, symmetrical rectangular footprints, equal visual weight, and matching wall heights. Arrange them precisely around the center so their positions form a balanced isometric X composition.
+
+The two smaller kiosks—`/kit` and `/fix`—must also match one another in scale, footprint, perspective, and architectural treatment. Center `/kit` above the road crossing and `/fix` below it. They remain separate kiosks inside the open negative spaces of the infinity diagram.
+
+Build a continuous yellow road shaped like a complete horizontal infinity symbol. The road must:
+
+* Include the central X crossing.
+* Include the missing curved outer-left connection from `/first` to `/build`.
+* Include the missing curved outer-right connection from `/land` to `/check`.
+* Maintain one consistent width and isometric thickness.
+* Form one uninterrupted, closed figure-eight loop.
+* Carry traffic in only one direction.
+* Use repeated, clearly oriented white arrows with no opposing arrows.
+* Follow this exact continuous sequence: `/first` → `/build` → `/land` → `/check` → `/first`.
+* Pass behind or beside rooms cleanly without visually merging into their floors.
+* Never branch, dead-end, or become a two-way road.
+
+Make the central crossover unmistakable while preserving a clean diagrammatic silhouette. The complete infinity road should be readable immediately from a distance.
+
+ROOM COLOR SYSTEM
+
+Use saturated but harmonious flat fills for the four main rooms:
+
+* `/first`: bright cyan and turquoise
+* `/build`: vivid magenta and hot pink
+* `/land`: deep cobalt and operational blue
+* `/check`: fresh emerald and project green
+
+Use much softer, low-contrast pastel fills for the kiosks:
+
+* `/kit`: pale peach, warm cream, powder coral, and soft apricot
+* `/fix`: pale blue-gray, lavender-gray, warm ivory, and a hint of blush
+
+The kiosk colors should create a deliberately faded-looking effect through their light fill values, but the artwork itself must remain crisp, fully opaque, sharply outlined, and professionally printed. Do not use transparency, blur, haze, washed-out linework, or actual fading.
+
+VISUAL STORYTELLING
+
+Treat every room as a miniature stage filled with grouped visual tokens from its inventory. Translate the inventory into clear characters, props, furniture, and compact comedic vignettes rather than displaying the inventory as written text.
+
+For every room:
+
+* The first character listed is the room’s boss protagonist.
+* Make that protagonist the strongest visual anchor through pose, placement, silhouette, costume, or a special prop.
+* Keep all specifically mentioned characters, items, furniture, and situations.
+* Group related objects into readable clusters rather than scattering them randomly.
+* Show several small simultaneous stories without making the room illegible.
+* Use exaggerated scale for selected hero props and visual jokes.
+* Give characters varied expressive poses and clear interactions.
+* Keep faces simple, charming, and readable.
+* Include diverse characters without making any individual look like a real person.
+* Avoid duplicating a protagonist or assigning an item to the wrong room.
+* Do not add a seventh room.
+* Add exactly one freestanding two-pole billboard to each room or kiosk.
+* Each billboard must be clearly visible, structurally supported by two vertical poles, and positioned near the room’s front edge or entrance without blocking the main protagonist.
+* Each billboard must display a concise two-word command consisting of the room’s slash command and its leadword, using the exact pair specified below.
+* Render the command as large, clean, highly legible typography with no extra words.
+
+BILLBOARD COMMANDS
+
+* `/first`: `FIRST SKETCH`
+* `/build`: `BUILD CODE`
+* `/land`: `LAND DEPLOY`
+* `/check`: `CHECK REVIEW`
+* `/kit`: `KIT EQUIP`
+* `/fix`: `FIX REPAIR`
+
+The slash command must remain visible as part of the first word on every billboard. Do not replace these commands with room labels, slogans, paragraphs, or decorative nonsense text.
+
+ROOM-SPECIFIC ART DIRECTION
+
+`/first` should feel like an eccentric advertising and ideation museum-studio. Feature the Acid Rockstar boss in an extremely loud multicolor outfit, a technical graphics ad illustrator, a huge MS Paint-style display, cartoon and wireframe sketch walls, the thinking philosopher statue, the large color-palette poster station, museum frames with an especially protagonistic frame, giant craft supplies, and an overflowing trash bin. Place a two-pole billboard near the front edge reading exactly `FIRST SKETCH`.
+
+`/build` should feel like a chaotic coding lounge, electronics hoard, robotics bench, and gaming den. Feature the stereotypical vested Tech-Bro CEO boss, the ADHD llama beside the math board, motherboard hoarding, a logic-diagram board, retro arcade gaming beside a gigantic modern TV, DIY mini karts, unconventional socially anxious working postures, an isolated developer with huge headphones, and a spaghetti-cabled mini server experiencing a small controlled fire. Place a two-pole billboard near the front edge reading exactly `BUILD CODE`.
+
+`/land` should feel like a whimsical live-operations mission-control center. Feature a retro Mission Commander boss, a lunette-shaped NOC cockpit, the SLA counter, Git contribution green-square chart, server racks, a cloud lounge sofa, a cloud-factory vaporizer shooting clouds upward, airplanes and penguin details, and a huge whale being loaded with a server container by a tiny crane. Do not include a generic growth chart in `/land`. Place a two-pole billboard near the front edge reading exactly `LAND DEPLOY`.
+
+`/check` should feel like a project-review room mixed with a quality laboratory and media studio. Feature the Scrum Oracle boss, the Scrum post-it board, stakeholders around a roundtable, a quarterly-report video-podcast recording desk, a growth chart, a large telescope, the active-installs counter sculpture, and magic-ball future reading. Make the review activities visibly distinct but compositionally organized. Place a two-pole billboard near the front edge reading exactly `CHECK REVIEW`.
+
+`/kit` should be a fashionable token-influencer shop that is mostly a tablet showroom. Feature the Token Influencer boss and the protagonistic shopping bag. Include long tablet display bars, satellite antennas for sale, a framed “TOP” magazine cover beside a magazine stand, token merchandise, stylish reception details, and crisp boutique lighting. Keep the kiosk architecturally small, symmetrical with `/fix`, and rendered in the soft pastel kiosk palette. Place a two-pole billboard near the front edge reading exactly `KIT EQUIP`.
+
+`/fix` should be a fashionable help-desk and Genius Bar repair kiosk. Feature the Chief Bug Doctor boss, a visibly trapped cartoon bug, a huge microscope, a giant magnifying glass mounted on a support, diagnostic monitors, an elegant reception counter, precision tools, a pink blob assistant, and the fishbowl supervisor. Keep the kiosk architecturally small, symmetrical with `/kit`, and rendered in the soft pastel kiosk palette. Place a two-pole billboard near the front edge reading exactly `FIX REPAIR`.
+
+TYPOGRAPHY
+
+Use only essential readable text. Clearly label all six spaces exactly as:
+
+`/first`
+`/build`
+`/kit`
+`/fix`
+`/land`
+`/check`
+
+In addition, render exactly one two-pole billboard per room or kiosk with the following exact command:
+
+`FIRST SKETCH`
+`BUILD CODE`
+`LAND DEPLOY`
+`CHECK STATUS`
+`KIT INSTALL`
+`FIX BUGS`
+
+Allow only a few important internal labels where requested, such as “TOP,” the SLA value, Scrum headings, or the active-installs counter. Avoid paragraphs, nonsense lettering, excessive signage, misspellings, or floating labels. Integrate room labels into the architecture or place them immediately beside the corresponding room. Keep billboard typography bold, clean, and readable from the full composition.
+
+FINAL QUALITY REQUIREMENTS
+
+* Exactly six rooms or kiosks.
+* Exactly six two-pole billboards, one per room or kiosk.
+* Each billboard contains its exact two-word command.
+* Complete one-way yellow infinity road.
+* Perfectly balanced isometric X arrangement.
+* Four identically sized main rooms.
+* Two identically sized soft-palette kiosks.
+* Every room boss clearly identifiable.
+* All inventory elements represented through grouped visual storytelling.
+* High object density with strong hierarchy and no muddy clutter.
+* Consistent scale, perspective, outlines, and lighting.
+* Generous off-white negative space around the complete diagram.
+* No gradients, photorealism, glossy 3D rendering, dramatic shadows, transparent rooms, random extra buildings, disconnected roads, two-way arrows, extra billboards, extra command text, or generic corporate stock-art styling.
+
+INVENTORY TO ILLUSTRATE:
+
+[PASTE THE COMPLETE SIX-ROOM, THREE-COLUMN INVENTORY TABLE HERE]

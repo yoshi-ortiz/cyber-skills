@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cyber Skills — A rail your agent can't fall off</title>
+  <style>
+    :root {
+      --paper: #ffffff;
+      --ink: #171a1f;
+      --muted: #555d67;
+      --line: #171a1f;
+      --cyan: #13c8db;
+      --pink: #f33da2;
+      --blue: #2574e8;
+      --green: #2cc978;
+      --orange: #ff8b2c;
+      --yellow: #ffd51f;
+      --shadow: 5px 5px 0 var(--line);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: inherit; }
+
+    .site-shell {
+      width: min(1440px, 100%);
+      margin-inline: auto;
+      padding: 0 clamp(20px, 4vw, 64px) clamp(36px, 5vw, 72px);
+      overflow: hidden;
+    }
+
+    .site-nav {
+      min-height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 2px solid var(--line);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font: 900 15px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: .08em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      aspect-ratio: 1;
+      background: var(--yellow);
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 3px 3px 0 var(--line);
+      font-size: 19px;
+      letter-spacing: 0;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: clamp(16px, 2.4vw, 34px);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .nav-links a { text-decoration: none; }
+
+    .hero {
+      padding-top: clamp(40px, 4.5vw, 60px);
+    }
+
+    .hero-intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
+      align-items: end;
+      gap: clamp(28px, 6vw, 88px);
+      margin-bottom: clamp(20px, 2vw, 30px);
+    }
+
+    .eyebrow {
+      margin: 0 0 15px;
+      font: 800 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 820px;
+      margin: 0;
+      font-family: "Arial Rounded MT Bold", "Trebuchet MS", ui-sans-serif, sans-serif;
+      font-size: clamp(48px, 6.7vw, 102px);
+      line-height: .9;
+      letter-spacing: -.055em;
+    }
+
+    .hero-copy {
+      align-self: end;
+      min-width: 0;
+      padding-bottom: .25rem;
+    }
+
+    .hero-copy p {
+      max-width: 56ch;
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: clamp(16px, 1.4vw, 19px);
+      line-height: 1.55;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .button {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      border: 2px solid var(--line);
+      border-radius: 11px;
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .button-primary {
+      background: var(--yellow);
+      box-shadow: var(--shadow);
+    }
+
+    .button-secondary { background: var(--paper); }
+
+    .button:focus-visible {
+      outline: 4px solid var(--blue);
+      outline-offset: 3px;
+    }
+
+    .flow-figure {
+      min-width: 0;
+      margin: 0;
+    }
+
+    .flow-map {
+      position: relative;
+      width: min(100%, 1080px);
+      min-width: 1020px;
+      aspect-ratio: 1672 / 941;
+      margin-inline: auto;
+    }
+
+    .flow-map img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+
+    .flow-scroll {
+      max-width: 100%;
+      min-width: 0;
+      margin-inline: clamp(-20px, -2vw, 0px);
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scrollbar-color: var(--yellow) transparent;
+    }
+
+    .node-label {
+      --node-color: var(--yellow);
+      position: absolute;
+      display: grid;
+      justify-items: start;
+      gap: 4px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .node-label strong {
+      padding: 7px 11px 6px;
+      color: var(--ink);
+      background: var(--node-color);
+      border: 2px solid var(--line);
+      border-radius: 9px;
+      box-shadow: 3px 3px 0 var(--line);
+      font: 900 clamp(13px, 1.25vw, 18px)/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .node-label span {
+      padding-left: 3px;
+      color: var(--ink);
+      font: 800 clamp(9px, .75vw, 11px)/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .node-kit   { --node-color: var(--yellow); left: 11%; top: 8%; }
+    .node-first { --node-color: var(--cyan);   left: 32%; top: 15%; }
+    .node-build { --node-color: var(--pink);   left: 56%; top: 17%; }
+    .node-land  { --node-color: var(--blue);   left: 84%; top: 15%; }
+    .node-check { --node-color: var(--green);  left: 75%; top: 62%; }
+    .node-fix   { --node-color: var(--orange); left: 42%; top: 62%; }
+
+    .flow-caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      margin-top: -4px;
+      padding-top: 16px;
+      border-top: 2px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .flow-caption strong { color: var(--ink); }
+
+    @media (max-width: 900px) {
+      .hero-intro {
+        width: 100%;
+        min-width: 0;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .hero-intro > *,
+      .hero-copy,
+      .hero-copy p {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+      }
+      .flow-scroll { margin-inline: -20px; padding-inline: 20px; }
+      .flow-caption { flex-direction: column; }
+    }
+
+    @media (max-width: 620px) {
+      .site-nav { min-height: 68px; }
+      .nav-links a:not(:last-child) { display: none; }
+      h1 { font-size: clamp(52px, 16vw, 74px); }
+      .hero { padding-top: 38px; }
+      .hero-intro,
+      .hero-copy,
+      .hero-copy p,
+      .actions {
+        width: calc(100vw - 40px);
+        max-width: calc(100vw - 40px);
+      }
+      .flow-map { min-width: 920px; }
+      .actions { flex-direction: column; }
+      .button { width: 100%; }
+      .flow-scroll::after {
+        content: "Swipe to follow the rail →";
+        position: sticky;
+        left: 20px;
+        display: inline-block;
+        margin-bottom: 10px;
+        padding: 7px 10px;
+        background: var(--paper);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="site-shell">
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a class="brand" href="#">
+        <span class="brand-mark" aria-hidden="true">/</span>
+        Cyber Skills
+      </a>
+      <div class="nav-links">
+        <a href="#rail">The rail</a>
+        <a href="#skills">Skills</a>
+        <a href="#install">Install</a>
+      </div>
+    </nav>
+
+    <section class="hero" id="rail" aria-labelledby="hero-title">
+      <div class="hero-intro">
+        <div>
+          <p class="eyebrow">Skill prompts for AI agents</p>
+          <h1 id="hero-title">A rail your agent can’t fall off.</h1>
+        </div>
+        <div class="hero-copy">
+          <p>Install once, then move from planning to shipping without losing context. Six skill families make the next step obvious—and bring broken work safely back.</p>
+          <div class="actions">
+            <a class="button button-primary" href="#install">Install the skills</a>
+            <a class="button button-secondary" href="#skills">Explore the families</a>
+          </div>
+        </div>
+      </div>
+
+      <figure class="flow-figure" aria-labelledby="flow-title">
+        <div class="flow-scroll" tabindex="0" aria-label="Scrollable workflow diagram">
+          <div class="flow-map">
+            <img src="../shots/landing.hero.flow.svg" alt="A colorful cartoon workflow with a toolkit on-ramp, planning, building, deployment, monitoring, and repair stations connected by one continuous figure-eight road running /first, /build, /land, /check.">
+            <div class="node-label node-kit"><strong>/kit</strong><span>Day 0 · set up</span></div>
+            <div class="node-label node-first"><strong>/first</strong><span>Plan</span></div>
+            <div class="node-label node-build"><strong>/build</strong><span>Code · test</span></div>
+            <div class="node-label node-land"><strong>/land</strong><span>Ship</span></div>
+            <div class="node-label node-check"><strong>/check</strong><span>Monitor</span></div>
+            <div class="node-label node-fix"><strong>/fix</strong><span>Repair</span></div>
+          </div>
+        </div>
+        <figcaption class="flow-caption" id="flow-title">
+          <span><strong>Forward rail:</strong> first → build → land</span>
+          <span><strong>Return rail:</strong> check → fix → first</span>
+          <span><strong>Outside the loop:</strong> kit provisions the machine once</span>
+        </figcaption>
+      </figure>
+    </section>
+  </main>
+</body>
+</html>

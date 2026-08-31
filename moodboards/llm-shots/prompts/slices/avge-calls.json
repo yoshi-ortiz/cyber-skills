@@ -1,0 +1,154 @@
+{
+  "adapter": "avge-engine",
+  "calls": [
+    {
+      "params": {
+        "note": "Draw the road first, one-way arrows, sequence /first -> /build -> /land -> /check -> /first",
+        "stroke": "#f4c430",
+        "z_index": 1
+      },
+      "pattern": "create_line_pattern"
+    },
+    {
+      "params": {
+        "depth": 0.32,
+        "fill": "#00bcd4",
+        "height": 0.06,
+        "new_prefix": "first",
+        "shadow": true,
+        "width": 0.38,
+        "x": 0.04,
+        "y": 0.06,
+        "z_index": 10
+      },
+      "pattern": "isometric_box"
+    },
+    {
+      "params": {
+        "depth": 0.32,
+        "fill": "#e91e63",
+        "height": 0.06,
+        "new_prefix": "build",
+        "shadow": true,
+        "width": 0.38,
+        "x": 0.04,
+        "y": 0.52,
+        "z_index": 11
+      },
+      "pattern": "isometric_box"
+    },
+    {
+      "params": {
+        "depth": 0.32,
+        "fill": "#1565c0",
+        "height": 0.06,
+        "new_prefix": "land",
+        "shadow": true,
+        "width": 0.38,
+        "x": 0.52,
+        "y": 0.06,
+        "z_index": 12
+      },
+      "pattern": "isometric_box"
+    },
+    {
+      "params": {
+        "depth": 0.32,
+        "fill": "#2e7d32",
+        "height": 0.06,
+        "new_prefix": "check",
+        "shadow": true,
+        "width": 0.38,
+        "x": 0.52,
+        "y": 0.52,
+        "z_index": 13
+      },
+      "pattern": "isometric_box"
+    },
+    {
+      "params": {
+        "depth": 0.1,
+        "fill": "#fff5f0",
+        "height": 0.04,
+        "new_prefix": "kit",
+        "shadow": false,
+        "width": 0.14,
+        "x": 0.19,
+        "y": 0.44,
+        "z_index": 14
+      },
+      "pattern": "isometric_box"
+    },
+    {
+      "params": {
+        "depth": 0.1,
+        "fill": "#f5f8fa",
+        "height": 0.04,
+        "new_prefix": "fix",
+        "shadow": false,
+        "width": 0.14,
+        "x": 0.67,
+        "y": 0.44,
+        "z_index": 15
+      },
+      "pattern": "isometric_box"
+    },
+    {
+      "params": {
+        "note": "Two-pole billboard text exactly: /first SKETCH",
+        "parent": "first_top",
+        "parent_anchor": "front_center",
+        "z_index": 16
+      },
+      "pattern": "attach"
+    },
+    {
+      "params": {
+        "note": "Two-pole billboard text exactly: /build CODE",
+        "parent": "build_top",
+        "parent_anchor": "front_center",
+        "z_index": 17
+      },
+      "pattern": "attach"
+    },
+    {
+      "params": {
+        "note": "Two-pole billboard text exactly: /land DEPLOY",
+        "parent": "land_top",
+        "parent_anchor": "front_center",
+        "z_index": 18
+      },
+      "pattern": "attach"
+    },
+    {
+      "params": {
+        "note": "Two-pole billboard text exactly: /check REVIEW",
+        "parent": "check_top",
+        "parent_anchor": "front_center",
+        "z_index": 19
+      },
+      "pattern": "attach"
+    },
+    {
+      "params": {
+        "note": "Two-pole billboard text exactly: /kit EQUIP",
+        "parent": "kit_top",
+        "parent_anchor": "front_center",
+        "z_index": 20
+      },
+      "pattern": "attach"
+    },
+    {
+      "params": {
+        "note": "Two-pole billboard text exactly: /fix REPAIR",
+        "parent": "fix_top",
+        "parent_anchor": "front_center",
+        "z_index": 21
+      },
+      "pattern": "attach"
+    }
+  ],
+  "element": "landing.hero.flow",
+  "sceneSpecHash": "a4fefe20b18ab8c0d6c253ae467cbda8488a9e74f5d4c605040bef1b3744b3b5",
+  "version": 1
+}

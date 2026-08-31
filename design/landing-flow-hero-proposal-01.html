@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cyber Skills — rail proposal 01</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#66727d; --paper:#fff; --yellow:#ffd52f; --cyan:#27c6d6; --pink:#ed5ca9; --blue:#4388e8; --green:#52c985; --orange:#ff9c43; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+    .shell { width:min(1180px,calc(100% - 48px)); margin:auto; }
+    nav { height:76px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #dfe5e8; }
+    .brand { display:flex; align-items:center; gap:9px; color:var(--ink); font:800 14px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.08em; text-transform:uppercase; }
+    .mark { display:grid; place-items:center; width:27px; height:27px; border:2px solid var(--ink); border-radius:8px; background:var(--yellow); font-weight:900; }
+    nav span:last-child { color:var(--muted); font-size:13px; }
+    .hero { padding:clamp(48px,7vw,92px) 0 34px; }
+    .intro { max-width:650px; margin:auto; text-align:center; }
+    .eyebrow { margin:0 0 14px; color:var(--muted); font:700 11px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.16em; text-transform:uppercase; }
+    h1 { margin:0; font:900 clamp(42px,6vw,76px)/.94 "Arial Rounded MT Bold","Trebuchet MS",sans-serif; letter-spacing:-.055em; }
+    .intro p:last-child { max-width:47ch; margin:22px auto 0; color:var(--muted); font-size:16px; line-height:1.55; }
+    .diagram-wrap { margin:clamp(42px,6vw,76px) auto 0; }
+    .diagram { position:relative; width:min(940px,100%); height:430px; margin:auto; }
+    .rail { position:absolute; left:10%; width:80%; height:48px; border:3px solid var(--ink); border-radius:30px; background:var(--yellow); box-shadow:0 5px 0 rgba(31,41,51,.12); }
+    .rail.forward { top:142px; transform:rotate(18deg); }
+    .rail.return { top:240px; transform:rotate(-18deg); }
+    .arrow { position:absolute; z-index:2; display:grid; place-items:center; width:42px; height:42px; border:3px solid var(--ink); border-radius:50%; background:var(--paper); font-size:23px; font-weight:900; line-height:1; }
+    .arrow.forward { left:49%; top:178px; }
+    .arrow.return { left:49%; top:210px; }
+    .station { position:absolute; z-index:3; width:100px; text-align:center; }
+    .station-card { width:58px; height:58px; margin:auto; border:3px solid var(--ink); border-radius:15px 15px 19px 19px; background:var(--station); box-shadow:5px 5px 0 var(--ink); transform:rotate(-4deg); }
+    .station-card::before { content:""; display:block; width:25px; height:13px; margin:11px auto 0; border:2px solid var(--ink); border-radius:5px; background:rgba(255,255,255,.7); }
+    .station-card::after { content:"• • •"; display:block; margin-top:4px; font-size:11px; letter-spacing:1px; }
+    .station label { display:block; margin-top:12px; font:800 12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .station small { display:block; margin-top:4px; color:var(--muted); font-size:11px; white-space:nowrap; }
+    .kit { --station:var(--orange); left:45%; top:2px; }
+    .first { --station:var(--cyan); left:7%; top:85px; }
+    .build { --station:var(--pink); left:29%; top:296px; }
+    .land { --station:var(--blue); right:6%; top:82px; }
+    .check { --station:var(--green); right:27%; top:296px; }
+    .fix { --station:#b6c7d4; left:45%; top:357px; }
+    .kit::after { content:"Day 0 · outside the loop"; position:absolute; top:82px; left:50%; transform:translateX(-50%); width:180px; color:var(--muted); font-size:11px; white-space:nowrap; }
+    .character { position:absolute; z-index:4; right:18%; top:184px; width:43px; height:43px; border:3px solid var(--ink); border-radius:50% 50% 45% 45%; background:#ffcf83; transform:rotate(8deg); }
+    .character::before { content:"•  •"; position:absolute; top:10px; left:9px; font-size:14px; letter-spacing:3px; }
+    .character::after { content:"⌣"; position:absolute; top:20px; left:14px; font-size:18px; }
+    .legend { display:flex; justify-content:center; gap:25px; margin:22px auto 0; color:var(--muted); font:700 11px ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .legend b { color:var(--ink); }
+    @media (max-width:700px) {
+      .shell { width:min(100% - 32px,520px); }
+      nav { height:64px; }
+      nav span:last-child { display:none; }
+      .hero { padding-top:42px; }
+      .diagram-wrap { overflow:hidden; margin-inline:-16px; }
+      .diagram { width:620px; height:390px; transform:scale(.82); transform-origin:top center; margin-bottom:-68px; }
+      .legend { flex-direction:column; align-items:center; gap:8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <nav aria-label="Primary navigation"><div class="brand"><span class="mark">/</span> Cyber Skills</div><span>Six families · one rail</span></nav>
+    <section class="hero" aria-labelledby="title">
+      <div class="intro"><p class="eyebrow">Skill prompts for AI agents</p><h1 id="title">A rail your agent can’t fall off.</h1><p>Install once, then move from planning to shipping without losing context.</p></div>
+      <div class="diagram-wrap"><div class="diagram" aria-label="Two-way workflow rail">
+        <div class="rail forward"></div><div class="rail return"></div><div class="arrow forward">→</div><div class="arrow return">←</div>
+        <div class="station kit"><div class="station-card"></div><label>/kit</label></div>
+        <div class="station first"><div class="station-card"></div><label>/first</label><small>plan</small></div>
+        <div class="station build"><div class="station-card"></div><label>/build</label><small>code · test</small></div>
+        <div class="station land"><div class="station-card"></div><label>/land</label><small>ship</small></div>
+        <div class="station check"><div class="station-card"></div><label>/check</label><small>monitor</small></div>
+        <div class="station fix"><div class="station-card"></div><label>/fix</label><small>repair</small></div>
+        <div class="character" aria-label="Cute guide character"></div>
+      </div></div>
+      <div class="legend"><span><b>Forward:</b> first → build → land</span><span><b>Return:</b> check → fix → first</span></div>
+    </section>
+  </main>
+</body>
+</html>

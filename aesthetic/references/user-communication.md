@@ -112,3 +112,13 @@ HTML path, an evidence card, or an image that is absent from that JSON.
 
 Use the project language for every sentence and image caption. Keep internal
 checks and process names out of the handoff.
+
+## Long runs
+
+Before tool work, mirror one project-language progress line in the status aid.
+Name the result, not setup commands.
+
+```bash
+python3 <skill>/scripts/bootstrap_harness.py status --project-root . \
+  --text "<emoji + visible work + why it matters>"
+```

@@ -1,0 +1,18 @@
+GEOMETRY ONLY - no character inventory prose.
+Layout: isometric-x.
+Road: infinity-horizontal, one-way /first -> /build -> /land -> /check -> /first.
+Spaces:
+- /first at upper-left (cyan, turquoise)
+- /build at lower-left (magenta, hot-pink)
+- /land at upper-right (cobalt, operational-blue)
+- /check at lower-right (emerald, project-green)
+- /kit at left-center (ghost-pastel-peach)
+- /fix at right-center (ghost-pastel-blue-gray)
+The road element must carry id="road" so the gate can read its topology.
+Billboards (exact text):
+- /build: /build CODE
+- /check: /check REVIEW
+- /first: /first SKETCH
+- /fix: /fix REPAIR
+- /kit: /kit EQUIP
+- /land: /land DEPLOY

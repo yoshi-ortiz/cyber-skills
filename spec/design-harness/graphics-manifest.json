@@ -1,0 +1,125 @@
+{
+  "adapters": {
+    "agy": {
+      "aspectRatio": "16:9",
+      "command": "agy",
+      "deliverable": false,
+      "fallbackModel": "gemini-3-pro-image-preview",
+      "imageModel": "gemini-3.1-flash-image-preview",
+      "interface": "cli",
+      "maxPromptBytes": 12000,
+      "role": "moodboard-raster"
+    },
+    "avge": {
+      "interface": "mcp",
+      "outputs": [
+        "svg",
+        "png"
+      ],
+      "role": "deterministic-scene",
+      "server": "avge-engine"
+    },
+    "svgmaker": {
+      "defaults": {
+        "background": "transparent",
+        "composition": "full_scene",
+        "quality": "high",
+        "style": "isometric"
+      },
+      "interface": "mcp",
+      "role": "ai-vector",
+      "server": "svgmaker",
+      "tools": [
+        "svgmaker_generate",
+        "svgmaker_convert"
+      ]
+    }
+  },
+  "corpus": {
+    "observe": "spec/design-harness/corpus.json",
+    "root": "moodboards",
+    "tags": "spec/design-harness/corpus-tags.json"
+  },
+  "corpusTagHints": {
+    "cartoon": {
+      "aspect": "illustration",
+      "quality": "finished",
+      "stance": "pursue"
+    },
+    "isometric cartoon": {
+      "aspect": "illustration",
+      "quality": "finished",
+      "stance": "pursue"
+    },
+    "llm-shots/best ugly shot.png": {
+      "aspect": "illustration",
+      "note": "monochrome; bad roads; ugly cartoons",
+      "quality": "finished",
+      "stance": "avoid"
+    },
+    "llm-shots/clear layout.png": {
+      "aspect": "composition",
+      "note": "good layout; rooms undersized",
+      "quality": "finished",
+      "stance": "pursue"
+    },
+    "llm-shots/good room space, wrong roads.png": {
+      "aspect": "composition",
+      "note": "good room scale; road topology fail",
+      "quality": "finished",
+      "stance": "pursue"
+    },
+    "storytelling/rooms-inventory.md": {
+      "aspect": "voice",
+      "note": "inventory truth; compile to scene-spec only",
+      "quality": "sketch",
+      "stance": "pursue"
+    },
+    "wireframe sketches": {
+      "aspect": "composition",
+      "note": "layout wireframe",
+      "quality": "sketch",
+      "stance": "pursue"
+    }
+  },
+  "element": "landing.hero.flow",
+  "gates": [
+    "scene-spec-valid",
+    "svg-exists",
+    "billboard-text-present",
+    "road-topology",
+    "no-avoid-corpus-as-style-source"
+  ],
+  "outputs": {
+    "attemptsLog": "spec/design-harness/inference-attempts.jsonl",
+    "moodboardAttempts": "moodboards/llm-shots/attempts",
+    "prompts": {
+      "compiled": "moodboards/llm-shots/prompts/graphics-prompt.json",
+      "slicesDir": "moodboards/llm-shots/prompts/slices"
+    },
+    "raster": "shots/landing.hero.flow.png",
+    "vector": "shots/landing.hero.flow.svg"
+  },
+  "palettes": {
+    "cobalt": "#1565c0",
+    "cyan": "#00bcd4",
+    "emerald": "#2e7d32",
+    "ghost-pastel-blue-gray": "#f5f8fa",
+    "ghost-pastel-peach": "#fff5f0",
+    "hot-pink": "#e91e63",
+    "magenta": "#e91e63",
+    "operational-blue": "#1565c0",
+    "project-green": "#2e7d32",
+    "turquoise": "#00bcd4"
+  },
+  "resolutionOrder": [
+    "corpus-reuse",
+    "avge-procedural",
+    "svgmaker-vector",
+    "agy-raster",
+    "omit"
+  ],
+  "sceneSpec": "spec/design-harness/scene-spec.json",
+  "styleDirective": "Clean 2.5D isometric editorial infographic. Crisp dark outlines, flat vector fills, simple faces, warm off-white background. Cute witty magazine style, not photorealistic, not glossy 3D, not pixel art, not stock art.",
+  "version": 1
+}
