@@ -10,7 +10,8 @@ also:
 
 | Say | Do |
 | --- | --- |
-| `kit`, `sync`, `update`, `refresh`, `upgrade`, `install`, `setup`, `init`, `start`, `starter-pack` | **Sync.** Re-arm every app at the latest version, cloning the harness first if it is missing. Bare `kit` means this, in every directory, a Repo-Dev checkout included. |
+| `kit`, `sync`, `update`, `refresh`, `upgrade`, `install`, `setup`, `init`, `start`, `starter-pack`, **with no source named** | **Sync.** Re-arm every app at the latest version, cloning the harness first if it is missing. Bare `kit` means this, in every directory, a Repo-Dev checkout included. |
+| any of those **followed by a source**, such as `sync cyber-skills` | **One source.** `harness add <source>`. Named a source, meant that source. |
 | `fix`, `doctor`, `repair`, `troubleshoot`, `conflict` | **Fix.** Something installed wrong, or two things collided. |
 
 Never ask which. Sync is idempotent, so there is no separate Install mode to
@@ -67,6 +68,16 @@ python3 ~/.harness-core/harness.py sync
 Sync is the idempotent re-fetch. Pulling the checkout first refreshes
 `collection.toml` and the harness code, so a source added upstream arrives with
 it. There is no separate installer upgrade path.
+
+**It fans out over every source in `collection.toml`.** When the user named one,
+run only that one, which is already a mode:
+
+```bash
+python3 ~/.harness-core/harness.py add <source>
+```
+
+Re-fetching twenty-odd repos to update the one that was asked for is the waste
+this row exists to prevent.
 
 `python3 ~/.harness-core/harness.py status` prints what is selected, what was
 detected, and how many skills are installed. Read it before and after.
