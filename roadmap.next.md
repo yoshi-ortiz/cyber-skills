@@ -26,8 +26,6 @@ The burndown has **~35 open rows** across five sections (excluding **E-01 done**
 
 | ID | One line |
 | --- | --- |
-| R-13 | Redraw 62 bare-SVG previews (mechanical, large) |
-| R-26 | Fix broken circular ring type (B-017) |
 | R-15 | Split `bootstrap_harness.py` (210KB / 30KB budget) |
 | R-18 | Companion live-check gates every Loop step |
 | R-24 | Cap golden-rule retry cost |
