@@ -35,6 +35,7 @@ this file tells you what order to work in, because the order is computed.
 | `add-corpus` | Put reference material under the manifest's corpus root. There is nothing to observe yet |
 | `observe` | `text_to_graphics.py observe` |
 | `seed-tags` | `text_to_graphics.py seed-tags`, then tag by hand for anything the manifest hints miss |
+| `refine` | Edit or reuse every named near-hit attempt. Retag it when resolved; do not launch a fresh shot |
 | `compile` | `text_to_graphics.py compile` |
 | `export-avge` | `text_to_graphics.py export-avge` |
 | `preflight` | Probe the adapter yourself, then record what you saw (below) |
@@ -44,6 +45,7 @@ this file tells you what order to work in, because the order is computed.
 | `done` | Every gate passes and no artifact is stale |
 
 An output is stale when no recorded attempt drew it from the current scene hash.
+Prompt slices are stale when the scene, corpus, corpus roles, or tags change.
 An artifact with no attempt behind it has unknown provenance and is redrawn.
 
 ## Resolution order
@@ -73,17 +75,31 @@ not point one at the other.
 
 ## Slices, and why they never merge
 
-`compile` writes four slices. Each has one consumer and one forbidden content.
+`compile` writes five slices. Each has one consumer and one forbidden content.
 
 | Slice | Built from | Max bytes | Must not carry |
 | --- | --- | --- | --- |
-| `style` | manifest `styleDirective` plus `illustration·pursue` corpus paths | 4 000 | inventory, space names, billboard text |
+| `style` | manifest `styleDirective` plus `reference·pursue·illustration` paths | 4 000 | attempts, inventory, space names, billboard text |
 | `geometry` | `scene-spec.json` only | 8 000 | character prose, style adjectives |
-| `moodboard` | `style` plus `composition·pursue` corpus paths | 12 000 | full inventory |
+| `moodboard` | `style` plus `reference·pursue·composition` paths | 12 000 | attempts, full inventory |
 | `inventory` | `inventoryRef`, split per space | 3 000 each | anything sent to an image model |
+| `refine` | `attempt·refine` paths and their notes | small, uncapped | anything sent as a fresh-shot prompt |
 
-Only `pursue` tags reach a slice. That is what makes the `avoid` stance mean
-something, and it is why retagging a reference changes the next prompt.
+Corpus intent is the product of two fields, not a guess from filenames:
+
+| Role + stance | Meaning | May source a fresh shot? |
+| --- | --- | --- |
+| `reference+pursue` | external visual evidence to follow | yes |
+| `reference+avoid` | visible counterevidence | no |
+| `attempt+refine` | this project's near-hit; preserve/fix per note | no—edit or reuse it |
+| `constraint+*` | scene/content truth | no |
+| `derivative+*` | generated or transformed audit evidence | no |
+
+Old tag files default to `reference`. `refine` requires role `attempt` and a
+note naming what to preserve or fix. While one is pending, `status` returns
+`refine` and `moodboard` refuses a new inference call. Retag the attempt after
+the edit is resolved. Only `reference+pursue` enters fresh-shot style and
+composition prompts; changing any role or stance invalidates compiled slices.
 
 A long human-authored inventory is an **authoring surface**. `compile` splits it
 on its `## /space` headings and keys it to the scene's declared spaces. Sending

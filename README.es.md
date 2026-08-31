@@ -147,7 +147,7 @@ parte, y eso conviene saberlo antes de dar por hecho que el tuyo es único.
 
 | | |
 | --- | --- |
-| **Package** | [build-context-token-vectors/](build-context-token-vectors/) · entry [build-context-token-vectors/SKILL.md](build-context-token-vectors/SKILL.md) |
+| **Package** | [check/build-context-token-vectors/](check/build-context-token-vectors/) · entry [check/build-context-token-vectors/SKILL.md](check/build-context-token-vectors/SKILL.md) |
 | **Invocar** | Solo tú. Di `build-context-token-vectors`. |
 | **Necesita** | Python, y tres paquetes en un entorno desechable que creas tú: `evoc`, `model2vec`, `matplotlib` |
 | **Se ejecuta en** | Tu carpeta de skills instalados, solo lectura |
@@ -192,7 +192,7 @@ la siguiente ronda contra eso. Nada se califica por vibra.
 
 | | |
 | --- | --- |
-| **Paquete** | [aesthetic/](aesthetic/) · entrada [aesthetic/SKILL.md](aesthetic/SKILL.md) |
+| **Paquete** | [first/aesthetic/](first/aesthetic/) · entrada [first/aesthetic/SKILL.md](first/aesthetic/SKILL.md) |
 | **Invocación** | Tu agent la inicia cuando el trabajo es visual. También puedes nombrarla. |
 | **Requiere** | Python 3 (solo estándar) · Node para la página local de ranking |
 | **Trabaja sobre** | **Tu** carpeta de proyecto, nunca este repositorio |
@@ -214,22 +214,22 @@ Si abre con charla de configuración, eso es un bug.
 | `observe` | Ingiere una carpeta de referencia como evidencia |
 
 ```bash
-python3 aesthetic/scripts/bootstrap_harness.py init --project-root <proyecto>
-python3 aesthetic/scripts/bootstrap_harness.py open --project-root <proyecto>
+python3 first/aesthetic/scripts/bootstrap_harness.py init --project-root <proyecto>
+python3 first/aesthetic/scripts/bootstrap_harness.py open --project-root <proyecto>
 ```
 
 `bootstrap_harness.py` maneja el compañero, el registro, el artículo y la
 publicación. `editorial_workflow.py` maneja corpus, preferencias, dirección y
 pendientes. Seis scripts más cubren reglas, entrega, briefs y diagnóstico. Todos
 responden `--help`, y la referencia completa de banderas está en
-[references/commands.md](aesthetic/references/commands.md).
+[references/commands.md](first/aesthetic/references/commands.md).
 
 **Doctrina.** Autocontenida, OKF 0.2, indexada en
-[references/index.md](aesthetic/references/index.md): reglas de oro y
+[references/index.md](first/aesthetic/references/index.md): reglas de oro y
 fundamentos de diseño, inferencia y crítica, contratos de producción, y el
 modelo de capacidades. Vocabulario:
-[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Servidor compañero
-en Node: [companion/](aesthetic/companion/).
+[UBIQUITOUS_LANGUAGE.md](first/aesthetic/UBIQUITOUS_LANGUAGE.md). Servidor compañero
+en Node: [companion/](first/aesthetic/companion/).
 
 **Puerta de entrada.** Las insignias de arriba dicen **pending** hasta que esto
 se sostenga bajo pruebas de regresión.
@@ -296,7 +296,7 @@ archivo quedan tal cual.
 
 | | |
 | --- | --- |
-| **Paquete** | [ora/](ora/) · entrada [ora/SKILL.md](ora/SKILL.md) |
+| **Paquete** | [kit/spanish/ora/](kit/spanish/ora/) · entrada [kit/spanish/ora/SKILL.md](kit/spanish/ora/SKILL.md) |
 | **Invocación** | Solo tú. Di `ora` para empezar y `modo normal` para salir. |
 | **Requiere** | Nada. Un solo archivo, sin scripts. |
 | **Canal** | `main` |
@@ -337,7 +337,7 @@ trabado, y **no da nada por terminado hasta verlo funcionar**.
 
 | | |
 | --- | --- |
-| **Paquete** | [genesis/](genesis/) · entrada [genesis/SKILL.md](genesis/SKILL.md) |
+| **Paquete** | [first/genesis/](first/genesis/) · entrada [first/genesis/SKILL.md](first/genesis/SKILL.md) |
 | **Invocación** | Solo tú. Di `genesis`. |
 | **Requiere** | Nada. Escribe Markdown normal dentro de tu proyecto. |
 | **Trabaja sobre** | **Tu** carpeta de proyecto, nunca este repositorio |
@@ -366,7 +366,7 @@ promovidos, `docs/GLOSSARY.md` un término inmutable por concepto, y
 `docs/knowledge/` a cargo de [/enciclopedia](#-enciclopedia).
 
 **Doctrina**, se carga solo cuando un paso la nombra:
-[references/index.md](genesis/references/index.md) cubre la entrevista de
+[references/index.md](first/genesis/references/index.md) cubre la entrevista de
 alcance y la arquitectura modular, el contrato de reutilización, y qué cuenta
 como evidencia.
 
@@ -392,7 +392,7 @@ inventarse la respuesta.
 
 | | |
 | --- | --- |
-| **Paquete** | [knowledge/](knowledge/) · entrada [knowledge/SKILL.md](knowledge/SKILL.md) |
+| **Paquete** | [first/knowledge/](first/knowledge/) · entrada [first/knowledge/SKILL.md](first/knowledge/SKILL.md) |
 | **Invocación** | Tu agent la inicia cuando hay investigación que conviene guardar. También puedes nombrarla. |
 | **Nombre original** | `knowledge`. El nombre en español lo instala [/silly](#-silly). |
 | **Requiere** | Python 3 (solo biblioteca estándar) |
@@ -404,12 +404,12 @@ inventarse la respuesta.
 
 Las notas usan **Open Knowledge Format 0.2**: un concepto por archivo,
 frontmatter YAML, un `index.md` en la puerta. La especificación queda guardada
-en [references/okf-0.2.md](knowledge/references/okf-0.2.md) para no volver a
+en [references/okf-0.2.md](first/knowledge/references/okf-0.2.md) para no volver a
 descargarla. La salida cae en `docs/knowledge/` de **tu** proyecto.
 
 ```bash
-python3 knowledge/scripts/okf.py new <url> --root docs/knowledge --by claude/opus-5
-python3 knowledge/scripts/okf.py check --root docs/knowledge
+python3 first/knowledge/scripts/okf.py new <url> --root docs/knowledge --by claude/opus-5
+python3 first/knowledge/scripts/okf.py check --root docs/knowledge
 ```
 
 `new` descarga la fuente, escribe el borrador con `resource`, `generated` y
@@ -420,7 +420,7 @@ enlace del índice que no resuelve.
 El script se detiene antes de resumir, a propósito. Un script que condensara una
 página estaría escribiendo justo la parte que tiene que producir algo que
 entendió la fuente. Reglas para la mitad humana:
-[distilling.md](knowledge/references/distilling.md).
+[distilling.md](first/knowledge/references/distilling.md).
 
 **Puerta de entrada.**
 
@@ -473,9 +473,9 @@ skill**, o el agent nunca ha oído la palabra y el archivo no cambia
 nada. La puerta del índice rechaza los tres casos.
 
 ```bash
-python3 silly/scripts/alias.py list   --root ~/.cursor/skills
-python3 silly/scripts/alias.py link   --root ~/.cursor/skills --lang es
-python3 silly/scripts/alias.py unlink --root ~/.cursor/skills
+python3 kit/silly/scripts/alias.py list   --root ~/.cursor/skills
+python3 kit/silly/scripts/alias.py link   --root ~/.cursor/skills --lang es
+python3 kit/silly/scripts/alias.py unlink --root ~/.cursor/skills
 ```
 
 `link --fun` instala los nombres divertidos. `--dry-run` imprime sin tocar nada.
@@ -502,6 +502,6 @@ propios archivos.
 
 Si construyes sobre este trabajo, considera dar atribución CC.
 
-Para contribuir: [CONTEXT.md](CONTEXT.md) · [ROADMAP.md](ROADMAP.md) · [aesthetic/AGENTS.md](aesthetic/AGENTS.md)
+Para contribuir: [CONTEXT.md](CONTEXT.md) · [ROADMAP.md](ROADMAP.md) · [first/aesthetic/AGENTS.md](first/aesthetic/AGENTS.md)
 
 </div>

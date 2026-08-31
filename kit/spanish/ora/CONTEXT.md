@@ -12,7 +12,7 @@ of Spanish the user themselves writes. It never decides anything. By default
 it covers one reply and stops; `on` holds it for the session, `off` ends that
 early. Neither mode is the file's own state — the calling agent tracks it.
 
-It ships in the same package as [aesthetic/](../aesthetic/) and shares nothing
+It ships in the same package as [aesthetic/](../../first/aesthetic/) and shares nothing
 with it. Ora's rules about tone and emoji budget are not design doctrine, and
 aesthetic's Golden Rules are not writing advice. An agent that has both loaded
 should treat them as two unrelated skills that happen to live in one repository.

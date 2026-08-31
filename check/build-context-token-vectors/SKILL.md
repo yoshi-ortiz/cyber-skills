@@ -14,7 +14,7 @@ A benchmark is only as good as what it compares against, and
 ```bash
 python3 -m venv /tmp/vectors
 /tmp/vectors/bin/pip install evoc model2vec matplotlib
-/tmp/vectors/bin/python build-context-token-vectors/scripts/vectors.py --serve
+/tmp/vectors/bin/python check/build-context-token-vectors/scripts/vectors.py --serve
 ```
 
 `--serve` starts a loopback companion, opens it, and stays alive until Ctrl-C.
@@ -94,5 +94,5 @@ records a judgement. Reading it may change which comparison you run next;
 nothing here runs one.
 
 Its three dependencies live in a virtual environment you create. Nothing under
-`aesthetic/scripts/` or `tools/` imports them, and this skill ships none of
+`first/aesthetic/scripts/` or `tools/` imports them, and this skill ships none of
 them.

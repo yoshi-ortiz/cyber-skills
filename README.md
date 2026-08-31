@@ -147,7 +147,7 @@ which is worth knowing before you decide yours is unique.
 
 | | |
 | --- | --- |
-| **Package** | [build-context-token-vectors/](build-context-token-vectors/) · entry [build-context-token-vectors/SKILL.md](build-context-token-vectors/SKILL.md) |
+| **Package** | [check/build-context-token-vectors/](check/build-context-token-vectors/) · entry [check/build-context-token-vectors/SKILL.md](check/build-context-token-vectors/SKILL.md) |
 | **Invoke** | You only. Say `build-context-token-vectors`. |
 | **Needs** | Python, and three packages in a throwaway environment you create: `evoc`, `model2vec`, `matplotlib` |
 | **Runs on** | Your installed skills folder, read only |
@@ -192,7 +192,7 @@ round against it. Nothing is scored by vibes.
 
 | | |
 | --- | --- |
-| **Package** | [aesthetic/](aesthetic/) · entry [aesthetic/SKILL.md](aesthetic/SKILL.md) |
+| **Package** | [first/aesthetic/](first/aesthetic/) · entry [first/aesthetic/SKILL.md](first/aesthetic/SKILL.md) |
 | **Invoke** | Your agent starts it when the work is visual. You can also name it. |
 | **Needs** | Python 3 (stdlib only) · Node for the local ranking page |
 | **Runs on** | **Your** project folder, never this repo |
@@ -214,22 +214,22 @@ with setup chatter instead, that is a bug.
 | `observe` | Ingest a reference folder as corpus evidence |
 
 ```bash
-python3 aesthetic/scripts/bootstrap_harness.py init --project-root <project>
-python3 aesthetic/scripts/bootstrap_harness.py open --project-root <project>
+python3 first/aesthetic/scripts/bootstrap_harness.py init --project-root <project>
+python3 first/aesthetic/scripts/bootstrap_harness.py open --project-root <project>
 ```
 
 `bootstrap_harness.py` runs the companion, ledger, article, and publish.
 `editorial_workflow.py` runs corpus, preferences, direction, and burndown. Six
 more scripts cover rules, delivery, briefs, and diagnostics. Every one answers
 `--help`, and the full flag reference is
-[references/commands.md](aesthetic/references/commands.md).
+[references/commands.md](first/aesthetic/references/commands.md).
 
 **Doctrine.** Self-contained, OKF 0.2, indexed at
-[references/index.md](aesthetic/references/index.md): golden rules and design
+[references/index.md](first/aesthetic/references/index.md): golden rules and design
 fundamentals, inference and critique, production contracts, and the capability
 model. Vocabulary:
-[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Companion server,
-vendored Node: [companion/](aesthetic/companion/).
+[UBIQUITOUS_LANGUAGE.md](first/aesthetic/UBIQUITOUS_LANGUAGE.md). Companion server,
+vendored Node: [companion/](first/aesthetic/companion/).
 
 **Promotion gate.** The badges above read **pending** until these hold under
 regression tests.
@@ -294,7 +294,7 @@ written.
 
 | | |
 | --- | --- |
-| **Package** | [ora/](ora/) · entry [ora/SKILL.md](ora/SKILL.md) |
+| **Package** | [kit/spanish/ora/](kit/spanish/ora/) · entry [kit/spanish/ora/SKILL.md](kit/spanish/ora/SKILL.md) |
 | **Invoke** | You only. Say `ora` to start, `modo normal` to stop. |
 | **Needs** | Nothing. One file, no scripts. |
 | **Channel** | `main` |
@@ -334,7 +334,7 @@ before it touches code, keeps a live list of what is done and what is stuck, and
 
 | | |
 | --- | --- |
-| **Package** | [genesis/](genesis/) · entry [genesis/SKILL.md](genesis/SKILL.md) |
+| **Package** | [first/genesis/](first/genesis/) · entry [first/genesis/SKILL.md](first/genesis/SKILL.md) |
 | **Invoke** | You only. Say `genesis`. |
 | **Needs** | Nothing. It writes plain Markdown into your project. |
 | **Runs on** | **Your** project folder, never this repo |
@@ -362,7 +362,7 @@ append-only, `docs/SPEC/` the promoted contracts, `docs/GLOSSARY.md` one
 immutable term per concept, `docs/knowledge/` owned by [/knowledge](#-knowledge).
 
 **Doctrine**, loaded only when a step names it:
-[references/index.md](genesis/references/index.md) covers the scope interview
+[references/index.md](first/genesis/references/index.md) covers the scope interview
 and modular architecture, the sourcing contract, and what counts as evidence.
 
 **Promotion gate.** The doctrine is written and untested.
@@ -386,7 +386,7 @@ project, and reads that note next time instead of inventing an answer.
 
 | | |
 | --- | --- |
-| **Package** | [knowledge/](knowledge/) · entry [knowledge/SKILL.md](knowledge/SKILL.md) |
+| **Package** | [first/knowledge/](first/knowledge/) · entry [first/knowledge/SKILL.md](first/knowledge/SKILL.md) |
 | **Invoke** | Your agent starts it when research needs keeping. You can also name it. |
 | **Also answers to** | `enciclopedia`, once [/silly](#-silly) installs it |
 | **Needs** | Python 3 (stdlib only) |
@@ -398,12 +398,12 @@ project, and reads that note next time instead of inventing an answer.
 
 Notes use **Open Knowledge Format 0.2**: one concept per file, YAML
 frontmatter, `index.md` at the door. The spec is cached in
-[references/okf-0.2.md](knowledge/references/okf-0.2.md) so the skill never
+[references/okf-0.2.md](first/knowledge/references/okf-0.2.md) so the skill never
 refetches it. Output lands in `docs/knowledge/` in **your** project.
 
 ```bash
-python3 knowledge/scripts/okf.py new <url> --root docs/knowledge --by claude/opus-5
-python3 knowledge/scripts/okf.py check --root docs/knowledge
+python3 first/knowledge/scripts/okf.py new <url> --root docs/knowledge --by claude/opus-5
+python3 first/knowledge/scripts/okf.py check --root docs/knowledge
 ```
 
 `new` fetches, writes the stub with `resource`, `generated`, and `sources`
@@ -414,7 +414,7 @@ that resolves to nothing.
 The script stops short of summarising on purpose. A script that condensed a
 page would be writing the one part of a note that has to be produced by
 something that understood the source. Rules for the human half:
-[distilling.md](knowledge/references/distilling.md).
+[distilling.md](first/knowledge/references/distilling.md).
 
 **Promotion gate.**
 
@@ -465,9 +465,9 @@ never heard the word and the alias file changes nothing. The index gate refuses
 all three failures.
 
 ```bash
-python3 silly/scripts/alias.py list   --root ~/.cursor/skills
-python3 silly/scripts/alias.py link   --root ~/.cursor/skills --lang es
-python3 silly/scripts/alias.py unlink --root ~/.cursor/skills
+python3 kit/silly/scripts/alias.py list   --root ~/.cursor/skills
+python3 kit/silly/scripts/alias.py link   --root ~/.cursor/skills --lang es
+python3 kit/silly/scripts/alias.py unlink --root ~/.cursor/skills
 ```
 
 `link --fun` installs the playful names instead. `--dry-run` prints without
@@ -494,6 +494,6 @@ touching anything. It refuses to write over a directory it did not create, and
 
 Please consider CC attribution if you build on this work.
 
-Contributors: [CONTEXT.md](CONTEXT.md) · [ROADMAP.md](ROADMAP.md) · [aesthetic/AGENTS.md](aesthetic/AGENTS.md)
+Contributors: [CONTEXT.md](CONTEXT.md) · [ROADMAP.md](ROADMAP.md) · [first/aesthetic/AGENTS.md](first/aesthetic/AGENTS.md)
 
 </div>

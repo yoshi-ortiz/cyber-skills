@@ -10,7 +10,8 @@ also:
 
 | Say | Do |
 | --- | --- |
-| `kit`, `sync`, `update`, `refresh`, `upgrade`, `install`, `setup`, `init`, `start`, `starter-pack` | **Sync.** Re-arm every app at the latest version, cloning the harness first if it is missing. Bare `kit` means this, in every directory, a Repo-Dev checkout included. |
+| `kit`, `sync`, `update`, `refresh`, `upgrade`, `install`, `setup`, `init`, `start`, `starter-pack`, **with no source named** | **Sync.** Re-arm every app at the latest version, cloning the harness first if it is missing. Bare `kit` means this, in every directory, a Repo-Dev checkout included. |
+| any of those **followed by a source**, such as `sync cyber-skills` | **One source.** `harness.py sync <source>`, matched as a substring. Named a source, meant that source. |
 | `fix`, `doctor`, `repair`, `troubleshoot`, `conflict` | **Fix.** Something installed wrong, or two things collided. |
 
 Never ask which. Sync is idempotent, so there is no separate Install mode to
@@ -68,6 +69,10 @@ Sync is the idempotent re-fetch. Pulling the checkout first refreshes
 `collection.toml` and the harness code, so a source added upstream arrives with
 it. There is no separate installer upgrade path.
 
+**It fans out over every source in `collection.toml`.** Naming one after `sync`
+filters to sources whose name contains it, so re-fetching twenty-odd repos to
+update the one that was asked for never happens; see the table above.
+
 `python3 ~/.harness-core/harness.py status` prints what is selected, what was
 detected, and how many skills are installed. Read it before and after.
 
@@ -88,6 +93,7 @@ matter first, which agents were detected and which categories are on.
 | A whole category is absent | `selected:` omits it | `harness onboard`, or `--all` to clear the selection |
 | An app cannot see a new skill | Skill lists load at session start | Start a new chat |
 | A skill behaves like an older version | A stale directory survived a rename; nothing deletes it | Remove it from that app's skills dir, then `harness sync` |
+| A skill I just edited syncs without my edit | Sync clones the source from GitHub; an uncommitted or unpushed edit is not there yet | Commit and push, then sync. To test the edit itself, run it from the checkout |
 | agy or Cursor sees nothing while Claude Code is fine | Those dirs are populated by `sync-skills.sh`, not the `skills` CLI | `harness sync`, which runs it after every install |
 | An edit to `collection.toml` changed nothing | Editing installs nothing | `harness sync` |
 
