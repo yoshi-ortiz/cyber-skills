@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-sys.path.insert(0, str(ROOT / "aesthetic" / "scripts"))
+sys.path.insert(0, str(ROOT / "first" / "aesthetic" / "scripts"))
 import direction_context as dc
 import trace_preview as tp
 

@@ -2,7 +2,7 @@
 """Every verification gate this repository has, in one run.
 
 The gates were documented in two places that never referenced each other --
-repo-root `CONTEXT.md` names five, `aesthetic/AGENTS.md` names four, and the
+repo-root `CONTEXT.md` names five, `first/aesthetic/AGENTS.md` names four, and the
 overlap is two. A contributor could run either list in full and still miss half
 the board. This is that board.
 
@@ -35,10 +35,10 @@ def gates(tree: Path) -> list[tuple[str, list[str]]]:
     """Name each gate by the question it answers, not the file it runs."""
     py, node = sys.executable, shutil.which("node")
     return [
-        ("contracts", [py, "aesthetic/scripts/contracts.py", "--root", "."]),
+        ("contracts", [py, "first/aesthetic/scripts/contracts.py", "--root", "."]),
         ("unit tests", [py, "-m", "unittest", "discover",
-                        "-s", "aesthetic/scripts", "-p", "test_*.py"]),
-        ("harness self-test", [py, "aesthetic/scripts/bootstrap_harness.py", "self-test"]),
+                        "-s", "first/aesthetic/scripts", "-p", "test_*.py"]),
+        ("harness self-test", [py, "first/aesthetic/scripts/bootstrap_harness.py", "self-test"]),
         ("index gate", [py, "tools/index_gate.py"]),
         ("loanwords", [py, "tools/loanwords.py"]),
         ("fog tests", [py, "tools/test_fog.py"]),
@@ -52,7 +52,7 @@ def gates(tree: Path) -> list[tuple[str, list[str]]]:
                            "--channel", "alpha", "--check"]),
         ("published tree is fog-free", [py, "tools/check_publication.py", str(tree / "main")]),
         *((f"{path.parent.name}/{path.name} parses", [node, "--check", str(path.relative_to(ROOT))])
-          for path in sorted(ROOT.glob("aesthetic/*/*.js")) if node),
+          for path in sorted(ROOT.glob("first/aesthetic/*/*.js")) if node),
     ]
 
 

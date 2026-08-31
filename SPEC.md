@@ -51,7 +51,7 @@ autocompletes instead.
 explaining what its skill does is a second copy that will drift, which is why
 `starter-pack/SKILL.md` says only "read the other file" in 617 bytes.
 
-`silly/scripts/alias.py` generates the whole kind today. Anchor and ghost
+`kit/silly/scripts/alias.py` generates the whole kind today. Anchor and ghost
 argument are one line each in its `stub()` function, plus a field to carry the
 section or the argument. R-45.
 
@@ -121,5 +121,5 @@ than building the path from a variable that reads as a new command every run.
 python3 aesthetic/scripts/contracts.py --root .
 python3 tools/index_gate.py
 python3 tools/publish.py --out /tmp/published --check
-python3 silly/scripts/alias.py list --root ~/.claude/skills
+python3 kit/silly/scripts/alias.py list --root ~/.claude/skills
 ```

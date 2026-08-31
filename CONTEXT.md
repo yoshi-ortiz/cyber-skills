@@ -19,18 +19,14 @@ Several skills ship together. They share a release, a publication pipeline, and
 nothing else. Each carries its own contract, and no skill's doctrine applies to
 another.
 
-| Directory | What it is | Context | Channel |
-| --- | --- | --- | --- |
-| [aesthetic/](aesthetic/) | Design and art direction, ranked against evidence | Design-Inference | alpha |
-| [build-context-token-vectors/](build-context-token-vectors/) | Which installed skills are a skill's real peers | Repo-Dev | main |
-| [genesis/](genesis/) | Spec-driven build discipline and the files it keeps state in | its own, unrelated | alpha |
-| [knowledge/](knowledge/) | External sources distilled into a cited OKF bundle | its own, unrelated | alpha |
-| [ora/](ora/) | Spanish conclusion voice | its own, unrelated | main |
-| [silly/](silly/) | Installs the second names other skills declare | its own, unrelated | alpha |
-| [kit/](kit/) | Operating guide for the harness that installs everything else | its own, unrelated | main |
-| [starter-pack/](starter-pack/) | A shipped alias, so `kit`'s original name keeps working | none; it holds no instructions | main |
-| [tools/](tools/) | Builds the published trees from `dev` | Repo-Dev | fog |
-| [assets/](assets/) | README imagery | neither; nothing reads it at runtime | main |
+| Workflow | Skills | Context |
+| --- | --- | --- |
+| [kit/](kit/) | [kit](kit/SKILL.md), [starter-pack](kit/starter-pack/), [silly](kit/silly/), [ora](kit/spanish/ora/) | Day 0 on-ramp |
+| [first/](first/) | [genesis](first/genesis/), [knowledge](first/knowledge/), [aesthetic](first/aesthetic/) | Plan |
+| [check/](check/) | [build-context-token-vectors](check/build-context-token-vectors/) | Monitor |
+| [build/](build/), [land/](land/), [fix/](fix/) | *(routers planned, R-36)* | Build · Ship · Operate |
+| [tools/](tools/) | Publication pipeline | Repo-Dev fog |
+| [assets/](assets/) | README imagery | neither |
 
 The [README](README.md) indexes **every** skill in this table, alpha included.
 A skill nobody can install yet is still a skill someone reads about before
@@ -95,11 +91,9 @@ skill from `ALPHA_SKILLS`, move its section, and the gate agrees again.
 
 ### Groups
 
-`GROUPS` in `index_gate.py` orders the index by the moment a reader needs a
-skill: set something up, plan a project, run a session, or nothing in
-particular. Every skill belongs to exactly one group, and the table lists them
-in that order in every language. Grouping by channel was the alternative and it
-answers a question nobody arrives with.
+`GROUPS` in `tools/skill_discovery.py` orders the index by rail family: `kit`,
+`first`, and `check` today. Every skill belongs to exactly one group, and the
+table lists them in that order in every language.
 
 ### What a translation may not translate
 

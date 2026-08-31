@@ -24,11 +24,28 @@ MANIFEST = ("---\nname: knowledge\ndescription: Distils sources, and answers to 
             "enciclopedia.\ntranslations:\n  es: enciclopedia\n---\n")
 
 
+# One row per skill, in the order GROUPS declares. Nested under workflow families.
+SKILL_HOME: dict[str, tuple[str, ...]] = {
+    "kit": (),
+    "silly": ("kit",),
+    "ora": ("kit", "spanish"),
+    "genesis": ("first",),
+    "knowledge": ("first",),
+    "aesthetic": ("first",),
+    "build-context-token-vectors": ("check",),
+}
+
+
+def skill_dir(root: Path, name: str) -> Path:
+    return root.joinpath(*SKILL_HOME[name], name)
+
+
 def build(root: Path, readme: str, translation: str | None,
           manifest: str = MANIFEST) -> None:
     for name in grouped():
-        (root / name).mkdir()
-        (root / name / "SKILL.md").write_text(
+        path = skill_dir(root, name)
+        path.mkdir(parents=True, exist_ok=True)
+        (path / "SKILL.md").write_text(
             manifest if name == "knowledge" else f"---\nname: {name}\n---\n")
     (root / "README.md").write_text(readme)
     if translation is not None:

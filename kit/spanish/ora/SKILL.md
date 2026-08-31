@@ -88,8 +88,8 @@ scan. Skip empty sections.
 ## Link the files you name
 
 A file is a link, written relative to the working directory, so the user can
-open it from the reply: `[SKILL.md](ora/SKILL.md)`, or
-`[bootstrap_harness.py:1594](aesthetic/scripts/bootstrap_harness.py:1594)` when
+open it from the reply: `[SKILL.md](kit/spanish/ora/SKILL.md)`, or
+`[bootstrap_harness.py:1594](first/aesthetic/scripts/bootstrap_harness.py:1594)` when
 the line matters. Name it once per bullet and link that mention.
 
 Paths inside code fences stay bare. A command is meant to be copied, not

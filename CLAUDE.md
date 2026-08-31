@@ -6,8 +6,8 @@ you are editing. This file only routes.
 ## Two Repo-Dev modes, and the context to stay out of
 
 Both modes below are **Repo-Dev Context**. **Design-Inference Context** is an
-agent running `aesthetic/SKILL.md` to produce design decisions; it uses
-`aesthetic/UBIQUITOUS_LANGUAGE.md`, and reading Repo-Dev records inside it is
+agent running `first/aesthetic/SKILL.md` to produce design decisions; it uses
+`first/aesthetic/UBIQUITOUS_LANGUAGE.md`, and reading Repo-Dev records inside it is
 the **context derail** failure. Doctrine: `CONTEXT.md` section "Two contexts".
 
 | Mode | State it reads and writes | Glossary |
@@ -30,7 +30,7 @@ cost**. **Signal density** is not countable and gets no checker.
 
 ## Standing rules
 
-- Standard library only, under `aesthetic/scripts/` and `tools/`.
+- Standard library only, under `first/aesthetic/scripts/` and `tools/`.
 - Every directory carries a `CONTEXT.md` with `purpose`, `admits`, `refuses`,
   `max_file_bytes`; `contracts.py` enforces it.
 - Never widen a `max_file_bytes` to silence a red check.

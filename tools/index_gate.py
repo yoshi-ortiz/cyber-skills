@@ -23,41 +23,25 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "silly" / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kit" / "silly" / "scripts"))
 from fog import ALPHA_SKILLS
 # The gate reads a manifest with the same parser that acts on it. A second
 # implementation here could disagree with `alias.py`, and a gate that passes
 # while the tool fails is the one bug this file exists to prevent.
-from alias import MARKER, frontmatter
+from alias import frontmatter
 from loanwords import check as localised_terms
 from manifest_gate import check as manifest_problems
+from skill_discovery import GROUPS, discover, grouped, names as skill_names
 
 # Section index, not section title: translations rename these headings.
 STABLE, EXPERIMENTAL = 1, 2
 SECTIONS = ("INSTALL", "SKILL PROMPTS", "EXPERIMENTS")
 
-# The index groups skills by the moment a reader needs one, not by channel: a
-# person arrives wanting to set something up, plan something, run something,
-# or nothing in particular. Labels are English and translations rename them,
-# so the gate compares order, never the words.
-GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("Set up once", ("kit", "silly", "ora")),
-    ("Plan a project", ("genesis", "knowledge")),
-    ("Run a session", ("aesthetic", "build-context-token-vectors")),
-)
-
-
-def grouped() -> list[str]:
-    """Every grouped skill, in the order the index table must list them."""
-    return [name for _, members in GROUPS for name in members]
-
 
 def skills(root: Path) -> list[str]:
     """Every skill dir: a SKILL.md that is not an alias. A shipped alias has
     one too, and would otherwise demand its own group and row."""
-    return sorted(p.name for p in root.iterdir()
-                  if p.is_dir() and (p / "SKILL.md").is_file()
-                  and not frontmatter(p / "SKILL.md")[0].get(MARKER))
+    return skill_names(root)
 
 
 Spec = tuple[dict[str, str], dict[str, str], list[str], list[tuple[str, str]]]
@@ -149,7 +133,8 @@ def gate(root: Path) -> int:
     problems: list[str] = []
     readme = root / "README.md"
     present = skills(root)
-    specs = {name: spec(root / name / "SKILL.md") for name in present}
+    skill_paths = dict(discover(root))
+    specs = {name: spec(skill_paths[name] / "SKILL.md") for name in present}
 
     problems.extend(localised_terms(root))
 
@@ -165,7 +150,7 @@ def gate(root: Path) -> int:
         found = [label for label, members in GROUPS if name in members]
         if not found:
             problems.append(f"{name}/ is in no index group; add it to GROUPS in "
-                            f"index_gate.py so the table stays a map of the package")
+                            f"tools/skill_discovery.py so the table stays a map of the package")
         elif len(found) > 1:
             problems.append(f"{name}/ is in {len(found)} index groups ({found}); "
                             f"a skill belongs to exactly one")

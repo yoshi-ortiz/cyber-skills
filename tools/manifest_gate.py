@@ -21,7 +21,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "silly" / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kit" / "silly" / "scripts"))
 from alias import frontmatter
 
 NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
@@ -29,11 +29,13 @@ NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 def check(root: Path, present: list[str]) -> list[str]:
     """Every frontmatter problem across the repo's skills, aliases included."""
+    from skill_discovery import discover
+
     problems: list[str] = []
     claimed: dict[str, str] = {}
 
-    for entry in sorted(root.glob("*/SKILL.md")):
-        name = entry.parent.name
+    for name, skill_dir in discover(root):
+        entry = skill_dir / "SKILL.md"
         fields, translations, aliases, also = frontmatter(entry)
         description = fields.get("description", "")
 
@@ -73,10 +75,10 @@ def check(root: Path, present: list[str]) -> list[str]:
 
 
 def main() -> int:
+    from skill_discovery import names
+
     root = Path(__file__).resolve().parents[1]
-    present = sorted(p.name for p in root.iterdir()
-                     if p.is_dir() and (p / "SKILL.md").is_file()
-                     and not frontmatter(p / "SKILL.md")[0].get("alias_of"))
+    present = names(root)
     problems = check(root, present)
     if problems:
         print(f"FAIL: {len(problems)} frontmatter problem(s)", file=sys.stderr)

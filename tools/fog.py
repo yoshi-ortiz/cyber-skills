@@ -25,7 +25,13 @@ FOG_FILES = (
     "ROADMAP.md",
     "BUGS.md",
     "CHANGELOG.md",
-    "aesthetic/AGENTS.md",
+    "first/aesthetic/AGENTS.md",
+    "first/CONTEXT.md",
+    "check/CONTEXT.md",
+    "build/CONTEXT.md",
+    "land/CONTEXT.md",
+    "fix/CONTEXT.md",
+    "kit/spanish/CONTEXT.md",
 )
 
 # Whole directories, relative to the repository root.
@@ -33,7 +39,7 @@ FOG_DIRS = (
     "docs",
     ".audit",
     "tools",
-    "aesthetic/docs",
+    "first/aesthetic/docs",
     # A design project run inside this repository. Its state, its references,
     # and its renders are one project's work, not any skill's payload.
     ".claude",
@@ -57,8 +63,8 @@ SKIP_DIRS = {".git", "__pycache__"}
 
 # Development tooling: it verifies the skill, it is not part of it.
 FOG_FILES_EXTRA = (
-    "aesthetic/scripts/contracts.py",
-    "aesthetic/scripts/verify_references.py",
+    "first/aesthetic/scripts/contracts.py",
+    "first/aesthetic/scripts/verify_references.py",
 )
 
 # Skills not ready for a stable tree. They stay on `dev` and ship on the alpha
@@ -72,9 +78,9 @@ ALPHA_SKILLS = (
 # Never fog, whatever else matches. The skill's own instructional payload is
 # the reason `main` exists at all.
 KEEP_ALWAYS = (
-    "aesthetic/SKILL.md",
-    "aesthetic/UBIQUITOUS_LANGUAGE.md",
-    "aesthetic/CONTEXT.md",
+    "first/aesthetic/SKILL.md",
+    "first/aesthetic/UBIQUITOUS_LANGUAGE.md",
+    "first/aesthetic/CONTEXT.md",
     "README.md",
 )
 
@@ -93,8 +99,8 @@ def walk(root: Path) -> list[Path]:
 
 def is_alpha(relative: str) -> bool:
     """True when this path belongs to a skill that has not reached `main`."""
-    return any(relative == skill or relative.startswith(skill + "/")
-               for skill in ALPHA_SKILLS)
+    return any(part in ALPHA_SKILLS
+               for part in PurePosixPath(relative).parts)
 
 
 def is_fog(relative: str, channel: str = "main") -> bool:
@@ -128,12 +134,18 @@ def reasons() -> dict[str, str]:
         "ROADMAP.md": "burndown state; an agent running the skill never reads it",
         "BUGS.md": "incident history; development state",
         "CHANGELOG.md": "release history; development state",
-        "aesthetic/AGENTS.md": "how to DEVELOP this skill, and it cites tests "
+        "first/aesthetic/AGENTS.md": "how to DEVELOP this skill, and it cites tests "
                                "that a published tree does not carry",
+        "first/CONTEXT.md": "workflow family container; Repo-Dev routing, not skill payload",
+        "check/CONTEXT.md": "workflow family container; Repo-Dev routing, not skill payload",
+        "build/CONTEXT.md": "workflow family placeholder; Repo-Dev routing, not skill payload",
+        "land/CONTEXT.md": "workflow family placeholder; Repo-Dev routing, not skill payload",
+        "fix/CONTEXT.md": "workflow family placeholder; Repo-Dev routing, not skill payload",
+        "kit/spanish/CONTEXT.md": "Spanish skill grouping; Repo-Dev routing, not skill payload",
         "docs": "requirements and distilled knowledge; development state",
         ".audit": "session decision log; development state",
         "tools": "publication tooling; it builds main, it does not ship on it",
-        "aesthetic/docs": "ADRs explaining why durable boundaries were drawn; needed "
+        "first/aesthetic/docs": "ADRs explaining why durable boundaries were drawn; needed "
                           "to change the skill, not to run it",
         ".claude": "skills for an agent working ON this repository. A consuming "
                    "agent installs skills from a published tree; it does not "
@@ -155,8 +167,8 @@ def reasons() -> dict[str, str]:
         "context-tags-inbox.jsonl": "one maintainer's reviewed judgements about "
                                     "context, which is training data and never "
                                     "an instruction a skill carries",
-        "aesthetic/scripts/contracts.py": "development tooling",
-        "aesthetic/scripts/verify_references.py": "development tooling",
+        "first/aesthetic/scripts/contracts.py": "development tooling",
+        "first/aesthetic/scripts/verify_references.py": "development tooling",
         "aesthetic": "alpha channel; not published to main",
         "genesis": "alpha channel; not published to main",
         "knowledge": "alpha channel; not published to main",

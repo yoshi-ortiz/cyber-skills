@@ -25,7 +25,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "aesthetic" / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "first" / "aesthetic" / "scripts"))
 
 CDN = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0"
 DEFAULT_TOKENIZER = "Xenova/gpt-4o"

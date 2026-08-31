@@ -18,7 +18,7 @@ and this cannot tell you which.
 
 It needs `evoc`, `model2vec`, and `matplotlib` in a virtual environment the user
 creates. The skill documents those, ships none of them, and nothing under
-`aesthetic/scripts/` or `tools/` imports any of them.
+`first/aesthetic/scripts/` or `tools/` imports any of them.
 
 `--serve` is a loopback-only live companion. It prepares the corpus once, then
 reruns only advisory EVoC analysis when a maintainer changes a parameter. It
