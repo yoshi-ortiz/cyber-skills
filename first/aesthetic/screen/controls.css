@@ -1,0 +1,272 @@
+/* dh-controls */
+/* Owned by the aesthetic skill. Do not restyle in a project: every local
+   patch so far has produced specificity fights and unusable controls.
+   `.dh-fb.dh-fb` doubles specificity so a host rule cannot flatten it. */
+/* Both wrappers establish the container. `controls --out` emits .dh-feedback,
+   but `embed` lifts the rows out of it into the project's own placeholder, so
+   on every embedded screen there was no container at all and the responsive
+   rule below could never match -- the signals stayed on the row and ran off
+   the right edge however narrow the description column got. */
+.dh-feedback,[data-dh-controls]{container-type:inline-size;display:flex;
+ flex-direction:column;gap:6px}
+.dh-offline{display:block;background:#b00020;color:#fff;font:700 12px/1.4 ui-monospace,monospace;
+ padding:9px 11px;border-radius:6px}
+:root[data-dh-live] .dh-offline{display:none}
+/* The round's scope, said out loud. `data-dh-cohort` was an attribute only:
+   doctor could read it, the user could not, so the one thing that tells them
+   which elements this round is asking about -- and which are deliberately left
+   alone -- was invisible on the screen they were scoring. */
+.dh-cohort{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin:0 0 2px;
+ font:500 12px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-cohort b{font-weight:700;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+ flex:none;color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-cohort span{font-weight:700;font-size:13px;letter-spacing:-.01em;
+ color:var(--dh-accent,#d9482a)}
+/* The description column carries a floor. At minmax(0,1fr) the signals column
+   took its full max-content width and squeezed the text to about 80px, where
+   `overflow-wrap:anywhere` broke every word mid-syllable -- "cover.sp / ine.righ
+   / t" -- and the strip became unreadable while every control still worked. */
+.dh-fb.dh-fb{display:grid;grid-template-columns:var(--dh-shot-w,96px) minmax(26ch,1fr) auto;
+ gap:16px;
+ /* `start`, not `center`. Centring the graphic, the text and the controls
+    independently gave each a different top -- 14/25/59 on one row, 14/66/59
+    on the next -- so nothing shared an edge and the misalignment MOVED with
+    the length of the description. Top-aligned, the three columns begin
+    together on every row whatever the text does. */
+ align-items:start;padding:13px 15px;border:1px solid rgba(0,0,0,.14);
+ border-radius:10px;background:var(--dh-bg,#fff);color:var(--dh-ink,#111);
+ font:500 13px/1.45 var(--dh-font,ui-monospace,SFMono-Regular,Menlo,monospace);
+ contain:layout style}
+/* Below ~560px of ROW there is no honest three-column layout: the controls
+   wrap onto their own line under the text instead of crushing it. Container
+   query, because the same row renders in a 1180px article and in a companion
+   pane a third that wide, and a viewport query cannot tell those apart.
+   Baseline since 2023; the stacked layout below is the safe default anyway. */
+/* `.dh-fb.dh-fb.dh-fb`, tripled. A legacy `@media (max-width:780px)` further
+   down sets the same property on `.dh-fb.dh-fb`, and a container rule that only
+   ties on specificity loses to it by source order -- which is why the narrow
+   layout silently never applied. */
+/* 980, not 560. The old number asked "is the row narrow?"; the question that
+   matters is "does the text still have a measure?" -- 96px of thumbnail plus
+   360px of controls plus gaps leaves under 30ch of text until about here. */
+@container dh-row (max-width: 980px){
+ .dh-fb.dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
+ .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-end;flex-wrap:wrap}
+}
+@container dh-row (max-width: 380px){
+ .dh-fb.dh-fb.dh-fb{grid-template-columns:minmax(0,1fr)}
+ .dh-fb .dh-shot{inline-size:100%;max-inline-size:220px}
+ /* The strip is five 30px stars, a zero and four verdict/bookmark buttons:
+    244px of fixed touch targets, which is wider than the row itself down
+    here. They shrink rather than spill -- still comfortably above the 24px
+    minimum -- and `.dh-signals` already wraps if a line still overflows. */
+ .dh-fb.dh-fb .dh-stars > *{inline-size:26px;min-inline-size:0;font-size:17px}
+ .dh-fb [data-sentiment],.dh-fb [data-verdict],.dh-fb [data-bookmark],.dh-fb .dh-zero > *{
+  min-inline-size:30px;font-size:14px}
+ .dh-fb .dh-signals{gap:4px}
+}
+.dh-fb.dh-fb:hover{border-color:var(--dh-ink,#111)}
+/* An invisible table, not a stack of independent rows. Each provenance line
+   used to be its own flex row, so its value began wherever its own label
+   happened to end: `PROPUESTO` is nine characters and `IMPLEMENTADO` is
+   twelve, so the two values started at different x and their wrapped lines
+   hung at different indents. One grid for the whole block puts every label
+   in a column sized to the longest of them and every value on one edge. */
+.dh-fb .dh-meta{display:grid;grid-template-columns:max-content minmax(0,1fr);
+ gap:5px 10px;align-content:start;min-width:0}
+/* The id and the description are prose, not rows of the table. */
+.dh-fb .dh-head,.dh-fb .dh-desc:not(.dh-sub){grid-column:1 / -1}
+/* Five stacked lines of near-identical grey monospace is what made the strip
+   tiring to read. Hierarchy now: the id leads, the description is the line you
+   actually read, provenance is demoted to a labelled aside, and the state sits
+   beside the id instead of adding a fifth line. */
+.dh-fb .dh-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0;
+ padding-inline-end:96px}
+/* The id, demoted to a tag. It is the ledger's key and the designer's noise. */
+/* Two grey pills of the same size said two unrelated things: one is a STATUS,
+   one is a machine key. The key stops being a badge -- it is the string you
+   quote back to the agent, not a label about the work. Deleting the pill is
+   also one less thing on the card. */
+.dh-fb .dh-token{grid-column:1 / -1;justify-self:start;font-size:9.5px;letter-spacing:.04em;
+ padding:0;background:none;overflow-wrap:anywhere;
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
+.dh-fb .dh-token::before{content:"#";opacity:.55;margin-inline-end:1px}
+.dh-fb .dh-id{font-weight:700;font-size:15px;letter-spacing:-.01em;
+ overflow-wrap:anywhere;color:var(--dh-ink,#111)}
+/* The status keeps the pill and earns a colour, so lifecycle is readable at a
+   glance instead of being one more grey rectangle to parse. */
+/* The status is about the card, so it sits on the card -- corner, not inline
+   after the title where it competed with the name for the reading line. */
+.dh-fb .dh-state{position:absolute;inset-block-start:8px;inset-inline-end:10px;z-index:2;
+ font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+ padding:2px 7px;border-radius:999px;white-space:nowrap;font-weight:700;
+ background:color-mix(in srgb, var(--dh-ink,#111) 8%, transparent);
+ color:color-mix(in srgb, var(--dh-ink,#111) 68%, transparent)}
+.dh-fb[data-group="developing"] .dh-state{background:color-mix(in srgb, #1c8b4b 16%, transparent);
+ color:#166b3a}
+.dh-fb[data-group="rejected"] .dh-state{background:color-mix(in srgb, #b00020 13%, transparent);
+ color:#8d1a2c}
+.dh-fb .dh-desc{font-size:13px;line-height:1.5;overflow-wrap:break-word;
+ color:color-mix(in srgb, var(--dh-ink,#111) 88%, transparent)}
+/* provenance, not prose: smaller, dimmer, with a micro-label instead of a
+   run-on bold prefix inside the sentence */
+/* `display:contents` so the label and the value become cells of the meta
+   grid directly. The element still passes inherited type and colour down --
+   it just stops generating a box that would trap them in their own row. */
+.dh-fb .dh-sub{font-size:11.5px;line-height:1.45;display:contents;
+ color:color-mix(in srgb, var(--dh-ink,#111) 58%, transparent)}
+.dh-fb .dh-sub > span{grid-column:2;min-inline-size:0;overflow-wrap:break-word}
+.dh-fb .dh-sub > b{grid-column:1;font-weight:700;font-size:9px;letter-spacing:.1em;
+ text-transform:uppercase;padding-top:2px;white-space:nowrap;
+ color:color-mix(in srgb, var(--dh-ink,#111) 62%, transparent)}
+.dh-fb .dh-signals{display:flex;gap:8px;align-items:center}
+/* The confirmation. Takes no layout when idle, so a row does not reflow the
+   moment a score lands -- and it is announced, so it is not colour-only. */
+/* Out of flow, top-right. In the flex line it pushed the controls sideways
+   every time a score landed. */
+.dh-fb{position:relative}
+/* Opaque, and it owns the corner while it is up: it shared the spot with the
+   status chip and the two translucent pills overprinted into noise. */
+.dh-fb:has(.dh-saved[data-on]) .dh-state{opacity:0}
+.dh-fb .dh-saved{position:absolute;inset-block-start:8px;inset-inline-end:10px;z-index:3;
+ font-size:10px;font-weight:700;letter-spacing:.12em;
+ text-transform:uppercase;white-space:nowrap;padding:3px 8px;border-radius:999px;
+ opacity:0;transform:translateY(2px);pointer-events:none;
+ transition:opacity .18s ease,transform .18s ease;
+ background:var(--dh-accent,#d9482a);color:#fff;
+ border:1px solid color-mix(in srgb, var(--dh-accent,#d9482a) 72%, #000)}
+.dh-fb .dh-saved[data-on]{opacity:1;transform:none}
+/* One continuous strip: zero is a first-class score, not a hidden reset. */
+.dh-fb .dh-stars{display:flex;align-items:center;gap:0}
+.dh-fb .dh-stars > *{min-inline-size:30px;min-block-size:34px;display:grid;place-items:center;
+ cursor:pointer;user-select:none;font-size:20px;line-height:1;border:0;background:transparent;
+ color:color-mix(in srgb, var(--dh-ink,#111) 30%, transparent);transition:color .12s}
+/* Gold, not the screen's accent. A star is the same instrument on every
+   project, and tinting it with whatever accent the design happens to use made
+   the rank read as part of the artwork being judged. */
+.dh-fb .dh-stars > *.on{color:var(--dh-star,#e0a20a)}
+/* The rank in figures. Five glyphs differing only in tint is a shape the eye
+   has to count, and at 24 rows nobody counts -- the standing score was there
+   and still unreadable at a glance. attr() off the strip means a click updates
+   it with no extra script. `--` is not-yet-judged, which a row of grey stars
+   cannot distinguish from a zero.
+   The figure runs red at 0 to green at 5, so a column of them reads as a
+   temperature before it reads as digits. */
+/* A zero scored showed twice -- the control on the left and the readout on
+   the right. The control is the one you press, so it keeps the digit. */
+.dh-fb .dh-stars[data-stars="0"]::after{content:""}
+.dh-fb .dh-stars::after{content:attr(data-stars);margin-inline-start:9px;min-inline-size:1.4ch;
+ font:700 13px/1 var(--dh-font,ui-monospace,monospace);font-variant-numeric:tabular-nums;
+ color:#b00020}
+.dh-fb .dh-stars[data-stars="1"]::after{color:#c2451c}
+.dh-fb .dh-stars[data-stars="2"]::after{color:#cf7a12}
+.dh-fb .dh-stars[data-stars="3"]::after{color:#b98b07}
+.dh-fb .dh-stars[data-stars="4"]::after{color:#6f9430}
+.dh-fb .dh-stars[data-stars="5"]::after{color:#1c8b4b}
+.dh-fb .dh-stars[data-scored="no"]::after{content:"--";
+ color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
+/* The preview has to move the number too, or hovering shows one rank and
+   reads another. */
+.dh-fb .dh-stars:hover::after{color:color-mix(in srgb, var(--dh-ink,#111) 34%, transparent)}
+/* Hover previews the RANK, not one glyph. Every star up to the pointer lights,
+   and the standing score steps aside for the duration so the preview is the
+   only thing being read. Without both halves, hovering the 2nd star of a
+   4-star row changed nothing at all, and hovering the 5th lit a gap-toothed
+   1,2,3,5 -- which is what "the hover is buggy" was pointing at. */
+.dh-fb .dh-stars:hover [data-rank]{color:color-mix(in srgb, var(--dh-ink,#111) 26%, transparent)}
+.dh-fb .dh-stars [data-rank]:hover,
+.dh-fb .dh-stars [data-rank]:has(~ [data-rank]:hover){color:var(--dh-star,#e0a20a)}
+/* The zero lives OUTSIDE the star strip, and stays out of the way until the
+   user actually reaches for the bottom of the scale: it surfaces on hovering
+   ONE star. It is always visible when it IS the score, so a zero already given
+   can never be mistaken for an unrated row.
+   While hidden it is also unclickable. That pairing is the whole point -- an
+   invisible-but-clickable zero sitting beside the first star is exactly how a
+   click aimed at 1 used to score 0, and a mis-hit zero used to wipe the thumb
+   and the tick along with it. Never set the opacity without the pointer-events.
+   The spacing is padding, not margin: a margin here is dead ground where
+   neither control is hovered, and the zero vanished as the pointer crossed it. */
+.dh-fb .dh-zero{display:flex;align-items:center;padding-inline-end:13px;
+ border-inline-end:1px solid rgba(0,0,0,.18);opacity:0;transition:opacity .12s}
+.dh-fb [data-rank="0"]{min-inline-size:30px;min-block-size:34px;display:grid;place-items:center;
+ cursor:pointer;user-select:none;border:0;background:transparent;font-size:13px;font-weight:700;
+ line-height:1;color:color-mix(in srgb, var(--dh-ink,#111) 40%, transparent);
+ transition:color .12s;pointer-events:none}
+/* Visibility follows the ROW'S DATA, not the button's class. A companion that
+   lights every control whose rank is <= the score lights this one on any
+   score, and keying off that class made the zero flash into view on every
+   click until the echo corrected it. data-stars is right immediately. */
+.dh-fb[data-stars="0"][data-scored="yes"] .dh-zero,.dh-fb .dh-zero:hover,
+.dh-fb .dh-zero:has(:focus-visible),
+.dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover){opacity:1}
+.dh-fb[data-stars="0"][data-scored="yes"] .dh-zero [data-rank="0"],
+.dh-fb .dh-zero:hover [data-rank="0"],
+.dh-fb .dh-zero:has(:focus-visible) [data-rank="0"],
+.dh-fb .dh-zero:has(~ .dh-stars [data-rank="1"]:hover) [data-rank="0"]{pointer-events:auto}
+.dh-fb [data-rank="0"]:hover,.dh-fb [data-rank="0"].on{color:#b00020}
+/* Green go, red stop, and the tick green with them. These hues are fixed on
+   purpose: they are the same instrument on every project, so they do not
+   follow --dh-accent into whatever palette is being judged. */
+.dh-fb [data-sentiment],.dh-fb [data-verdict],.dh-fb [data-bookmark]{min-inline-size:38px;min-block-size:34px;
+ display:grid;place-items:center;cursor:pointer;user-select:none;font-size:15px;
+ border:1px solid rgba(0,0,0,.22);border-radius:6px;background:transparent;line-height:1;
+ transition:background .12s,color .12s,border-color .12s}
+.dh-fb [data-sentiment]:hover,.dh-fb [data-verdict]:hover,.dh-fb [data-bookmark]:hover{border-color:var(--dh-ink,#111)}
+.dh-fb [data-sentiment="like"].on{background:#1c8b4b;border-color:#126435;color:#fff}
+.dh-fb [data-sentiment="dislike"].on{background:#b00020;border-color:#8a0019;color:#fff}
+/* Its own hue -- gold, not the approve-green or dislike-red -- so a
+   bookmark never reads as a verdict on the work, only as "keep this handy". */
+.dh-fb [data-bookmark].on{background:#e0a20a;border-color:#a97600;color:#fff}
+/* The ribbon itself: a box with a notch cut out of its foot. Deterministic
+   CSS geometry, so it inherits currentColor and needs no asset. */
+.dh-ribbon{display:block;inline-size:11px;block-size:15px;background:currentColor;
+ clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%);opacity:.5;
+ transition:opacity .12s}
+.dh-fb [data-bookmark]:hover .dh-ribbon{opacity:.8}
+.dh-fb [data-bookmark].on .dh-ribbon{opacity:1}
+/* Approve reads as done: green fill, white tick, unmistakable. */
+.dh-fb [data-verdict].on{background:#1c8b4b;border-color:#126435;color:#fff;font-weight:800}
+/* Completed is the one final act on the page: the tick becomes a finish flag,
+   and the card itself flashes once so the change is felt, not just seen. */
+.dh-fb [data-verdict].on > span{font-size:0}
+.dh-fb [data-verdict].on > span::after{content:"🏁";font-size:15px}
+@keyframes dh-flash{0%{background:color-mix(in srgb, #1c8b4b 26%, var(--dh-bg,#fff))}
+ 100%{background:var(--dh-bg,#fff)}}
+.dh-fb[data-done]{animation:dh-flash .75s ease-out}
+.dh-fb [data-rank]:focus-visible,.dh-fb [data-sentiment]:focus-visible,
+.dh-fb [data-verdict]:focus-visible,.dh-fb [data-bookmark]:focus-visible{
+ outline:2px solid var(--dh-accent,#d9482a);outline-offset:2px}
+/* A foundation heading opens a section of a design system, so it is sized like
+   one. At 11px uppercase it read as a caption and the eye slid past it -- the
+   grouping was there and invisible, which is the same as absent. The rule under
+   the heading does the separating, so the rows need no extra chrome. */
+.dh-group{margin:32px 0 12px;display:flex;align-items:baseline;gap:10px;
+ padding-block-end:8px;
+ border-block-end:1px solid color-mix(in srgb, var(--dh-ink,#111) 24%, transparent);
+ font:700 20px/1.15 var(--dh-font,ui-monospace,monospace);letter-spacing:-.015em;
+ text-transform:none;color:var(--dh-ink,#111)}
+.dh-group:first-child{margin-top:0}
+.dh-group .dh-count{font-size:11px;font-weight:700;letter-spacing:.12em;
+ margin-inline-start:auto;font-variant-numeric:tabular-nums;
+ color:color-mix(in srgb, var(--dh-ink,#111) 55%, transparent)}
+/* This round is the one section the user must not scroll past. */
+.dh-group[data-group="pinned"]{border-block-end-color:var(--dh-accent,#d9482a);
+ color:var(--dh-accent,#d9482a)}
+.dh-group[data-group="rejected"]{color:#b00020;opacity:.85}
+/* Rejected rows recede only in the graveyard zone. Superseded rows in a versus
+   pair carry `data-group="rejected"` for lifecycle grouping but must stay fully
+   readable -- dimming them made incumbent/proposal pairs look randomly broken. */
+.dh-zone[data-zone="antipattern"] .dh-fb[data-group="rejected"]{opacity:.62}
+.dh-zone[data-zone="antipattern"] .dh-fb[data-group="rejected"]:hover{opacity:1}
+.dh-shot{display:block;inline-size:var(--dh-shot-w,96px);aspect-ratio:8.5/11;overflow:hidden;
+ position:relative;border:1px solid rgba(0,0,0,.25);border-radius:4px;background:#fff;isolation:isolate}
+.dh-shot svg{inline-size:100%;block-size:100%;display:block}
+.dh-shot img{inline-size:100%;block-size:100%;object-fit:contain;display:block}
+.dh-shot-missing{display:grid;place-items:center;text-align:center;padding:6px;
+ font-size:9px;opacity:.6;block-size:100%}
+@container (max-width: 780px){
+ .dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
+ .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-end}
+}
+@media (prefers-reduced-motion:reduce){.dh-fb *{transition:none!important}}

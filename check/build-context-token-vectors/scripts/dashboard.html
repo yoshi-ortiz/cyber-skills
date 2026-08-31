@@ -1,0 +1,312 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Context token vectors</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1a1a19; --dim:#6b6b68; --line:#e4e4e1; --card:#fff;
+          --local:#4338ca; --noise:#b45309; --sel:#0f766e; }
+  @media (prefers-color-scheme:dark) {
+    :root { --bg:#131312; --fg:#e8e8e5; --dim:#96968f; --line:#2c2c29; --card:#1c1c1a;
+            --local:#a5b4fc; --noise:#fbbf24; --sel:#5eead4; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:2rem 1.25rem 4rem; background:var(--bg); color:var(--fg);
+    font:15px/1.55 ui-sans-serif,-apple-system,"Segoe UI",sans-serif; }
+  .wrap { max-width:1100px; margin:0 auto; }
+  h1 { font-size:1.5rem; margin:0 0 .25rem; letter-spacing:-.01em; }
+  .sub { color:var(--dim); font-size:.85rem; margin:0 0 1.25rem; }
+  .sub code { background:var(--card); border:1px solid var(--line);
+    border-radius:.25rem; padding:.05rem .3rem; }
+  .bar { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center;
+    background:var(--card); border:1px solid var(--line); border-radius:.5rem;
+    padding:.75rem .9rem; margin-bottom:1rem; }
+  .bar label { font-size:.75rem; color:var(--dim); text-transform:uppercase;
+    letter-spacing:.05em; }
+  button { font:inherit; font-size:.85rem; padding:.3rem .7rem; cursor:pointer;
+    border:1px solid var(--line); background:var(--bg); color:var(--fg);
+    border-radius:.3rem; }
+  button[aria-pressed="true"] { background:var(--fg); color:var(--bg);
+    border-color:var(--fg); }
+  input[type=search] { font:inherit; font-size:.85rem; padding:.3rem .6rem;
+    border:1px solid var(--line); border-radius:.3rem; background:var(--bg);
+    color:var(--fg); min-width:12rem; flex:1; }
+  .tune { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:.7rem; align-items:end; background:var(--card); border:1px solid var(--line);
+    border-radius:.5rem; padding:.8rem .9rem; margin-bottom:1rem; }
+  .knob label { display:block; color:var(--dim); font-size:.67rem;
+    text-transform:uppercase; letter-spacing:.04em; }
+  .knob input { width:100%; margin-top:.2rem; padding:.3rem .45rem;
+    border:1px solid var(--line); border-radius:.3rem; background:var(--bg);
+    color:var(--fg); font:12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .tune-action { display:flex; align-items:center; gap:.6rem; min-height:2.1rem; }
+  #tuneStatus { color:var(--dim); font-size:.75rem; }
+  .stats { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.25rem; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:.5rem;
+    padding:.55rem .85rem; min-width:6.5rem; }
+  .stat b { display:block; font-size:1.3rem; font-variant-numeric:tabular-nums; }
+  .stat span { color:var(--dim); font-size:.7rem; text-transform:uppercase;
+    letter-spacing:.05em; }
+  figure { margin:0 0 1.25rem; background:var(--card); border:1px solid var(--line);
+    border-radius:.5rem; padding:1rem; }
+  figcaption { color:var(--dim); font-size:.78rem; margin-top:.6rem; }
+  svg { width:100%; height:auto; display:block; }
+  circle { cursor:pointer; }
+  #detail { background:var(--card); border:1px solid var(--sel); border-radius:.5rem;
+    padding:.9rem 1rem; margin-bottom:1.25rem; font-size:.875rem; }
+  #detail h3 { margin:0 0 .5rem; font-size:.95rem; }
+  #detail.empty { border-color:var(--line); color:var(--dim); }
+  h2 { font-size:1rem; margin:1.75rem 0 .6rem; }
+  table { width:100%; border-collapse:collapse; font-size:.85rem; }
+  th { text-align:left; color:var(--dim); font-weight:600; font-size:.68rem;
+    text-transform:uppercase; letter-spacing:.05em; padding:.4rem .5rem;
+    border-bottom:1px solid var(--line); }
+  td { padding:.4rem .5rem; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr.row { cursor:pointer; }
+  tr.row:hover td { background:var(--card); }
+  .scroll { overflow-x:auto; }
+  code { font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .local { color:var(--local); font-weight:600; }
+  .tag { display:inline-block; padding:.05rem .4rem; border-radius:.25rem;
+    font-size:.7rem; background:var(--line); }
+  .tag.noise { background:transparent; color:var(--noise);
+    border:1px solid var(--noise); }
+  .num { font-variant-numeric:tabular-nums; text-align:right; }
+  .peers { color:var(--dim); }
+  .peers b { color:var(--fg); font-weight:600; }
+  .meter { display:inline-block; width:3rem; height:.4rem; background:var(--line);
+    border-radius:.2rem; overflow:hidden; vertical-align:middle; }
+  .meter i { display:block; height:100%; background:var(--sel); }
+  .note { color:var(--dim); font-size:.83rem; border-left:2px solid var(--line);
+    padding-left:.9rem; margin-top:1.75rem; }
+</style>
+<div class="wrap">
+  <h1>Context token vectors</h1>
+  <p class="sub" id="sub"></p>
+
+  <div class="bar">
+    <label>Layer</label><span id="layers"></span>
+    <label>Show</label><span id="scopes"></span>
+    <input type="search" id="q" placeholder="Filter by name, peer, or cluster">
+  </div>
+
+  <form id="tune" class="tune">
+    <div id="knobs" style="display:contents"></div>
+    <div class="tune-action"><button id="applyTune" type="submit">Retune</button>
+      <span id="tuneStatus" role="status"></span></div>
+  </form>
+
+  <div class="stats" id="stats"></div>
+
+  <figure>
+    <svg id="plot" viewBox="0 0 900 420" role="img" aria-label="Skill embedding scatter"></svg>
+    <figcaption>
+      Two principal components. Clustering ran in full dimensionality, so
+      adjacency here is orientation and not the result. Larger marks are local
+      skills. Click any point to inspect it.
+    </figcaption>
+  </figure>
+
+  <div id="detail" class="empty">Click a point or a row to inspect a skill.</div>
+
+  <h2 id="tableHead"></h2>
+  <div class="scroll"><table id="table"></table></div>
+
+  <h2>Clusters at this layer</h2>
+  <div class="scroll"><table id="clusters"></table></div>
+
+  <p class="note">
+    This observes position and overlap, never quality. <span class="tag noise">noise</span>
+    means the corpus holds no peer, which is novelty or dilution, and nothing
+    here can tell you which. Every number changes with the parameters printed
+    above; re-run with different flags to compare two settings rather than
+    trusting one.
+  </p>
+</div>
+<script>
+let D = __DATA__;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// Coarsest layer first: it is the one a reader can hold in their head, and the
+// finer layers are the drill-down rather than the entry point.
+let layer = D.layerStats.length - 1;
+let scope = "rail";
+let selected = null;
+
+function subtitle() {
+  const params = Object.entries(D.params);
+  $("sub").innerHTML = `${esc(D.root)} · <code>${esc(D.model)}</code> · seed ${D.seed} · ` +
+    (params.length
+      ? params.map(([k, v]) => `<code>${esc(k)}=${esc(v)}</code>`).join(" ")
+      : "<code>EVoC defaults</code>");
+}
+
+function tuneControls() {
+  const live = location.protocol === "http:" || location.protocol === "https:";
+  $("knobs").innerHTML = Object.entries(D.tunables || {}).map(([name, spec]) =>
+    `<div class="knob"><label title="${esc(spec.help)}">${esc(name)}
+      <input name="${esc(name)}" type="number" ${spec.type === "int" ? "step=1" : "step=any"}
+        placeholder="default ${esc(spec.default)}" value="${esc(D.params[name] ?? "")}"></label></div>`
+  ).join("");
+  $("applyTune").disabled = !live;
+  $("tuneStatus").textContent = live ? "Embeddings stay cached." : "Use --serve for live tuning.";
+}
+
+const cl = i => D.skills[i].layers[layer];
+const hue = c => c < 0 ? "var(--dim)" : `hsl(${(c * 47) % 360} 62% 52%)`;
+const tag = c => c < 0 ? '<span class="tag noise">noise</span>'
+                       : `<span class="tag">c${c}</span>`;
+const meter = v =>
+  `<span class="meter"><i style="width:${Math.round(v * 100)}%"></i></span>`;
+const railRank = s => s.phase ? D.railOrder.indexOf(s.phase) : D.railOrder.length;
+const railSort = (a, b) => railRank(a[0]) - railRank(b[0]) ||
+  a[0].name.localeCompare(b[0].name);
+const phaseTag = s => s.phase ? `<span class="tag">/${esc(s.phase)}</span>` : "&mdash;";
+
+function controls() {
+  $("layers").innerHTML = D.layerStats.map((s, i) =>
+    `<button data-layer="${i}" aria-pressed="${i === layer}">${s.clusters}c</button>`
+  ).join(" ");
+  $("scopes").innerHTML = [["rail", "Rail"], ["local", "Local"],
+    ["all", "All"], ["noise", "Noise"]]
+    .map(([k, t]) => `<button data-scope="${k}" aria-pressed="${k === scope}">${t}</button>`)
+    .join(" ");
+}
+
+function visible() {
+  const q = $("q").value.trim().toLowerCase();
+  return D.skills.map((s, i) => [s, i]).filter(([s, i]) => {
+    if (scope === "rail" && !s.phase) return false;
+    if (scope === "local" && !s.local) return false;
+    if (scope === "noise" && cl(i) >= 0) return false;
+    if (!q) return true;
+    return s.name.toLowerCase().includes(q)
+      || s.phase === q || ("/" + s.phase) === q
+      || ("c" + cl(i)) === q
+      || s.peers.some(p => p.name.toLowerCase().includes(q));
+  }).sort(railSort);
+}
+
+function plot() {
+  const W = 900, H = 420, P = 26;
+  const shown = new Set(visible().map(([, i]) => i));
+  $("plot").innerHTML = D.skills.map((s, i) => {
+    const x = P + s.x * (W - 2 * P), y = P + (1 - s.y) * (H - 2 * P);
+    const on = shown.has(i), pick = i === selected;
+    return `<circle data-i="${i}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}"
+      r="${pick ? 10 : s.local ? 7 : 3.5}"
+      fill="${s.local ? "var(--local)" : hue(cl(i))}"
+      fill-opacity="${on ? (s.local ? .95 : .6) : .12}"
+      stroke="${pick ? "var(--sel)" : s.local ? "var(--bg)" : "none"}"
+      stroke-width="${pick ? 3 : 1.5}"
+      ><title>${esc(s.name)} — ${cl(i) < 0 ? "noise" : "c" + cl(i)}</title></circle>`;
+  }).join("");
+}
+
+function detail() {
+  const box = $("detail");
+  if (selected === null) {
+    box.className = "empty";
+    box.textContent = "Click a point or a row to inspect a skill.";
+    return;
+  }
+  const s = D.skills[selected], c = cl(selected);
+  box.className = "";
+  const siblings = D.skills
+    .map((o, i) => [o, i]).filter(([, i]) => cl(i) === c && i !== selected && c >= 0);
+  box.innerHTML = `<h3><code class="${s.local ? "local" : ""}">${esc(s.name)}</code>
+      ${phaseTag(s)} ${tag(c)} · ${s.bytes.toLocaleString()} bytes ·
+      membership ${s.strength.toFixed(3)} ${meter(s.strength)}</h3>
+    <div class="peers"><b>Nearest:</b> ${s.peers.map(p =>
+      `${p.sim.toFixed(3)} <b class="${p.local ? "local" : ""}">${esc(p.name)}</b>`
+    ).join(" · ")}</div>
+    <div class="peers" style="margin-top:.4rem"><b>Cluster mates:</b> ${
+      c < 0 ? "none, this skill was placed nowhere at this layer"
+            : siblings.map(([o]) => esc(o.name)).join(", ") || "none"}</div>`;
+}
+
+function tables() {
+  const rows = visible();
+  $("tableHead").textContent =
+    `${rows.length} skill${rows.length === 1 ? "" : "s"} shown`;
+  $("table").innerHTML =
+    "<tr><th>Phase</th><th>Skill</th><th>Cluster</th><th>Member</th><th class='num'>Bytes</th>" +
+    "<th>Nearest peers, by cosine similarity</th></tr>" +
+    rows.map(([s, i]) => `<tr class="row" data-i="${i}">
+      <td>${phaseTag(s)}</td>
+      <td><code class="${s.local ? "local" : ""}">${esc(s.name)}</code></td>
+      <td>${tag(cl(i))}</td>
+      <td>${meter(s.strength)} <span class="num">${s.strength.toFixed(2)}</span></td>
+      <td class="num">${s.bytes.toLocaleString()}</td>
+      <td class="peers">${s.peers.slice(0, 5).map(p =>
+        `${p.sim.toFixed(3)} <b class="${p.local ? "local" : ""}">${esc(p.name)}</b>`
+      ).join(" · ")}</td></tr>`).join("");
+
+  const by = new Map();
+  D.skills.forEach((s, i) => {
+    const c = cl(i);
+    if (c < 0) return;
+    if (!by.has(c)) by.set(c, []);
+    by.get(c).push(s);
+  });
+  $("clusters").innerHTML =
+    "<tr><th>Cluster</th><th class='num'>Size</th><th class='num'>Persist</th><th>Members</th></tr>" +
+    [...by.entries()].sort((a, b) => a[0] - b[0]).map(([c, ms]) => `<tr>
+      <td>${tag(c)}</td><td class="num">${ms.length}</td>
+      <td class="num">${D.persistence[c] !== undefined ? D.persistence[c].toFixed(2) : "&mdash;"}</td>
+      <td>${ms.map((m, i) => [m, i]).sort(railSort).map(([m]) =>
+        `${phaseTag(m)} <code class="${m.local ? "local" : ""}">${esc(m.name)}</code>`)
+        .join(", ")}</td></tr>`).join("");
+}
+
+function draw() { controls(); plot(); detail(); tables(); }
+
+function stats() {
+  const s = D.layerStats[layer], locals = D.skills.filter(x => x.local);
+  $("stats").innerHTML = [
+    ["skills", D.skills.length], ["clusters", s.clusters], ["noise", s.noise],
+    ["rail", D.skills.filter(x => x.phase).length],
+    ["local", locals.length],
+    ["local in noise", D.skills.filter((x, i) => x.local && cl(i) < 0).length],
+  ].map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("");
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (b && b.dataset.layer !== undefined) { layer = +b.dataset.layer; stats(); draw(); return; }
+  if (b && b.dataset.scope) { scope = b.dataset.scope; draw(); return; }
+  const hit = e.target.closest("[data-i]");
+  if (hit) { selected = +hit.dataset.i; plot(); detail(); }
+});
+$("q").addEventListener("input", () => { plot(); tables(); });
+
+$("tune").addEventListener("submit", async e => {
+  e.preventDefault();
+  const button = $("applyTune"), status = $("tuneStatus");
+  const values = {};
+  for (const input of e.currentTarget.querySelectorAll("input[name]")) {
+    if (input.value === "") continue;
+    values[input.name] = input.step === "1" ? Number.parseInt(input.value, 10)
+                                             : Number.parseFloat(input.value);
+  }
+  button.disabled = true;
+  status.textContent = "Fitting EVoC…";
+  try {
+    const response = await fetch("/tune", {method:"POST",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(values)});
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    D = result;
+    layer = Math.min(layer, D.layerStats.length - 1);
+    selected = null;
+    subtitle(); tuneControls(); stats(); draw();
+    status.textContent = "Updated. Embeddings reused.";
+  } catch (error) {
+    status.textContent = `Not updated: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+subtitle(); tuneControls(); stats(); draw();
+</script>
