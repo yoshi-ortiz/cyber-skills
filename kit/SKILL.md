@@ -69,15 +69,9 @@ Sync is the idempotent re-fetch. Pulling the checkout first refreshes
 `collection.toml` and the harness code, so a source added upstream arrives with
 it. There is no separate installer upgrade path.
 
-**It fans out over every source in `collection.toml`.** When the user named one,
-run only that one, which is already a mode:
-
-```bash
-python3 ~/.harness-core/harness.py add <source>
-```
-
-Re-fetching twenty-odd repos to update the one that was asked for is the waste
-this row exists to prevent.
+**It fans out over every source in `collection.toml`.** Naming one after `sync`
+filters to sources whose name contains it, so re-fetching twenty-odd repos to
+update the one that was asked for never happens; see the table above.
 
 `python3 ~/.harness-core/harness.py status` prints what is selected, what was
 detected, and how many skills are installed. Read it before and after.
