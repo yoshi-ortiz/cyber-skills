@@ -24,8 +24,11 @@ Do exactly the returned action. This route outranks generic art-direction
 inference. Do not replace a passing graphic; reuse it from `shots/` first.
 
 Choose chat language from the user's latest words and mirror their dialect in
-project-authored publishing copy. `project.json.language` only translates
-companion controls.
+project-authored publishing copy. `project.json.language` translates companion
+controls; when it is set, every string you author into the screen -- round
+question, element titles, descriptions, status -- is written in that same
+language. One language per screen. An English `--asks` inside a Spanish
+companion is the mixing this rule exists to stop.
 
 Keep the established article: hero, graph, TOC, four sections, progress chart. Never replace it with a kanban or second site.
 

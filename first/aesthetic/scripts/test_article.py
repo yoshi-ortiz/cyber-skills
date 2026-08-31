@@ -1352,6 +1352,39 @@ class ChromeFixesV34(unittest.TestCase):
         self.assertIn(":scope{width:510px;background:#e8e4d8}", compact)
         self.assertNotIn(f".{bh.COMP_SCOPE_CLASS}{{width:510px", compact)
 
+    def test_a_components_width_is_never_read_as_the_page_width(self):
+        """B: a landing comp declared `.brand-mark{width:34px}` before any
+        page size, so the preview scaled the whole page to a 34px artboard and
+        the designer got a magnified corner of the logo instead of the page.
+        A component width must not be mistaken for the page."""
+        raw = ("<html><head><style>.brand-mark{width:34px}"
+               ".site-nav{min-height:78px}"
+               ".shell{width:min(1440px,100%)}</style></head>"
+               "<body><p>x</p></body></html>")
+        _, width, height = bh.html_comp_fragment(raw)
+        self.assertEqual(width, 850.0)
+        self.assertEqual(height, 1100.0)
+
+    def test_a_page_level_rule_still_wins_at_any_size(self):
+        """The floor guards the fallback only. A comp that deliberately sizes
+        its page small on `body` keeps that size."""
+        raw = ("<html><head><style>.chip{width:44px}"
+               "body{width:300px;min-height:200px}</style></head>"
+               "<body><p>x</p></body></html>")
+        _, width, height = bh.html_comp_fragment(raw)
+        self.assertEqual(width, 300.0)
+        self.assertEqual(height, 200.0)
+
+    def test_an_artboard_sized_wrapper_is_still_found_without_a_page_rule(self):
+        """Comps that size a `.sheet` wrapper rather than `body` must keep
+        working -- the floor only skips component-scale declarations."""
+        raw = ("<html><head><style>.badge{width:28px}"
+               ".sheet{width:816px;min-height:1056px}</style></head>"
+               "<body><p>x</p></body></html>")
+        _, width, height = bh.html_comp_fragment(raw)
+        self.assertEqual(width, 816.0)
+        self.assertEqual(height, 1056.0)
+
     def test_comp_logical_page_size_is_not_the_850_default(self):
         raw = ("<html><head><style>body{inline-size:510px;block-size:660px;"
                "background:#e8e4d8}</style></head><body><p>x</p></body></html>")
