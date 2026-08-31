@@ -64,7 +64,6 @@ FOG_FILES_EXTRA = (
 # Skills not ready for a stable tree. They stay on `dev` and ship on the alpha
 # channel; `main` carries nothing under them, KEEP_ALWAYS included.
 ALPHA_SKILLS = (
-    "aesthetic",
     "genesis",
     "knowledge",
     "silly",

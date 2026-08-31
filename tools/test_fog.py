@@ -9,11 +9,12 @@ from fog import (ALPHA_SKILLS, FOG_DIRS, FOG_FILES, FOG_FILES_EXTRA,
 
 
 def test() -> None:
-    assert is_fog("aesthetic/SKILL.md")                    # KEEP_ALWAYS loses to alpha
-    assert is_fog("aesthetic/references/loop.md")
-    assert not is_fog("aesthetic/SKILL.md", "alpha")
+    assert is_fog("genesis/SKILL.md")                       # KEEP_ALWAYS loses to alpha
+    assert is_fog("genesis/references/architecture.md")
+    assert not is_fog("genesis/SKILL.md", "alpha")
     assert is_fog("aesthetic/AGENTS.md", "alpha")          # fog is still fog on alpha
     assert not is_fog("ora/SKILL.md")                      # stable skills unaffected
+    assert not is_fog("aesthetic/SKILL.md")                # graduated off alpha, R-59
     assert not is_fog("README.md")
 
     # Learning artifacts leave on neither channel. R-50 turns on this.

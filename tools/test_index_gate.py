@@ -16,9 +16,9 @@ INDEX = ("## Index\n\n| | |\n| --- | --- |\n"
          + "\n")
 BODY = (INDEX + "# 📦 INSTALL\n\n"
         "# ✨ SKILL PROMPTS\n\n## 🎒 /kit\n\n## 🇪🇸 /ora\n\n"
-        "## 🔬 /build-context-token-vectors\n\n"
+        "## 🔬 /build-context-token-vectors\n\n## 🎨 /aesthetic\n\n"
         "# 🧪 EXPERIMENTS\n\n## 🧬 /genesis\n\n## 📚 /knowledge\n\n"
-        "## 🎨 /aesthetic\n\n## 🃏 /silly\n")
+        "## 🃏 /silly\n")
 
 MANIFEST = ("---\nname: knowledge\ndescription: Distils sources, and answers to "
             "enciclopedia.\ntranslations:\n  es: enciclopedia\n---\n")
@@ -50,7 +50,8 @@ def case(readme: str, translation: str | None = None,
 def test() -> None:
     assert case(HEADER + BODY) == 0
 
-    # aesthetic is alpha: listing it as stable must fail
+    # genesis, knowledge, silly are alpha: an EXPERIMENTS section removed
+    # leaves them with no home, which must fail
     assert case(HEADER + BODY.replace("\n# 🧪 EXPERIMENTS\n", "")) == 1
     # a skill missing from the index
     assert case(HEADER + BODY.replace("## 🇪🇸 /ora\n", "")) == 1

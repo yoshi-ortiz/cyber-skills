@@ -181,6 +181,71 @@ skill's own script, and it ships none of them.
 
 </details>
 
+## 🧑‍🎨 /aesthetic
+
+![Aesthetic ranking companion](assets/aesthetic-companion.svg)
+
+Design that reads as **intentional, not templated**. Your agent draws 3 to 6
+versions of a screen and publishes them to a page in your browser. **You rank
+them and leave notes, in your own words.** It reads that back and draws the next
+round against it. Nothing is scored by vibes.
+
+| | |
+| --- | --- |
+| **Package** | [aesthetic/](aesthetic/) · entry [aesthetic/SKILL.md](aesthetic/SKILL.md) |
+| **Invoke** | Your agent starts it when the work is visual. You can also name it. |
+| **Needs** | Python 3 (stdlib only) · Node for the local ranking page |
+| **Runs on** | **Your** project folder, never this repo |
+| **Channel** | `alpha` |
+
+First reply you should get: a URL, a session key, and one question. If it opens
+with setup chatter instead, that is a bug.
+
+<details>
+<summary><b>Full spec: modes, scripts, doctrine, and the promotion gate</b></summary>
+
+**Modes**, said in chat, not typed as flags.
+
+| Mode | When |
+| --- | --- |
+| `continue` | Resume from the ledger. One new round of 3 to 6 elements. |
+| `critique` | Report mismatches without changing ranks or scope |
+| `prototype` | Draw and publish comps for ranking |
+| `observe` | Ingest a reference folder as corpus evidence |
+
+```bash
+python3 aesthetic/scripts/bootstrap_harness.py init --project-root <project>
+python3 aesthetic/scripts/bootstrap_harness.py open --project-root <project>
+```
+
+`bootstrap_harness.py` runs the companion, ledger, article, and publish.
+`editorial_workflow.py` runs corpus, preferences, direction, and burndown. Six
+more scripts cover rules, delivery, briefs, and diagnostics. Every one answers
+`--help`, and the full flag reference is
+[references/commands.md](aesthetic/references/commands.md).
+
+**Doctrine.** Self-contained, OKF 0.2, indexed at
+[references/index.md](aesthetic/references/index.md): golden rules and design
+fundamentals, inference and critique, production contracts, and the capability
+model. Vocabulary:
+[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Companion server,
+vendored Node: [companion/](aesthetic/companion/).
+
+**Promotion gate.** The badges above read **pending** until these hold under
+regression tests.
+
+| Goal | Claim |
+| --- | --- |
+| Round-trip feedback | Your rank, then `adopt`, then `preferences` reflects it without signal collapse |
+| Cohort discipline | Published rounds stay within 3 to 6 rankable elements |
+| Independence | Stars, likes, lifecycle, and missing feedback never merge into one score |
+| Accessibility | Text at 4.5:1 and controls at 3:1 contrast before publish |
+| Honest delivery | `review_delivery.py` rejects generic, explanatory-only, or hash-drifted proposals |
+| Subject fidelity | A comp reads as *this* product with the logo removed |
+| Handoff clarity | First reply is URL, key, and a question. No setup preamble. |
+
+</details>
+
 ## 📦 /kit
 
 One toolkit, every AI app. If you use more than one, this keeps them
@@ -360,71 +425,6 @@ something that understood the source. Rules for the human half:
 | Compression | A note is shorter than a careful reading of its source, and still answers the question |
 | Version fidelity | The version a claim held for is named, and checked against the dependency manifest |
 | Scope | Notes describe sources. Project decisions stay out of them. |
-
-</details>
-
-## 🧑‍🎨 /aesthetic
-
-![Aesthetic ranking companion](assets/aesthetic-companion.svg)
-
-Design that reads as **intentional, not templated**. Your agent draws 3 to 6
-versions of a screen and publishes them to a page in your browser. **You rank
-them and leave notes, in your own words.** It reads that back and draws the next
-round against it. Nothing is scored by vibes.
-
-| | |
-| --- | --- |
-| **Package** | [aesthetic/](aesthetic/) · entry [aesthetic/SKILL.md](aesthetic/SKILL.md) |
-| **Invoke** | Your agent starts it when the work is visual. You can also name it. |
-| **Needs** | Python 3 (stdlib only) · Node for the local ranking page |
-| **Runs on** | **Your** project folder, never this repo |
-| **Channel** | `alpha` |
-
-First reply you should get: a URL, a session key, and one question. If it opens
-with setup chatter instead, that is a bug.
-
-<details>
-<summary><b>Full spec: modes, scripts, doctrine, and the promotion gate</b></summary>
-
-**Modes**, said in chat, not typed as flags.
-
-| Mode | When |
-| --- | --- |
-| `continue` | Resume from the ledger. One new round of 3 to 6 elements. |
-| `critique` | Report mismatches without changing ranks or scope |
-| `prototype` | Draw and publish comps for ranking |
-| `observe` | Ingest a reference folder as corpus evidence |
-
-```bash
-python3 aesthetic/scripts/bootstrap_harness.py init --project-root <project>
-python3 aesthetic/scripts/bootstrap_harness.py open --project-root <project>
-```
-
-`bootstrap_harness.py` runs the companion, ledger, article, and publish.
-`editorial_workflow.py` runs corpus, preferences, direction, and burndown. Six
-more scripts cover rules, delivery, briefs, and diagnostics. Every one answers
-`--help`, and the full flag reference is
-[references/commands.md](aesthetic/references/commands.md).
-
-**Doctrine.** Self-contained, OKF 0.2, indexed at
-[references/index.md](aesthetic/references/index.md): golden rules and design
-fundamentals, inference and critique, production contracts, and the capability
-model. Vocabulary:
-[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Companion server,
-vendored Node: [companion/](aesthetic/companion/).
-
-**Promotion gate.** The badges above read **pending** until these hold under
-regression tests.
-
-| Goal | Claim |
-| --- | --- |
-| Round-trip feedback | Your rank, then `adopt`, then `preferences` reflects it without signal collapse |
-| Cohort discipline | Published rounds stay within 3 to 6 rankable elements |
-| Independence | Stars, likes, lifecycle, and missing feedback never merge into one score |
-| Accessibility | Text at 4.5:1 and controls at 3:1 contrast before publish |
-| Honest delivery | `review_delivery.py` rejects generic, explanatory-only, or hash-drifted proposals |
-| Subject fidelity | A comp reads as *this* product with the logo removed |
-| Handoff clarity | First reply is URL, key, and a question. No setup preamble. |
 
 </details>
 

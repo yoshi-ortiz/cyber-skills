@@ -181,6 +181,71 @@ skill's own script, and it ships none of them.
 
 </details>
 
+## 🧑‍🎨 /aesthetic
+
+![Aesthetic ranking companion](assets/aesthetic-companion.svg)
+
+Diseño que se lee como **intencional, no como plantilla**. Tu agent dibuja
+de 3 a 6 versiones de una pantalla y las publica en una página de tu navegador.
+**Tú las ordenas y dejas notas, con tus palabras.** Las lee de vuelta y dibuja
+la siguiente ronda contra eso. Nada se califica por vibra.
+
+| | |
+| --- | --- |
+| **Paquete** | [aesthetic/](aesthetic/) · entrada [aesthetic/SKILL.md](aesthetic/SKILL.md) |
+| **Invocación** | Tu agent la inicia cuando el trabajo es visual. También puedes nombrarla. |
+| **Requiere** | Python 3 (solo estándar) · Node para la página local de ranking |
+| **Trabaja sobre** | **Tu** carpeta de proyecto, nunca este repositorio |
+| **Canal** | `alpha` |
+
+La primera respuesta debería ser: una URL, una clave de sesión y una pregunta.
+Si abre con charla de configuración, eso es un bug.
+
+<details>
+<summary><b>Especificación completa: modos, scripts, doctrina y puerta de entrada</b></summary>
+
+**Modos**, se dicen en el chat, no se escriben como banderas.
+
+| Modo | Cuándo |
+| --- | --- |
+| `continue` | Retoma desde el registro. Una ronda nueva de 3 a 6 elementos. |
+| `critique` | Reporta desajustes sin cambiar rangos ni alcance |
+| `prototype` | Dibuja y publica propuestas para ordenar |
+| `observe` | Ingiere una carpeta de referencia como evidencia |
+
+```bash
+python3 aesthetic/scripts/bootstrap_harness.py init --project-root <proyecto>
+python3 aesthetic/scripts/bootstrap_harness.py open --project-root <proyecto>
+```
+
+`bootstrap_harness.py` maneja el compañero, el registro, el artículo y la
+publicación. `editorial_workflow.py` maneja corpus, preferencias, dirección y
+pendientes. Seis scripts más cubren reglas, entrega, briefs y diagnóstico. Todos
+responden `--help`, y la referencia completa de banderas está en
+[references/commands.md](aesthetic/references/commands.md).
+
+**Doctrina.** Autocontenida, OKF 0.2, indexada en
+[references/index.md](aesthetic/references/index.md): reglas de oro y
+fundamentos de diseño, inferencia y crítica, contratos de producción, y el
+modelo de capacidades. Vocabulario:
+[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Servidor compañero
+en Node: [companion/](aesthetic/companion/).
+
+**Puerta de entrada.** Las insignias de arriba dicen **pending** hasta que esto
+se sostenga bajo pruebas de regresión.
+
+| Objetivo | Compromiso |
+| --- | --- |
+| Ida y vuelta | Tu orden, luego `adopt`, y `preferences` lo refleja sin colapsar la señal |
+| Disciplina de ronda | Las rondas publicadas se quedan entre 3 y 6 elementos ordenables |
+| Independencia | Estrellas, likes, ciclo de vida y falta de respuesta nunca se funden en un puntaje |
+| Accesibilidad | Texto a 4.5:1 y controles a 3:1 de contraste antes de publicar |
+| Entrega honesta | `review_delivery.py` rechaza propuestas genéricas, solo explicativas o con hash desviado |
+| Fidelidad al tema | La propuesta se reconoce como *este* producto sin el logo |
+| Claridad del traspaso | La primera respuesta es URL, clave y una pregunta. Sin preámbulo. |
+
+</details>
+
 ## 📦 /kit
 
 Un solo juego de herramientas, todas tus apps de IA. Si usas más de una
@@ -366,71 +431,6 @@ entendió la fuente. Reglas para la mitad humana:
 | Compresión | Una nota es más corta que leer con calma su fuente, y aun así responde la pregunta |
 | Fidelidad de versión | Se nombra la versión para la que valía la afirmación, y se contrasta con el manifiesto |
 | Alcance | Las notas describen fuentes. Las decisiones del proyecto se quedan fuera. |
-
-</details>
-
-## 🧑‍🎨 /aesthetic
-
-![Aesthetic ranking companion](assets/aesthetic-companion.svg)
-
-Diseño que se lee como **intencional, no como plantilla**. Tu agent dibuja
-de 3 a 6 versiones de una pantalla y las publica en una página de tu navegador.
-**Tú las ordenas y dejas notas, con tus palabras.** Las lee de vuelta y dibuja
-la siguiente ronda contra eso. Nada se califica por vibra.
-
-| | |
-| --- | --- |
-| **Paquete** | [aesthetic/](aesthetic/) · entrada [aesthetic/SKILL.md](aesthetic/SKILL.md) |
-| **Invocación** | Tu agent la inicia cuando el trabajo es visual. También puedes nombrarla. |
-| **Requiere** | Python 3 (solo estándar) · Node para la página local de ranking |
-| **Trabaja sobre** | **Tu** carpeta de proyecto, nunca este repositorio |
-| **Canal** | `alpha` |
-
-La primera respuesta debería ser: una URL, una clave de sesión y una pregunta.
-Si abre con charla de configuración, eso es un bug.
-
-<details>
-<summary><b>Especificación completa: modos, scripts, doctrina y puerta de entrada</b></summary>
-
-**Modos**, se dicen en el chat, no se escriben como banderas.
-
-| Modo | Cuándo |
-| --- | --- |
-| `continue` | Retoma desde el registro. Una ronda nueva de 3 a 6 elementos. |
-| `critique` | Reporta desajustes sin cambiar rangos ni alcance |
-| `prototype` | Dibuja y publica propuestas para ordenar |
-| `observe` | Ingiere una carpeta de referencia como evidencia |
-
-```bash
-python3 aesthetic/scripts/bootstrap_harness.py init --project-root <proyecto>
-python3 aesthetic/scripts/bootstrap_harness.py open --project-root <proyecto>
-```
-
-`bootstrap_harness.py` maneja el compañero, el registro, el artículo y la
-publicación. `editorial_workflow.py` maneja corpus, preferencias, dirección y
-pendientes. Seis scripts más cubren reglas, entrega, briefs y diagnóstico. Todos
-responden `--help`, y la referencia completa de banderas está en
-[references/commands.md](aesthetic/references/commands.md).
-
-**Doctrina.** Autocontenida, OKF 0.2, indexada en
-[references/index.md](aesthetic/references/index.md): reglas de oro y
-fundamentos de diseño, inferencia y crítica, contratos de producción, y el
-modelo de capacidades. Vocabulario:
-[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Servidor compañero
-en Node: [companion/](aesthetic/companion/).
-
-**Puerta de entrada.** Las insignias de arriba dicen **pending** hasta que esto
-se sostenga bajo pruebas de regresión.
-
-| Objetivo | Compromiso |
-| --- | --- |
-| Ida y vuelta | Tu orden, luego `adopt`, y `preferences` lo refleja sin colapsar la señal |
-| Disciplina de ronda | Las rondas publicadas se quedan entre 3 y 6 elementos ordenables |
-| Independencia | Estrellas, likes, ciclo de vida y falta de respuesta nunca se funden en un puntaje |
-| Accesibilidad | Texto a 4.5:1 y controles a 3:1 de contraste antes de publicar |
-| Entrega honesta | `review_delivery.py` rechaza propuestas genéricas, solo explicativas o con hash desviado |
-| Fidelidad al tema | La propuesta se reconoce como *este* producto sin el logo |
-| Claridad del traspaso | La primera respuesta es URL, clave y una pregunta. Sin preámbulo. |
 
 </details>
 
