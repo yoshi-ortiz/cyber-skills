@@ -16,60 +16,16 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
-from html.parser import HTMLParser
 from pathlib import Path
+
+from errors import CookError
+from qa import feedback
+from screen import PLACEHOLDER_HEADING, Screen
 
 REPO = Path(__file__).resolve().parents[1]
 SKILL = REPO / "first" / "aesthetic"
 COMPANION = ".superpowers/brainstorm"
 HTTP_TIMEOUT = 5
-VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input",
-             "link", "meta", "param", "source", "track", "wbr"}
-
-PLACEHOLDER_HEADING = "brainstorm companion"
-
-
-class CookError(Exception):
-    """A Food Product round that cannot be trusted, with the reason a human needs."""
-
-
-class Screen(HTMLParser):
-    """Just enough of the served document to tell a screen from the shell."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.headings: list[str] = []
-        self.tags: set[str] = set()
-        self.rankable_elements: set[str] = set()
-        self._in_heading = False
-        self._depth = 0
-        self._decision_rows: list[tuple[str, int]] = []
-
-    def handle_starttag(self, tag: str, attrs: list) -> None:
-        self.tags.add(tag)
-        values = dict(attrs)
-        classes = str(values.get("class") or "").split()
-        element = str(values.get("data-element") or "").strip()
-        if "dh-fb" in classes and element:
-            self._decision_rows.append((element, self._depth))
-        if self._decision_rows and "data-rank" in values:
-            self.rankable_elements.add(self._decision_rows[-1][0])
-        if tag in ("h1", "h2"):
-            self._in_heading = True
-        if tag not in VOID_TAGS:
-            self._depth += 1
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag not in VOID_TAGS:
-            self._depth = max(0, self._depth - 1)
-            while self._decision_rows and self._decision_rows[-1][1] >= self._depth:
-                self._decision_rows.pop()
-        if tag in ("h1", "h2"):
-            self._in_heading = False
-
-    def handle_data(self, data: str) -> None:
-        if self._in_heading and data.strip():
-            self.headings.append(data.strip().lower())
 
 
 def check_not_the_repo(project_root: Path) -> None:
@@ -163,6 +119,27 @@ def doctor(project_root: Path) -> dict:
             "the served screen carries no decision row with a data-rank control; "
             "unrelated forms and buttons do not give the designer a proposal to rank.")
 
+    # A row can be structurally rankable and still show the designer a white
+    # rectangle, which is what `screen-is-rankable` alone let through.
+    blank = sorted(el for el, shot in parsed.shots.items() if not shot["drawn"])
+    offsite = sorted(el for el, shot in parsed.shots.items() if shot["offsite"])
+    checks.append({"id": "preview-renders",
+                   "passed": bool(parsed.shots) and not blank and not offsite})
+    if rankable and not parsed.shots:
+        errors.append(
+            "no preview accompanies any ranked row, so the designer is asked to "
+            "score a proposal they cannot see.")
+    if blank:
+        errors.append(
+            f"preview draws nothing for {', '.join(blank)}: the row renders as an "
+            "empty rectangle, which is not rankable however complete the markup is.")
+    if offsite:
+        broken = sorted({src for shot in parsed.shots.values() for src in shot["offsite"]})
+        errors.append(
+            f"preview for {', '.join(offsite)} points outside the served document "
+            f"({', '.join(broken)}). The companion serves from its own session "
+            "directory, so that path resolves to nothing and paints white.")
+
     return {"url": url, "checks": checks, "errors": errors,
             "passed": not errors, "screens": [str(p) for p in on_disk]}
 
@@ -241,13 +218,21 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     for name, help_text in (("doctor", "assert the companion serves a real screen"),
                             ("run", "open a round in a scratch tree, then doctor it"),
-                            ("clean", "delete the scratch tree")):
+                            ("clean", "delete the scratch tree"),
+                            ("feedback", "read the round back against what the user "
+                                         "said about it, in the real project")):
         one = sub.add_parser(name, help=help_text)
         one.add_argument("--project-root", type=Path, required=True)
+        if name == "feedback":
+            one.add_argument("--session", type=Path, default=None,
+                             help="transcript to read, for an agent app cook does not know")
     args = parser.parse_args(argv)
     try:
-        result = {"doctor": doctor, "run": run, "clean": clean}[args.command](
-            args.project_root)
+        if args.command == "feedback":
+            result = feedback(args.project_root, args.session)
+        else:
+            result = {"doctor": doctor, "run": run, "clean": clean}[args.command](
+                args.project_root)
     except CookError as problem:
         print(json.dumps({"passed": False, "error": str(problem)}, indent=2))
         return 2

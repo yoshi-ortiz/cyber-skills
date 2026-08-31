@@ -1,6 +1,6 @@
 ---
-purpose: run this repository's own skills against a throwaway project and assert what a user would actually see
-admits: the Food Product loop, its tests, diagnostic handoff, and release confirmation
+purpose: run this repository's own skills against a throwaway project and assert what the user would see, and whether the run absorbed what they said
+admits: the Food Product loop, its tests, the user-feedback read-back, diagnostic handoff, and release confirmation
 refuses: skill payload, design project state, anything a published tree carries
 max_file_bytes: 12000
 ---
@@ -11,6 +11,12 @@ Food Product development. `cook` runs a skill the way a user runs it and checks 
 **visible** outcome, because every gate in this repository so far checks an
 exit code, and an exit code is what the companion bug hid behind: `open`
 returned a URL, returned zero, and served an empty page.
+
+`feedback` is the one command pointed at the real project. It reads the agent
+transcript and git, and writes nothing. It deliberately does not read any
+skill's state files: a loop that understands `decisions.json` has stopped being
+universal and joined one project's shot, which is this directory's own
+contamination rule turned inward.
 
 Fog, on purpose and permanently. This directory is registered in
 `tools/fog.py` FOG_DIRS and in `tools/skill_discovery.py` SKIP, so it publishes

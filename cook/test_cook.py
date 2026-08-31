@@ -5,12 +5,15 @@ The loop's own first version passed against the broken state it existed to
 catch, so the case that matters most here is `test_an_unreadable_page_fails`:
 a checker that cannot see the page must say so rather than report a pass.
 """
+import json
 import tempfile
 import unittest
 import unittest.mock
 from pathlib import Path
 
 import cook
+import qa
+import screen
 
 
 class TheRepositoryIsNotAProjectRoot(unittest.TestCase):
@@ -34,7 +37,7 @@ class AScreenIsToldFromTheShell(unittest.TestCase):
     """Parsed structure, never a substring of the document."""
 
     def _parse(self, document: str) -> cook.Screen:
-        parsed = cook.Screen()
+        parsed = screen.Screen()
         parsed.feed(document)
         return parsed
 
@@ -133,3 +136,37 @@ class TheRoundStopsWhatItStarted(unittest.TestCase):
     def test_no_companion_state_stops_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(cook.stop_companion(Path(tmp)), [])
+
+
+class APreviewMustActuallyDraw(unittest.TestCase):
+    """B: the companion served a structurally perfect rankable row whose
+    graphic was a white rectangle, and `screen-is-rankable` passed it. A
+    proposal the designer cannot see is not a proposal."""
+
+    def _shots(self, document: str) -> dict:
+        parsed = screen.Screen()
+        parsed.feed(document)
+        return parsed.shots
+
+    def test_an_inlined_image_counts_as_drawn(self):
+        shots = self._shots('<div class="dh-shot" data-el="a">'
+                            '<img src="data:image/png;base64,AAA"></div>')
+        self.assertTrue(shots["a"]["drawn"])
+        self.assertEqual(shots["a"]["offsite"], [])
+
+    def test_an_empty_shot_is_not_drawn(self):
+        shots = self._shots('<div class="dh-shot" data-el="a">'
+                            '<span class="dh-shot-missing">sin gráfico</span></div>')
+        self.assertFalse(shots["a"]["drawn"])
+
+    def test_a_relative_source_is_offsite_because_the_companion_moves_the_document(self):
+        shots = self._shots('<div class="dh-shot" data-el="a">'
+                            '<img src="../shots/hero.svg"></div>')
+        self.assertEqual(shots["a"]["offsite"], ["../shots/hero.svg"])
+
+    def test_a_shot_does_not_leak_into_the_next_row(self):
+        shots = self._shots('<div class="dh-shot" data-el="a">'
+                            '<img src="data:image/png;base64,AAA"></div>'
+                            '<div class="dh-shot" data-el="b"></div>')
+        self.assertTrue(shots["a"]["drawn"])
+        self.assertFalse(shots["b"]["drawn"])
