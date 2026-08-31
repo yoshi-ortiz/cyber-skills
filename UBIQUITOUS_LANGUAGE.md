@@ -56,6 +56,7 @@ Flagged ambiguities.
 | **Context compiler** | The deterministic program that resolves eligible context, counts it under a tokenizer profile, packs it by priority and pass budget, and explains every admission and omission | Retriever, neural router, prompt optimizer |
 | **Invocation path** | One route through a skill for a particular task, naming the context and inference passes that route may use | Workflow, command, mode |
 | **Semantic context** | A declared boundary around work that a body of evidence can legitimately inform, such as Repo-Dev or Design-Inference | Topic, namespace, layer |
+| **Eat your own food** | The repo-context doctrine that Repo-Dev work on this package must run through the skills it ships; after a skill commit here, `kit sync` must re-arm this repo and its collection dependencies | Dogfooding, self-host |
 | **Context bundle** | The exact, ordered content compiled for one invocation path and inference pass | Prompt, corpus, context window |
 | **Loading tier** | The declared availability of content: always, invocation, conditional, or excluded | Priority, weight, publication channel |
 | **Workflow role** | What an item does in an invocation path: instruction, reference, executable, fixture, test, generated output, or evidence | File type, semantic context, loading tier |

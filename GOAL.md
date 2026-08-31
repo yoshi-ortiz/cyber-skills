@@ -416,6 +416,16 @@ settles what a proposal is and what it may never do. These are the parts left op
 | Which embedding model | One CLIP-class model for images, one sentence model for chunks | The larger dependency is not EVoC, it is whatever produces the vectors, and it is the one that drags a checkpoint and a cache into a repository whose publication gates must reject both. Local model, or an API that leaves nothing on disk? The second trades a download for a network call inside dev tooling that is otherwise offline. | R-53 |
 | Whether EVoC earns its place | The same corpus through EVoC and through scikit-learn's own HDBSCAN | EVoC is built for millions of vectors. This corpus is 13 items now and 135 in a real project, where `base_min_cluster_size` defaults to 5. HDBSCAN is already an EVoC dependency, so the lazier option costs one package fewer and is a strict subset of what is being installed either way. If the clusters agree at this scale, the extra package is buying nothing yet. | R-53 |
 
+### Eat your own food, unanswered parts
+
+The doctrine in `CONTEXT.md` section "Repo context doctrine: eat your own
+food" is settled as a rule. These are the parts it deliberately does not carry.
+
+| Item | Prototype | The question | Row |
+| --- | --- | --- | --- |
+| Superpowers companion agent app | A self-built loopback app under `.superpowers/` that syncs HTML value-changing inputs to file data | `trace_preview.py` and `vectors.py` append review clicks to JSONL and replay them on refresh. Can the same shape carry arbitrary form state (sliders, toggles, text inputs) for Repo-Dev tooling, not only tokenizer tags? | R-60 |
+| Collection lists this repo | `collection.toml` names `yoshi-ortiz/cyber-skills` so `kit sync` after a commit here is the proof | Does the harness manifest already list this repo and every dependency skill, or does dogfooding still need a manual `harness add`? | R-60 |
+
 ## Open questions
 
 | # | Question | Why it is not settled |

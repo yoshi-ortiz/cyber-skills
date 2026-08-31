@@ -138,6 +138,7 @@ creates PASS evidence by assertion.
 | --- | --- | --- | --- |
 | R-16 | `TODO` | Enforce the ubiquitous language | `UBIQUITOUS_LANGUAGE.md` defines 30 terms with banned synonyms and nothing verifies it. A checker would make the document load-bearing. |
 | R-17 | `TODO` | Automate the verification loop | Four commands, all manual, no CI. Fine while one person runs them; a trap the moment two people do. |
+| R-60 | `TODO` | Build the superpowers companion agent app | Self-built companion for this repo, not vendored from brainstorming-skill. HTML interactions that change values (inputs, sliders, toggles, selects) must sync to file data durably: one append per value change, replay on refresh, ledger outside session dirs. `trace_preview.py` and `vectors.py` already do this for tokenizer review tags; this generalizes it to arbitrary form state. Lives under `.superpowers/` and satisfies `references/companion-contract.md`. Blocked on R-56 for the serving seam. |
 
 ## Working notes
 

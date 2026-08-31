@@ -68,6 +68,14 @@ Sync is the idempotent re-fetch. Pulling the checkout first refreshes
 `collection.toml` and the harness code, so a source added upstream arrives with
 it. There is no separate installer upgrade path.
 
+### Repo-Dev checkout
+
+Bare `kit` in a `cyber-skills` checkout is still Sync. After you commit or
+update a skill here, run it again: the harness must re-arm this repo, every
+skill it declares, and every dependency listed in the collection. That loop is
+how this package eats its own food. If sync does not pick up your change, the
+manifest or the source entry is wrong, not the workflow.
+
 `python3 ~/.harness-core/harness.py status` prints what is selected, what was
 detected, and how many skills are installed. Read it before and after.
 
