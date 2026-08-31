@@ -9,19 +9,50 @@ description: Design and art direction that reads as intentional, not templated. 
 requested diagram, scene, or illustration routes to
 [text-to-graphics.md](references/text-to-graphics.md).
 
+## Route before designing
+
+Read [user-communication.md](references/user-communication.md) before any
+user-visible update. Inspect `spec/design-harness/` before opening or
+initializing the generic ranking workflow. If `scene-spec.json` or
+`graphics-manifest.json` exists, run:
+
+```bash
+python3 <skill>/scripts/text_to_graphics.py --project-root . status
+```
+
+Do exactly the returned action. This filesystem route outranks a supplied
+reference folder and generic art-direction inference. Do not run `init`,
+`seed`, or `direction`; do not replace a passing graphic with alternate page
+concepts. Reuse the passing artifact from `shots/` first.
+
+Choose chat language from the user's latest words. When they use Spanish,
+mirror the dialect and register in project-authored publishing copy. Never use
+reference captions, machine locale, a previous agent reply, or
+`project.json.language` to choose chat language; that field translates only
+the companion controls.
+
 Keep the established article: hero, graph, TOC, four sections, progress chart. Never replace it with a kanban or second site.
 
 ## Start
 
-Read [user-communication.md](references/user-communication.md) before any user-visible update. Open the companion first.
+Open the companion first.
 
 ```bash
 python3 <skill>/scripts/bootstrap_harness.py open --project-root . \
-  --status "<emoji + project-language description of the first real design task>"
+  --status "<emoji + user-language description of the first real design task>"
 ```
 
 `open` restores the last ranking page. Follow `user-communication.md` for the
-URL-first reply and use the language in `project.json`.
+URL-first reply with no preamble:
+
+```text
+🔗 <full URL>
+🔑 <value after ?key=>
+👀 <user-language review action in the publishing-copy register>
+```
+
+Update status when visible activity changes. `project.json.language` translates
+the controls; it does not translate your reply.
 
 With a reference folder, read images and text together:
 
@@ -42,6 +73,10 @@ python3 <skill>/scripts/editorial_workflow.py seed --project-root . \
 A premise cites [golden-rules.md](references/golden-rules.md) or a
 [profile](references/domain-profiles.md), names counterevidence, and remains
 inference. Ask for references without blocking.
+
+`init` is only for a project with no existing `spec/design-harness` contents;
+`seed` is only for a project with no saved corpus. Both commands refuse to
+overwrite existing evidence.
 
 ## Read the user first
 
@@ -73,6 +108,10 @@ needed by the claim. Read [loop.md](references/loop.md) for a thin/failed round,
 Declare hierarchy, composition, grid, type roles, color relationships, image register, motion purpose, and one subject-specific signature. State the aesthetic question tested. Replace "clean," "premium," or "editorial" with observable relationships and counterevidence.
 
 Select one evidence-backed hypothesis and a 3–6 element cohort. Never average direction, execution, lifecycle, or missing feedback. Reject a thesis that fits an unrelated product unchanged.
+
+In comparison rows, use `null` for `corpusFit` when there is no real corpus and
+for `preferenceFit` when the user has not ranked anything. Missing evidence is
+not a neutral score and never becomes a model-authored 3, 4, or 5.
 
 Copy every `briefConstraints` item from `/tmp/aesthetic-context.json` into the
 direction spec and add its concrete `impact`. The gate rejects missing or stale
@@ -115,12 +154,13 @@ python3 <skill>/scripts/bootstrap_harness.py publish --project-root . \
 python3 <skill>/scripts/review_delivery.py --project-root . \
   --cohort "<element ids>" --assessments /tmp/proposal-assessments.json
 python3 <skill>/scripts/bootstrap_harness.py status --project-root . --idle \
-  --text "<project-language request to review the new designs>"
+  --text "<user-language request to review the new designs>"
 ```
 
 Keep the graph, sticky TOC, slideshow, and Discarded-last order. Delivery accepts
 only subject-specific rankable proposals with a legible signature. Lead with
-the URL, key, review request, and emitted images.
+the URL, key, review request, and every absolute `image_path` emitted by the
+delivery check.
 
 ## Continue and critique
 
@@ -139,6 +179,6 @@ A run is complete only when:
 5. no text or interactive state fails deterministic contrast checks;
 6. every nontrivial graphic has source/license/version provenance or a reproducible procedure;
 7. the original article structure, scoring controls, burndown, slideshow, and responsive layout work;
-8. the user receives the current URL, key, project-language request, and emitted review images.
+8. the user receives the current URL, key, user-language request, and emitted review images.
 
 Passing checks while looking templated is failure.

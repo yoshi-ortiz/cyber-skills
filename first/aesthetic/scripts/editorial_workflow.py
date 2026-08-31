@@ -288,6 +288,7 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
     if not isinstance(comparison, list) or len(comparison) != len(ids):
         raise WorkflowError("comparison needs one row per hypothesis")
     dimensions = ("corpusFit", "preferenceFit", "subjectSpecificity", "coherence", "executionLeverage")
+    user_ranked = int(preferences.get("coverage", {}).get("userRanked") or 0)
     compared: set[str] = set()
     normalized_comparison = []
     for row in comparison:
@@ -300,6 +301,14 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
         values = {}
         for dimension in dimensions:
             value = row.get(dimension)
+            missing_evidence = ((dimension == "corpusFit" and seeded) or
+                                (dimension == "preferenceFit" and not user_ranked))
+            if missing_evidence:
+                if value is not None:
+                    raise WorkflowError(
+                        f"{identifier}.{dimension} must be null without supporting evidence")
+                values[dimension] = None
+                continue
             if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 5:
                 raise WorkflowError(f"{identifier}.{dimension} must be 1..5")
             values[dimension] = value
@@ -331,6 +340,10 @@ def validate_art_direction(raw: Any, corpus: Mapping[str, Any],
 
 def save_art_direction(project_root: Path, raw: Any) -> dict[str, Any]:
     root = Path(project_root)
+    if any((root / STORE / name).is_file()
+           for name in ("scene-spec.json", "graphics-manifest.json")):
+        raise WorkflowError(
+            "graphics project detected; run text_to_graphics.py status instead of direction")
     corpus = _read_json(root / STORE / CORPUS_FILE)
     # Nothing ranked yet is a normal first round, not a missing artifact.
     preferences = preference_brief(load_decisions(root))
@@ -648,8 +661,11 @@ def seed_corpus_value(profile: str, subject: str) -> dict[str, Any]:
 
 
 def seed_corpus(project_root: Path, profile: str, subject: str) -> dict[str, Any]:
+    path = Path(project_root) / STORE / CORPUS_FILE
+    if path.exists():
+        raise WorkflowError("corpus already exists; keep it or run observe, never seed over it")
     result = seed_corpus_value(profile, subject)
-    _atomic_json(Path(project_root) / STORE / CORPUS_FILE, result)
+    _atomic_json(path, result)
     return result
 
 
