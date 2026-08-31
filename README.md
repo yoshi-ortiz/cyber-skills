@@ -57,16 +57,15 @@ which stop of that rail a prompt belongs to.
   <tr><td colspan="3" align="center"><h3><a href="#-kit">📀 Setup once</a><br><small>Install it once, every AI app carries it</small></h3></td></tr>
   <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>One toolkit across every AI app you use</td><td><code>kit</code> · <strong>Day 0</strong>, outside the loop</td></tr>
   <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>Same skill, its original name</td><td><code>kit</code> · <strong>Day 0</strong>, outside the loop</td></tr>
+  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td><td>No family. Works anywhere on the rail.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Add commands in Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Rewrites your agent's conclusions in plain Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-genesis">💼 Planning</a><br><small>Before you start building</small></h3></td></tr>
   <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Plans before it builds, and proves the thing runs</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td nowrap>📚 <a href="#-knowledge"><strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Token sessions</a><br><small>Where you spend a working session</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Shows which other skills yours actually resemble, and which resemble nothing</td><td><code>build</code> · <strong>Measure</strong></td></tr>
-  <tr><td colspan="3" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Call by fun names</small></h3></td></tr>
-  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td><td>No family. Works anywhere on the rail.</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Add commands in Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Rewrites your agent's conclusions in plain Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
   <tr><td colspan="3" align="center"><h3>🛤️ Rest of the rail<br><small>Planned families. No installed command answers to these yet.</small></h3></td></tr>
   <tr><td nowrap>🔨 <code>build-*</code></td><td>Implement and verify the approved contract</td><td><code>build</code> · <strong>Code · Build · Test</strong></td></tr>
   <tr><td nowrap>🚢 <code>land-*</code></td><td>Ship selected outputs and make deployment observable</td><td><code>land</code> · <strong>Release · Deploy</strong></td></tr>
@@ -179,6 +178,71 @@ skills return different groups, and a comparison set that moves is not one.
 
 **Dependencies stay outside.** Nothing in this package imports them except this
 skill's own script, and it ships none of them.
+
+</details>
+
+## 🧑‍🎨 /aesthetic
+
+![Aesthetic ranking companion](assets/aesthetic-companion.svg)
+
+Design that reads as **intentional, not templated**. Your agent draws 3 to 6
+versions of a screen and publishes them to a page in your browser. **You rank
+them and leave notes, in your own words.** It reads that back and draws the next
+round against it. Nothing is scored by vibes.
+
+| | |
+| --- | --- |
+| **Package** | [aesthetic/](aesthetic/) · entry [aesthetic/SKILL.md](aesthetic/SKILL.md) |
+| **Invoke** | Your agent starts it when the work is visual. You can also name it. |
+| **Needs** | Python 3 (stdlib only) · Node for the local ranking page |
+| **Runs on** | **Your** project folder, never this repo |
+| **Channel** | `alpha` |
+
+First reply you should get: a URL, a session key, and one question. If it opens
+with setup chatter instead, that is a bug.
+
+<details>
+<summary><b>Full spec: modes, scripts, doctrine, and the promotion gate</b></summary>
+
+**Modes**, said in chat, not typed as flags.
+
+| Mode | When |
+| --- | --- |
+| `continue` | Resume from the ledger. One new round of 3 to 6 elements. |
+| `critique` | Report mismatches without changing ranks or scope |
+| `prototype` | Draw and publish comps for ranking |
+| `observe` | Ingest a reference folder as corpus evidence |
+
+```bash
+python3 aesthetic/scripts/bootstrap_harness.py init --project-root <project>
+python3 aesthetic/scripts/bootstrap_harness.py open --project-root <project>
+```
+
+`bootstrap_harness.py` runs the companion, ledger, article, and publish.
+`editorial_workflow.py` runs corpus, preferences, direction, and burndown. Six
+more scripts cover rules, delivery, briefs, and diagnostics. Every one answers
+`--help`, and the full flag reference is
+[references/commands.md](aesthetic/references/commands.md).
+
+**Doctrine.** Self-contained, OKF 0.2, indexed at
+[references/index.md](aesthetic/references/index.md): golden rules and design
+fundamentals, inference and critique, production contracts, and the capability
+model. Vocabulary:
+[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Companion server,
+vendored Node: [companion/](aesthetic/companion/).
+
+**Promotion gate.** The badges above read **pending** until these hold under
+regression tests.
+
+| Goal | Claim |
+| --- | --- |
+| Round-trip feedback | Your rank, then `adopt`, then `preferences` reflects it without signal collapse |
+| Cohort discipline | Published rounds stay within 3 to 6 rankable elements |
+| Independence | Stars, likes, lifecycle, and missing feedback never merge into one score |
+| Accessibility | Text at 4.5:1 and controls at 3:1 contrast before publish |
+| Honest delivery | `review_delivery.py` rejects generic, explanatory-only, or hash-drifted proposals |
+| Subject fidelity | A comp reads as *this* product with the logo removed |
+| Handoff clarity | First reply is URL, key, and a question. No setup preamble. |
 
 </details>
 
@@ -361,71 +425,6 @@ something that understood the source. Rules for the human half:
 | Compression | A note is shorter than a careful reading of its source, and still answers the question |
 | Version fidelity | The version a claim held for is named, and checked against the dependency manifest |
 | Scope | Notes describe sources. Project decisions stay out of them. |
-
-</details>
-
-## 🧑‍🎨 /aesthetic
-
-![Aesthetic ranking companion](assets/aesthetic-companion.svg)
-
-Design that reads as **intentional, not templated**. Your agent draws 3 to 6
-versions of a screen and publishes them to a page in your browser. **You rank
-them and leave notes, in your own words.** It reads that back and draws the next
-round against it. Nothing is scored by vibes.
-
-| | |
-| --- | --- |
-| **Package** | [aesthetic/](aesthetic/) · entry [aesthetic/SKILL.md](aesthetic/SKILL.md) |
-| **Invoke** | Your agent starts it when the work is visual. You can also name it. |
-| **Needs** | Python 3 (stdlib only) · Node for the local ranking page |
-| **Runs on** | **Your** project folder, never this repo |
-| **Channel** | `alpha` |
-
-First reply you should get: a URL, a session key, and one question. If it opens
-with setup chatter instead, that is a bug.
-
-<details>
-<summary><b>Full spec: modes, scripts, doctrine, and the promotion gate</b></summary>
-
-**Modes**, said in chat, not typed as flags.
-
-| Mode | When |
-| --- | --- |
-| `continue` | Resume from the ledger. One new round of 3 to 6 elements. |
-| `critique` | Report mismatches without changing ranks or scope |
-| `prototype` | Draw and publish comps for ranking |
-| `observe` | Ingest a reference folder as corpus evidence |
-
-```bash
-python3 aesthetic/scripts/bootstrap_harness.py init --project-root <project>
-python3 aesthetic/scripts/bootstrap_harness.py open --project-root <project>
-```
-
-`bootstrap_harness.py` runs the companion, ledger, article, and publish.
-`editorial_workflow.py` runs corpus, preferences, direction, and burndown. Six
-more scripts cover rules, delivery, briefs, and diagnostics. Every one answers
-`--help`, and the full flag reference is
-[references/commands.md](aesthetic/references/commands.md).
-
-**Doctrine.** Self-contained, OKF 0.2, indexed at
-[references/index.md](aesthetic/references/index.md): golden rules and design
-fundamentals, inference and critique, production contracts, and the capability
-model. Vocabulary:
-[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Companion server,
-vendored Node: [companion/](aesthetic/companion/).
-
-**Promotion gate.** The badges above read **pending** until these hold under
-regression tests.
-
-| Goal | Claim |
-| --- | --- |
-| Round-trip feedback | Your rank, then `adopt`, then `preferences` reflects it without signal collapse |
-| Cohort discipline | Published rounds stay within 3 to 6 rankable elements |
-| Independence | Stars, likes, lifecycle, and missing feedback never merge into one score |
-| Accessibility | Text at 4.5:1 and controls at 3:1 contrast before publish |
-| Honest delivery | `review_delivery.py` rejects generic, explanatory-only, or hash-drifted proposals |
-| Subject fidelity | A comp reads as *this* product with the logo removed |
-| Handoff clarity | First reply is URL, key, and a question. No setup preamble. |
 
 </details>
 

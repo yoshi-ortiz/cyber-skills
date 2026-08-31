@@ -1,0 +1,4 @@
+interface:
+  display_name: "Aesthetic"
+  short_description: "Ground art direction in references and user sentiment"
+  default_prompt: "Use $aesthetic in my project's language. Give me the ranking URL and session key first. Explain progress in plain design language, keep the current page available while you work, and ask me to score the next designs."

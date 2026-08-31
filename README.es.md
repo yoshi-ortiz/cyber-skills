@@ -58,16 +58,15 @@ avanzan el trabajo, y `check` y `fix` son arcos de regreso. La columna
   <tr><td colspan="3" align="center"><h3><a href="#-kit">📀 Configurar una vez</a><br><small>Instálalo una vez y todas tus apps de IA lo llevan</small></h3></td></tr>
   <tr><td nowrap>📦 <a href="#-kit"><strong>/kit</strong></a></td><td>Un solo juego de herramientas en todas tus apps de IA</td><td><code>kit</code> · <strong>Día 0</strong>, fuera del flujo</td></tr>
   <tr><td nowrap>📦 <a href="#-kit"><strong>/starter-pack</strong></a></td><td>La misma skill, con su nombre original</td><td><code>kit</code> · <strong>Día 0</strong>, fuera del flujo</td></tr>
+  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Agrega comandos en español</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
+  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu agent en español sencillo</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-genesis">💼 Planear</a><br><small>Antes de empezar a construir</small></h3></td></tr>
   <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Planea antes de construir, y comprueba que funcione</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td nowrap>📚 <a href="#-enciclopedia"><strong>/enciclopedia</strong></a></td><td>Lee la documentación real y guarda una nota corta con su fuente</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Sesiones de tokens</a><br><small>Donde se te va una sesión de trabajo</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Muestra a qué otros skills se parece el tuyo, y cuál no se parece a nada</td><td><code>build</code> · <strong>Medir</strong></td></tr>
-  <tr><td colspan="3" align="center"><h3><a href="#-silly">🤡 Silly</a><br><small>Llámalas por nombres divertidos</small></h3></td></tr>
-  <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Agrega comandos en español</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
-  <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu agent en español sencillo</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
   <tr><td colspan="3" align="center"><h3>🛤️ Resto del riel<br><small>Familias planeadas. Todavía no hay comando instalado que responda a estos nombres.</small></h3></td></tr>
   <tr><td nowrap>🔨 <code>build-*</code></td><td>Implementa y verifica el contrato aprobado</td><td><code>build</code> · <strong>Código · Build · Pruebas</strong></td></tr>
   <tr><td nowrap>🚢 <code>land-*</code></td><td>Publica salidas y vuelve observable el despliegue</td><td><code>land</code> · <strong>Lanzar · Desplegar</strong></td></tr>
@@ -179,6 +178,71 @@ skills return different groups, and a comparison set that moves is not one.
 
 **Dependencies stay outside.** Nothing in this package imports them except this
 skill's own script, and it ships none of them.
+
+</details>
+
+## 🧑‍🎨 /aesthetic
+
+![Aesthetic ranking companion](assets/aesthetic-companion.svg)
+
+Diseño que se lee como **intencional, no como plantilla**. Tu agent dibuja
+de 3 a 6 versiones de una pantalla y las publica en una página de tu navegador.
+**Tú las ordenas y dejas notas, con tus palabras.** Las lee de vuelta y dibuja
+la siguiente ronda contra eso. Nada se califica por vibra.
+
+| | |
+| --- | --- |
+| **Paquete** | [aesthetic/](aesthetic/) · entrada [aesthetic/SKILL.md](aesthetic/SKILL.md) |
+| **Invocación** | Tu agent la inicia cuando el trabajo es visual. También puedes nombrarla. |
+| **Requiere** | Python 3 (solo estándar) · Node para la página local de ranking |
+| **Trabaja sobre** | **Tu** carpeta de proyecto, nunca este repositorio |
+| **Canal** | `alpha` |
+
+La primera respuesta debería ser: una URL, una clave de sesión y una pregunta.
+Si abre con charla de configuración, eso es un bug.
+
+<details>
+<summary><b>Especificación completa: modos, scripts, doctrina y puerta de entrada</b></summary>
+
+**Modos**, se dicen en el chat, no se escriben como banderas.
+
+| Modo | Cuándo |
+| --- | --- |
+| `continue` | Retoma desde el registro. Una ronda nueva de 3 a 6 elementos. |
+| `critique` | Reporta desajustes sin cambiar rangos ni alcance |
+| `prototype` | Dibuja y publica propuestas para ordenar |
+| `observe` | Ingiere una carpeta de referencia como evidencia |
+
+```bash
+python3 aesthetic/scripts/bootstrap_harness.py init --project-root <proyecto>
+python3 aesthetic/scripts/bootstrap_harness.py open --project-root <proyecto>
+```
+
+`bootstrap_harness.py` maneja el compañero, el registro, el artículo y la
+publicación. `editorial_workflow.py` maneja corpus, preferencias, dirección y
+pendientes. Seis scripts más cubren reglas, entrega, briefs y diagnóstico. Todos
+responden `--help`, y la referencia completa de banderas está en
+[references/commands.md](aesthetic/references/commands.md).
+
+**Doctrina.** Autocontenida, OKF 0.2, indexada en
+[references/index.md](aesthetic/references/index.md): reglas de oro y
+fundamentos de diseño, inferencia y crítica, contratos de producción, y el
+modelo de capacidades. Vocabulario:
+[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Servidor compañero
+en Node: [companion/](aesthetic/companion/).
+
+**Puerta de entrada.** Las insignias de arriba dicen **pending** hasta que esto
+se sostenga bajo pruebas de regresión.
+
+| Objetivo | Compromiso |
+| --- | --- |
+| Ida y vuelta | Tu orden, luego `adopt`, y `preferences` lo refleja sin colapsar la señal |
+| Disciplina de ronda | Las rondas publicadas se quedan entre 3 y 6 elementos ordenables |
+| Independencia | Estrellas, likes, ciclo de vida y falta de respuesta nunca se funden en un puntaje |
+| Accesibilidad | Texto a 4.5:1 y controles a 3:1 de contraste antes de publicar |
+| Entrega honesta | `review_delivery.py` rechaza propuestas genéricas, solo explicativas o con hash desviado |
+| Fidelidad al tema | La propuesta se reconoce como *este* producto sin el logo |
+| Claridad del traspaso | La primera respuesta es URL, clave y una pregunta. Sin preámbulo. |
 
 </details>
 
@@ -367,71 +431,6 @@ entendió la fuente. Reglas para la mitad humana:
 | Compresión | Una nota es más corta que leer con calma su fuente, y aun así responde la pregunta |
 | Fidelidad de versión | Se nombra la versión para la que valía la afirmación, y se contrasta con el manifiesto |
 | Alcance | Las notas describen fuentes. Las decisiones del proyecto se quedan fuera. |
-
-</details>
-
-## 🧑‍🎨 /aesthetic
-
-![Aesthetic ranking companion](assets/aesthetic-companion.svg)
-
-Diseño que se lee como **intencional, no como plantilla**. Tu agent dibuja
-de 3 a 6 versiones de una pantalla y las publica en una página de tu navegador.
-**Tú las ordenas y dejas notas, con tus palabras.** Las lee de vuelta y dibuja
-la siguiente ronda contra eso. Nada se califica por vibra.
-
-| | |
-| --- | --- |
-| **Paquete** | [aesthetic/](aesthetic/) · entrada [aesthetic/SKILL.md](aesthetic/SKILL.md) |
-| **Invocación** | Tu agent la inicia cuando el trabajo es visual. También puedes nombrarla. |
-| **Requiere** | Python 3 (solo estándar) · Node para la página local de ranking |
-| **Trabaja sobre** | **Tu** carpeta de proyecto, nunca este repositorio |
-| **Canal** | `alpha` |
-
-La primera respuesta debería ser: una URL, una clave de sesión y una pregunta.
-Si abre con charla de configuración, eso es un bug.
-
-<details>
-<summary><b>Especificación completa: modos, scripts, doctrina y puerta de entrada</b></summary>
-
-**Modos**, se dicen en el chat, no se escriben como banderas.
-
-| Modo | Cuándo |
-| --- | --- |
-| `continue` | Retoma desde el registro. Una ronda nueva de 3 a 6 elementos. |
-| `critique` | Reporta desajustes sin cambiar rangos ni alcance |
-| `prototype` | Dibuja y publica propuestas para ordenar |
-| `observe` | Ingiere una carpeta de referencia como evidencia |
-
-```bash
-python3 aesthetic/scripts/bootstrap_harness.py init --project-root <proyecto>
-python3 aesthetic/scripts/bootstrap_harness.py open --project-root <proyecto>
-```
-
-`bootstrap_harness.py` maneja el compañero, el registro, el artículo y la
-publicación. `editorial_workflow.py` maneja corpus, preferencias, dirección y
-pendientes. Seis scripts más cubren reglas, entrega, briefs y diagnóstico. Todos
-responden `--help`, y la referencia completa de banderas está en
-[references/commands.md](aesthetic/references/commands.md).
-
-**Doctrina.** Autocontenida, OKF 0.2, indexada en
-[references/index.md](aesthetic/references/index.md): reglas de oro y
-fundamentos de diseño, inferencia y crítica, contratos de producción, y el
-modelo de capacidades. Vocabulario:
-[UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md). Servidor compañero
-en Node: [companion/](aesthetic/companion/).
-
-**Puerta de entrada.** Las insignias de arriba dicen **pending** hasta que esto
-se sostenga bajo pruebas de regresión.
-
-| Objetivo | Compromiso |
-| --- | --- |
-| Ida y vuelta | Tu orden, luego `adopt`, y `preferences` lo refleja sin colapsar la señal |
-| Disciplina de ronda | Las rondas publicadas se quedan entre 3 y 6 elementos ordenables |
-| Independencia | Estrellas, likes, ciclo de vida y falta de respuesta nunca se funden en un puntaje |
-| Accesibilidad | Texto a 4.5:1 y controles a 3:1 de contraste antes de publicar |
-| Entrega honesta | `review_delivery.py` rechaza propuestas genéricas, solo explicativas o con hash desviado |
-| Fidelidad al tema | La propuesta se reconoce como *este* producto sin el logo |
-| Claridad del traspaso | La primera respuesta es URL, clave y una pregunta. Sin preámbulo. |
 
 </details>
 
