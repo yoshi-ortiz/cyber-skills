@@ -7,6 +7,7 @@ a checker that cannot see the page must say so rather than report a pass.
 """
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import cook
@@ -81,3 +82,43 @@ class NoScreenIsNoPass(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheRoundStopsWhatItStarted(unittest.TestCase):
+    """A leaked companion is a node process per run, and `clean` deleting the
+    tree under a live one leaves it serving a directory that is gone."""
+
+    def pid_file(self, project: Path, pid: int) -> None:
+        state = project / cook.COMPANION / "1-1" / "state"
+        state.mkdir(parents=True)
+        (state / "server.pid").write_text(str(pid), encoding="utf-8")
+
+    def test_every_session_pid_is_signalled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            self.pid_file(project, 4242)
+            killed = []
+            with unittest.mock.patch.object(cook.os, "kill",
+                                            lambda pid, sig: killed.append(pid)):
+                self.assertEqual(cook.stop_companion(project), [4242])
+            self.assertEqual(killed, [4242])
+
+    def test_a_dead_pid_is_not_an_error(self):
+        # The server exited on its own. Nothing to stop is a clean stop.
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            self.pid_file(project, 4242)
+            with unittest.mock.patch.object(cook.os, "kill",
+                                            side_effect=ProcessLookupError):
+                self.assertEqual(cook.stop_companion(project), [])
+
+    def test_a_corrupt_pid_file_is_skipped_rather_than_raising(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            self.pid_file(project, 0)
+            (project / cook.COMPANION / "1-1" / "state" / "server.pid").write_text("nonsense")
+            self.assertEqual(cook.stop_companion(project), [])
+
+    def test_no_companion_state_stops_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(cook.stop_companion(Path(tmp)), [])
