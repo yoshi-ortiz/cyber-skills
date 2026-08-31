@@ -10,6 +10,16 @@
       "quality": "finished",
       "stance": "pursue"
     },
+    "3db0f51e41e094cd302f7cffe107bde0ff3b0a09daaa7d8f305d0977da0a26bc": {
+      "aspects": [
+        "composition"
+      ],
+      "at": "2026-08-30T22:40:00-06:00",
+      "group": "llm-shots/fucked shots",
+      "note": "only corpus item whose road closes: central X plus both outer return arcs, matching Group 47. Billboard strings correct. Counterevidence: watermarked, billboards duplicated, rooms small in frame",
+      "quality": "finished",
+      "stance": "pursue"
+    },
     "419c4bf5d16be2e6b96edc36c7cb36df2087e7488f66a0655b83f9879d94d05b": {
       "aspects": [
         "voice"
