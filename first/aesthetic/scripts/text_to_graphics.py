@@ -19,6 +19,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
+from graphics_corpus import (prompt_inputs_hash, refine_references,
+                             tagged_references)
+
 STORE = Path("spec/design-harness")
 MANIFEST_FILE = "graphics-manifest.json"
 SCENE_FILE = "scene-spec.json"
@@ -174,34 +177,6 @@ def validate_scene(scene: Mapping[str, Any]) -> list[str]:
     return errors
 
 
-def tagged_references(project_root: Path, aspect: str,
-                      stance: str = "pursue") -> list[tuple[str, str]]:
-    """Corpus paths carrying one aspect and stance, with the note the user left.
-
-    This is the only route from a tag to a prompt. Anything not tagged `pursue`
-    never reaches a slice, which is what makes the avoid stance mean something.
-    """
-    corpus_path = project_root / STORE / "corpus.json"
-    tags_path = project_root / STORE / "corpus-tags.json"
-    if not corpus_path.exists() or not tags_path.exists():
-        return []
-    corpus = _read_json(corpus_path)
-    tags = (_read_json(tags_path) or {}).get("tags") or {}
-    by_digest = {str(item.get("sha256")): str(item.get("path"))
-                 for item in corpus.get("items", []) if isinstance(item, Mapping)}
-    found = []
-    for digest, tag in tags.items():
-        if not isinstance(tag, Mapping) or tag.get("stance") != stance:
-            continue
-        aspects = tag.get("aspects") or [tag.get("aspect")]
-        if aspect not in [str(item) for item in aspects]:
-            continue
-        path = by_digest.get(str(digest))
-        if path:
-            found.append((path, str(tag.get("note") or "").strip()))
-    return sorted(found)
-
-
 def inventory_sections(text: str) -> dict[str, str]:
     """Split an inventory document on its `## /space` headings."""
     sections: dict[str, str] = {}
@@ -294,6 +269,9 @@ def compile_slices(project_root: Path) -> dict[str, Any]:
         + ["", "Match composition only. This is a moodboard probe, never a deliverable."]),
         MOODBOARD_SLICE_MAX)
     inventory = _inventory_directive(project_root, scene)
+    refine = "\n".join(
+        ["REFINE EXISTING ATTEMPTS - edit or reuse these; do not spend a fresh shot."]
+        + [f"- {path}: {note}" for path, note in refine_references(project_root)])
 
     slices = {
         "version": 1,
@@ -302,8 +280,10 @@ def compile_slices(project_root: Path) -> dict[str, Any]:
         "geometry": geometry,
         "moodboard": moodboard,
         "inventory": inventory,
+        "refine": refine,
         "sceneSpecHash": _sha256_bytes(
             json.dumps(scene, sort_keys=True).encode("utf-8")),
+        "promptInputsHash": prompt_inputs_hash(project_root, manifest, scene),
     }
 
     outputs = manifest.get("outputs") or {}
@@ -327,11 +307,12 @@ def compile_slices(project_root: Path) -> dict[str, Any]:
             "geometry": geometry,
             "moodboard": moodboard,
             "inventory": inventory,
+            "refine": refine,
         },
     }
     _atomic_json(compiled, graphics_prompt)
     for name, text in slices.items():
-        if name in {"version", "element", "sceneSpecHash"}:
+        if name in {"version", "element", "sceneSpecHash", "promptInputsHash"}:
             continue
         (slices_dir / f"{name}.txt").write_text(text + "\n", encoding="utf-8")
     _atomic_json(slices_dir / "manifest.json", slices)
@@ -609,6 +590,11 @@ def refresh_corpus(project_root: Path) -> dict[str, Any]:
 
 def run_moodboard(project_root: Path, *, dry_run: bool = False) -> dict[str, Any]:
     manifest = load_manifest(project_root)
+    pending = refine_references(project_root)
+    if pending:
+        raise GraphicsError(
+            "refine-tagged attempts are pending; edit or reuse them before spending "
+            "a fresh moodboard shot: " + ", ".join(path for path, _ in pending))
     compile_slices(project_root)
     agy = ((manifest.get("adapters") or {}).get("agy") or {})
     model = agy.get("imageModel", "gemini-3.1-flash-image-preview")

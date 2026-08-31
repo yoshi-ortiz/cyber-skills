@@ -899,6 +899,33 @@ def ledger_cursor_key(project_root: Path, ledger_path: Path) -> str:
     return str(resolved.relative_to(root)) if is_within(resolved, root) else resolved.name
 
 
+def drain_companion(project_root: Path, ledger_path: Path | None = None) -> tuple[int, int]:
+    """Read everything the user typed or clicked, from every companion inbox.
+
+    The companion queues; nothing applies a queue on its own. An agent that
+    forgets this step publishes a new round over the user's ranks and over the
+    brief answer that named what they actually asked for, and neither the
+    agent nor any gate can tell, because a queue nobody drained looks exactly
+    like a user who said nothing.
+    """
+    base = project_root / ".superpowers" / "brainstorm"
+    ledger = ledger_path if ledger_path is not None else base / "decisions.jsonl"
+    # A project nobody has clicked in yet has no ledger. That is an empty
+    # queue, not a broken one, and refusing it would make `article` impossible
+    # to run on a fresh project.
+    adopted, skipped = (adopt_companion(project_root, ledger)
+                        if Path(ledger).is_file() else (0, 0))
+    try:
+        import brief_workflow
+        said, _ = brief_workflow.adopt_brief_inbox(
+            project_root, base / brief_workflow.BRIEF_INBOX_FILE)
+        if said:
+            print(f"Adopted {said} brief answer(s).")
+    except (ImportError, OSError, ValueError):
+        pass
+    return adopted, skipped
+
+
 def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
     """Fold the companion's durable ledger into the harness ledger.
 
@@ -1425,12 +1452,38 @@ def scope_comp_css(css: str, scope_class: str = COMP_SCOPE_CLASS) -> str:
     return f"@scope (.{scope_class}) {{\n{css}\n}}\n"
 
 
+# A page is never 34px wide. Preview scaling reads the comp's page size out of
+# its stylesheet, and taking the first px width anywhere in the sheet hands it
+# whatever small component happens to be declared first -- a logo, a badge, an
+# avatar. The thumbnail is then scaled to that component, so the designer sees
+# one magnified corner of the page instead of the page. Below this, a
+# declaration is a component, not an artboard.
+MIN_ARTBOARD_PX = 320.0
+
+_PAGE_RULE = re.compile(r"(?:^|,)\s*(?::root|html|body|@page)\b", re.I)
+
+
+def _page_level_css(css: str) -> str:
+    """Declarations belonging to the rules that size the page itself."""
+    return "\n".join(block for selector, block
+                     in re.findall(r"([^{}]+)\{([^{}]*)\}", css)
+                     if _PAGE_RULE.search(selector))
+
+
 def _css_px(css: str, names: tuple[str, ...]) -> float | None:
-    """First declared px size among logical and physical properties."""
-    for name in names:
-        match = re.search(rf"(?<![\w-]){name}:\s*(\d+(?:\.\d+)?)px", css)
-        if match:
-            return float(match.group(1))
+    """The comp's declared page size in px, or None when it declares none.
+
+    A page-level rule wins outright, whatever it says. Failing that, the first
+    declaration big enough to be an artboard is taken and smaller ones are
+    passed over, because a fluid comp that never states a page size is better
+    served by the caller's default than by the width of its logo.
+    """
+    for scope, floor in ((_page_level_css(css), 0.0), (css, MIN_ARTBOARD_PX)):
+        for name in names:
+            for match in re.finditer(rf"(?<![\w-]){name}:\s*(\d+(?:\.\d+)?)px", scope):
+                value = float(match.group(1))
+                if value >= floor:
+                    return value
     return None
 
 
@@ -3541,7 +3594,11 @@ def parser() -> argparse.ArgumentParser:
                              f"{STAR_RANGE[0]}-{STAR_RANGE[1]} when the user set the rank")
     decide.add_argument("--evidence", required=True, help="verbatim user excerpt, not a paraphrase")
     decide.add_argument("--supersedes", default="", help="comma-separated element ids this replaces")
-    decide.add_argument("--preview", default="", help="project-relative graphic of the element being ranked")
+    decide.add_argument("--preview", default="", help=(
+        "the HTML comp of the element being ranked. That comp is canonical: the "
+        "article inlines it and `review_delivery.py` refuses anything else. A "
+        "PNG from `shoot` is for your own eyes and is accepted only when no comp "
+        "exists -- record one and delivery rejects the round"))
     decide.add_argument("--title", default="",
                         help="what to CALL this design in plain words, e.g. "
                              "'Pestaña de rol coloreada'. The dotted id stays the "
@@ -3602,8 +3659,11 @@ def parser() -> argparse.ArgumentParser:
                          help="green pulsing dot while the agent is drawing; omit when waiting "
                               "on the user (idle text + orange dot)")
     article.add_argument("--asks", default="",
-                         help="the one design question this round asks. Required "
-                              "when the cohort is set. Do not paste the zone note.")
+                         help="the one design question this round asks, in "
+                              "project.json.language when that is set -- the screen is "
+                              "one language throughout, controls and authored copy "
+                              "alike. Required when the cohort is set. Do not paste "
+                              "the zone note.")
     article.add_argument("--title", default="",
                          help="the artefact being designed, in the user's own words "
                               "(stored in project.json and reused)")
@@ -3719,6 +3779,10 @@ def main() -> int:
                   + "). Record it with `decide --preview`.")
         elif args.command == "article":
             root = args.project_root.resolve(strict=True)
+            # Drain before building. A round assembled over an undrained queue
+            # silently overwrites the ranks and the brief answer the user
+            # already gave, and asks them the same question again.
+            drain_companion(root)
             cohort = {e.strip() for e in args.cohort.split(",") if e.strip()}
             decisions = load_decisions(root / "spec" / "design-harness")
             canonicalize_recorded_previews(root, decisions)
@@ -3746,7 +3810,7 @@ def main() -> int:
             print(f"Wrote {args.out.name}: {len(cohort)} element(s) in this round's cohort. "
                   f"Run `publish` to serve it.")
         elif args.command == "adopt":
-            adopted, skipped = adopt_companion(args.project_root, args.companion_ledger)
+            adopted, skipped = drain_companion(args.project_root, args.companion_ledger)
             print(f"Adopted {adopted} ranked decision(s); skipped {skipped} "
                   f"interaction(s) with no design-element id or usable signal.")
             # Everything else the user typed arrives on the same trip. Folding

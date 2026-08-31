@@ -1,6 +1,6 @@
 ---
 purpose: skill entry point -- everything an agent must know before its first command
-admits: SKILL.md, AGENTS.md, and directories that carry their own contract
+admits: SKILL.md, AGENTS.md, corpus role/stance routing, and directories that carry their own contract
 refuses: doctrine, examples, command reference -- those belong in references/
 max_file_bytes: 7250
 ---
