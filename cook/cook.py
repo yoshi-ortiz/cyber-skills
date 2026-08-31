@@ -185,13 +185,31 @@ def harness(project_root: Path, *argv: str) -> subprocess.CompletedProcess:
 
 
 def run(project_root: Path) -> dict:
-    """A full round in a scratch tree, then the same assertion as `doctor`."""
+    """A full round in a scratch tree, then the same assertion as `doctor`.
+
+    Every verb here is load-bearing. An earlier version ran `open` alone and
+    then asserted a screen, which only `article` and `publish` create -- so it
+    was red on every project forever, and its red said nothing about the skill
+    under test. A dogfood round that cannot go green is not a test of anything.
+    """
     check_not_the_repo(project_root)
     project_root.mkdir(parents=True, exist_ok=True)
-    opened = harness(project_root, "open", "--status", "cook dogfood round")
-    if opened.returncode != 0:
-        raise CookError(f"open failed: {opened.stderr.strip()}")
-    return {"opened": opened.stdout.strip(), **doctor(project_root)}
+    screen = project_root / "round.html"
+    steps = (
+        ("init", "--source-root", str(REPO / "moodboards"),
+         "--profiles", "art-direction"),
+        ("open", "--status", "cook dogfood round"),
+        ("article", "--out", str(screen)),
+        ("publish", "--screen", str(screen)),
+    )
+    opened = ""
+    for verb, *flags in steps:
+        done = harness(project_root, verb, *flags)
+        if done.returncode != 0:
+            raise CookError(f"{verb} failed: {(done.stderr or done.stdout).strip()}")
+        if verb == "open":
+            opened = done.stdout.strip()
+    return {"opened": opened, **doctor(project_root)}
 
 
 def clean(project_root: Path) -> dict:
