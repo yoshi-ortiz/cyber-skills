@@ -1,13 +1,13 @@
 ---
 purpose: run this repository's own skills against a throwaway project and assert what a user would actually see
-admits: the dogfood loop, its tests, and doctrine about running it
+admits: the Food Product loop, its tests, diagnostic handoff, and release confirmation
 refuses: skill payload, design project state, anything a published tree carries
 max_file_bytes: 12000
 ---
 
 # Cook
 
-Eat your own food. `cook` runs a skill the way a user runs it and checks the
+Food Product development. `cook` runs a skill the way a user runs it and checks the
 **visible** outcome, because every gate in this repository so far checks an
 exit code, and an exit code is what the companion bug hid behind: `open`
 returned a URL, returned zero, and served an empty page.
@@ -29,4 +29,4 @@ test** are the same directory, which is the context derail the root
 document.
 
 So `cook` refuses the repository root as a project root. There is no flag for
-it. A dogfood round runs in a scratch tree or it does not run.
+it. A Food Product round runs in a scratch tree or it does not run.

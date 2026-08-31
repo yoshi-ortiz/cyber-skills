@@ -96,7 +96,7 @@ Open rows grouped by what unblocks what. Priority order:
 | id | State | Item | Notes |
 | --- | --- | --- | --- |
 | R-15 | `TODO` | Split `bootstrap_harness.py` | 210 KB vs 30 KB budget. Split before adding; do not widen the cap. |
-| R-62 | `TODO` | Dogfood this repo's graphics and website | `landing.hero.flow` through `text_to_graphics.py` → `design/landing-flow-hero.html`. Proof = `kit sync` then a green graphics run on this checkout. |
+| R-62 | `TODO` | Run this repo's graphics and website as a Food Product | `landing.hero.flow` through `text_to_graphics.py` → `design/landing-flow-hero.html`. Proof = `kit sync` then a green graphics run on this checkout. |
 | R-24 | `TODO` | Cap golden-rule retry cost | B-013. Retries must narrow scope, not re-attempt the same rejected spec. |
 | R-25 | `TODO` | Explicit `subject` in `editorial.json` | Durable model behind R-21; not urgent while dotted-id convention holds. |
 
@@ -130,7 +130,7 @@ Open rows grouped by what unblocks what. Priority order:
 
 Domain-neutral workflow in
 [`platform-support.md`](aesthetic/references/platform-support.md). E-01 is
-`DONE`. Defer external adapter epics until E4 dogfood is green on this repo.
+`DONE`. Defer external adapter epics until E4 Food Product is green on this repo.
 
 | id | State | Family | Phase | Epic | Exit |
 | --- | --- | --- | --- | --- | --- |

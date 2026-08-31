@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the dogfood loop.
+"""Tests for the Food Product loop.
 
 The loop's own first version passed against the broken state it existed to
 catch, so the case that matters most here is `test_an_unreadable_page_fails`:
@@ -45,9 +45,20 @@ class AScreenIsToldFromTheShell(unittest.TestCase):
 
     def test_a_real_screen_carries_its_own_heading(self):
         parsed = self._parse("<html><body><h1>Cover round</h1>"
-                             "<form><button>5</button></form></body></html>")
+                             '<div class="dh-fb" data-element="cover.hero">'
+                             '<button data-rank="5">5</button></div></body></html>')
         self.assertNotIn(cook.PLACEHOLDER_HEADING, parsed.headings)
-        self.assertTrue(parsed.tags & {"form", "input", "button"})
+        self.assertEqual(parsed.rankable_elements, {"cover.hero"})
+
+    def test_an_unrelated_button_is_not_a_ranking_control(self):
+        parsed = self._parse("<html><body><h1>Landing page</h1>"
+                             "<button>Install</button></body></html>")
+        self.assertEqual(parsed.rankable_elements, set())
+
+    def test_a_rank_outside_a_decision_row_is_not_rankable(self):
+        parsed = self._parse("<html><body><h1>Broken round</h1>"
+                             '<button data-rank="5">5</button></body></html>')
+        self.assertEqual(parsed.rankable_elements, set())
 
     def test_an_unreadable_page_has_no_heading_to_stand_on(self):
         # The redirect shim at `/?key=`: a title, a script, and no heading.

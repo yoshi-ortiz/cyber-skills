@@ -5,7 +5,7 @@ from pathlib import Path
 
 import iso_svg
 
-SCENE = json.loads((Path(__file__).resolve().parents[2]
+SCENE = json.loads((Path(__file__).resolve().parents[3]
                     / "spec/design-harness/scene-spec.json").read_text(encoding="utf-8"))
 
 

@@ -100,6 +100,37 @@ class TheSchemaIsOwnedHere(unittest.TestCase):
             with self.assertRaises(WorkflowError):
                 tag(root, "manuals", ["core"], stance="maybe")
 
+    def test_refine_is_a_distinct_attempt_stance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = project(Path(tmp), "attempts/candidate.png")
+            ct.tag_group(root, {
+                "group": "attempts", "aspects": ["composition"],
+                "stance": "refine", "role": "attempt", "quality": "finished",
+                "note": "keep room scale; repair the road", "at": "2026-08-31T00:00:00Z",
+            })
+            entry = next(iter(ct.load_tags(root)["tags"].values()))
+            self.assertEqual((entry["stance"], entry["role"]), ("refine", "attempt"))
+
+    def test_refine_is_refused_for_a_reference_role(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = project(Path(tmp), "references/candidate.png")
+            with self.assertRaisesRegex(WorkflowError, "refine.*attempt"):
+                ct.tag_group(root, {
+                    "group": "references", "aspects": ["composition"],
+                    "stance": "refine", "role": "reference", "quality": "finished",
+                    "note": "repair it", "at": "2026-08-31T00:00:00Z",
+                })
+
+    def test_an_unknown_role_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = project(Path(tmp), "references/candidate.png")
+            with self.assertRaisesRegex(WorkflowError, "role must be one of"):
+                ct.tag_group(root, {
+                    "group": "references", "aspects": ["composition"],
+                    "stance": "pursue", "role": "vibes", "quality": "finished",
+                    "note": "", "at": "2026-08-31T00:00:00Z",
+                })
+
     def test_a_tag_with_no_aspect_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = project(Path(tmp), "manuals/c.jpg")
@@ -193,6 +224,17 @@ class TheDigestIsTheKeyTokens(unittest.TestCase):
             row = next(r for r in ct.digest_rows(root) if r["aspect"] == "palette")
             self.assertEqual((row["pursue"], row["avoid"]), (1, 1))
 
+    def test_refine_attempts_are_counted_separately(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = project(Path(tmp), "attempts/one.png")
+            ct.tag_group(root, {
+                "group": "attempts", "aspects": ["composition"],
+                "stance": "refine", "role": "attempt", "quality": "finished",
+                "note": "keep scale", "at": "2026-08-31T00:00:00Z",
+            })
+            row = next(r for r in ct.digest_rows(root) if r["aspect"] == "composition")
+            self.assertEqual((row["pursue"], row["refine"], row["avoid"]), (0, 1, 0))
+
     def test_sketches_are_counted_separately_from_finished_work(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = project(Path(tmp), "a/1.jpg")
@@ -276,6 +318,9 @@ class TheModuleRendersOrStaysQuiet(unittest.TestCase):
             root = project(Path(tmp), "a/1.jpg", "b/2.jpg", "c/3.jpg")
             markup = ct.render_corpus_tags(root)
             self.assertEqual(markup.count("data-tags-group="), 1)
+            self.assertIn('name="role"', markup)
+            self.assertIn('value="refine"', markup)
+            self.assertIn('name="note"', markup)
 
     def test_every_aspect_is_offered_as_a_choice(self):
         with tempfile.TemporaryDirectory() as tmp:

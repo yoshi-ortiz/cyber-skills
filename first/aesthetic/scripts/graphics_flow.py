@@ -25,8 +25,14 @@ FLOW = (
      lambda st: "no corpus.json, so nothing has been observed yet"),
     ("seed-tags", lambda st: not st["tags"],
      lambda st: "corpus is observed but untagged, and only pursue tags reach a slice"),
+    ("refine", lambda st: bool(st["refinePending"]),
+     lambda st: "edit or reuse refine-tagged attempts before spending a fresh shot: "
+                + ", ".join(st["refinePending"])),
     ("compile", lambda st: _stale(st["slicesHash"], st["sceneHash"]),
      lambda st: "scene changed since the slices were compiled"),
+    ("compile", lambda st: _stale(st["slicesPromptHash"], st["promptHash"]),
+     lambda st: "corpus context changed: roles, tags, or another prompt input "
+                "changed since compilation"),
     ("export-avge", lambda st: _stale(st["callsHash"], st["sceneHash"]),
      lambda st: "scene changed since avge-calls.json was exported"),
     ("preflight", lambda st: st["svgHash"] != st["sceneHash"] and not st["adapters"],
@@ -52,7 +58,8 @@ def next_action(state: Mapping[str, Any]) -> dict[str, str]:
 
 def read_state(project_root: Path) -> dict[str, Any]:
     from text_to_graphics import (SUPPORT_FILE, STORE, gate_outputs, load_manifest,
-                                  load_scene, scene_hash, validate_scene, _slices_dir)
+                                  load_scene, prompt_inputs_hash, refine_references,
+                                  scene_hash, validate_scene, _slices_dir)
 
     manifest = load_manifest(project_root)
     scene = load_scene(project_root, manifest)
@@ -71,9 +78,12 @@ def read_state(project_root: Path) -> dict[str, Any]:
         "corpusRootPath": str((manifest.get("corpus") or {}).get("root")
                               or "moodboards"),
         "sceneHash": scene_hash(scene),
+        "promptHash": prompt_inputs_hash(project_root, manifest, scene),
         "corpus": (store / "corpus.json").exists(),
         "tags": (store / "corpus-tags.json").exists(),
         "slicesHash": _recorded_hash(slices),
+        "slicesPromptHash": _recorded_field(slices, "promptInputsHash"),
+        "refinePending": [path for path, _ in refine_references(project_root)],
         "callsHash": _recorded_hash(calls),
         "adapters": (json.loads(support.read_text(encoding="utf-8")).get("adapters", {})
                      if support.exists() else {}),
@@ -108,7 +118,11 @@ def drawn_from(project_root: Path, output: Path) -> str:
 
 
 def _recorded_hash(path: Path) -> str:
+    return _recorded_field(path, "sceneSpecHash")
+
+
+def _recorded_field(path: Path, field: str) -> str:
     if not path.exists():
         return ""
     payload = json.loads(path.read_text(encoding="utf-8"))
-    return str(payload.get("sceneSpecHash") or "")
+    return str(payload.get(field) or "")

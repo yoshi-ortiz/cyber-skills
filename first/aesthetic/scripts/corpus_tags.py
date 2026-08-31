@@ -43,7 +43,8 @@ MAX_NOTE_CHARS = 280
 # `test_corpus_tags` asserts the two stay identical.
 ASPECTS = ("core", "palette", "typography", "illustration",
            "composition", "voice", "motion")
-STANCES = ("pursue", "avoid")
+ROLES = ("reference", "constraint", "attempt", "derivative")
+STANCES = ("pursue", "refine", "avoid")
 QUALITIES = ("finished", "sketch")
 
 ROOT_GROUP = "(root)"
@@ -106,9 +107,18 @@ def validate_tags(raw: Any) -> dict[str, Any]:
             raise WorkflowError(
                 f"tags[{digest}].note is {len(note)} characters, over the "
                 f"{MAX_NOTE_CHARS} limit. A tag is a label, not a critique.")
+        role = _vocabulary(entry.get("role", "reference"), ROLES,
+                           f"tags[{digest}].role")
+        stance = _vocabulary(entry.get("stance"), STANCES,
+                             f"tags[{digest}].stance")
+        if stance == "refine" and role != "attempt":
+            raise WorkflowError(f"tags[{digest}]: refine stance requires attempt role")
+        if stance == "refine" and not note.strip():
+            raise WorkflowError(f"tags[{digest}]: refine attempt requires a note")
         tags[digest] = {
             "aspects": seen,
-            "stance": _vocabulary(entry.get("stance"), STANCES, f"tags[{digest}].stance"),
+            "role": role,
+            "stance": stance,
             "quality": _vocabulary(entry.get("quality"), QUALITIES, f"tags[{digest}].quality"),
             "group": _text(entry.get("group"), f"tags[{digest}].group"),
             "note": note.strip(),
@@ -156,7 +166,8 @@ def tag_group(project_root: Path, event: Mapping[str, Any]) -> int:
     if name not in groups:
         raise WorkflowError(f"unknown corpus folder {name}")
     entry = {
-        "aspects": event.get("aspects"), "stance": event.get("stance"),
+        "aspects": event.get("aspects"), "role": event.get("role", "reference"),
+        "stance": event.get("stance"),
         "quality": event.get("quality"), "group": name,
         "note": event.get("note") or "", "at": _text(event.get("at"), "at"),
     }
@@ -228,13 +239,15 @@ def digest_rows(project_root: Path) -> list[dict[str, Any]]:
     rows: dict[str, dict[str, int]] = {}
     for entry in tags.values():
         for aspect in entry["aspects"]:
-            row = rows.setdefault(aspect, {"pursue": 0, "avoid": 0, "sketch": 0})
+            row = rows.setdefault(
+                aspect, {"pursue": 0, "refine": 0, "avoid": 0, "sketch": 0})
             row[entry["stance"]] += 1
             if entry["quality"] == "sketch":
                 row["sketch"] += 1
     ordered = [{"aspect": a, **rows[a]} for a in ASPECTS if a in rows]
     total = len([i for i in (corpus.get("items") or []) if isinstance(i, Mapping)])
-    ordered.append({"aspect": "untagged", "pursue": 0, "avoid": 0, "sketch": 0,
+    ordered.append({"aspect": "untagged", "pursue": 0, "refine": 0,
+                    "avoid": 0, "sketch": 0,
                     "count": total - len(tags)})
     return ordered
 
@@ -246,8 +259,10 @@ def render_digest(rows: list[dict[str, Any]]) -> str:
             lines.append(f'{"untagged":<13}{row["count"]}')
             continue
         sketch = f' ({row["sketch"]} sketch)' if row["sketch"] else ""
+        refine = f'   refine {row["refine"]}' if row["refine"] else ""
         avoid = f'   avoid {row["avoid"]}' if row["avoid"] else ""
-        lines.append(f'{row["aspect"]:<13}pursue {row["pursue"]}{sketch}{avoid}')
+        lines.append(
+            f'{row["aspect"]:<13}pursue {row["pursue"]}{sketch}{refine}{avoid}')
     return "\n".join(lines) + "\n"
 
 
@@ -342,6 +357,8 @@ TAGS_STYLE = """<style>/* dh-tags */
 .dh-tags-set input{position:absolute;opacity:0;pointer-events:none}
 .dh-tags-set label:has(:focus-visible){outline:2px solid var(--dh-accent,#d9482a);
  outline-offset:2px}
+.dh-tags-note{font:inherit;font-size:12px;width:100%;box-sizing:border-box;
+ padding:8px 10px;border:1px solid var(--dh-rule);border-radius:8px}
 .dh-tags-actions{display:flex;align-items:center;gap:var(--s2);margin-block-start:var(--s3)}
 .dh-tags-save{font:inherit;font-size:12px;font-weight:700;cursor:pointer;
  padding:9px 14px;border-radius:8px;border:1px solid var(--dh-ink,#111);
@@ -366,7 +383,8 @@ TAGS_SCRIPT = """<script>/* dh-tags */
   btn.disabled=true;
   fetch('/corpus',{method:'POST',headers:{'Content-Type':'application/json'},
    body:JSON.stringify({group:card.getAttribute('data-tags-group'),aspects:aspects,
-    stance:one('stance'),quality:one('quality'),
+    role:one('role'),stance:one('stance'),quality:one('quality'),
+    note:(card.querySelector('[name=note]')||{}).value||'',
     at:new Date().toISOString()})})
    .then(function(r){if(!r.ok)throw new Error('save failed');
     btn.textContent=btn.getAttribute('data-saved-label')||'Saved';})
@@ -428,10 +446,14 @@ def render_corpus_tags(project_root: Path, txt: Mapping[str, str] | None = None)
             + strip
             + _chips("aspect", ASPECTS, words.get("tags-aspects", "Useful for"),
                      words, True)
+            + _chips("role", ROLES, words.get("tags-role", "Corpus role"),
+                     words, False, ROLES[0])
             + _chips("stance", STANCES, words.get("tags-stance", "Stance"),
                      words, False, STANCES[0])
             + _chips("quality", QUALITIES, words.get("tags-quality", "Quality"),
                      words, False, QUALITIES[0])
+            + f'<input class="dh-tags-note" name="note" maxlength="{MAX_NOTE_CHARS}" '
+              f'placeholder="{html_escape(words.get("tags-note", "What to preserve or fix"))}">'
             + '<div class="dh-tags-actions">'
             f'<button type="button" class="dh-tags-save" data-tags-save'
             f' data-saved-label="{html_escape(words.get("tags-saved", "Saved"))}">'
@@ -452,6 +474,7 @@ def main() -> int:
     tag.add_argument("--group", required=True, help="folder as it appears in corpus.json")
     tag.add_argument("--aspects", required=True,
                      help="comma-separated, from " + ", ".join(ASPECTS))
+    tag.add_argument("--role", default=ROLES[0], choices=ROLES)
     tag.add_argument("--stance", default=STANCES[0], choices=STANCES)
     tag.add_argument("--quality", default=QUALITIES[0], choices=QUALITIES)
     tag.add_argument("--note", default="")
@@ -470,7 +493,7 @@ def main() -> int:
             n = tag_group(args.project_root, {
                 "group": args.group,
                 "aspects": [a.strip() for a in args.aspects.split(",") if a.strip()],
-                "stance": args.stance, "quality": args.quality,
+                "role": args.role, "stance": args.stance, "quality": args.quality,
                 "note": args.note, "at": args.at})
             print(f"Tagged {n} item(s) under {args.group}.")
         elif args.command == "adopt":

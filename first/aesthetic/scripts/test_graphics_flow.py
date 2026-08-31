@@ -15,7 +15,9 @@ def _state(**overrides) -> dict:
         "sceneErrors": [], "sceneHash": "abc", "corpusRoot": True,
         "corpusRootPath": "moodboards",
         "corpus": True, "tags": True,
+        "promptHash": "prompt", "slicesPromptHash": "prompt",
         "slicesHash": "abc", "callsHash": "abc", "adapters": {"avge": "PASS"},
+        "refinePending": [],
         "svgHash": "abc", "gateErrors": [],
     }
     state.update(overrides)
@@ -42,6 +44,16 @@ class FlowTests(unittest.TestCase):
         step = next_action(_state(slicesHash="older"))
         self.assertEqual(step["action"], "compile")
         self.assertIn("scene changed", step["reason"])
+
+    def test_slices_stale_against_corpus_context_recompile(self) -> None:
+        step = next_action(_state(slicesPromptHash="older"))
+        self.assertEqual(step["action"], "compile")
+        self.assertIn("corpus context changed", step["reason"])
+
+    def test_refine_attempt_blocks_a_fresh_shot(self) -> None:
+        step = next_action(_state(refinePending=["attempts/close-but-wrong.png"]))
+        self.assertEqual(step["action"], "refine")
+        self.assertIn("close-but-wrong.png", step["reason"])
 
     def test_calls_stale_against_the_scene_hash_re_export(self) -> None:
         self.assertEqual(next_action(_state(callsHash="older"))["action"],
@@ -89,7 +101,7 @@ class ReadStateTests(unittest.TestCase):
             store.mkdir(parents=True)
             for name in ("graphics-manifest.json", "scene-spec.json"):
                 (store / name).write_text(
-                    (Path(__file__).resolve().parents[2] / "spec/design-harness" / name
+                    (Path(__file__).resolve().parents[3] / "spec/design-harness" / name
                      ).read_text(encoding="utf-8"), encoding="utf-8")
             self.assertEqual(next_action(read_state(project))["action"], "add-corpus")
 

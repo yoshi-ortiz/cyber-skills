@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Run a skill the way a user runs it, then check what the user would see.
-
-Every other gate in this repository reads an exit code. The companion bug is
-what that misses: `bootstrap_harness.py open` exited zero, printed a live URL,
-and served "Waiting for the agent to push a screen..." -- a success-shaped
-return in front of an empty page, handed to the designer as the first line of
-the reply because `user-communication.md` says the URL comes first.
-
-So the assertion here is never "it exited zero". It is "the page a designer
-opens carries a screen", fetched over HTTP from the running companion.
+"""Run the Aesthetic Food Product in a throwaway project and check its screen.
 
     python3 cook/cook.py doctor --project-root /tmp/cook-run
     python3 cook/cook.py run    --project-root /tmp/cook-run
@@ -32,15 +23,14 @@ REPO = Path(__file__).resolve().parents[1]
 SKILL = REPO / "first" / "aesthetic"
 COMPANION = ".superpowers/brainstorm"
 HTTP_TIMEOUT = 5
+VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input",
+             "link", "meta", "param", "source", "track", "wbr"}
 
-# What the companion serves when `<session>/content/` holds no screen. Matched
-# on parsed structure rather than on the sentence, so rewording the placeholder
-# does not silently turn this check green.
 PLACEHOLDER_HEADING = "brainstorm companion"
 
 
 class CookError(Exception):
-    """A dogfood round that cannot be trusted, with the reason a human needs."""
+    """A Food Product round that cannot be trusted, with the reason a human needs."""
 
 
 class Screen(HTMLParser):
@@ -50,14 +40,30 @@ class Screen(HTMLParser):
         super().__init__()
         self.headings: list[str] = []
         self.tags: set[str] = set()
+        self.rankable_elements: set[str] = set()
         self._in_heading = False
+        self._depth = 0
+        self._decision_rows: list[tuple[str, int]] = []
 
     def handle_starttag(self, tag: str, attrs: list) -> None:
         self.tags.add(tag)
+        values = dict(attrs)
+        classes = str(values.get("class") or "").split()
+        element = str(values.get("data-element") or "").strip()
+        if "dh-fb" in classes and element:
+            self._decision_rows.append((element, self._depth))
+        if self._decision_rows and "data-rank" in values:
+            self.rankable_elements.add(self._decision_rows[-1][0])
         if tag in ("h1", "h2"):
             self._in_heading = True
+        if tag not in VOID_TAGS:
+            self._depth += 1
 
     def handle_endtag(self, tag: str) -> None:
+        if tag not in VOID_TAGS:
+            self._depth = max(0, self._depth - 1)
+            while self._decision_rows and self._decision_rows[-1][1] >= self._depth:
+                self._decision_rows.pop()
         if tag in ("h1", "h2"):
             self._in_heading = False
 
@@ -67,16 +73,11 @@ class Screen(HTMLParser):
 
 
 def check_not_the_repo(project_root: Path) -> None:
-    """Refuse the repository root as a design project root.
-
-    The skill package and one project's shot tests must not be the same tree.
-    No flag opens this: a round that writes its state next to the source that
-    produced it has already contaminated the context it was meant to test.
-    """
+    """Keep Food Product project state outside the skill source tree."""
     resolved = project_root.resolve()
     if resolved == REPO or REPO in resolved.parents:
         raise CookError(
-            f"{resolved} is inside {REPO}. A dogfood round writes project state -- "
+            f"{resolved} is inside {REPO}. A Food Product round writes project state -- "
             "corpus, ledger, renders, companion sessions -- and writing it here puts "
             "one project's work in the same tree as the skill source that produced "
             "it, which is the contamination cook exists to catch. Pass a "
@@ -94,12 +95,7 @@ def companion_address(project_root: Path) -> tuple[str, str]:
 
 
 def served_document(port: str, token: str) -> str:
-    """Fetch the page a designer actually lands on, not the redirect shim.
-
-    `/?key=` only stashes the key and redirects to `/`; parsing it was how the
-    first version of this check went green against an empty companion. The key
-    is mirrored into a cookie, so send that and read the real document.
-    """
+    """Fetch `/` with the key cookie; `/?key=` is only a redirect shim."""
     request = urllib.request.Request(
         f"http://localhost:{port}/",
         headers={"Cookie": f"brainstorm-key-{port}={token}"})
@@ -112,12 +108,7 @@ def served_document(port: str, token: str) -> str:
 
 
 def screens_on_disk(project_root: Path) -> list[Path]:
-    """Every screen the companion could serve, newest first.
-
-    `publish_screen` serves the newest-mtime html in the newest session's
-    `content/`. An empty `content/` is exactly the state that produces the
-    placeholder, so it is worth naming separately from an HTTP failure.
-    """
+    """Newest screen from the newest session that contains one."""
     sessions = sorted((project_root / COMPANION).glob("*/"),
                       key=lambda p: p.stat().st_mtime, reverse=True)
     for session in sessions:
@@ -146,10 +137,6 @@ def doctor(project_root: Path) -> dict:
     parsed = Screen()
     parsed.feed(served_document(port, token))
 
-    # Default deny. A document this cannot recognise is a failure, never a
-    # pass: the first version of this check treated "no heading found" as
-    # "not the placeholder" and went green against the empty page it existed
-    # to catch. An assertion that cannot see the page has not checked it.
     if PLACEHOLDER_HEADING in parsed.headings:
         verdict, why = False, (
             f"the page at {url} is the empty-companion placeholder. This is the "
@@ -169,23 +156,19 @@ def doctor(project_root: Path) -> dict:
     if not verdict:
         errors.append(why)
 
-    rankable = bool(parsed.tags & {"form", "input", "button"})
+    rankable = bool(parsed.rankable_elements)
     checks.append({"id": "screen-is-rankable", "passed": rankable})
     if on_disk and not rankable:
-        errors.append("the served screen carries no scoring control; nothing to rank.")
+        errors.append(
+            "the served screen carries no decision row with a data-rank control; "
+            "unrelated forms and buttons do not give the designer a proposal to rank.")
 
     return {"url": url, "checks": checks, "errors": errors,
             "passed": not errors, "screens": [str(p) for p in on_disk]}
 
 
 def stop_companion(project_root: Path) -> list[int]:
-    """Kill the servers this round started. Returns the pids that were signalled.
-
-    `open` starts a node server per session and the harness has no verb that
-    stops one. A round that leaves it running is a process leak per run, and
-    `clean` deleting the tree under a live server leaves it serving a directory
-    that no longer exists.
-    """
+    """Signal companion servers started under this project."""
     base = project_root / COMPANION
     stopped = []
     for pid_file in list(base.glob("*/state/server.pid")) + list(base.glob(".server.pid")):
@@ -207,21 +190,28 @@ def harness(project_root: Path, *argv: str) -> subprocess.CompletedProcess:
 
 
 def run(project_root: Path) -> dict:
-    """A full round in a scratch tree, then the same assertion as `doctor`.
-
-    Every verb here is load-bearing. An earlier version ran `open` alone and
-    then asserted a screen, which only `article` and `publish` create -- so it
-    was red on every project forever, and its red said nothing about the skill
-    under test. A dogfood round that cannot go green is not a test of anything.
-    """
+    """Run one complete rankable round, then apply `doctor`."""
     check_not_the_repo(project_root)
     project_root.mkdir(parents=True, exist_ok=True)
     screen = project_root / "round.html"
+    preview = project_root / "cook-proposal.png"
+    source_preview = next(iter(sorted(REPO.glob("moodboards/**/*.png"))), None)
+    if source_preview is None:
+        raise CookError("the repository moodboards hold no PNG for the Food Product proposal")
+    shutil.copy2(source_preview, preview)
     steps = (
         ("init", "--source-root", str(REPO / "moodboards"),
          "--profiles", "art-direction"),
-        ("open", "--status", "cook dogfood round"),
-        ("article", "--out", str(screen)),
+        ("open", "--status", "Cook Food Product round"),
+        ("decide", "--element", "cook.round.rankable", "--verdict", "proposed",
+         "--stars", "0", "--evidence", "agent: Cook Food Product proposal",
+         "--source", "agent", "--preview", preview.name,
+         "--title", "Cook Food Product proposal",
+         "--description", "A real proposal row used to prove ranking works.",
+         "--implemented", "Published with a preview and an unscored rank control."),
+        ("article", "--out", str(screen), "--cohort", "cook.round.rankable",
+         "--round-label", "Cook Food Product proposal",
+         "--asks", "How strong is this proposal?"),
         ("publish", "--screen", str(screen)),
     )
     opened = ""
@@ -231,8 +221,6 @@ def run(project_root: Path) -> dict:
             raise CookError(f"{verb} failed: {(done.stderr or done.stdout).strip()}")
         if verb == "open":
             opened = done.stdout.strip()
-    # `doctor` has already fetched the page over HTTP, so the assertion is done
-    # and nothing downstream needs the server. Re-run `run` to inspect again.
     try:
         return {"opened": opened, **doctor(project_root)}
     finally:

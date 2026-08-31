@@ -7,9 +7,10 @@ from pathlib import Path
 
 from graphics_flow import next_action, read_state
 from text_to_graphics import (build_svg, compile_slices, export_avge_calls,
-                              gate_outputs, record_adapter, validate_scene)
+                              gate_outputs, GraphicsError, prompt_inputs_hash,
+                              record_adapter, run_moodboard, validate_scene)
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 STORE = "spec/design-harness"
 HARNESS_FILES = ("graphics-manifest.json", "scene-spec.json",
                  "corpus.json", "corpus-tags.json")
@@ -125,6 +126,39 @@ class CorpusDrivenPromptTests(unittest.TestCase):
             after = (project / "moodboards/llm-shots/prompts/slices/style.txt"
                      ).read_text(encoding="utf-8")
             self.assertNotEqual(before, after)
+
+    def test_refine_attempt_is_separate_and_never_used_as_a_fresh_shot_reference(self) -> None:
+        with _project() as project:
+            corpus = json.loads((project / STORE / "corpus.json").read_text())
+            tags_path = project / STORE / "corpus-tags.json"
+            tags = json.loads(tags_path.read_text())
+            candidate = next(item for item in corpus["items"]
+                             if item["path"].endswith("clear layout.png"))
+            tags["tags"][candidate["sha256"]].update({
+                "stance": "refine", "role": "attempt",
+                "note": "keep the crossing; enlarge the rooms",
+            })
+            tags_path.write_text(json.dumps(tags), encoding="utf-8")
+            result = compile_slices(project)
+            slices = result["slices"]
+            self.assertNotIn(candidate["path"], slices["style"])
+            self.assertNotIn(candidate["path"], slices["moodboard"])
+            self.assertIn(candidate["path"], slices["refine"])
+            self.assertIn("enlarge the rooms", slices["refine"])
+
+            with self.assertRaisesRegex(GraphicsError, "before spending a fresh"):
+                run_moodboard(project, dry_run=True)
+
+    def test_prompt_input_hash_changes_when_a_tag_changes(self) -> None:
+        with _project() as project:
+            manifest = json.loads((project / STORE / "graphics-manifest.json").read_text())
+            scene = json.loads((project / STORE / "scene-spec.json").read_text())
+            before = prompt_inputs_hash(project, manifest, scene)
+            tags_path = project / STORE / "corpus-tags.json"
+            tags = json.loads(tags_path.read_text())
+            next(iter(tags["tags"].values()))["stance"] = "avoid"
+            tags_path.write_text(json.dumps(tags), encoding="utf-8")
+            self.assertNotEqual(before, prompt_inputs_hash(project, manifest, scene))
 
     def test_inventory_is_its_own_slice_and_never_enters_style_or_geometry(self) -> None:
         with _project() as project:

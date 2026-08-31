@@ -20,16 +20,12 @@ initializing the generic ranking workflow. If `scene-spec.json` or
 python3 <skill>/scripts/text_to_graphics.py --project-root . status
 ```
 
-Do exactly the returned action. This filesystem route outranks a supplied
-reference folder and generic art-direction inference. Do not run `init`,
-`seed`, or `direction`; do not replace a passing graphic with alternate page
-concepts. Reuse the passing artifact from `shots/` first.
+Do exactly the returned action. This route outranks generic art-direction
+inference. Do not replace a passing graphic; reuse it from `shots/` first.
 
-Choose chat language from the user's latest words. When they use Spanish,
-mirror the dialect and register in project-authored publishing copy. Never use
-reference captions, machine locale, a previous agent reply, or
-`project.json.language` to choose chat language; that field translates only
-the companion controls.
+Choose chat language from the user's latest words and mirror their dialect in
+project-authored publishing copy. `project.json.language` only translates
+companion controls.
 
 Keep the established article: hero, graph, TOC, four sections, progress chart. Never replace it with a kanban or second site.
 
@@ -42,8 +38,7 @@ python3 <skill>/scripts/bootstrap_harness.py open --project-root . \
   --status "<emoji + user-language description of the first real design task>"
 ```
 
-`open` restores the last ranking page. Follow `user-communication.md` for the
-URL-first reply with no preamble:
+Follow `user-communication.md` for the URL-first reply with no preamble:
 
 ```text
 🔗 <full URL>
@@ -51,8 +46,7 @@ URL-first reply with no preamble:
 👀 <user-language review action in the publishing-copy register>
 ```
 
-Update status when visible activity changes. `project.json.language` translates
-the controls; it does not translate your reply.
+Update status when visible activity changes.
 
 With a reference folder, read images and text together:
 
@@ -61,22 +55,13 @@ python3 <skill>/scripts/editorial_workflow.py observe \
   --project-root . --source-root <absolute-reference-folder>
 ```
 
-Open items; metadata is not visual evidence.
-
-No folder is not a stop. Seed and direct from premises:
+Open items; metadata is not visual evidence. Without a folder, seed from a
+named profile and ask for references without blocking:
 
 ```bash
 python3 <skill>/scripts/editorial_workflow.py seed --project-root . \
   --profile <domain-profiles.md name> --subject "<what this is>"
 ```
-
-A premise cites [golden-rules.md](references/golden-rules.md) or a
-[profile](references/domain-profiles.md), names counterevidence, and remains
-inference. Ask for references without blocking.
-
-`init` is only for a project with no existing `spec/design-harness` contents;
-`seed` is only for a project with no saved corpus. Both commands refuse to
-overwrite existing evidence.
 
 ## Read the user first
 
@@ -92,30 +77,34 @@ python3 <skill>/scripts/direction_context.py --project-root . \
   --out /tmp/aesthetic-context.json
 ```
 
-Read that context before doctrine. It is the project evidence bundle: current
-constraints, reference tags, and element feedback. With ranked elements, read
+Read that context before doctrine. With ranked elements, read
 [sentiment-analysis.md](references/sentiment-analysis.md). Never collapse stars,
 thumbs, lifecycle, or missing feedback into one score.
 
+Classify corpus before inference. `reference+pursue` may source a new direction;
+`reference+avoid` is counterevidence; `attempt+refine` is a near-hit to edit or
+reuse before spending another shot; constraints carry scene truth; derivatives
+are audit evidence, never an original source. If `status` returns `refine`, do
+that first. Read [text-to-graphics.md](references/text-to-graphics.md) for the
+role/stance matrix and staleness rules.
+
 ## Infer and rank art direction
 
-Read [golden-rules.md](references/golden-rules.md), then only the indexed body
-needed by the claim. Read [loop.md](references/loop.md) for a thin/failed round,
-[interpret-art.md](references/interpret-art.md) for ambiguous evidence, and
-[anti-slop.md](references/anti-slop.md) at critique. Root `GOAL.md`, `SPEC.md`,
-`ROADMAP.md`, and `BUGS.md` are never design evidence.
+Read [golden-rules.md](references/golden-rules.md), [loop.md](references/loop.md)
+for failed rounds, [interpret-art.md](references/interpret-art.md) for ambiguous
+evidence, and [anti-slop.md](references/anti-slop.md) at critique.
 
-Declare hierarchy, composition, grid, type roles, color relationships, image register, motion purpose, and one subject-specific signature. State the aesthetic question tested. Replace "clean," "premium," or "editorial" with observable relationships and counterevidence.
+Declare hierarchy, grid, type roles, color relationships, image register,
+motion purpose, one subject-specific signature, and the question tested.
 
-Select one evidence-backed hypothesis and a 3–6 element cohort. Never average direction, execution, lifecycle, or missing feedback. Reject a thesis that fits an unrelated product unchanged.
+Select one evidence-backed hypothesis and a 3–6 element cohort. Reject a thesis
+that fits an unrelated product unchanged.
 
 In comparison rows, use `null` for `corpusFit` when there is no real corpus and
 for `preferenceFit` when the user has not ranked anything. Missing evidence is
 not a neutral score and never becomes a model-authored 3, 4, or 5.
 
-Copy every `briefConstraints` item from `/tmp/aesthetic-context.json` into the
-direction spec and add its concrete `impact`. The gate rejects missing or stale
-answers.
+Copy every `briefConstraints` item into the direction spec with its impact.
 
 ```bash
 python3 <skill>/scripts/editorial_workflow.py direction --project-root . \
@@ -126,21 +115,27 @@ Fix a rejected spec; never bypass the gate.
 
 ## Scope the editorial burndown
 
-Read [editorial-workflow.md](references/editorial-workflow.md). Save epics in `editorial.json`, append changes to `editorial-events.jsonl`. Every element has one primary epic. Retrying an event id is a no-op.
+Read [editorial-workflow.md](references/editorial-workflow.md). Then append scope
+changes; every element has one primary epic and retrying an event id is a no-op.
 
 ## Build one testable cohort
 
-Draw real HTML/CSS, render it, inspect the PNG at desktop and narrow widths. Judge hierarchy, grouping, measure, and color in the render, never from isolated values — [fundamentals](references/graphic-design-fundamentals.md). Preserve ranked elements outside the cohort. New proposals use new ids, unscored until the user ranks them.
+Draw real HTML/CSS and inspect the PNG at desktop and narrow widths. Judge the
+render using [fundamentals](references/graphic-design-fundamentals.md). Preserve
+ranked elements outside the cohort; new proposals use new ids and start unscored.
 
 ```bash
 python3 <skill>/scripts/golden_rules.py --design spec/design-harness/candidate.json --min-coverage 0.8
 ```
 
-Never invent SVG paths. Follow [asset-sourcing.md](references/asset-sourcing.md). Reuse a project asset, fetch a pinned licensed one, [generate deterministically](references/text-to-graphics.md), or omit.
+Never invent SVG paths. Follow [asset-sourcing.md](references/asset-sourcing.md).
 
-Before publishing, require 4.5:1 text contrast and 3:1 control contrast.
+Generated graphics are proposals, not silent assets: record the scene element
+with its preview as an unscored decision and include it in the article cohort so
+the user can rank the visual decision.
 
-Companion chrome and theme controls follow [companion-contract.md](references/companion-contract.md).
+Require 4.5:1 text and 3:1 control contrast. Companion chrome follows
+[companion-contract.md](references/companion-contract.md).
 
 ## Publish the established article
 
@@ -157,28 +152,26 @@ python3 <skill>/scripts/bootstrap_harness.py status --project-root . --idle \
   --text "<user-language request to review the new designs>"
 ```
 
-Keep the graph, sticky TOC, slideshow, and Discarded-last order. Delivery accepts
-only subject-specific rankable proposals with a legible signature. Lead with
-the URL, key, review request, and every absolute `image_path` emitted by the
-delivery check.
+Delivery accepts only subject-specific rankable proposals. Lead with the
+URL, key, user-language request, and every absolute `image_path` emitted.
 
 ## Continue and critique
 
-On continuation, use latest state for the next action, append-only history for audit. Order: like + low stars, dislike + high stars, unresolved critical work, unscored designs, then new exploration. Change one coherent 3–6 element cohort.
+On continuation order: like + low stars, dislike + high stars, unresolved work,
+unscored designs, then exploration. Change one 3–6 element cohort.
 
-On critique, inspect corpus, direction spec, preference brief, screenshots, and a11y report. Name the strongest mismatch first. Do not change ranks, sentiment, lifecycle, or scope while reporting.
+On critique, name the strongest mismatch first. Do not mutate evidence.
 
 ## Done gate
 
 A run is complete only when:
 
-1. the cohort declares its hierarchy, grid, type roles, color relationships, and one subject-specific signature, and the render carries them;
-2. the design would still read as this subject with the logo removed, and does not fit an unrelated product unchanged;
-3. every inference claim cites visible corpus or feedback evidence and names counterevidence;
+1. the render carries declared hierarchy, grid, type, color, and signature;
+2. it remains subject-specific without the logo;
+3. inference cites visible evidence and counterevidence;
 4. rank, sentiment, lifecycle, and missingness remain independent;
-5. no text or interactive state fails deterministic contrast checks;
-6. every nontrivial graphic has source/license/version provenance or a reproducible procedure;
-7. the original article structure, scoring controls, burndown, slideshow, and responsive layout work;
-8. the user receives the current URL, key, user-language request, and emitted review images.
+5. contrast passes and graphics have provenance;
+6. article, scoring, burndown, slideshow, and responsive layout work;
+7. the user receives URL, key, review request, and review images.
 
 Passing checks while looking templated is failure.
