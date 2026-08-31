@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
+import signal
 import subprocess
 import sys
 import urllib.error
@@ -176,6 +178,26 @@ def doctor(project_root: Path) -> dict:
             "passed": not errors, "screens": [str(p) for p in on_disk]}
 
 
+def stop_companion(project_root: Path) -> list[int]:
+    """Kill the servers this round started. Returns the pids that were signalled.
+
+    `open` starts a node server per session and the harness has no verb that
+    stops one. A round that leaves it running is a process leak per run, and
+    `clean` deleting the tree under a live server leaves it serving a directory
+    that no longer exists.
+    """
+    base = project_root / COMPANION
+    stopped = []
+    for pid_file in list(base.glob("*/state/server.pid")) + list(base.glob(".server.pid")):
+        try:
+            pid = int(pid_file.read_text().strip())
+            os.kill(pid, signal.SIGTERM)
+            stopped.append(pid)
+        except (ValueError, OSError):
+            continue  # already gone, or never ours to signal
+    return stopped
+
+
 def harness(project_root: Path, *argv: str) -> subprocess.CompletedProcess:
     """One call into the skill under test, run the way a user runs it."""
     return subprocess.run(
@@ -209,14 +231,20 @@ def run(project_root: Path) -> dict:
             raise CookError(f"{verb} failed: {(done.stderr or done.stdout).strip()}")
         if verb == "open":
             opened = done.stdout.strip()
-    return {"opened": opened, **doctor(project_root)}
+    # `doctor` has already fetched the page over HTTP, so the assertion is done
+    # and nothing downstream needs the server. Re-run `run` to inspect again.
+    try:
+        return {"opened": opened, **doctor(project_root)}
+    finally:
+        stop_companion(project_root)
 
 
 def clean(project_root: Path) -> dict:
     check_not_the_repo(project_root)
+    stopped = stop_companion(project_root)
     if project_root.exists():
         shutil.rmtree(project_root)
-    return {"removed": str(project_root)}
+    return {"removed": str(project_root), "stopped": stopped}
 
 
 def main(argv: list[str] | None = None) -> int:

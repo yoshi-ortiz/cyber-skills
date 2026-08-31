@@ -51,6 +51,10 @@ def gates(tree: Path) -> list[tuple[str, list[str]]]:
         ("publish alpha", [py, "tools/publish.py", "--out", str(tree / "alpha"),
                            "--channel", "alpha", "--check"]),
         ("published tree is fog-free", [py, "tools/check_publication.py", str(tree / "main")]),
+        # The only gate that asserts on what a designer sees rather than on an
+        # exit code. `--project-root` is the runner's tempdir because cook
+        # refuses one inside the repository, and it is outside by construction.
+        ("cook dogfood round", [py, "cook/cook.py", "run", "--project-root", str(tree / "cook")]),
         *((f"{path.parent.name}/{path.name} parses", [node, "--check", str(path.relative_to(ROOT))])
           for path in sorted(ROOT.glob("first/aesthetic/*/*.js")) if node),
     ]
