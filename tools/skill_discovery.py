@@ -21,6 +21,9 @@ WORKFLOW = frozenset({"kit", "first", "build", "land", "check", "fix"})
 SKIP = frozenset({
     "tools", "assets", "docs", "design", "shots", "moodboards", "spec",
     ".git", ".claude", ".superpowers", ".audit",
+    # `cook/` carries a SKILL.md so an agent can invoke it, but it is fog and
+    # ships on no channel, so the README must not be asked to index it.
+    "cook",
 })
 
 # README index: one group per family that ships skills today.
