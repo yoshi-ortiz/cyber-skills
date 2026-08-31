@@ -170,6 +170,29 @@ command surface and never become a third runtime context.
 None of them reach a published tree — see `tools/fog.py`, which is the list, and
 `tools/CONTEXT.md`, which explains why generating `main` beats curating it.
 
+## Repo context doctrine: eat your own food
+
+This package is a skill collection. Repo-Dev work on it must run through the
+same skills the collection ships, not parallel procedures invented for
+contributors alone.
+
+The test is operational, not rhetorical. After you commit or update a skill in
+this repository, **`kit sync` must re-arm every app** with this repo, every
+skill it declares, and every dependency the harness collection lists. If the
+change only lands when someone hand-copies files or runs a one-off script, the
+package is not eating its own food.
+
+| Work | Run through |
+| --- | --- |
+| Re-arm skills after a commit here | `kit sync` |
+| Derive peer sets for a skill flow | `build-context-token-vectors` |
+| Burndown, bugs, shipped changes | `genesis` files (`ROADMAP.md`, `BUGS.md`, `CHANGELOG.md`) |
+| Gates before merge | `python3 tools/check.py` |
+
+A Repo-Dev checkout is not exempt. Bare `kit` in this directory is Sync, same
+as anywhere else. The harness reads `collection.toml`; this repo must stay
+listed there so a sync after your edit is the proof the edit is consumable.
+
 ## Channels
 
 `main` is the stable channel: what an agent gets by default. `alpha` carries the

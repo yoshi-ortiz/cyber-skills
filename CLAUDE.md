@@ -8,7 +8,8 @@ you are editing. This file only routes.
 Both modes below are **Repo-Dev Context**. **Design-Inference Context** is an
 agent running `aesthetic/SKILL.md` to produce design decisions; it uses
 `aesthetic/UBIQUITOUS_LANGUAGE.md`, and reading Repo-Dev records inside it is
-the **context derail** failure. Doctrine: `CONTEXT.md` section "Two contexts".
+the **context derail** failure. Doctrine: `CONTEXT.md` sections "Two contexts"
+and "Repo context doctrine: eat your own food".
 
 | Mode | State it reads and writes | Glossary |
 | --- | --- | --- |
