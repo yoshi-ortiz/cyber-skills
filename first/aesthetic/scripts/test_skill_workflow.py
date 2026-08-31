@@ -15,7 +15,7 @@ class SkillWorkflowTest(unittest.TestCase):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         positions = [skill.index(term) for term in (
             "editorial_workflow.py observe",
-            "editorial_workflow.py preferences",
+            "direction_context.py",
             "bootstrap_harness.py article",
             "bootstrap_harness.py publish",
         )]
@@ -47,6 +47,16 @@ class SkillWorkflowTest(unittest.TestCase):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("Never invent SVG paths", skill)
         self.assertIn("asset-sourcing.md", skill)
+
+    def test_small_models_get_a_mechanical_graphics_and_language_route(self) -> None:
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        communication = (ROOT / "references/user-communication.md").read_text(
+            encoding="utf-8")
+        self.assertLess(skill.index("text_to_graphics.py"),
+                        skill.index("editorial_workflow.py observe"))
+        self.assertIn("project-authored publishing copy", skill)
+        self.assertIn("project.json.language", communication)
+        self.assertIn("never\nchooses the language of chat", communication)
 
 
 if __name__ == "__main__":

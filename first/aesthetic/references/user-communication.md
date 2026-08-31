@@ -15,12 +15,19 @@ what is happening now, and what they can do while they wait.
 
 ## Language
 
-Every visible sentence stays in the project language -- not only the three moments
+Use the language in the user's latest words. When that language is Spanish,
+read project-authored publishing copy and mirror its dialect, vocabulary, and
+register rather than defaulting to generic Spanish. Exclude reference captions,
+prompts, generated artifacts, machine locale, and prior agent replies from that
+decision. `project.json.language` translates companion controls only; it never
+chooses the language of chat.
+Treat the user's current language plus the publishing-copy register as the
+project language for chat.
+
+Every visible sentence then stays in that language -- not only the three moments
 named below. That includes running commentary on what you are doing right now
-("exploring the corpus", "rendering the comp"), not just the labelled handoffs.
-A session that narrates its own work in one language and talks to the designer in
-another reads as two agents, not one. Pick the project language once and hold it
-for the whole conversation; do not code-switch mid-reply.
+("exploring the references", "rendering the comp"), not just the labelled
+handoffs. Do not code-switch mid-reply.
 
 ## First reply
 

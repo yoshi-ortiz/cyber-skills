@@ -2952,6 +2952,12 @@ def init_harness(project_root: Path, source_root: Path, profiles: list[str],
     output = project_root / "spec" / "design-harness"
     if is_within(output.resolve(), source_root):
         raise HarnessError("generated harness cannot live inside the read-only source root")
+    if output.is_dir() and any(output.iterdir()):
+        route = ("run text_to_graphics.py status" if
+                 any((output / name).is_file() for name in
+                     ("scene-spec.json", "graphics-manifest.json")) else
+                 "continue the existing harness")
+        raise HarnessError(f"design harness already exists; {route} instead of init")
 
     before = source_entries(source_root)
     output.mkdir(parents=True, exist_ok=True)
@@ -2967,8 +2973,8 @@ def init_harness(project_root: Path, source_root: Path, profiles: list[str],
         "sourceRoot": str(source_root),
         "sourcePolicy": "read-only",
         "profiles": profiles,
-        # Stored once, so every later verb draws the strip in the user's own
-        # language without being told again.
+        # UI locale only. Chat language comes from the user's words and the
+        # project's published copy, never from this field.
         "language": language,
         "state": "draft",
         "budgets": {"toolCalls": 4, "urls": 2, "newVisuals": 4, "extractedChars": 24000, "outputTokens": 1200},
@@ -3523,7 +3529,7 @@ def parser() -> argparse.ArgumentParser:
     init.add_argument("--profiles", required=True)
     init.add_argument("--language", default=DEFAULT_LANGUAGE,
                       choices=sorted(STRINGS),
-                      help="language for the scoring strip (stored in project.json)")
+                      help="scoring-strip UI locale only (never chat language)")
     validate = subcommands.add_parser("validate")
     validate.add_argument("--project-root", required=True, type=Path)
     decide = subcommands.add_parser("decide", help="record a binding design decision")

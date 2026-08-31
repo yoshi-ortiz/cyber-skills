@@ -603,13 +603,13 @@ class TheSkillKeepsTheUserInformed(unittest.TestCase):
         self.assertIn("desktop and narrow widths", skill)
         self.assertIn("review_delivery.py", skill)
         self.assertIn("absolute `image_path`", skill)
-        self.assertIn("URL, key, and project-language review request", skill)
+        self.assertIn("URL, key, user-language request", skill)
 
     def test_first_reply_gives_the_page_and_key_before_any_status(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
         section = skill.split("## Start", 1)[1].split("## Read the user", 1)[0]
-        self.assertLess(section.index("🔗 <full URL>"), section.index("👀 <project-language"))
-        self.assertLess(section.index("🔑 <value after ?key=>"), section.index("👀 <project-language"))
+        self.assertLess(section.index("🔗 <full URL>"), section.index("👀 <user-language"))
+        self.assertLess(section.index("🔑 <value after ?key=>"), section.index("👀 <user-language"))
         self.assertIn("no preamble", section)
 
     def test_live_status_spans_the_real_run(self):
@@ -617,7 +617,7 @@ class TheSkillKeepsTheUserInformed(unittest.TestCase):
         start = skill.split("## Start", 1)[1].split("## Read the user", 1)[0]
         publish = skill.split("## Publish the established article", 1)[1].split(
             "## Continue and critique", 1)[0]
-        self.assertIn('--status "<emoji + project-language', start)
+        self.assertIn('--status "<emoji + user-language', start)
         self.assertIn("activity changes", skill)
         self.assertIn("status --project-root . --idle", publish)
 

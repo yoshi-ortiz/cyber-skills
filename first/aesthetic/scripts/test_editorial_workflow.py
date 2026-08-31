@@ -128,6 +128,19 @@ class ArtDirectionInferenceContractTest(unittest.TestCase):
             validate_assets([{"id": "ornament", "provenance": "generated-from-memory",
                               "path": "ornament.svg"}], {"image-a"})
 
+    def test_missing_preference_evidence_cannot_be_self_scored(self) -> None:
+        preferences = {"coverage": {"userRanked": 0}, "elements": []}
+        spec = self.spec()
+        spec["preferencePatterns"] = []
+        spec["cohort"] = ["new.hero", "new.type", "new.nav"]
+        with self.assertRaisesRegex(ew.WorkflowError, "preferenceFit must be null"):
+            ew.validate_art_direction(spec, self.corpus(), preferences)
+        for row in spec["comparison"]:
+            row["preferenceFit"] = None
+        self.assertIsNone(
+            ew.validate_art_direction(spec, self.corpus(), preferences)
+            ["comparison"][0]["preferenceFit"])
+
 
 class EditorialBurndownTest(unittest.TestCase):
     def spec(self) -> dict:
@@ -290,13 +303,18 @@ class EmptyCorpusStillDirectsTheWorkTest(unittest.TestCase):
         self.assertEqual(value["profile"], "art-direction")
 
     def test_direction_is_reachable_with_premises_instead_of_observations(self) -> None:
-        result = ew.validate_art_direction(self.spec(), self.seeded_corpus(), self.preferences())
+        for row in (spec := self.spec())["comparison"]:
+            row["corpusFit"] = row["preferenceFit"] = None
+        result = ew.validate_art_direction(spec, self.seeded_corpus(), self.preferences())
         self.assertEqual(result["selected"], "tape-index")
         self.assertEqual(result["grounding"], "inference")
         self.assertEqual(len(result["premises"]), 2)
 
     def test_inference_is_never_recorded_as_corpus_evidence(self) -> None:
-        result = ew.validate_art_direction(self.spec(), self.seeded_corpus(), self.preferences())
+        spec = self.spec()
+        for row in spec["comparison"]:
+            row["corpusFit"] = row["preferenceFit"] = None
+        result = ew.validate_art_direction(spec, self.seeded_corpus(), self.preferences())
         self.assertEqual(result["observations"], [])
 
     def test_a_premise_must_name_a_known_basis(self) -> None:
@@ -335,7 +353,10 @@ class EmptyCorpusStillDirectsTheWorkTest(unittest.TestCase):
             project = Path(tmp)
             ew.seed_corpus(project, profile="art-direction", subject="a field-recording label")
             self.assertFalse((project / ew.STORE / ew.DECISIONS_FILE).exists())
-            result = ew.save_art_direction(project, self.spec())
+            spec = self.spec()
+            for row in spec["comparison"]:
+                row["corpusFit"] = row["preferenceFit"] = None
+            result = ew.save_art_direction(project, spec)
             self.assertEqual(result["grounding"], "inference")
 
     def test_current_brief_constraints_bound_the_direction(self) -> None:
@@ -354,6 +375,8 @@ class EmptyCorpusStillDirectsTheWorkTest(unittest.TestCase):
                 "answer": "layout goal.png is primary; rooms must not be copied",
                 "impact": "The composition follows the small crossing rails and omits rooms.",
             }]
+            for row in spec["comparison"]:
+                row["corpusFit"] = row["preferenceFit"] = None
             result = ew.save_art_direction(project, spec)
             self.assertEqual(result["briefConstraints"], spec["briefConstraints"])
 
@@ -379,6 +402,30 @@ class EmptyCorpusStillDirectsTheWorkTest(unittest.TestCase):
             self.assertEqual(value["grounding"], "inference")
             written = json.loads((project / ew.STORE / ew.CORPUS_FILE).read_text())
             self.assertEqual(written["items"], [])
+
+    def test_seed_refuses_to_erase_an_existing_corpus(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            references = project / "references"
+            references.mkdir()
+            (references / "copy.txt").write_text("Published copy", encoding="utf-8")
+            ew.observe_corpus(project, references)
+            with self.assertRaisesRegex(ew.WorkflowError, "never seed over it"):
+                ew.seed_corpus(project, profile="frontend-layout", subject="a docs site")
+
+
+class SpecializedGraphicsRoutingTest(unittest.TestCase):
+    def test_generic_init_and_direction_refuse_a_graphics_project(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            (project / "references").mkdir()
+            store = project / ew.STORE
+            store.mkdir(parents=True)
+            (store / "scene-spec.json").write_text("{}", encoding="utf-8")
+            with self.assertRaisesRegex(bh.HarnessError, "text_to_graphics.py status"):
+                bh.init_harness(project, project / "references", ["art-direction"])
+            with self.assertRaisesRegex(ew.WorkflowError, "text_to_graphics.py status"):
+                ew.save_art_direction(project, {})
 
 
 if __name__ == "__main__":
