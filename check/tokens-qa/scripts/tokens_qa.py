@@ -26,10 +26,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-REQUIRED = ("shot_id", "scope", "inputs", "compute", "output",
-            "provenance", "user_feedback")
-PROVENANCE = ("corpus", "procedural", "fetched", "inference")
-STATUS = ("pending", "accepted", "corrected", "rejected")
+from shot_contract import Invalid, validate
+
 # QA.md names exactly four. An unlisted finding never blocks compliance.
 VETOES = ("scope_breach", "missing_observation_log", "context_derail",
           "ungrounded_corpus_claim")
@@ -47,32 +45,6 @@ def sha256(text: str) -> str:
 
 def now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-class Invalid(Exception):
-    """The record cannot be read. Fail closed and name the JSON path."""
-
-
-def validate(record: object, where: str = "$") -> dict:
-    if not isinstance(record, dict):
-        raise Invalid(f"{where}: not a JSON object")
-    for key in REQUIRED:
-        if key not in record:
-            raise Invalid(f"{where}.{key}: required key is absent")
-    if record.get("provenance") not in PROVENANCE:
-        raise Invalid(f"{where}.provenance: not one of {'/'.join(PROVENANCE)}")
-    compute, output = record["compute"], record["output"]
-    for key in ("model", "harness", "started_at", "duration_ms", "tokens"):
-        if key not in compute:
-            raise Invalid(f"{where}.compute.{key}: required key is absent")
-    if ("path" in output) == ("inline" in output):
-        raise Invalid(f"{where}.output: exactly one of `path` and `inline`")
-    if record["user_feedback"].get("status") not in STATUS:
-        raise Invalid(f"{where}.user_feedback.status: not one of {'/'.join(STATUS)}")
-    for finding in record.get("findings", []):
-        if finding.get("id") not in VETOES and finding.get("id") != "context_contamination":
-            raise Invalid(f"{where}.findings: unknown id {finding.get('id')!r}")
-    return record
 
 
 def verdict(record: dict) -> str:

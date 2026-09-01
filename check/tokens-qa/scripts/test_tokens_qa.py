@@ -6,6 +6,7 @@ correction, a token total that compares across profiles, and a table that drops
 a metric. Everything else fails loudly on its own.
 """
 import json
+import copy
 import sys
 import tempfile
 import unittest
@@ -13,6 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import tokens_qa as qa
+
+
+FIXTURES = Path(__file__).with_name("shot_contract_fixtures.json")
 
 
 def shot(**over):
@@ -50,6 +54,28 @@ class Validation(unittest.TestCase):
     def test_an_unlisted_finding_id_is_refused(self):
         with self.assertRaises(qa.Invalid):
             qa.validate(shot(findings=[{"id": "vibes_off", "status": "present"}]))
+
+    def test_multimodal_contract_fixtures_validate_the_same_boundary(self):
+        fixtures = json.loads(FIXTURES.read_text(encoding="utf-8"))
+        for fixture in fixtures["valid"]:
+            with self.subTest(fixture["name"]):
+                self.assertTrue(qa.validate(fixture["record"]))
+
+        base = fixtures["valid"][0]["record"]
+        for fixture in fixtures["invalid"]:
+            record = copy.deepcopy(base)
+            path = fixture.get("replace") or fixture["delete"]
+            parent = record
+            for key in path[:-1]:
+                parent = parent[key]
+            if "replace" in fixture:
+                parent[path[-1]] = fixture["value"]
+            else:
+                del parent[path[-1]]
+            with self.subTest(fixture["name"]):
+                with self.assertRaises(qa.Invalid) as raised:
+                    qa.validate(record)
+                self.assertIn(fixture["path"], str(raised.exception))
 
 
 class Verdict(unittest.TestCase):

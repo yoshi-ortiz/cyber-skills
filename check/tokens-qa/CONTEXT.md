@@ -1,6 +1,6 @@
 ---
 purpose: black-box QA over one Shot -- what it cost, what it broke, what the user said
-admits: the observer script, its test, and the skill doctrine that drives them
+admits: the observer script, its tests and shared contract fixtures, and the skill doctrine that drives them
 refuses: hidden reasoning, repository scans standing in for evidence, another shot schema
 max_file_bytes: 12000
 ---
