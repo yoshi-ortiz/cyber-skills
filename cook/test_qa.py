@@ -2,6 +2,7 @@
 """Tests for the read-back: what the user said, versus what the round changed."""
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 import unittest.mock
@@ -9,55 +10,66 @@ from pathlib import Path
 
 import qa
 
+MARKER = "Base directory for this skill: /skills/aesthetic"
+
+
+def said(text: str, stamp: str = "t1") -> dict:
+    return {"type": "user", "timestamp": stamp,
+            "message": {"content": [{"type": "text", "text": text}]}}
+
+
+def written(folder, *rows: dict, name: str = "session.jsonl") -> Path:
+    path = Path(folder) / name
+    path.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+    return path
+
+
+def run_of(folder, *rows: dict) -> Path:
+    """A transcript always opens with the skill payload, as a real one does."""
+    return written(folder, said(MARKER, "t0"), *rows)
+
 
 class TheRoundIsReadBackAgainstWhatTheUserSaid(unittest.TestCase):
-    """`doctor` cannot see a designer calling the round broken; that lives in
-    the transcript and the ledger."""
-
-    def _transcript(self, folder: Path, *entries: dict) -> Path:
-        """A transcript always opens with the skill payload, as a real one does."""
-        rows = (self._said("Base directory for this skill: /skills/aesthetic"),) + entries
-        path = folder / "session.jsonl"
-        path.write_text("\n".join(json.dumps(e) for e in rows), encoding="utf-8")
-        return path
-
-    def _said(self, text: str) -> dict:
-        return {"type": "user", "timestamp": "2026-01-01T00:00:00Z",
-                "message": {"content": [{"type": "text", "text": text}]}}
+    """`doctor` cannot see a designer calling the round broken."""
 
     def test_skill_payload_replayed_as_a_user_turn_is_not_the_user(self):
         with tempfile.TemporaryDirectory() as tmp:
-            path = self._transcript(
-                Path(tmp),
-                self._said("Base directory for this skill: /x\n\n# Aesthetic"),
-                self._said("this is broken"))
+            path = run_of(tmp, said("Base directory for this skill: /x\n\n# A"),
+                          said("this is broken"))
             self.assertEqual(qa.user_turns(qa.entries(path)), ["this is broken"])
+
+    def test_a_sentence_typed_into_a_slash_command_is_still_the_user_talking(self):
+        """The user's own words arrive inside <command-args>; the turn opens
+        with <command-message>, which used to discard the whole thing."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = run_of(tmp, said(
+                "<command-message>cook</command-message>\n"
+                "<command-name>/cook</command-name>\n"
+                "<command-args>you should fix the thumbnail</command-args>"))
+            self.assertEqual(qa.user_turns(qa.entries(path)),
+                             ["you should fix the thumbnail"])
 
     def test_an_answer_given_through_a_question_tool_still_counts(self):
         with tempfile.TemporaryDirectory() as tmp:
-            path = self._transcript(Path(tmp), {
-                "type": "user",
-                "message": {"content": [{
-                    "type": "tool_result",
-                    "content": 'The user answered: "Which one?"="all of it is wrong"'}]}})
+            path = run_of(tmp, {"type": "user", "message": {"content": [{
+                "type": "tool_result",
+                "content": 'The user answered: "Which one?"="all of it is wrong"'}]}})
             self.assertEqual(qa.user_turns(qa.entries(path)), ["all of it is wrong"])
 
     def test_a_repeated_answer_is_not_two_complaints(self):
         with tempfile.TemporaryDirectory() as tmp:
-            path = self._transcript(Path(tmp), self._said("broken"), self._said("broken"))
+            path = run_of(tmp, said("broken"), said("broken"))
             self.assertEqual(qa.user_turns(qa.entries(path)), ["broken"])
 
     def test_a_project_with_no_ledger_is_still_checked(self):
         """Universal half: any project, no design ledger, nothing changed."""
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            path = self._transcript(root, self._said("it is all broken"))
+            path = run_of(tmp, said("it is all broken"))
             with unittest.mock.patch.object(qa, "session_transcripts", return_value=[path]), \
                  unittest.mock.patch.object(qa, "tracked_changes", return_value=[]):
-                result = qa.feedback(root)
+                result = qa.feedback(Path(tmp))
             self.assertFalse(result["passed"])
             self.assertIn("edited nothing", result["errors"][0])
-
 
     def test_complaints_with_nothing_rejected_are_a_missed_shot(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -66,13 +78,12 @@ class TheRoundIsReadBackAgainstWhatTheUserSaid(unittest.TestCase):
             (root / "spec" / "design-harness" / "decisions.json").write_text(
                 json.dumps({"elements": [{"element": "hero", "state": "proposed"}]}),
                 encoding="utf-8")
-            path = self._transcript(root, self._said("it is all broken"))
+            path = run_of(root, said("it is all broken"))
             with unittest.mock.patch.object(qa, "session_transcripts", return_value=[path]), \
                  unittest.mock.patch.object(qa, "tracked_changes", return_value=[]):
                 result = qa.feedback(root)
             self.assertFalse(result["passed"])
             self.assertIn("edited nothing", result["errors"][0])
-
 
     def test_no_transcript_is_refused_rather_than_passed(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -81,43 +92,83 @@ class TheRoundIsReadBackAgainstWhatTheUserSaid(unittest.TestCase):
                     qa.feedback(Path(tmp))
 
 
-class TheReadIsScopedToTheSkillRun(unittest.TestCase):
-    """Complaints from before a skill was invoked are about something else, and
-    a transcript that never ran one is not evidence about a skill."""
-
-    def _rows(self, *texts: tuple[str, str]) -> list[dict]:
-        return [{"type": "user", "timestamp": stamp,
-                 "message": {"content": [{"type": "text", "text": text}]}}
-                for stamp, text in texts]
+class TheReadIsScopedToTheLatestSkillRun(unittest.TestCase):
+    """Complaints from before the latest invocation are about another round."""
 
     def test_the_skill_directory_names_the_skill(self):
-        rows = self._rows(("t1", "Base directory for this skill: /s/aesthetic\\n\\n# X"))
-        self.assertEqual(qa.skill_run(rows), ("aesthetic", "t1"))
+        rows = [said("Base directory for this skill: /s/aesthetic\\n\\n# X")]
+        self.assertEqual(qa.latest_run(rows), ("aesthetic", "t1", 0))
 
     def test_a_transcript_with_no_skill_is_not_evidence(self):
-        self.assertEqual(qa.skill_run(self._rows(("t1", "hi")))[0], "")
+        self.assertEqual(qa.latest_run([said("hi")])[0], "")
 
     def test_complaints_before_the_skill_ran_are_out_of_scope(self):
-        rows = self._rows(("t1", "the old thing is broken"),
-                          ("t2", "Base directory for this skill: /s/aesthetic"),
-                          ("t3", "looks fine"))
+        rows = [said("the old thing is broken", "t1"),
+                said("Base directory for this skill: /s/aesthetic", "t2"),
+                said("looks fine", "t3")]
         self.assertEqual(qa.user_turns(rows, after="t2"), ["looks fine"])
 
     def test_a_session_that_ran_no_skill_is_skipped_for_an_older_one_that_did(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            idle = root / "idle.jsonl"
-            idle.write_text(json.dumps(self._rows(("t1", "just chatting"))[0]),
-                            encoding="utf-8")
-            real = root / "real.jsonl"
-            real.write_text(json.dumps(
-                self._rows(("t1", "Base directory for this skill: /s/genesis"))[0]),
-                encoding="utf-8")
+            idle = written(tmp, said("just chatting"), name="idle.jsonl")
+            real = written(tmp, said("Base directory for this skill: /s/genesis"),
+                           name="real.jsonl")
             with unittest.mock.patch.object(qa, "session_transcripts",
                                             return_value=[idle, real]):
-                path, rows = qa.resolve_transcript(root, None)
+                path = qa.resolve_transcript(Path(tmp), None)
             self.assertEqual(path, real)
-            self.assertEqual(qa.skill_run(rows)[0], "genesis")
+            self.assertEqual(qa.latest_run(qa.entries(path))[0], "genesis")
+
+    def test_only_the_latest_runs_turns_are_evidence(self):
+        """The FIRST marker reads a dead round's verdict onto the live one."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = written(tmp, said(MARKER, "t1"), said("the old run is broken", "t2"),
+                           said(MARKER, "t3"), said("looks good", "t4"))
+            bundle = qa.normalized_evidence(path)
+            self.assertEqual(bundle["turns"], ["looks good"])
+            self.assertEqual(set(bundle), {"transcript", "skill", "invoked_at",
+                                           "turns", "artifacts"})
+
+    def test_a_transcript_is_never_read_whole(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = written(tmp, *[said("filler") for _ in range(5000)],
+                           said(MARKER, "z1"), said("looks good", "z2"))
+            with unittest.mock.patch.object(
+                    qa, "entries",
+                    side_effect=AssertionError("the whole transcript was loaded")):
+                self.assertEqual(qa.normalized_evidence(path)["turns"], ["looks good"])
+            self.assertEqual(len(list(qa.stream_run(path))), 1)
+
+
+class CookAsksTokensQaThroughItsPublicCli(unittest.TestCase):
+    def test_a_nonzero_exit_names_the_code_rather_than_tracing_back(self):
+        done = subprocess.CompletedProcess([], 5, "", "adapter blew up")
+        with unittest.mock.patch.object(subprocess, "run", return_value=done):
+            with self.assertRaises(qa.CookError) as caught:
+                qa.assess_feedback({"turns": ["looks good"]})
+        self.assertIn("5", str(caught.exception))
+
+    def test_advisory_candidates_are_warnings_not_a_verdict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = run_of(tmp, said("looks good"))
+            with unittest.mock.patch.object(qa, "tracked_changes", return_value=["a.py"]):
+                result = qa.feedback(Path(tmp), path)
+        self.assertTrue(result["passed"])
+        self.assertTrue(result["warnings"])
+        self.assertNotIn("rejected", result)
+
+    def test_cook_runs_from_the_repository_root(self):
+        """The old sys.path hack reached into a private module, and the
+        directory cook ran from decided whether that resolved."""
+        repo = Path(qa.__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            log = run_of(tmp, said("looks good"))
+            done = subprocess.run(
+                [sys.executable, str(repo / "cook" / "cook.py"), "feedback",
+                 "--project-root", tmp, "--session", str(log)],
+                capture_output=True, text=True, cwd=repo)
+        self.assertEqual(done.returncode, 0, done.stderr or done.stdout)
+        self.assertEqual(json.loads(done.stdout)["skill"], "aesthetic")
 
 
 class ACommittedFixStillCounts(unittest.TestCase):
@@ -140,13 +191,11 @@ class ACommittedFixStillCounts(unittest.TestCase):
 
 
 class ACorrectionIsStrongerThanAComplaint(unittest.TestCase):
-    """"It's broken" is a symptom. "I asked for X" is a requirement still
-    outstanding, and this session shipped four rounds without acting on one."""
+    """"It's broken" is a symptom. "I asked for X" is still outstanding."""
 
     def test_an_unmet_instruction_is_a_correction(self):
-        said = ["i initially requested to take over the design website",
-                "you did not create a css layout"]
-        for text in said:
+        for text in ("i initially requested to take over the design website",
+                     "you did not create a css layout"):
             self.assertTrue(any(p.search(text) for p in qa.CORRECTION), text)
 
     def test_plain_praise_is_not_a_correction(self):
@@ -154,30 +203,33 @@ class ACorrectionIsStrongerThanAComplaint(unittest.TestCase):
                              for p in qa.CORRECTION))
 
     def test_an_instruction_restated_is_one_that_did_not_land(self):
-        said = ["i initially requested to take over the claude design website",
-                "you did not follow instructions about the claude design website"]
-        self.assertEqual(qa.repeated(said), [said[1]])
+        texts = ["i initially requested to take over the claude design website",
+                 "you did not follow instructions about the claude design website"]
+        self.assertEqual(qa.repeated(texts), [texts[1]])
 
     def test_two_unrelated_corrections_are_not_a_restatement(self):
-        said = ["i asked for a css layout on the rails",
-                "you did not translate the companion copy properly"]
-        self.assertEqual(qa.repeated(said), [])
+        self.assertEqual(qa.repeated(["i asked for a css layout on the rails",
+                                      "you did not translate the companion copy"]), [])
 
     def test_corrections_alone_fail_a_round_that_changed_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            path = self._t(root, "i asked for the rails to be css")
+            path = run_of(tmp, said("i asked for the rails to be css"))
             with unittest.mock.patch.object(qa, "session_transcripts", return_value=[path]), \
                  unittest.mock.patch.object(qa, "tracked_changes", return_value=[]):
-                result = qa.feedback(root)
+                result = qa.feedback(Path(tmp))
             self.assertFalse(result["passed"])
             self.assertEqual(len(result["corrections"]), 1)
 
-    def _t(self, folder, *texts):
-        rows = [{"type": "user", "timestamp": "t0", "message": {"content": [
-            {"type": "text", "text": "Base directory for this skill: /s/aesthetic"}]}}]
-        rows += [{"type": "user", "timestamp": "t1", "message": {"content": [
-            {"type": "text", "text": t}]}} for t in texts]
-        path = folder / "s.jsonl"
-        path.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
-        return path
+    def test_a_restated_instruction_fails_however_many_files_moved(self):
+        """A run that churns a dozen files while ignoring what was asked is the
+        exact shot this check exists to catch, so `changed` cannot rescue it."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = run_of(tmp,
+                          said("i asked for the rails on the claude design site to be css"),
+                          said("you did not follow instructions about the claude "
+                               "design site rails"))
+            with unittest.mock.patch.object(qa, "tracked_changes",
+                                            return_value=["a.py"] * 13):
+                result = qa.feedback(Path(tmp), path)
+        self.assertFalse(result["passed"])
+        self.assertEqual(len(result["restated"]), 1)

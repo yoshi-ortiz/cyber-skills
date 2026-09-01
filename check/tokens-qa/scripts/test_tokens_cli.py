@@ -187,7 +187,13 @@ class Feedback(unittest.TestCase):
         self.assertEqual(self.feedback_fields(), {"status": "pending"})
 
     def test_evidence_and_observed_at_survive_a_later_flag(self):
-        run("feedback", self.shot, "the split is wrong, fix it", cwd=self.root)
+        path = Path(self.shot)
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record["user_feedback"] = {"status": "pending",
+                                   "evidence": "the split is wrong, fix it",
+                                   "observed_at": "2026-01-01T00:00:00Z"}
+        path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n",
+                        encoding="utf-8")
         before = self.feedback_fields()
         self.assertIn("evidence", before)
         run("feedback", self.shot, "--rank", "1", cwd=self.root)

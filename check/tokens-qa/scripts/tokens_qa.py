@@ -20,7 +20,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -91,44 +90,20 @@ def cmd_compare(args):
     return read_pair(args.baseline, args.candidate)
 
 
-def sentiment(message: str) -> str:
-    """Classify one user message into a `STATUS`. L3 is primary, so this IS the
-    verdict -- no amount of work done rescues a message that carries a
-    correction. Module level so other loops can ask the same question instead
-    of growing a second, weaker copy of it."""
-    text = message.lower()
-    words = set(re.findall(r"[a-z']+", text))
-    if words & {"reject", "no", "bad"} or "doesn't work" in text:
-        return "rejected"
-    if words & {"but", "except", "wrong", "fix", "change", "should", "instead", "not"}:
-        return "corrected"
-    if words & {"accept", "accepted", "approve", "approved"} or any(
-            p in text for p in ("ship it", "looks good", "works for me")):
-        return "accepted"
-    return "pending"
-
-
 def cmd_feedback(args):
     path = Path(args.shot)
     record = shot_io.read_shot(path)
-    if args.message is not None:
-        # The inferring form Cook still calls. It goes when `sentiment` goes.
-        status = sentiment(args.message)
-        fields = {"status": status, "evidence": args.message, "observed_at": now()}
-        if status == "corrected":
-            fields["correction"] = args.message
-    else:
-        given = {"status": args.status, "correction": args.correction,
-                 "sentiment": args.sentiment, "rank": args.rank}
-        given = {k: v for k, v in given.items() if v is not None}
-        if not given:
-            raise Refused("feedback: give at least one of --status, --correction,"
-                          " --sentiment, --rank")
-        # A v1 file is history. Writing it would migrate it and rewrite the past.
-        if shot_io.on_disk_version(path) == 1:
-            raise Refused(f"{path}: version 1 is read-only, record a new shot")
-        fields = dict(record["user_feedback"])
-        fields.update(given)
+    given = {"status": args.status, "correction": args.correction,
+             "sentiment": args.sentiment, "rank": args.rank}
+    given = {k: v for k, v in given.items() if v is not None}
+    if not given:
+        raise Refused("feedback: give at least one of --status, --correction,"
+                      " --sentiment, --rank")
+    # A v1 file is history. Writing it would migrate it and rewrite the past.
+    if shot_io.on_disk_version(path) == 1:
+        raise Refused(f"{path}: version 1 is read-only, record a new shot")
+    fields = dict(record["user_feedback"])
+    fields.update(given)
     record["user_feedback"] = fields
     record = validate(record)
     shot_io.replace_shot(path, record)
@@ -175,7 +150,6 @@ def parse(argv):
 
     fb = sub.add_parser("feedback", parents=[common], help="record the user's authority")
     fb.add_argument("shot")
-    fb.add_argument("message", nargs="?")
     fb.add_argument("--status", choices=("pending", "accepted", "corrected", "rejected"))
     fb.add_argument("--correction")
     fb.add_argument("--sentiment", choices=("positive", "neutral", "negative"))

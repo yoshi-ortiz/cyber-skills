@@ -83,15 +83,16 @@ class Verdict(unittest.TestCase):
         # The case this whole tool exists for: "good but fix X" is a failure.
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "s.json"
-            path.write_text(json.dumps(shot()))
-            qa.main(["feedback", str(path), "good but the split is wrong, fix it"])
+            path.write_text(json.dumps(shot(version=2)))
+            qa.main(["feedback", str(path), "--status", "accepted",
+                     "--correction", "good but the split is wrong, fix it"])
             self.assertEqual(qa.verdict(json.loads(path.read_text())), "failed")
 
     def test_plain_acceptance_is_acceptance(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "s.json"
-            path.write_text(json.dumps(shot()))
-            qa.main(["feedback", str(path), "looks good, ship it"])
+            path.write_text(json.dumps(shot(version=2)))
+            qa.main(["feedback", str(path), "--status", "accepted"])
             self.assertEqual(qa.verdict(json.loads(path.read_text())), "accepted")
 
     def test_silence_stays_pending_and_never_becomes_accepted(self):
