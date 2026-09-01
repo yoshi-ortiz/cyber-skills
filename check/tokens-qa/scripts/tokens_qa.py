@@ -50,6 +50,10 @@ def now() -> str:
 
 
 def cmd_record(args):
+    if args.output:
+        raise Refused('--output was removed. Pass --inline "<text>" for an inline '
+                      "payload, or --output-manifest <manifest.json> for artifacts "
+                      "on disk.")
     request = Path(args.request).read_text(encoding="utf-8")
     digests: list[dict] = []
     if args.output_manifest:
@@ -139,6 +143,10 @@ def parse(argv):
     out = rec.add_mutually_exclusive_group(required=True)
     out.add_argument("--output-manifest")
     out.add_argument("--inline")
+    # Declared only so it stops being an abbreviation of --output-manifest.
+    # Without it argparse expands the removed flag onto the new one and the
+    # user's file is parsed as a manifest.
+    out.add_argument("--output", help=argparse.SUPPRESS)
     rec.add_argument("--scope", default="")
     rec.add_argument("--model", default="unknown")
     rec.add_argument("--harness", default="unknown")

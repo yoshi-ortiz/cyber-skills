@@ -8,6 +8,7 @@ future refactor could quietly stop honouring.
 import copy
 import hashlib
 import json
+import re
 import os
 import subprocess
 import sys
@@ -305,6 +306,39 @@ class AssessFeedback(unittest.TestCase):
                        cwd=tmp)
             self.assertEqual(done.returncode, 2)
             self.assertEqual(envelope(done)["path"], "$.turns")
+
+
+class RemovedFlagsDoNotSilentlyAlias(unittest.TestCase):
+    """`--output` is an unambiguous prefix of `--output-manifest`, so argparse
+    expanded it and parsed the user's markdown as a manifest. Both READMEs
+    documented that command for a while."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.root = Path(self.dir.name)
+        (self.root / "req.txt").write_text("hello", encoding="utf-8")
+        (self.root / "out.md").write_text("# not a manifest", encoding="utf-8")
+
+    def test_the_removed_flag_names_its_replacements(self):
+        done = run("record", "s", "--request", "req.txt", "--output", "out.md",
+                   "--json", cwd=self.root)
+        self.assertEqual(done.returncode, 2)
+        error = envelope(done)["error"]
+        self.assertIn("--output was removed", error)
+        self.assertIn("--inline", error)
+        self.assertIn("--output-manifest", error)
+
+    def test_no_current_flag_is_a_prefix_of_another_on_the_same_verb(self):
+        source = (Path(__file__).resolve().parent / "tokens_qa.py").read_text()
+        verbs = dict(re.findall(r'(\w+)\s*=\s*sub\.add_parser\("([\w-]+)"', source))
+        for var, verb in verbs.items():
+            flags = set(re.findall(r'%s\.add_argument\("(--[\w-]+)"' % var, source))
+            flags.discard("--output")
+            for a in flags:
+                for b in flags:
+                    if a != b and b.startswith(a):
+                        self.fail(f"{verb}: {a} silently abbreviates {b}")
 
 
 if __name__ == "__main__":
