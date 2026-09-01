@@ -95,7 +95,7 @@ Open rows grouped by what unblocks what. Priority order:
 
 | id | State | Item | Notes |
 | --- | --- | --- | --- |
-| R-15 | `TODO` | Split `bootstrap_harness.py` | 210 KB vs 30 KB budget. Split before adding; do not widen the cap. |
+| R-15 | `DONE` | Split `bootstrap_harness.py` | Repaid 2026-09-01. 216,757 B to 25,326 B across thirteen `harness_*` seams; `editorial_workflow.py` 34,911 B to 3,858 B across four. `test_article.py` and `test_adopt.py` split by subject. No file in the repository is over its budget, `contracts-budget` is green, and `tools/check.py` is 27/27. Public surface, CLI help for all eighteen subcommands, and all 515 test ids verified unchanged. |
 | R-62 | `TODO` | Run this repo's graphics and website as a Food Product | `landing.hero.flow` through `text_to_graphics.py` → `design/landing-flow-hero.html`. Proof = `kit sync` then a green graphics run on this checkout. |
 | R-24 | `TODO` | Cap golden-rule retry cost | B-013. Retries must narrow scope, not re-attempt the same rejected spec. |
 | R-25 | `TODO` | Explicit `subject` in `editorial.json` | Durable model behind R-21; not urgent while dotted-id convention holds. |

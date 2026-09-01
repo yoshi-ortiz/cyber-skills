@@ -7,6 +7,34 @@ Fog. Lives on `dev`, never published to `main`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Review images rendered at phone width.** Every page comp shipped its
+  mobile layout because review inherited a 510px default, so the landing
+  hero's rail, rooms, and station labels sat below the fold and the user was
+  asked to rank a graphic that was not in the picture. Renders at 1280 now.
+- **A round could report `done` with nothing to look at.** `graphics_flow`
+  had no browser render and no thumbnail anywhere in it. `verify-delivery`
+  and `apply-correction` now sit ahead of `done`, and a correction the user
+  already sent outranks proving a proposal nobody asked for.
+- **Untracked files shipped to users.** `publish` copied the working tree, so
+  two stray root files reached both published trees. It publishes what git
+  tracks now, which fixes the class rather than the two filenames.
+- **A removed CLI flag silently became a different one.** `--output` is an
+  unambiguous prefix of `--output-manifest`, so argparse expanded it and
+  parsed the user's markdown as a manifest.
+- **Praise failed a Cook round.** "not bad" and "no changes needed, ship it"
+  both classified as rejection.
+- **A refused socket failed a round.** Cook started the companion and fetched
+  immediately, so a socket not yet bound read as a broken companion.
+- **Two thirds of the test suite ran in no gate.** Three tokens-qa suites and
+  all of cook were invisible to `tools/check.py`.
+
+### Changed
+
+- **R-15 repaid.** No file in this repository is over its declared byte
+  budget, and `tools/check.py` is 27/27 for the first time.
+
 ### Added
 
 - **The rail.** `GOAL.md` (why), `SPEC.md` (the settled contract), and

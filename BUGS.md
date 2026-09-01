@@ -705,7 +705,7 @@ bakes its palette or the theming moves. That is a design decision, and it
 belongs to the cartoon round the user has already scheduled ("cartoons drawings
 will need their own round"), not to a layout pass.
 
-## B-027 · The installed skill is a copy, so edits to it are silently lost · open
+## B-027 · The installed skill is a copy, so edits to it are silently lost · open (needs a human)
 
 **Symptom.** `~/.claude/skills/aesthetic` is a symlink, which reads as a live
 dev loop, but it points outside the repository:
@@ -729,3 +729,11 @@ still a channel.
 skill through the path the agent is given edits the source under version
 control. Until then, treat `first/aesthetic` as the only writable copy and sync
 outward, never inward.
+
+This one is not an agent's to run. It deletes a directory outside the
+repository, so it needs a human who can see what is in there first:
+
+```bash
+rm -rf ~/.agents/skills/aesthetic
+ln -s ~/Development/cyber-skills/first/aesthetic ~/.agents/skills/aesthetic
+```
