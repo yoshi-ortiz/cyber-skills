@@ -642,3 +642,90 @@ never says so.
 **Fix.** `page(data)` takes the liveness flag and writes it into the data blob;
 the client reads it rather than sniffing. One parameter, and it removes a
 class of confusion rather than one instance of it.
+
+## B-025 · Every `@container` rule in the ranking controls is dead · open
+
+**Symptom.** `first/aesthetic/screen/controls.css` carries three container
+queries that shape the scoring card at narrow widths -- `@container dh-row
+(max-width: 980px)`, `@container dh-row (max-width: 380px)`, and a bare
+`@container (max-width: 780px)`. None of them has ever applied. Measured on the
+served companion:
+
+```js
+row.closest('.dh-feedback,[data-dh-controls]')   // null
+getComputedStyle(row.parentElement).containerType // "normal"
+```
+
+**Root cause.** Two independent faults, either one sufficient. First, no
+ancestor establishes a container at all: `container-type:inline-size` is
+declared only on `.dh-feedback,[data-dh-controls]`, and `embed` lifts the rows
+out of that wrapper into the project's own placeholder -- the file's own opening
+comment describes this, and adding `[data-dh-controls]` to the selector did not
+fix it because the placeholder is not that element either. Second, even with a
+container present, `container-name: dh-row` is never set anywhere in the
+codebase, so a query written `@container dh-row (...)` could not match a
+container that has no name.
+
+The cost is not one layout. It is that every narrow-width repair anybody writes
+in this file is inert, verifies as "fixed" against a viewport `@media` rule
+elsewhere in the same file that happens to fire at a similar width, and ships.
+That has now happened at least twice.
+
+**Fix.** Name the container and give the row a real one. `container: dh-row /
+inline-size` on the row's parent is the shape the rules already assume, but the
+parent is project markup, so the durable version is for `embed` to emit a
+wrapper per row and set the container on it. An element cannot be its own query
+container, so putting it on `.dh-fb` is not an option. Until then, prefer rules
+that need no query: B-026's two fixes are both query-free for this reason.
+
+## B-026 · The hero comp hand-authors SVG, so its own gate cannot run · open
+
+**Symptom.** `bootstrap_harness.py audit-svg --project-root .` is red:
+
+```
+1 recorded preview(s) hand-author <svg>
+  landing.hero.flow.foundation	design/landing-flow-hero.html
+```
+
+`shoot` refuses the comp for the same reason, so the one graphic in the round
+never passes through `check_no_hand_authored_svg`.
+
+**Root cause.** The comp draws its room bosses and signature items as inline
+`<svg>`. That is not an accident and not the model inventing coordinates: it is
+the user's recorded instruction on `landing.hero.flow.foundation` -- "the
+graphic should be css first, and vectors for characters+items sprite sheets."
+The sprite sheets half was never built, so the vectors still live in the page.
+
+**Fix.** Extract the characters and items into referenced sprite files and point
+at them with `<img src="...">`, which is what the instruction asked for and what
+the gate wants. This is not mechanical: the rooms colour their walls with
+`color-mix()` over a per-station `--plate-face` custom property, and custom
+properties do not cascade into an `<img>`-referenced SVG, so each sprite either
+bakes its palette or the theming moves. That is a design decision, and it
+belongs to the cartoon round the user has already scheduled ("cartoons drawings
+will need their own round"), not to a layout pass.
+
+## B-027 · The installed skill is a copy, so edits to it are silently lost · open
+
+**Symptom.** `~/.claude/skills/aesthetic` is a symlink, which reads as a live
+dev loop, but it points outside the repository:
+
+```
+~/.claude/skills/aesthetic -> ../../.agents/skills/aesthetic
+```
+
+`.agents/skills/aesthetic` is a full copy of `first/aesthetic`. An agent that
+edits the path it is told is "the skill" changes the copy; `git status` in this
+repository stays clean, every gate stays green, and the next `kit sync`
+overwrites the work. This session lost one CSS fix that way and only found it by
+diffing the two trees by hand.
+
+**Root cause.** `c1bef2a "make the dev loop a symlink, not a channel"` made the
+symlink, but aimed it at the installed channel copy rather than at
+`first/aesthetic` in the working tree. The name says dev loop; the target is
+still a channel.
+
+**Fix.** Point `.agents/skills/aesthetic` at `first/aesthetic`, so editing the
+skill through the path the agent is given edits the source under version
+control. Until then, treat `first/aesthetic` as the only writable copy and sync
+outward, never inward.

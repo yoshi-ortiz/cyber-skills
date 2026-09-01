@@ -91,7 +91,13 @@
     .hero-intro {
       display: grid;
       grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
-      align-items: end;
+      /* `end` bottom-aligned two columns of unequal height, so the shorter one
+         hung from the taller one's baseline and left its dead space ABOVE the
+         headline -- a hole between the nav rule and the first word, which reads
+         as a mistake rather than as air. Worst at 780-900px, where the right
+         column grows a fourth line and the two buttons stop fitting side by
+         side, which is exactly the width the ranking thumbnail renders at. */
+      align-items: start;
       gap: clamp(28px, 6vw, 88px);
       margin-bottom: clamp(20px, 2vw, 30px);
     }
@@ -376,7 +382,22 @@
 
     .flow-caption strong { color: var(--ink); }
 
-    @media (max-width: 900px) {
+    /* 780, not 900. The stacked treatment used to start at 900px, but the two
+       hero columns are fluid -- minmax(0, 1.35fr) and a 300px floor -- and they
+       still fit at 780px (371px + 300px inside 718px of content). Everything
+       between 780 and 900 was being stacked while it had room not to be.
+
+       That range is not hypothetical: the ranking companion lays a comp out in
+       a fixed 850px frame and the review render uses 510px, so at 900 EVERY
+       preview of this page showed the tablet layout -- stacked hero, captions
+       in a column under a full-width rule -- and the comp's own height ran to
+       1272px inside an 1100px frame, clipping the last 172px. The design being
+       ranked was never the design. At 780 the 850px frame renders the desktop
+       layout it was drawn for, and the page measures 913px, inside the frame.
+
+       Real 800-900px tablets get the same benefit; nothing here is tuned for
+       the screenshot that is not also true for a reader at that width. */
+    @media (max-width: 780px) {
       .hero-intro {
         width: 100%;
         min-width: 0;

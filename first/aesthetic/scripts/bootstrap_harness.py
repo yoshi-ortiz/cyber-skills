@@ -1096,12 +1096,12 @@ def adopt_companion(project_root: Path, ledger_path: Path) -> tuple[int, int]:
 # Inline so a host stylesheet cannot collapse the one element the user must see.
 # The fallback MUST match the grid track in FEEDBACK_STYLE. When it did not, the
 # graphic rendered wider than its column and sat on top of the description text.
-SHOT_INLINE = ("display:block;flex:0 0 auto;inline-size:var(--dh-shot-w,96px);"
-               "block-size:calc(var(--dh-shot-w,96px) * 11 / 8.5);overflow:hidden;"
+SHOT_INLINE = ("display:block;flex:0 0 auto;inline-size:var(--dh-shot-w,clamp(96px,18vw,240px));"
+               "block-size:calc(var(--dh-shot-w,clamp(96px,18vw,240px)) * 11 / 8.5);overflow:hidden;"
                "position:relative;border:1px solid currentColor;background:#fff")
 SHOT_INNER_INLINE = ("position:absolute;inset-block-start:0;inset-inline-start:0;"
                      "inline-size:850px;block-size:1100px;transform-origin:0 0;"
-                     "transform:scale(calc(var(--dh-shot-w,96px) / 850));pointer-events:none")
+                     "transform:scale(calc(var(--dh-shot-w,clamp(96px,18vw,240px)) / 850));pointer-events:none")
 SCREEN_DIR = Path(__file__).resolve().parent.parent / "screen"
 
 
@@ -1122,7 +1122,7 @@ STYLE_MARKER = "/* dh-controls */"
 # screen, so a screen embedded by an older skill keeps the older bug forever and
 # looks, from the browser, exactly like a fix that did not work. `doctor`
 # compares this against the served page and fails on a mismatch.
-CONTROLS_VERSION = "37"
+CONTROLS_VERSION = "39"
 VERSION_MARKER = "dh-controls-version"
 
 # Restores the signals a refresh would otherwise throw away.
@@ -1538,7 +1538,7 @@ def html_comp_fragment(raw: str, element: str = "") -> tuple[str, float, float]:
 def preview_inner_style(comp_width: float, comp_height: float) -> str:
     return ("position:absolute;inset-block-start:0;inset-inline-start:0;"
             f"inline-size:{comp_width}px;block-size:{comp_height}px;transform-origin:0 0;"
-            f"transform:scale(calc(var(--dh-shot-w,96px) / {comp_width}));pointer-events:none")
+            f"transform:scale(calc(var(--dh-shot-w,clamp(96px,18vw,240px)) / {comp_width}));pointer-events:none")
 
 
 def preview_reference(project_root: Path, raw: str, element: str = "") -> dict[str, str]:
@@ -1637,6 +1637,33 @@ def render_preview(project_root: Path | None, preview: dict[str, str] | None, el
         encoded = base64.b64encode(path.read_bytes()).decode("ascii")
         body = f'<img alt="" src="data:{media};base64,{encoded}">'
         return f"{tag}{body}</div>"
+    # Prefer the rendered review image over inlining the comp.
+    #
+    # A comp inlined into the card is laid out in an 850px box, but it sits
+    # INSIDE the host page, so every `vw` unit in it resolves against the
+    # browser viewport rather than against that box. Measured on this project's
+    # hero, served at a 1280px viewport:
+    #
+    #     h1 font-size   85.76px  (6.7vw of 1280)   true 850px view:  56.95px
+    #     hero columns   370.8px / 300px            true 850px view:  431 / 300
+    #     column gap     76.8px   (6vw of 1280)     true 850px view:  51px
+    #
+    # so the headline rendered half again too large in a column 60px too
+    # narrow and wrapped to five lines. The card was not a smaller version of
+    # the design, it was a layout that occurs at no viewport at all -- which is
+    # why improving the design changed the card so little.
+    #
+    # `review_delivery` already renders every canonical comp in a REAL browser
+    # viewport, at the same 8.5:11 the frame uses. Using that PNG makes the
+    # card and the full-size review image the same picture by construction,
+    # instead of two renderings that disagree.
+    review_png = project_root / "design" / "review" / (
+        # Same name `review_delivery._image_name` writes.
+        re.sub(r"[^A-Za-z0-9._-]+", "-", element).strip(".-") + ".png")
+    if suffix == ".html" and review_png.is_file():
+        encoded = base64.b64encode(review_png.read_bytes()).decode("ascii")
+        return f'{tag}<img alt="" src="data:image/png;base64,{encoded}"></div>'
+
     fragment = path.read_text(encoding="utf-8")
     if suffix == ".svg":
         fragment = re.sub(r"<svg\b", '<svg preserveAspectRatio="xMidYMid meet" '

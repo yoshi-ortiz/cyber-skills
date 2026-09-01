@@ -67,11 +67,11 @@
       "bookmarked": false,
       "description": "Isometric hero map: a continuous CSS rail connecting four sims-style cutaway rooms (floor + two back walls) and two ghost kiosks. Each main room holds a primitive-built SVG character (its room boss) and one signature item, matching rooms-inventory.md.",
       "element": "landing.hero.flow.foundation",
-      "evidence": "User: 'take over where claude design left off, a website... the graphic should be css first, and vectors for characters+items sprite sheets. progress so far is the rail and floors, should not be floors but sims like rooms. the rail should not have gaps, those were formed on the sketch to signal flow, not gaps.' Replaced the four flat isometric diamonds with sims-style cutaway rooms (floor + two shaded back walls, formula-generated polygons) each holding a primitive-built SVG character (room boss) and one signature item, per rooms-inventory.md. Confirmed the rail (arcs+bars) has no real gaps and plugs directly into each room's corner.",
+      "evidence": "User: 'you made the rubric but i need to observe the improvements.' Closed the hero void: the two hero columns were bottom-aligned, so the shorter left column hung from the taller right one and left dead space between the nav rule and the headline. Top-aligned now. At the 850px thumbnail frame the headline starts 90px higher and the rail diagram gains that space.",
       "implemented": "design/landing-flow-hero.html",
       "preview": {
         "path": "design/landing-flow-hero.html",
-        "sha256": "b8b27738148e907b8c3c5d28cd8299ca42c88db3e945c7fddbc9b8a1d995d184"
+        "sha256": "7b8e59e7ba88e94af39fe54fa12b7e922a90c0652aa29ef6e0b0b5616cd7ee7f"
       },
       "scored": false,
       "sentiment": "like",

@@ -49,6 +49,18 @@ def step(argv: list[str], project_root: Path) -> str:
 def deliver(project_root: Path, out: str, cohort: str, round_label: str, asks: str,
             assessments: str | None, idle_text: str, agent: str = "",
             agent_url: str = "") -> dict:
+    # Review images are the half a user can act on. No assessments means the
+    # caller has nothing to show, which is a refusal, not a quiet skip.
+    #
+    # Checked FIRST, before anything is written or served. It used to sit after
+    # `article` and `publish`, so the refusal arrived having already replaced
+    # the live screen -- the round was published, and only then declared
+    # undeliverable. A precondition that needs no subprocess belongs before the
+    # steps that mutate what the user is looking at.
+    if not assessments:
+        raise DeliveryError("no --assessments: a published round with no review "
+                            "images is a link the user cannot act on")
+
     harness = str(HERE / "bootstrap_harness.py")
     article = [harness, "article", "--out", out, "--cohort", cohort,
                "--round-label", round_label, "--asks", asks]
@@ -58,17 +70,26 @@ def deliver(project_root: Path, out: str, cohort: str, round_label: str, asks: s
         article += ["--agent-url", agent_url]
     step(article, project_root)
 
-    published = step([harness, "publish", "--screen", out], project_root)
-    url = next((line for line in published.splitlines() if line.startswith("http")),
-               published)
-    if not url.startswith("http"):
-        raise DeliveryError(f"publish returned no URL: {published!r}")
+    step([harness, "publish", "--screen", out], project_root)
 
-    # Review images are the half a user can act on. No assessments means the
-    # caller has nothing to show, which is a refusal, not a quiet skip.
-    if not assessments:
-        raise DeliveryError("no --assessments: a published round with no review "
-                            "images is a link the user cannot act on")
+    # The URL comes from `open`, not from `publish`.
+    #
+    # `publish` prints one line -- "Serving <name>. Any screen written after
+    # this steals the route" -- and has never printed a URL at all. Scanning
+    # its stdout for a line starting with "http" therefore found nothing on
+    # every run, and the guard below it turned that into a hard failure. So
+    # this script, whose entire reason to exist is that `article`, `publish`,
+    # `review_delivery` and `status --idle` must run TOGETHER, aborted after
+    # step two of four -- every time it was called. The round was published
+    # with no review images and no idle status, which is precisely the
+    # "a link the user cannot act on" failure the module docstring describes.
+    #
+    # `open` is the verb that owns the URL, and it is idempotent: it starts the
+    # companion only if it is not already up, and prints the URL either way.
+    url = step([harness, "open"], project_root).strip()
+    if not url.startswith("http"):
+        raise DeliveryError(f"open returned no URL: {url!r}")
+
     images = step([str(HERE / "review_delivery.py"), "--cohort", cohort,
                    "--assessments", assessments], project_root)
 

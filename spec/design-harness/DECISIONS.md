@@ -12,7 +12,7 @@ Lifecycle state: `proposed`
 
 | Element | Verdict | Stars | Evidence |
 | --- | --- | --- | --- |
-| `landing.hero.flow.foundation` | proposed | ☆☆☆☆☆ | User: 'take over where claude design left off, a website... the graphic should be css first, and vectors for characters+items sprite sheets. progress so far is the rail and floors, should not be floors but sims like rooms. the rail should not have gaps, those were formed on the sketch to signal flow, not gaps.' Replaced the four flat isometric diamonds with sims-style cutaway rooms (floor + two shaded back walls, formula-generated polygons) each holding a primitive-built SVG character (room boss) and one signature item, per rooms-inventory.md. Confirmed the rail (arcs+bars) has no real gaps and plugs directly into each room's corner. |
+| `landing.hero.flow.foundation` | proposed | ☆☆☆☆☆ | User: 'you made the rubric but i need to observe the improvements.' Closed the hero void: the two hero columns were bottom-aligned, so the shorter left column hung from the taller right one and left dead space between the nav rule and the headline. Top-aligned now. At the 850px thumbnail frame the headline starts 90px higher and the rail diagram gains that space. |
 
 ## Superseded
 

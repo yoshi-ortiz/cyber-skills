@@ -202,8 +202,30 @@ def _image_name(element: str) -> str:
     return f"{name}.png"
 
 
+# A review image is not a thumbnail. It is opened at full size in the reply and
+# it is the ONLY view of the work a user gets without visiting the companion, so
+# it has to show the design.
+#
+# It used to inherit `render_html_preview`'s default width, `PREVIEW_WIDTH` --
+# 510px, which is a phone. Every comp that is a real page therefore shipped its
+# MOBILE rendering: on the landing hero, 510px put the headline and the two
+# buttons in frame and pushed the isometric rail, the four rooms and every
+# station label -- the entire subject of the round -- below the fold. The user
+# was asked to rank a graphic that was not in the picture.
+#
+# 1280 is a desktop viewport, so a page comp renders the layout it was drawn
+# for. A comp authored small still reads: it is centred in a wider frame rather
+# than cropped by a narrower one, and being surrounded by white is recoverable
+# in a way that being cut in half is not.
+REVIEW_WIDTH = 1280
+
+
+def _render_review(html: Path, out: Path) -> str:
+    return render_html_preview(html, out, width=REVIEW_WIDTH)
+
+
 def deliver_review_images(project_root: Path, cohort: Iterable[str], assessments_path: Path,
-                          renderer: Renderer = render_html_preview,
+                          renderer: Renderer = _render_review,
                           publisher: Publisher = _replace) -> list[ReviewImage]:
     root = project_root.resolve(strict=True)
     elements = list(cohort)
@@ -240,6 +262,20 @@ def deliver_review_images(project_root: Path, cohort: Iterable[str], assessments
         for preview, _, _, _ in staged_images:
             if sha256_file(preview.html_path) != preview.html_sha256:
                 raise DeliveryError(f"canonical HTML changed while rendering {preview.element}")
+
+        # A round with no changed drawing is not a round. Every image here
+        # rendering byte-identical to the one already published means the user
+        # is being handed the same artwork again and asked to rank it again --
+        # and the `--asks` question will be about a design that did not move.
+        # The comparison is free: both digests are already in hand.
+        unchanged = [preview.element for preview, _, target, digest in staged_images
+                     if target.is_file() and sha256_file(target) == digest]
+        if len(unchanged) == len(staged_images):
+            raise DeliveryError(
+                "every review image in this cohort is byte-identical to the one "
+                f"already published ({', '.join(unchanged)}). Nothing about the "
+                "artwork changed, so there is nothing new to rank. Change the "
+                "design, or change the cohort.")
 
         backups: dict[Path, Path | None] = {}
         published: list[Path] = []
