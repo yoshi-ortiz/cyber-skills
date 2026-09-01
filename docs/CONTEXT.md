@@ -1,6 +1,6 @@
 ---
 purpose: requirements and distilled knowledge that shape the repository, held apart from the skills they shape
-admits: promoted contracts under SPEC/, and research a contributor needs before changing a skill
+admits: promoted contracts under SPEC/, implementation plans, and research a contributor needs before changing a skill
 refuses: anything a running skill loads -- a skill's own doctrine lives inside that skill
 ---
 

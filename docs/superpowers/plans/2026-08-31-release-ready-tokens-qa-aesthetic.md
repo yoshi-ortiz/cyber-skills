@@ -201,7 +201,7 @@ Every listed failure has a planned test and explicit handling; there are no sile
 - Produces: `validate_v2(record: object, where: str = "$") -> dict`
 - Produces: `artifact_descriptor(path, role, mime, bytes, sha256) -> dict`
 
-- [ ] **Step 1: Write failing migration and strict-v2 tests.**
+- [x] **Step 1: Write failing migration and strict-v2 tests.**
 
 ```python
 def test_v1_path_output_migrates_to_one_v2_artifact():
@@ -211,6 +211,8 @@ def test_v1_path_output_migrates_to_one_v2_artifact():
     migrated = contract.migrate(v1)
     assert migrated["version"] == 2
     assert migrated["output"]["artifacts"] == [{
+        # NOTE: these values are from the SPEC example, NOT the committed
+        # fixture. The real fixture is shots/hero.png at 2048 bytes.
         "role": "deliverable", "path": "shots/hero.svg",
         "mime": "image/svg+xml", "bytes": 18432,
         "sha256": "sha256:abc"
@@ -225,8 +227,8 @@ def test_v2_refuses_unknown_nested_fields_with_the_exact_path():
     self.assertIn("$.compute.tokens.surprise", str(raised.exception))
 ```
 
-- [ ] **Step 2: Run `python3 check/tokens-qa/scripts/test_shot_contract.py`; expect failures for missing `migrate` and accepted unknown nested data.**
-- [ ] **Step 3: Implement explicit v1→v2 migration and strict v2 validation.**
+- [x] **Step 2: Run `python3 check/tokens-qa/scripts/test_shot_contract.py`; expect failures for missing `migrate` and accepted unknown nested data.**
+- [x] **Step 3: Implement explicit v1→v2 migration and strict v2 validation.**
 
 ```python
 CURRENT_VERSION = 2
@@ -247,9 +249,9 @@ def migrate(record: object) -> dict:
     return validate_v2(source)
 ```
 
-- [ ] **Step 4: Validate independent feedback fields, findings, passes, gates, nullable token counts, corpus descriptors, artifact arrays, and unknown-field policy.**
-- [ ] **Step 5: Run both tokens-qa test files and `python3 tools/check.py tokens-qa`; expect all selected gates green.**
-- [ ] **Step 6: Commit with `feat(tokens-qa): version the universal shot contract`.**
+- [x] **Step 4: Validate independent feedback fields, findings, passes, gates, nullable token counts, corpus descriptors, artifact arrays, and unknown-field policy.**
+- [x] **Step 5: Run both tokens-qa test files and `python3 tools/check.py tokens-qa`; expect all selected gates green.**
+- [x] **Step 6: Commit with `feat(tokens-qa): version the universal shot contract`.**
 
 ## Task 2 [Epic 2]: Make the CLI path-first, typed, and concurrency-safe
 
@@ -265,7 +267,7 @@ def migrate(record: object) -> dict:
 - Produces: stable exit codes `0 success`, `1 hard veto`, `2 schema/arguments`, `3 I/O`, `4 write conflict`, `5 adapter/subprocess`
 - Produces: optional `--json` diagnostics `{ok, code, error, path, result}`
 
-- [ ] **Step 1: Write failing CLI tests for binary artifacts, 65,537-byte inline data, missing files, permissions, malformed JSON, duplicate creation, and concurrent updates.**
+- [x] **Step 1: Write failing CLI tests for binary artifacts, 65,537-byte inline data, missing files, permissions, malformed JSON, duplicate creation, and concurrent updates.**
 
 ```python
 def run_cli(*arguments: str) -> subprocess.CompletedProcess[str]:
@@ -296,11 +298,11 @@ def test_inline_payload_over_65536_bytes_is_refused():
     assert json.loads(done.stdout)["path"] == "$.output.inline"
 ```
 
-- [ ] **Step 2: Run the new CLI suite and verify failures are behavioral, not import errors.**
-- [ ] **Step 3: Add streaming `sha256_file`, bounded inline encoding, UUIDv4 Shot IDs, exclusive `open('x')`, and unique same-directory temporary files followed by `os.replace`.**
-- [ ] **Step 4: Catch expected filesystem, JSON, validation, conflict, and adapter errors at `main`; never expose tracebacks for expected failures.**
-- [ ] **Step 5: Keep `observe` read-only and return candidate comparison without modifying either Shot.**
-- [ ] **Step 6: Run focused tests plus `python3 tools/check.py tokens-qa`; commit with `feat(tokens-qa): harden the public shot CLI`.**
+- [x] **Step 2: Run the new CLI suite and verify failures are behavioral, not import errors.**
+- [x] **Step 3: Add streaming `sha256_file`, bounded inline encoding, UUIDv4 Shot IDs, exclusive `open('x')`, and unique same-directory temporary files followed by `os.replace`.**
+- [x] **Step 4: Catch expected filesystem, JSON, validation, conflict, and adapter errors at `main`; never expose tracebacks for expected failures.**
+- [x] **Step 5: Keep `observe` read-only and return candidate comparison without modifying either Shot.**
+- [x] **Step 6: Run focused tests plus `python3 tools/check.py tokens-qa`; commit with `feat(tokens-qa): harden the public shot CLI`.**
 
 ## Task 3 [Epic 2]: Separate authoritative feedback from advisory inference
 
@@ -316,7 +318,7 @@ def test_inline_payload_over_65536_bytes_is_refused():
 - Produces: `correction_bundle(shot, evidence, artifacts) -> dict`
 - Authoritative `feedback` requires explicit `--status`; assessment never writes the Shot
 
-- [ ] **Step 1: Write the failing adversarial table.**
+- [x] **Step 1: Write the failing adversarial table.**
 
 ```python
 CASES = {
@@ -328,11 +330,11 @@ CASES = {
 }
 ```
 
-- [ ] **Step 2: Verify the current keyword classifier fails at least `not bad`, acceptance containing `no`, and Spanish correction.**
-- [ ] **Step 3: Implement conservative advisory candidates with confidence and literal reasons; omit a candidate when ambiguity remains.**
-- [ ] **Step 4: Make authoritative feedback accept independent `status`, `correction`, `sentiment`, and `rank` arguments without deriving one from another.**
-- [ ] **Step 5: Emit correction bundles containing only Shot ID, bounded scope, exact evidence, present findings, affected artifacts, and observation timestamp.**
-- [ ] **Step 6: Run feedback, schema, and CLI suites; commit with `feat(tokens-qa): separate feedback evidence from authority`.**
+- [x] **Step 2: Verify the current keyword classifier fails at least `not bad`, acceptance containing `no`, and Spanish correction.**
+- [x] **Step 3: Implement conservative advisory candidates with confidence and literal reasons; omit a candidate when ambiguity remains.**
+- [x] **Step 4: Make authoritative feedback accept independent `status`, `correction`, `sentiment`, and `rank` arguments without deriving one from another.**
+- [x] **Step 5: Emit correction bundles containing only Shot ID, bounded scope, exact evidence, present findings, affected artifacts, and observation timestamp.**
+- [x] **Step 6: Run feedback, schema, and CLI suites; commit with `feat(tokens-qa): separate feedback evidence from authority`.**
 
 ## Task 4 [Epic 2]: Invoke tokens-qa once from Cook with streaming evidence
 
@@ -347,7 +349,7 @@ CASES = {
 - Produces: one normalized evidence bundle `{transcript, skill, invoked_at, turns, artifacts}`
 - Produces: `stream_run(transcript: Path, skill: str = "") -> Iterator[dict]`
 
-- [ ] **Step 1: Write failing repository-root, two-run contamination, large-transcript, subprocess-error, and changed-files-do-not-rescue-rejection tests.**
+- [x] **Step 1: Write failing repository-root, two-run contamination, large-transcript, subprocess-error, and changed-files-do-not-rescue-rejection tests.**
 
 ```python
 def user(stamp: str, text: str) -> dict:
@@ -378,11 +380,11 @@ def test_latest_skill_run_excludes_an_older_complaint():
         assert result["turns"] == ["looks good"]
 ```
 
-- [ ] **Step 2: Confirm current root discovery fails on ambient `import qa` and the current list parser retains unrelated history.**
-- [ ] **Step 3: Remove the `sys.path`/private `tokens_qa` import and every Cook-owned verdict classifier.**
-- [ ] **Step 4: Implement two-pass JSONL streaming: locate the latest relevant invocation, then yield subsequent exact user/tool-result evidence.**
-- [ ] **Step 5: Write one evidence bundle and invoke tokens-qa once; translate stable exit codes into `CookError` diagnostics.**
-- [ ] **Step 6: Run `cd cook && python3 -m unittest test_qa.py`, the repository-root integration, and the Cook gate; commit with `refactor(cook): consume tokens-qa through its CLI`.**
+- [x] **Step 2: Confirm current root discovery fails on ambient `import qa` and the current list parser retains unrelated history.**
+- [x] **Step 3: Remove the `sys.path`/private `tokens_qa` import and every Cook-owned verdict classifier.**
+- [x] **Step 4: Implement two-pass JSONL streaming: locate the latest relevant invocation, then yield subsequent exact user/tool-result evidence.**
+- [x] **Step 5: Write one evidence bundle and invoke tokens-qa once; translate stable exit codes into `CookError` diagnostics.**
+- [x] **Step 6: Run `cd cook && python3 -m unittest test_qa.py`, the repository-root integration, and the Cook gate; commit with `refactor(cook): consume tokens-qa through its CLI`.**
 
 ## Task 5 [Epic 3]: Add adapter-owned correction and browser proof to aesthetic
 
