@@ -146,13 +146,15 @@ def validate_v2(record: object, where: str = "$") -> dict:
         for index, artifact in enumerate(artifacts):
             at = f"{where}.output.artifacts[{index}]"
             require_object(artifact, at)
-            only(artifact, at, "role", "path", "mime", "bytes")
+            only(artifact, at, "role", "path", "mime", "bytes", "sha256")
             require_string(artifact.get("role"), f"{at}.role")
             require_string(artifact.get("path"), f"{at}.path")
             if "mime" in artifact:
                 require_string(artifact["mime"], f"{at}.mime")
             if "bytes" in artifact:
                 require_count(artifact["bytes"], f"{at}.bytes")
+            if "sha256" in artifact:
+                require_string(artifact["sha256"], f"{at}.sha256")
 
     feedback = require_object(record["user_feedback"], f"{where}.user_feedback")
     only(feedback, f"{where}.user_feedback", *FEEDBACK)

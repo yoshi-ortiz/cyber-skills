@@ -17,31 +17,60 @@ repository scan standing in for evidence: context you cannot see is
 `FIX` for fix, repair, improve, rewrite, next version. Both match, or neither
 matches, choose `OBSERVE` — it writes nothing, so a wrong guess costs a read.
 
-## Observe
+## Five verbs
 
 ```bash
-python3 <skill>/scripts/tokens_qa.py record <skill-dir> \
-  --request req.txt --output out.md --scope "<one bounded task>"
+python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt \
+  --inline "<the output>" --scope "<one bounded task>"
+python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt \
+  --output-manifest manifest.json
 python3 <skill>/scripts/tokens_qa.py observe .audit/shots/<id>.json
+python3 <skill>/scripts/tokens_qa.py compare <baseline>.json <candidate>.json
+python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json --status accepted
+python3 <skill>/scripts/tokens_qa.py assess-feedback --evidence turns.json --json
 ```
 
-`record` writes one canonical Shot record under `.audit/shots/`. `observe`
-validates it and prints the two-column table. Pass a second record to compare a
-candidate against a baseline.
+`record` writes one canonical Shot record under `.audit/shots/` at version 2,
+under a fresh UUID, created exclusively so a second writer never wins. Give it
+exactly one of `--inline` and `--output-manifest`. A manifest is
+`{"adapter": ..., "artifacts": [{"role", "path", "mime"}]}`; each artifact is
+sized and hashed as bytes, never decoded, so a PNG records like prose. An
+inline payload over 65536 bytes is refused.
 
-Exit 0 is a clean read, 1 is a present hard veto, 2 is an invalid record with
-the failing JSON path on stderr.
+`observe` validates one record and prints the two-column table, optionally
+against a candidate. `compare` is the same table with both records required.
+Neither writes anything.
+
+`feedback` is authority, not inference. `--status`, `--correction`,
+`--sentiment` and `--rank` are independent, at least one is required, and none
+is ever derived from another. A correction is not a status. Existing `evidence`
+and `observed_at` survive. A record stored at version 1 is frozen history and
+refuses every write; record a new shot instead.
+
+`assess-feedback` reads an evidence bundle whose `turns` is a list of strings
+and names the fields a human might want to set. It is advisory, and it writes
+no record.
+
+Add `--json` to any verb for one envelope, `{ok, code, error, path, result}`,
+where `path` is the failing JSON path or null.
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| 0 | success |
+| 1 | a present hard veto |
+| 2 | schema or arguments |
+| 3 | I/O |
+| 4 | write conflict |
+| 5 | adapter or subprocess |
 
 ## The user decides
 
-```bash
-python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json "<their exact words>"
-```
-
-L3 is primary. `accepted` requires an explicit accept with no correction term in
-the same breath — "good but fix X" is `failed`, because an instruction restated
-is an instruction that did not land. Silence stays `pending` and never ripens
-into acceptance.
+L3 is primary. `accepted` requires an explicit accept with no correction in the
+same breath. "good but fix X" is `failed`, because an instruction restated is
+an instruction that did not land. Silence stays `pending` and never ripens into
+acceptance.
 
 ## Fix
 

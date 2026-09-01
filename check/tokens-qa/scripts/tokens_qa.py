@@ -6,31 +6,38 @@ token counts, and the user's own words. It never reads hidden reasoning, and it
 never substitutes a repository scan for evidence -- context it cannot see is
 reported `not_observed`, never guessed at.
 
-    python3 tokens_qa.py record first/aesthetic --request req.txt --output out.md
+    python3 tokens_qa.py record <skill> --request req.txt --inline "<output>"
     python3 tokens_qa.py observe .audit/shots/<id>.json
-    python3 tokens_qa.py observe .audit/shots/<baseline>.json .audit/shots/<candidate>.json
-    python3 tokens_qa.py feedback .audit/shots/<id>.json "looks good"
+    python3 tokens_qa.py compare .audit/shots/<base>.json .audit/shots/<cand>.json
+    python3 tokens_qa.py feedback .audit/shots/<id>.json --status accepted
+    python3 tokens_qa.py assess-feedback --evidence turns.json --json
 
-Exit 0 on a clean read, 2 on an invalid record, 1 on a hard veto.
+Exit 0 success, 1 hard veto, 2 schema or arguments, 3 I/O, 4 write conflict,
+5 adapter or subprocess.
 """
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
-import os
 import re
-import shutil
 import sys
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+import feedback as advisory
+import shot_io
 from shot_contract import Invalid, validate
+from shot_io import sha256_text as sha256
+from shot_view import ORDER, VETOES, metrics, table, totals, verdict, vetoes
 
-# QA.md names exactly four. An unlisted finding never blocks compliance.
-VETOES = ("scope_breach", "missing_observation_log", "context_derail",
-          "ungrounded_corpus_claim")
+
+class Refused(Exception):
+    def __init__(self, message: str, code: int = 2, path: str | None = None):
+        super().__init__(message)
+        self.code, self.path = code, path
+
 
 # ponytail: bytes/4. The repo already refuses to pretend precision it does not
 # have (tools/token_bench.py says so at length); swap for a real tokenizer only
@@ -39,186 +46,176 @@ def estimate(text: str) -> int:
     return math.ceil(len(text.encode("utf-8")) / 4)
 
 
-def sha256(text: str) -> str:
-    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
 def now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def verdict(record: dict) -> str:
-    """The user decides. L1 and L2 never rescue or override L3."""
-    feedback = record["user_feedback"]
-    if feedback["status"] in ("corrected", "rejected"):
-        return "failed"
-    if feedback.get("correction") or feedback.get("sentiment") == "negative":
-        return "failed"
-    return "accepted" if feedback["status"] == "accepted" else "pending"
-
-
-def vetoes(record: dict) -> list[str]:
-    return [f["id"] for f in record.get("findings", [])
-            if f.get("status") == "present" and f["id"] in VETOES]
-
-
-def totals(record: dict) -> tuple[int | None, str]:
-    tokens = record["compute"]["tokens"]
-    given = (tokens.get("input"), tokens.get("output"))
-    if any(t is None for t in given):
-        return None, tokens.get("profile", "unavailable")
-    return sum(given), tokens.get("profile", "unavailable")
-
-
-def metrics(record: dict) -> dict[str, str]:
-    total, profile = totals(record)
-    admitted = record["inputs"].get("admitted_context")
-    contaminated = any(f.get("status") == "present" and
-                       f["id"] in ("context_derail", "context_contamination")
-                       for f in record.get("findings", []))
-    tokens = record["compute"]["tokens"]
-    mark = "~" if profile != "exact" else ""
-    return {
-        "scope": record["scope"],
-        "context.status": ("not_observed" if admitted is None
-                           else "contaminated" if contaminated else "observed"),
-        "hard_vetoes": ", ".join(vetoes(record)) or "none",
-        "feedback.status": record["user_feedback"]["status"],
-        "feedback.corrections": "1" if record["user_feedback"].get("correction") else "0",
-        "tokens.input": f"{mark}{tokens['input']}" if tokens.get("input") is not None else "unavailable",
-        "tokens.output": f"{mark}{tokens['output']}" if tokens.get("output") is not None else "unavailable",
-        "tokens.total": f"{mark}{total}" if total is not None else "unavailable",
-        "tokens.profile": profile,
-        "verdict": verdict(record),
-    }
-
-
-ORDER = ("scope", "context.status", "hard_vetoes", "feedback.status",
-         "feedback.corrections", "tokens.input", "tokens.output",
-         "tokens.total", "tokens.profile", "verdict")
-
-
-def table(base: dict[str, str], cand: dict[str, str] | None) -> str:
-    """Two semantic columns. Two physical rows per metric, never wrapped."""
-    width = min(160, max(80, shutil.get_terminal_size((100, 24)).columns))
-    left = (width - 3) // 2
-    right = width - 3 - left
-
-    def cell(text: str, room: int) -> str:
-        room -= 2
-        if len(text) > room:
-            text = text[:room - 1] + "…" if room >= 2 else "…"
-        return f" {text.ljust(room)} "
-
-    rule = f"+{'-' * left}+{'-' * right}+"
-    lines = [rule, f"|{cell('current', left)}|{cell('QA proposal', right)}|", rule]
-    for key in ORDER:
-        if key not in base and (not cand or key not in cand):
-            continue
-        top, bottom = f"{key}: {base.get(key, 'pending')}", ""
-        prev = f"previous: {key}: {base.get(key, 'pending')}"
-        new = f"new: {key}: {cand[key]}" if cand else "pending"
-        lines.append(f"|{cell(top, left)}|{cell(prev, right)}|")
-        lines.append(f"|{cell(bottom, left)}|{cell(new, right)}|")
-        lines.append(rule)
-    return "\n".join(lines)
-
-
-def read(path: Path, where: str) -> dict:
-    try:
-        return validate(json.loads(path.read_text(encoding="utf-8")), where)
-    except json.JSONDecodeError as bad:
-        raise Invalid(f"{where}: {bad}") from bad
-
-
-def cmd_record(args) -> int:
+def cmd_record(args):
     request = Path(args.request).read_text(encoding="utf-8")
-    output = Path(args.output).read_text(encoding="utf-8")
-    root = Path.cwd()
-    shot_id = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{sha256(request)[7:15]}"
-    record = {
-        "version": 1, "shot_id": shot_id, "scope": args.scope or args.skill,
+    digests: list[dict] = []
+    if args.output_manifest:
+        output, size, digests = shot_io.manifest_output(args.output_manifest)
+    else:
+        output, size = shot_io.inline_output(args.inline)
+    shot_id = uuid.uuid4().hex
+    record = validate({
+        "version": 2, "shot_id": shot_id, "scope": args.scope or args.skill,
         "inputs": {"request": request, "target_skill": args.skill,
                    "corpus_refs": [], "prompt_hash": sha256(request), "tools": []},
         "compute": {"model": args.model, "harness": args.harness,
                     "started_at": now(), "duration_ms": 0,
-                    "tokens": {"input": estimate(request), "output": estimate(output),
+                    "tokens": {"input": estimate(request),
+                               "output": math.ceil(size / 4),
                                "profile": "utf8_bytes_div4_ceil_v1"}},
-        "output": {"adapter": "text", "inline": {"text": output}},
-        "provenance": "inference", "user_feedback": {"status": "pending"},
-        "findings": [],
-    }
-    validate(record)
-    target = root / ".audit" / "shots" / f"{shot_id}.json"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(target)
-    return 0
+        "output": output, "provenance": "inference",
+        "user_feedback": {"status": "pending"}, "findings": [],
+    })
+    target = Path.cwd() / ".audit" / "shots" / f"{shot_id}.json"
+    shot_io.create_shot(target, record)
+    return 0, {"path": str(target), "shot_id": shot_id, "artifacts": digests}, str(target)
 
 
-def cmd_observe(args) -> int:
-    base = read(Path(args.shot), "$")
-    cand = read(Path(args.candidate), "$candidate") if args.candidate else None
-    print(table(metrics(base), metrics(cand) if cand else None))
-    return 1 if vetoes(base) else 0
+def read_pair(base_path: str, cand_path: str | None):
+    base = shot_io.read_shot(base_path)
+    cand = shot_io.read_shot(cand_path) if cand_path else None
+    text = table(metrics(base), metrics(cand) if cand else None)
+    return (1 if vetoes(base) else 0), {"verdict": verdict(base),
+                                        "hard_vetoes": vetoes(base)}, text
 
 
-def cmd_feedback(args) -> int:
-    path = Path(args.shot)
-    record = read(path, "$")
-    text = args.message.lower()
+def cmd_observe(args):
+    return read_pair(args.shot, args.candidate)
+
+
+def cmd_compare(args):
+    return read_pair(args.baseline, args.candidate)
+
+
+def sentiment(message: str) -> str:
+    """Classify one user message into a `STATUS`. L3 is primary, so this IS the
+    verdict -- no amount of work done rescues a message that carries a
+    correction. Module level so other loops can ask the same question instead
+    of growing a second, weaker copy of it."""
+    text = message.lower()
     words = set(re.findall(r"[a-z']+", text))
     if words & {"reject", "no", "bad"} or "doesn't work" in text:
-        status = "rejected"
-    elif words & {"but", "except", "wrong", "fix", "change", "should", "instead", "not"}:
-        status = "corrected"
-    elif words & {"accept", "accepted", "approve", "approved"} or any(
+        return "rejected"
+    if words & {"but", "except", "wrong", "fix", "change", "should", "instead", "not"}:
+        return "corrected"
+    if words & {"accept", "accepted", "approve", "approved"} or any(
             p in text for p in ("ship it", "looks good", "works for me")):
-        status = "accepted"
+        return "accepted"
+    return "pending"
+
+
+def cmd_feedback(args):
+    path = Path(args.shot)
+    record = shot_io.read_shot(path)
+    if args.message is not None:
+        # The inferring form Cook still calls. It goes when `sentiment` goes.
+        status = sentiment(args.message)
+        fields = {"status": status, "evidence": args.message, "observed_at": now()}
+        if status == "corrected":
+            fields["correction"] = args.message
     else:
-        status = "pending"
-    record["user_feedback"] = {"status": status, "evidence": args.message,
-                               "observed_at": now()}
-    if status == "corrected":
-        record["user_feedback"]["correction"] = args.message
-    validate(record)
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
-    print(verdict(record))
-    return 0
+        given = {"status": args.status, "correction": args.correction,
+                 "sentiment": args.sentiment, "rank": args.rank}
+        given = {k: v for k, v in given.items() if v is not None}
+        if not given:
+            raise Refused("feedback: give at least one of --status, --correction,"
+                          " --sentiment, --rank")
+        # A v1 file is history. Writing it would migrate it and rewrite the past.
+        if shot_io.on_disk_version(path) == 1:
+            raise Refused(f"{path}: version 1 is read-only, record a new shot")
+        fields = dict(record["user_feedback"])
+        fields.update(given)
+    record["user_feedback"] = fields
+    record = validate(record)
+    shot_io.replace_shot(path, record)
+    return 0, {"verdict": verdict(record), "user_feedback": fields}, verdict(record)
 
 
-def main(argv: list[str] | None = None) -> int:
+def cmd_assess(args):
+    bundle = shot_io.load(args.evidence)
+    turns = bundle.get("turns") if isinstance(bundle, dict) else None
+    if not isinstance(turns, list) or any(not isinstance(t, str) for t in turns):
+        raise Refused("$.turns: expected an array of strings", path="$.turns")
+    found = [c._asdict() for c in advisory.assess(turns)]
+    lines = [f"{c['field']} = {c['value']} ({c['confidence']})" for c in found]
+    return 0, {"candidates": found}, "\n".join(lines) or "no candidates"
+
+
+def parse(argv):
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--json", action="store_true", help="emit one JSON envelope")
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="verb", required=True)
 
-    rec = sub.add_parser("record", help="write a Shot record from a request and an output")
-    rec.add_argument("skill", help="repository-relative skill directory")
+    rec = sub.add_parser("record", parents=[common], help="write a Shot record")
+    rec.add_argument("skill")
     rec.add_argument("--request", required=True)
-    rec.add_argument("--output", required=True)
+    out = rec.add_mutually_exclusive_group(required=True)
+    out.add_argument("--output-manifest")
+    out.add_argument("--inline")
     rec.add_argument("--scope", default="")
     rec.add_argument("--model", default="unknown")
     rec.add_argument("--harness", default="unknown")
     rec.set_defaults(run=cmd_record)
 
-    obs = sub.add_parser("observe", help="read a Shot, optionally against a candidate")
+    obs = sub.add_parser("observe", parents=[common], help="read one Shot")
     obs.add_argument("shot")
     obs.add_argument("candidate", nargs="?")
     obs.set_defaults(run=cmd_observe)
 
-    fb = sub.add_parser("feedback", help="attach the user's own words to a Shot")
+    cmp_ = sub.add_parser("compare", parents=[common], help="baseline against candidate")
+    cmp_.add_argument("baseline")
+    cmp_.add_argument("candidate")
+    cmp_.set_defaults(run=cmd_compare)
+
+    fb = sub.add_parser("feedback", parents=[common], help="record the user's authority")
     fb.add_argument("shot")
-    fb.add_argument("message")
+    fb.add_argument("message", nargs="?")
+    fb.add_argument("--status", choices=("pending", "accepted", "corrected", "rejected"))
+    fb.add_argument("--correction")
+    fb.add_argument("--sentiment", choices=("positive", "neutral", "negative"))
+    fb.add_argument("--rank", type=float)
     fb.set_defaults(run=cmd_feedback)
 
-    args = parser.parse_args(argv)
+    ass = sub.add_parser("assess-feedback", parents=[common], help="advisory candidates")
+    ass.add_argument("--evidence", required=True)
+    ass.set_defaults(run=cmd_assess)
+    return parser.parse_args(argv)
+
+
+def json_path(message: str) -> str | None:
+    head = message.split(":", 1)[0]
+    return head if head.startswith("$") else None
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse(argv)
+    result, error, path = None, None, None
     try:
-        return args.run(args)
+        code, result, text = args.run(args)
+    except Refused as bad:
+        code, error, path = bad.code, str(bad), bad.path
     except Invalid as bad:
-        print(f"tokens-qa: {bad}", file=sys.stderr)
-        return 2
+        code, error, path = 2, str(bad), json_path(str(bad))
+    except FileExistsError as bad:
+        code, error = 4, f"{bad.filename}: a shot already claims this id"
+    except json.JSONDecodeError as bad:
+        code, error = 2, f"not JSON: {bad}"
+    except OSError as bad:
+        code, error = 3, f"{bad.filename}: {bad.strerror}"
+    if args.json:
+        print(json.dumps({"ok": code == 0, "code": code, "error": error,
+                          "path": path, "result": result}))
+    elif error:
+        print(f"tokens-qa: {error}", file=sys.stderr)
+    else:
+        print(text)
+    return code
 
 
 if __name__ == "__main__":
