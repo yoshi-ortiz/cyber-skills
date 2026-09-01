@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fog import (ALPHA_SKILLS, FOG_DIRS, FOG_FILES, FOG_FILES_EXTRA,
                  FOG_GLOBS, is_fog, reasons)
+from publish import published_paths
 
 
 def test() -> None:
@@ -36,9 +37,22 @@ def test() -> None:
     # Every rule can say why it exists; a rule with no reason prints
     # "development state" at the one moment someone needs the real answer.
     why = reasons()
-    for rule in (FOG_FILES + FOG_FILES_EXTRA + FOG_DIRS + FOG_GLOBS
-                 + ALPHA_SKILLS):
+    rules = set(FOG_FILES + FOG_FILES_EXTRA + FOG_DIRS + FOG_GLOBS
+                + ALPHA_SKILLS)
+    for rule in sorted(rules):
         assert rule in why, f"{rule} has no reason"
+    assert set(why) == rules, f"reasons for no rule: {sorted(set(why) - rules)}"
+
+    # A file nobody committed is a file nobody chose to ship.
+    root = Path(__file__).resolve().parents[1]
+    stray = root / "test_fog_stray.md"
+    stray.write_text("stray\n")
+    try:
+        for channel in ("main", "alpha"):
+            published = {path.as_posix() for path in published_paths(root, channel)}
+            assert stray.name not in published, f"{stray.name} reached {channel}"
+    finally:
+        stray.unlink()
     print("OK")
 
 

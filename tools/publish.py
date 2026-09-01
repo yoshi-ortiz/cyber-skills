@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -25,10 +26,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fog import is_fog, walk
 
 
+def tracked(root: Path) -> set[str]:
+    """Every path git tracks, repo-relative.
+
+    The fog list names what dev state to withhold, and it can only name what
+    someone thought of. A scratch file in the working tree is named by nobody,
+    so publishing the working tree ships it. Committing is the act by which a
+    file is chosen to exist here at all; publishing what git tracks makes that
+    the same act as choosing to ship it.
+    """
+    listing = subprocess.run(["git", "-C", str(root), "ls-files", "-z"],
+                             capture_output=True, text=True, check=True).stdout
+    return set(listing.split("\0"))
+
+
 def published_paths(root: Path, channel: str = "main") -> list[Path]:
     """Every file that belongs in a published tree, repo-relative."""
+    known = tracked(root)
     return [relative for relative in walk(root)
-            if not is_fog(relative.as_posix(), channel)]
+            if relative.as_posix() in known
+            and not is_fog(relative.as_posix(), channel)]
 
 
 def publish(root: Path, out: Path, channel: str = "main") -> tuple[int, int]:
