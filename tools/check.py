@@ -49,7 +49,10 @@ def gates(tree: Path) -> list[tuple[str, list[str]]]:
         ("unit tests", [py, "-m", "unittest", "discover",
                         "-s", "first/aesthetic/scripts", "-p", "test_*.py"]),
         ("harness self-test", [py, "first/aesthetic/scripts/bootstrap_harness.py", "self-test"]),
-        ("tokens-qa tests", [py, "check/tokens-qa/scripts/test_tokens_qa.py"]),
+        *((f"tokens-qa {path.stem} passes", [py, str(path.relative_to(ROOT))])
+          for path in sorted(ROOT.glob("check/tokens-qa/scripts/test_*.py"))),
+        ("cook tests", [py, "-m", "unittest", "discover",
+                        "-s", "cook", "-p", "test_*.py"]),
         ("index gate", [py, "tools/index_gate.py"]),
         ("loanwords", [py, "tools/loanwords.py"]),
         ("fog tests", [py, "tools/test_fog.py"]),
