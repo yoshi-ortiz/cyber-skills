@@ -66,6 +66,7 @@ which stop of that rail a prompt belongs to.
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Token sessions</a><br><small>Where you spend a working session</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Shows which other skills yours actually resemble, and which resemble nothing</td><td><code>build</code> · <strong>Measure</strong></td></tr>
+  <tr><td nowrap>🧾 <a href="#-tokens-qa"><strong>/tokens-qa</strong></a></td><td>Observe one shot, measure what it cost, and say what it broke</td><td><code>check</code> · <strong>Measure</strong></td></tr>
   <tr><td colspan="3" align="center"><h3>🛤️ Rest of the rail<br><small>Planned families. No installed command answers to these yet.</small></h3></td></tr>
   <tr><td nowrap>🔨 <code>build-*</code></td><td>Implement and verify the approved contract</td><td><code>build</code> · <strong>Code · Build · Test</strong></td></tr>
   <tr><td nowrap>🚢 <code>land-*</code></td><td>Ship selected outputs and make deployment observable</td><td><code>land</code> · <strong>Release · Deploy</strong></td></tr>
@@ -180,6 +181,7 @@ skills return different groups, and a comparison set that moves is not one.
 skill's own script, and it ships none of them.
 
 </details>
+
 
 ## 🧑‍🎨 /aesthetic
 
@@ -325,6 +327,48 @@ written.
 
 Not on the stable branch. Real work, real tests, unfinished edges. Install by
 hand from `dev` (path A). Links in this section resolve on `dev`.
+
+## 🧾 /tokens-qa
+
+Answers one question: **did that shot land, and what did it cost?** It reads the
+request you made, the output you got, the token counts, and your own words back
+about it. It never reads the model's hidden reasoning, and it never goes
+digging through your repository to invent evidence it did not observe.
+
+The verdict is yours. "Good, ship it" is acceptance. "Good, but fix the
+split" is a failure, because an instruction you had to give twice is an
+instruction that did not land the first time. Silence stays pending forever and
+never quietly ripens into a pass.
+
+| | |
+| --- | --- |
+| **Package** | [check/tokens-qa/](check/tokens-qa/) · entry [check/tokens-qa/SKILL.md](check/tokens-qa/SKILL.md) |
+| **Invoke** | You only. Say `tokens-qa`. |
+| **Needs** | Python. Standard library only. |
+| **Runs on** | Shot records under `.audit/shots/`, which it also writes |
+| **Channel** | `alpha` |
+
+<details>
+<summary><b>Full spec: the three verbs and the four hard vetoes</b></summary>
+
+```bash
+python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt --output out.md
+python3 <skill>/scripts/tokens_qa.py observe .audit/shots/<id>.json [<candidate>.json]
+python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json "<your exact words>"
+```
+
+`observe` prints two columns, current against QA proposal, two rows per metric.
+Exit 0 is a clean read, 1 is a present hard veto, 2 is an invalid record with
+the failing JSON path named on stderr.
+
+The four hard vetoes come from [QA.md](QA.md) and nowhere else: `scope_breach`,
+`missing_observation_log`, `context_derail`, `ungrounded_corpus_claim`. An
+undeclared source that never shows up in the output is `context_contamination`: reported, but not a veto.
+
+Token totals compare only within one profile. Missing counts read
+`unavailable`, never zero.
+
+</details>
 
 ## 📁 /genesis
 

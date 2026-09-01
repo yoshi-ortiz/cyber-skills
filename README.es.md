@@ -67,6 +67,7 @@ avanzan el trabajo, y `check` y `fix` son arcos de regreso. La columna
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Sesiones de tokens</a><br><small>Donde se te va una sesión de trabajo</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Muestra a qué otros skills se parece el tuyo, y cuál no se parece a nada</td><td><code>build</code> · <strong>Medir</strong></td></tr>
+  <tr><td nowrap>🧾 <a href="#-tokens-qa"><strong>/tokens-qa</strong></a></td><td>Observa un shot, mide lo que costó y dice qué rompió</td><td><code>check</code> · <strong>Medir</strong></td></tr>
   <tr><td colspan="3" align="center"><h3>🛤️ Resto del riel<br><small>Familias planeadas. Todavía no hay comando instalado que responda a estos nombres.</small></h3></td></tr>
   <tr><td nowrap>🔨 <code>build-*</code></td><td>Implementa y verifica el contrato aprobado</td><td><code>build</code> · <strong>Código · Build · Pruebas</strong></td></tr>
   <tr><td nowrap>🚢 <code>land-*</code></td><td>Publica salidas y vuelve observable el despliegue</td><td><code>land</code> · <strong>Lanzar · Desplegar</strong></td></tr>
@@ -180,6 +181,7 @@ skills return different groups, and a comparison set that moves is not one.
 skill's own script, and it ships none of them.
 
 </details>
+
 
 ## 🧑‍🎨 /aesthetic
 
@@ -328,6 +330,49 @@ archivo quedan tal cual.
 No están en la rama estable. Trabajo real, pruebas reales, bordes sin terminar.
 Instálalos a mano desde `dev` (ruta A). Los enlaces de esta sección funcionan en
 `dev`.
+
+## 🧾 /tokens-qa
+
+Responde una pregunta: **¿ese shot funcionó, y cuánto costó?** Lee lo que
+pediste, lo que te entregó, los tokens que gastó, y tus propias palabras sobre
+el resultado. Nunca lee el razonamiento oculto del modelo, y nunca se pone a
+escarbar tu repositorio para inventar evidencia que no observó.
+
+El veredicto es tuyo. "Bien, va" es aceptación. "Bien, pero arregla el split"
+es un fallo, porque una instrucción que tuviste que dar dos veces es una
+instrucción que no aterrizó la primera. El silencio se queda en pendiente para
+siempre y nunca madura solo hasta convertirse en aprobación.
+
+| | |
+| --- | --- |
+| **Package** | [check/tokens-qa/](check/tokens-qa/) · entry [check/tokens-qa/SKILL.md](check/tokens-qa/SKILL.md) |
+| **Invocar** | Solo tú. Di `tokens-qa`. |
+| **Needs** | Python. Solo biblioteca estándar. |
+| **Runs on** | Registros de shot en `.audit/shots/`, que también escribe |
+| **Channel** | `alpha` |
+
+<details>
+<summary><b>Spec completa: los tres verbos y los cuatro vetos duros</b></summary>
+
+```bash
+python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt --output out.md
+python3 <skill>/scripts/tokens_qa.py observe .audit/shots/<id>.json [<candidate>.json]
+python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json "<your exact words>"
+```
+
+`observe` imprime dos columnas, actual contra propuesta QA, dos filas por
+métrica. Salida 0 es lectura limpia, 1 es un veto duro presente, 2 es un
+registro inválido con la ruta JSON que falló nombrada en stderr.
+
+Los cuatro vetos duros vienen de [QA.md](QA.md) y de ningún otro lado:
+`scope_breach`, `missing_observation_log`, `context_derail`,
+`ungrounded_corpus_claim`. Una fuente no declarada que nunca aparece en la
+salida es `context_contamination`: se reporta, pero no es veto.
+
+Los totales de tokens solo se comparan dentro de un mismo perfil. Los conteos
+ausentes dicen `unavailable`, nunca cero.
+
+</details>
 
 ## 📁 /genesis
 

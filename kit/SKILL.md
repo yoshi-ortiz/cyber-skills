@@ -12,6 +12,7 @@ also:
 | --- | --- |
 | `kit`, `sync`, `update`, `refresh`, `upgrade`, `install`, `setup`, `init`, `start`, `starter-pack`, **with no source named** | **Sync.** Re-arm every app at the latest version, cloning the harness first if it is missing. Bare `kit` means this, in every directory, a Repo-Dev checkout included. |
 | any of those **followed by a source**, such as `sync cyber-skills` | **One source.** `harness.py sync <source>`, matched as a substring. Named a source, meant that source. |
+| `sync dev`, or any attempt to sync your own unpushed work | **Not a sync.** No channel serves `dev`, and none should: every source clones from GitHub, so no flag here shortens edit-to-run. Symlink the checkout into that repo's `.claude/skills/` and your edits are live with no sync at all. To reach your *other* machines, publish first -- in `cyber-skills` that is `python3 tools/release.py --channel alpha --push`, then sync. |
 | `fix`, `doctor`, `repair`, `troubleshoot`, `conflict` | **Fix.** Something installed wrong, or two things collided. |
 
 Never ask which. Sync is idempotent, so there is no separate Install mode to
