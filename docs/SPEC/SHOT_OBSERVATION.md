@@ -3,14 +3,17 @@
 Status: promoted contract for [QA.md](../../QA.md). Dev fog until the schema
 stabilizes; `QA.md` on `main` links here.
 
-JSON is canonical. Example:
+JSON is canonical. The current schema is version 2. Example:
 
 ```json
 {
+  "version": 2,
   "shot_id": "2026-08-31T18:00:00Z-landing-hero-03",
   "scope": "Render landing hero SVG from current scene spec",
   "inputs": {
-    "corpus_refs": ["moodboards/llm-shots/good room space, wrong roads.png"],
+    "corpus_refs": [
+      { "path": "moodboards/llm-shots/good room space, wrong roads.png" }
+    ],
     "prompt_hash": "sha256:abc…",
     "tools": ["text_to_graphics.py", "iso_svg"],
     "stack": ["python3", "stdlib"]
@@ -36,9 +39,14 @@ JSON is canonical. Example:
   },
   "output": {
     "adapter": "graphic",
-    "path": "shots/landing.hero.flow.svg",
-    "mime": "image/svg+xml",
-    "bytes": 18432
+    "artifacts": [
+      {
+        "role": "deliverable",
+        "path": "shots/landing.hero.flow.svg",
+        "mime": "image/svg+xml",
+        "bytes": 18432
+      }
+    ]
   },
   "provenance": "procedural",
   "gates": {
@@ -55,6 +63,7 @@ JSON is canonical. Example:
 
 | Key | Type | Rule |
 | --- | --- | --- |
+| `version` | number | `2`. A `1` record is migrated on read |
 | `shot_id` | string | Unique per attempt |
 | `scope` | string | One bounded task |
 | `inputs` | object | See below |
@@ -67,10 +76,15 @@ JSON is canonical. Example:
 
 | Key | Required | Type |
 | --- | --- | --- |
-| `corpus_refs` | no | string[] |
+| `corpus_refs` | no | descriptor[] |
 | `prompt_hash` | yes | string |
 | `tools` | yes | string[] |
 | `stack` | no | string[] |
+| `request` | no | string |
+| `target_skill` | no | string |
+
+A corpus descriptor is an object with a required `path`. Version 1 wrote bare
+strings. Each string becomes `{ "path": "<the string>" }` on migration.
 
 ## `compute`
 
@@ -90,10 +104,14 @@ JSON is canonical. Example:
 | Key | Required | Type |
 | --- | --- | --- |
 | `adapter` | yes | string (e.g. `graphic`, `document`, `bundle`) |
-| `path` | no | string |
-| `mime` | no | string |
-| `bytes` | no | number |
-| `inline` | no | object (only when no path) |
+| `artifacts` | no | non-empty array of artifact objects |
+| `inline` | no | object |
+
+Exactly one of `artifacts` and `inline` is present. An artifact carries a
+required `role` and `path`, and an optional `mime` and `bytes`. Version 1 put a
+single `path`, `mime`, and `bytes` directly on `output`. That shape migrates to
+one artifact whose `role` is `deliverable`. Absent keys stay absent. Nothing is
+filled in with null.
 
 ## `user_feedback`
 
@@ -103,6 +121,8 @@ JSON is canonical. Example:
 | `sentiment` | no | `positive`, `neutral`, `negative` |
 | `correction` | no | string |
 | `rank` | no | number |
+| `evidence` | no | string, the user message the status was read from |
+| `observed_at` | no | ISO-8601 string |
 
 **Primary verdict:** `status`, `sentiment`, and `correction` from user chat.
 Negative sentiment or any correction means the shot did not succeed at L3.
@@ -118,6 +138,24 @@ Negative sentiment or any correction means the shot did not succeed at L3.
 
 Gates inform risk; they do not override L3 except where [QA.md](../../QA.md)
 names a **hard veto**.
+
+## Unknown fields
+
+Validation is strict at every object level. A field this document does not name
+is refused, and the error names its exact JSON path. A stray key under
+`compute.tokens` reports `$.compute.tokens.surprise`. A stray key on the first
+artifact reports `$.output.artifacts[0].surprise`.
+
+Strictness is what makes migration safe. A record that quietly carries an
+unnamed field is a record whose meaning nobody agreed on.
+
+## Reading a record
+
+`shot_contract.migrate` is the only entry. It deep copies, so it never mutates
+what it was handed. It returns a version 2 record unchanged, migrates a version
+1 record, and refuses anything else with `$.version: unsupported version`.
+`shot_contract.validate` is `validate_v2` over `migrate`, so every version 1
+record already on disk still reads.
 
 ## File placement
 
