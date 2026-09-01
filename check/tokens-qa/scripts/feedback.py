@@ -87,3 +87,28 @@ def assess(messages: Sequence[str]) -> list[FeedbackCandidate]:
                     confidence, (reason,), message))
             break
     return found
+
+
+BUNDLE = ("shot_id", "scope", "evidence", "findings", "artifacts", "observed_at")
+
+
+def correction_bundle(shot: dict, evidence: str = "",
+                      artifacts: Sequence[str] = ()) -> dict:
+    """What an adapter is allowed to see when a Shot is sent back.
+
+    Bounded on purpose. Handing over the whole record is how one rejected
+    round turns into a rewrite of the skill that produced it, so this carries
+    the correction and the things it names, and nothing else.
+    """
+    said = shot.get("user_feedback") or {}
+    declared = shot.get("output", {}).get("artifacts") or []
+    return {
+        "shot_id": shot.get("shot_id", ""),
+        "scope": shot.get("scope", ""),
+        "evidence": evidence or said.get("correction") or said.get("evidence") or "",
+        "findings": sorted(f["id"] for f in shot.get("findings") or []
+                           if isinstance(f, dict) and f.get("status") == "present"),
+        "artifacts": list(artifacts) or [a["path"] for a in declared
+                                         if isinstance(a, dict) and a.get("path")],
+        "observed_at": said.get("observed_at", ""),
+    }

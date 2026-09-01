@@ -5,6 +5,7 @@ The keyword classifier this replaces read "not bad" as a rejection and "no
 changes needed, ship it" as a rejection too. Every row of the adversarial
 table below is a message that classifier got backwards.
 """
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -146,6 +147,51 @@ class Shape(unittest.TestCase):
                        "import shot_contract"):
             with self.subTest(banned):
                 self.assertNotIn(banned, source)
+
+
+class CorrectionBundleIsBounded(unittest.TestCase):
+    """Handing an adapter the whole record is how one rejected round becomes a
+    rewrite of the skill that produced it."""
+
+    shot = {
+        "shot_id": "abc", "scope": "render one hero",
+        "secret": "must not travel",
+        "inputs": {"request": "a long private request", "prompt_hash": "sha256:x"},
+        "output": {"adapter": "graphic",
+                   "artifacts": [{"role": "deliverable", "path": "shots/hero.png"}]},
+        "findings": [{"id": "scope_breach", "status": "present"},
+                     {"id": "context_derail", "status": "absent"}],
+        "user_feedback": {"status": "corrected", "correction": "fix the thumbnail",
+                          "observed_at": "2026-09-01T00:00:00Z"},
+    }
+
+    def test_the_bundle_carries_exactly_the_declared_keys(self):
+        self.assertEqual(set(fb.correction_bundle(self.shot)), set(fb.BUNDLE))
+
+    def test_nothing_outside_the_bundle_travels(self):
+        blob = json.dumps(fb.correction_bundle(self.shot))
+        self.assertNotIn("must not travel", blob)
+        self.assertNotIn("a long private request", blob)
+
+    def test_only_findings_marked_present_are_carried(self):
+        self.assertEqual(fb.correction_bundle(self.shot)["findings"], ["scope_breach"])
+
+    def test_declared_artifacts_are_used_when_none_are_named(self):
+        self.assertEqual(fb.correction_bundle(self.shot)["artifacts"],
+                         ["shots/hero.png"])
+
+    def test_named_artifacts_win_over_declared_ones(self):
+        got = fb.correction_bundle(self.shot, artifacts=["design/thumb.png"])
+        self.assertEqual(got["artifacts"], ["design/thumb.png"])
+
+    def test_explicit_evidence_wins_over_the_recorded_correction(self):
+        got = fb.correction_bundle(self.shot, evidence="the crop is wrong")
+        self.assertEqual(got["evidence"], "the crop is wrong")
+
+    def test_a_record_with_no_feedback_yields_empty_strings_not_a_crash(self):
+        got = fb.correction_bundle({"shot_id": "x", "scope": "y"})
+        self.assertEqual(got["evidence"], "")
+        self.assertEqual(got["artifacts"], [])
 
 
 if __name__ == "__main__":

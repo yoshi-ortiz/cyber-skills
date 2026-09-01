@@ -120,6 +120,12 @@ def cmd_assess(args):
     return 0, {"candidates": found}, "\n".join(lines) or "no candidates"
 
 
+def cmd_correction(args):
+    shot = shot_io.read_shot(args.shot)
+    bundle = advisory.correction_bundle(shot, args.evidence or "", args.artifact)
+    return 0, bundle, json.dumps(bundle, indent=2, sort_keys=True)
+
+
 def parse(argv):
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--json", action="store_true", help="emit one JSON envelope")
@@ -159,6 +165,13 @@ def parse(argv):
     ass = sub.add_parser("assess-feedback", parents=[common], help="advisory candidates")
     ass.add_argument("--evidence", required=True)
     ass.set_defaults(run=cmd_assess)
+
+    cor = sub.add_parser("correction", parents=[common],
+                         help="a bounded bundle an adapter may act on")
+    cor.add_argument("shot")
+    cor.add_argument("--evidence", default="")
+    cor.add_argument("--artifact", action="append", default=[])
+    cor.set_defaults(run=cmd_correction)
     return parser.parse_args(argv)
 
 

@@ -28,6 +28,7 @@ python3 <skill>/scripts/tokens_qa.py observe .audit/shots/<id>.json
 python3 <skill>/scripts/tokens_qa.py compare <baseline>.json <candidate>.json
 python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json --status accepted
 python3 <skill>/scripts/tokens_qa.py assess-feedback --evidence turns.json --json
+python3 <skill>/scripts/tokens_qa.py correction .audit/shots/<id>.json
 ```
 
 `record` writes one canonical Shot record under `.audit/shots/` at version 2,
@@ -50,6 +51,10 @@ refuses every write; record a new shot instead.
 `assess-feedback` reads an evidence bundle whose `turns` is a list of strings
 and names the fields a human might want to set. It is advisory, and it writes
 no record.
+
+`correction` emits the bounded bundle an adapter may act on. Six keys, and
+nothing else from the record travels. Handing an adapter the whole Shot is how
+one rejected round becomes a rewrite of the skill that produced it.
 
 Add `--json` to any verb for one envelope, `{ok, code, error, path, result}`,
 where `path` is the failing JSON path or null.
