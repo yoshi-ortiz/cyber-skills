@@ -20,13 +20,21 @@ An unsettled question goes to `GOAL.md`'s prototype backlog, never to `SPEC.md`.
 ## Is it green
 
 ```bash
-python3 tools/check.py        # every gate at once
-python3 tools/token_bench.py  # token cost only
+python3 tools/check.py                             # every gate at once
+python3 tools/token_bench.py --flow NAME=a,b,c     # what one walk loads
+python3 tools/token_bench.py --package NAME=ROOT   # what a whole install holds
 ```
 
-`check.py` filters nothing. 18/19 gates pass; `contracts` is red on purpose
-(R-15, four files over the 30 KB budget). `token_bench.py` measures **token
-cost**. **Signal density** is not countable and gets no checker.
+`check.py` filters nothing. 22/23 gates pass; `contracts` is red on purpose.
+That red is R-15, four source files over the 30 KB **byte budget**. It is
+modularity debt. It is not a package **token cost** result and says nothing
+about what a package costs a model.
+
+`token_bench.py` measures token cost on two separate questions. A **flow** is
+one end-to-end path, and its on-path bytes are what a session pays. A
+**package** is every `SKILL.md` on disk, and its payload is a ceiling nobody
+loads at once. The two numbers are not interchangeable. **Signal density** is
+not countable and gets no checker.
 
 ## Standing rules
 

@@ -225,23 +225,57 @@ Two axes again, and a design can win one while losing the other. **Context** is
 the description text model-invoked skills put in front of the model every
 session. **On path** is the `SKILL.md` bytes one end-to-end walk loads.
 
+**Workflow only.** Both figures below are flow figures. The table compares one
+end-to-end walk against one end-to-end walk. It is not a comparison of complete
+packages, and reading it as one overstates what either collection costs.
+
 | Flow | Skills | Context | On path |
 | --- | --- | --- | --- |
 | `ask-matt`, full flow | 9 | 870 B | 36,267 B |
-| The rail as it stands today | 6 | 1,855 B | 37,405 B |
+| The rail as it stands today | 6 | 1,855 B | 37,278 B |
 | | | **2.13x** | 1.03x |
 
 Same work, near-identical path cost, and the rail pays **113% more** context
 while shipping three fewer skills. Invocation choice and model-invoked
 description length, not raw skill count, explain the difference.
 
-**The reference is a moving target, and it moved.** This table read 1.98x when
-first measured. The rail did not regress -- its context is unchanged at 1,855 B
-against 1,856 B. `ask-matt` dropped 67 bytes of description, from 937 to 870,
+**The package surface is a different question.** A flow is one walk. A
+**package** is every `SKILL.md` an install puts on disk, found recursively.
+`--package` measures that tree.
+
+```bash
+python3 tools/publish.py --out /tmp/cyber-alpha --channel alpha
+git clone --depth 1 https://github.com/mattpocock/skills /tmp/matt
+python3 tools/token_bench.py \
+  --package cyber-alpha=/tmp/cyber-alpha \
+  --package matt=/tmp/matt
+```
+
+| Package | Skills | Always-on description | Payload |
+| --- | --- | --- | --- |
+| `cyber-alpha` | 9 | 1,215 B | 37,907 B |
+| `matt` | 37 | 3,047 B | 158,138 B |
+| | | **2.51x** | **4.17x** |
+
+Payload is **not** one execution path. Nobody loads a package in a session. It
+is the ceiling on what an install could ever cost, and the flow table above is
+what one session actually pays. The figure paid every turn is the always-on
+description, where the gap is 2.51x rather than 4.17x, and it tracks
+model-invoked count, 3 of 9 against 15 of 37.
+
+**The reference is a moving target, and it moved.** The flow table read 1.98x
+when first measured. The rail did not regress -- its context is unchanged at
+1,855 B against 1,856 B. `ask-matt` dropped 67 bytes of description, from 937 to 870,
 and took the ratio with it. That is the argument for a re-runnable command over
 a number in a document: a benchmark against other people's work goes stale
 because of their commits, not yours, and nothing in this repository would have
-said so.
+said so. The package figures moved further. The plan this work came from
+asserted 44 skills, 4,969 bytes of always-on description, and 179,360 bytes of
+payload for `matt`. That did not reproduce. Upstream measures 37 / 3,047 /
+158,138 today, so the plan's figure is not one this repository can stand behind.
+The local install lock also holds 48 skills from `mattpocock/skills` while
+upstream ships 37. What is installed and what a package contains are two
+questions, and neither answers the other.
 
 **Finding 1: invocation choice comes before description length.** `ask-matt`,
 `implement`, and the other user-invoked steps contribute zero context despite
