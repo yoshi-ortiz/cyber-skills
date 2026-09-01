@@ -6,9 +6,12 @@ The vocabulary of the **rail**: the package-level workflow described in
 Fog. Lives on `dev`, never published to `main`.
 
 This is **not** the aesthetic skill's language. That one lives in
-[aesthetic/UBIQUITOUS_LANGUAGE.md](aesthetic/UBIQUITOUS_LANGUAGE.md), ships to
-users, and defines a different domain with words that look the same. See
-Flagged ambiguities.
+[first/aesthetic/UBIQUITOUS_LANGUAGE.md](first/aesthetic/UBIQUITOUS_LANGUAGE.md),
+ships to users, and defines a different domain with words that look the same.
+See Flagged ambiguities.
+
+Shot evaluation vocabulary is universal and lives in [QA.md](QA.md). Terms below
+point there; they are not redefined.
 
 ## The rail
 
@@ -66,12 +69,30 @@ Flagged ambiguities.
 | **Compiler trace** | The reproducible account of what each inference pass admitted, omitted, spent, and why | Log, explanation, chain of thought |
 | **Agreed tokenization** | A reviewed human judgement that a chunk's token-level rendering is legible to the target model, pinned to the sha256 of the exact text reviewed | Signal density, token cost, legibility score |
 
+## Shot QA
+
+Universal shot contract: [QA.md](QA.md). Repo-agnostic; copy into any skills
+repository.
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Shot** | One bounded LLM tool-using deliverable awaiting user judgment | Response, generation, render |
+| **Shot record** | Structured log (JSON primary) for one shot: scope, inputs, compute, output, provenance, feedback | Attempt log, trace |
+| **Compute step** | Tokenized prompt execution plus tools; emits an observation log | Inference, run, pass |
+| **Corpus** (shot input) | Optional reference material tagged for pursue, avoid, near-hit, or feedback re-entry | Moodboard, references, examples |
+| **Provenance** (shot) | How output was grounded: `corpus`, `procedural`, `fetched`, or `inference` | Source, origin |
+| **Compliance layer** | L3 user verdict (primary), optional L1/L2 machine checks, hard vetoes | Gate, test, lint |
+| **Hard veto** | Non-compliance regardless of taste: scope breach, missing log, context derail, ungrounded corpus claim | Blocker, fail |
+| **Output adapter** | Skill-specific typing of `output` (`graphic`, `document`, `bundle`, etc.) | Format, renderer |
+| **Observation log** | Per-prompt-scope structured compute metadata; canonical JSON | Telemetry, metrics |
+| **Minimum project surface** | Corpus root (optional), shot log dir, scope, user feedback channel | Harness, scaffold |
+
 ## Inference outcomes
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
 | **Inference attempt** | One task execution from compiled context through artifacts and user outcome, recorded locally for comparison | Session, run, generation |
-| **Accepted result** | An inference attempt whose output the user keeps or ships without a restart or major scope correction | Successful response, completion, positive score |
+| **Accepted result** | An inference attempt whose output the user keeps or ships without a restart or major scope correction; at L3, no negative sentiment or correction | Successful response, completion, positive score |
 | **Context utility** | The observed usefulness of admitted context to an accepted result, kept separate from its token cost | Token weight, relevance, quality |
 | **Contamination risk** | The likelihood that content from an incompatible semantic context will frame the current work | Context derail, noise, hallucination |
 | **Learned recommendation** | A dev-only model suggestion to change a declaration, priority, pass budget, proof gate, or regression fixture; never live authority | Rule, decision, automatic optimization |

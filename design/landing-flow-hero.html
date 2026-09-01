@@ -108,7 +108,7 @@
       margin: 0;
       font-family: "Arial Rounded MT Bold", "Trebuchet MS", ui-sans-serif, sans-serif;
       font-size: clamp(48px, 6.7vw, 102px);
-      line-height: .9;
+      line-height: 1.02;
       letter-spacing: -.055em;
     }
 
@@ -161,20 +161,197 @@
       margin: 0;
     }
 
+    /* The rail map is a CSS layout, not a flat picture. Every station is a
+       real element positioned in percentages of the 1600x900 design frame, so
+       it stays editable, translatable, and legible to a screen reader. The
+       road is CSS too, so nothing here depends on an external file that a
+       different serving directory could break. `cqw` units let the whole
+       scene scale as one drawing. */
     .flow-map {
       position: relative;
+      container-type: inline-size;
       width: min(100%, 1080px);
-      min-width: 1020px;
-      aspect-ratio: 1672 / 941;
+      min-width: 720px;
+      aspect-ratio: 1600 / 1000;
       margin-inline: auto;
+      background: #faf5ee;
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      /* Not overflow:hidden: the near-edge station billboards (st-land,
+         st-check) sit close enough to the card boundary that clipping here
+         cut their text mid-word ("/land DEPL…"). The rail shapes are already
+         computed to stay inside 0-100%, so nothing else relies on this. */
+      overflow: visible;
     }
 
-    .flow-map img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: contain;
+    /* Group 47's topology: a central X carrying the forward diagonals, plus a
+       return arc down each outer side. Bars are rotated rectangles; arcs are
+       rings clipped to one half. Both are ordinary boxes, so the road
+       recolours, rescales and reflows with the rest of the page. */
+    .rail-bar,
+    .rail-arc {
+      position: absolute;
+      background: var(--yellow);
     }
+
+    .rail-bar {
+      left: 50%;
+      top: 48.06%;
+      width: 46.2%;
+      height: 2.75cqw;
+      translate: -50% -50%;
+      border-top: .25cqw solid var(--line);
+      border-bottom: .25cqw solid var(--line);
+    }
+
+    .rail-bar-a { rotate:  30deg; }
+    .rail-bar-b { rotate: -30deg; }
+
+    .rail-arc {
+      top: 26.01%;
+      width: 25.5%;
+      height: 44.01%;
+      background: none;
+      border: 2.75cqw solid var(--yellow);
+      border-radius: 50%;
+      box-shadow: 0 0 0 .25cqw var(--line), inset 0 0 0 .25cqw var(--line);
+    }
+
+    .rail-arc-left  { left: 6.25%;  clip-path: inset(-2cqw 50% -2cqw -2cqw); }
+    .rail-arc-right { left: 68.25%; clip-path: inset(-2cqw -2cqw -2cqw 50%); }
+
+    /* Painted centre line, drawn on top of the band. */
+    .rail-bar::after {
+      content: "";
+      position: absolute;
+      inset-block: calc(50% - .12cqw);
+      inset-inline: 0;
+      border-top: .25cqw dashed #fff;
+    }
+
+    .rail-arc::after {
+      content: "";
+      position: absolute;
+      inset: -1.5cqw;
+      border: .25cqw dashed #fff;
+      border-radius: 50%;
+    }
+
+    .station {
+      position: absolute;
+      translate: -50% -50%;
+      display: grid;
+      justify-items: center;
+      gap: 0;
+    }
+
+    /* A square rotated 45deg then flattened is the isometric plate. The
+       drop-shadow sits on the untransformed wrapper so the extrusion reads as
+       depth rather than a rotated blur. */
+    .plate-wrap { filter: drop-shadow(0 1.15cqw 0 var(--plate-edge)); }
+
+    .plate {
+      width: var(--plate-side);
+      aspect-ratio: 1;
+      background: var(--plate-face);
+      border: 2px solid var(--line);
+      transform: scale(1, var(--plate-squash)) rotate(45deg);
+    }
+
+    .station-solid {
+      --plate-side: 22.1cqw;
+      --plate-squash: .38;
+    }
+
+    .station-ghost {
+      --plate-side: 8.4cqw;
+      --plate-squash: .505;
+    }
+
+    /* A sims-style cutaway room: floor diamond plus two back walls rising
+       from its north-west and north-east edges, meeting at the room's back
+       corner. Every point is a formula on (half-width, half-height, wall
+       height) -- 80/45/70 in a 200x170 frame -- not a hand-drawn path, so a
+       different room is the same three polygons with new fill colors. The
+       two walls are shaded relative to --plate-face with color-mix, the way
+       a lit isometric cube always reads left wall darkest, right wall
+       mid-tone, floor brightest. */
+    .room-box {
+      width: 26cqw;
+      overflow: visible;
+      filter: drop-shadow(0 1.1cqw 0 rgba(23, 26, 31, .22));
+    }
+
+    .room-floor { fill: var(--plate-face); stroke: var(--line); stroke-width: 3; }
+
+    .room-wall-left {
+      fill: color-mix(in srgb, var(--plate-face) 58%, #171a1f);
+      stroke: var(--line);
+      stroke-width: 3;
+    }
+
+    .room-wall-right {
+      fill: color-mix(in srgb, var(--plate-face) 78%, #171a1f);
+      stroke: var(--line);
+      stroke-width: 3;
+    }
+
+    .room-character, .room-item { stroke: var(--line); stroke-width: 2.5; stroke-linejoin: round; }
+
+    .billboard {
+      position: absolute;
+      z-index: 2;
+      padding: .5cqw .9cqw;
+      background: var(--paper);
+      border: 2px solid var(--line);
+      border-radius: .55cqw;
+      box-shadow: .25cqw .25cqw 0 var(--line);
+      font: 800 1.55cqw/1.1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: nowrap;
+    }
+
+    /* Solid stations hang their sign on two posts. The upper pair points its
+       sign up; the lower pair points down, which keeps both clear of the
+       ghost stations parked at mid-height between them. */
+    .station-solid .billboard::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      left: 22%;
+      width: 56%;
+      height: 3.4cqw;
+      border-left: .5cqw solid var(--line);
+      border-right: .5cqw solid var(--line);
+    }
+
+    .st-first .billboard,
+    .st-land .billboard { bottom: calc(100% - 1cqw); }
+
+    .st-first .billboard::after,
+    .st-land .billboard::after { top: 100%; }
+
+    .st-build .billboard,
+    .st-check .billboard { top: calc(100% - 1cqw); }
+
+    .st-build .billboard::after,
+    .st-check .billboard::after { bottom: 100%; }
+
+    /* Ghost stations are off the loop, so their label sits on the plate. */
+    .station-ghost .billboard {
+      position: static;
+      margin-bottom: -1.6cqw;
+      font-size: 1.25cqw;
+      box-shadow: none;
+      background: transparent;
+      border: 0;
+    }
+
+    .st-first { left: 21.5%; top: 26.01%; --plate-face: var(--cyan);  --plate-edge: #0b7f8c; }
+    .st-land  { left: 78.5%; top: 26.01%; --plate-face: var(--blue);  --plate-edge: #12459a; }
+    .st-build { left: 21.5%; top: 70.02%; --plate-face: var(--pink);  --plate-edge: #a31666; }
+    .st-check { left: 78.5%; top: 70.02%; --plate-face: var(--green); --plate-edge: #17804a; }
+    .st-kit   { left: 28.1%; top: 47.97%; --plate-face: #fff3e9; --plate-edge: #cbb6a6; }
+    .st-fix   { left: 71.9%; top: 47.97%; --plate-face: #eef3f8; --plate-edge: #adb9c4; }
 
     .flow-scroll {
       max-width: 100%;
@@ -184,41 +361,6 @@
       overscroll-behavior-inline: contain;
       scrollbar-color: var(--yellow) transparent;
     }
-
-    .node-label {
-      --node-color: var(--yellow);
-      position: absolute;
-      display: grid;
-      justify-items: start;
-      gap: 4px;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-
-    .node-label strong {
-      padding: 7px 11px 6px;
-      color: var(--ink);
-      background: var(--node-color);
-      border: 2px solid var(--line);
-      border-radius: 9px;
-      box-shadow: 3px 3px 0 var(--line);
-      font: 900 clamp(13px, 1.25vw, 18px)/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    }
-
-    .node-label span {
-      padding-left: 3px;
-      color: var(--ink);
-      font: 800 clamp(9px, .75vw, 11px)/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-    }
-
-    .node-kit   { --node-color: var(--yellow); left: 11%; top: 8%; }
-    .node-first { --node-color: var(--cyan);   left: 32%; top: 15%; }
-    .node-build { --node-color: var(--pink);   left: 56%; top: 17%; }
-    .node-land  { --node-color: var(--blue);   left: 84%; top: 15%; }
-    .node-check { --node-color: var(--green);  left: 75%; top: 62%; }
-    .node-fix   { --node-color: var(--orange); left: 42%; top: 62%; }
 
     .flow-caption {
       display: flex;
@@ -263,7 +405,7 @@
         width: calc(100vw - 40px);
         max-width: calc(100vw - 40px);
       }
-      .flow-map { min-width: 920px; }
+      .flow-map { min-width: 680px; }
       .actions { flex-direction: column; }
       .button { width: 100%; }
       .flow-scroll::after {
@@ -318,13 +460,107 @@
       <figure class="flow-figure" aria-labelledby="flow-title">
         <div class="flow-scroll" tabindex="0" aria-label="Scrollable workflow diagram">
           <div class="flow-map">
-            <img src="../shots/landing.hero.flow.svg" alt="A colorful cartoon workflow with a toolkit on-ramp, planning, building, deployment, monitoring, and repair stations connected by one continuous figure-eight road running /first, /build, /land, /check.">
-            <div class="node-label node-kit"><strong>/kit</strong><span>Day 0 · set up</span></div>
-            <div class="node-label node-first"><strong>/first</strong><span>Plan</span></div>
-            <div class="node-label node-build"><strong>/build</strong><span>Code · test</span></div>
-            <div class="node-label node-land"><strong>/land</strong><span>Ship</span></div>
-            <div class="node-label node-check"><strong>/check</strong><span>Monitor</span></div>
-            <div class="node-label node-fix"><strong>/fix</strong><span>Repair</span></div>
+            <div class="rail-arc rail-arc-left"></div>
+            <div class="rail-arc rail-arc-right"></div>
+            <div class="rail-bar rail-bar-a"></div>
+            <div class="rail-bar rail-bar-b"></div>
+
+            <div class="station station-solid st-first">
+              <p class="billboard">/first SKETCH</p>
+              <svg class="room-box" viewBox="0 0 200 170" aria-hidden="true">
+                <polygon class="room-wall-left" points="100,80 20,125 20,55 100,10" />
+                <polygon class="room-wall-right" points="100,80 180,125 180,55 100,10" />
+                <polygon class="room-floor" points="100,80 20,125 100,170 180,125" />
+                <!-- item: spotlight on the protagonist's pedestal -->
+                <g class="room-item" fill="var(--yellow)">
+                  <polygon points="140,62 150,100 130,100" opacity=".55" stroke="none" />
+                  <circle cx="140" cy="60" r="7" />
+                  <rect x="136" y="100" width="8" height="16" fill="var(--paper)" />
+                </g>
+                <!-- character: Acid Rockstar -->
+                <g class="room-character">
+                  <polygon points="63,150 60,124 100,124 97,150" fill="var(--pink)" />
+                  <circle cx="80" cy="106" r="15" fill="#ffd9b8" />
+                  <polygon points="65,98 74,84 80,98" fill="#171a1f" stroke="none" />
+                  <polygon points="76,98 86,80 92,98" fill="#171a1f" stroke="none" />
+                  <polygon points="88,98 96,86 100,98" fill="#171a1f" stroke="none" />
+                  <rect x="66" y="102" width="28" height="9" rx="2" fill="#171a1f" />
+                </g>
+              </svg>
+            </div>
+            <div class="station station-solid st-land">
+              <p class="billboard">/land DEPLOY</p>
+              <svg class="room-box" viewBox="0 0 200 170" aria-hidden="true">
+                <polygon class="room-wall-left" points="100,80 20,125 20,55 100,10" />
+                <polygon class="room-wall-right" points="100,80 180,125 180,55 100,10" />
+                <polygon class="room-floor" points="100,80 20,125 100,170 180,125" />
+                <!-- item: mission console -->
+                <g class="room-item" fill="var(--paper)">
+                  <rect x="122" y="108" width="34" height="18" rx="2" />
+                  <circle cx="130" cy="117" r="3" fill="var(--green)" stroke="none" />
+                  <circle cx="139" cy="117" r="3" fill="var(--yellow)" stroke="none" />
+                  <circle cx="148" cy="117" r="3" fill="var(--pink)" stroke="none" />
+                </g>
+                <!-- character: Retro Mission Commander -->
+                <g class="room-character">
+                  <polygon points="63,150 60,124 100,124 97,150" fill="var(--orange)" />
+                  <circle cx="80" cy="106" r="15" fill="#ffd9b8" />
+                  <path d="M 65 100 A 15 15 0 0 1 95 100" fill="none" stroke="#171a1f" stroke-width="4" />
+                  <rect x="63" y="98" width="6" height="10" fill="#171a1f" stroke="none" />
+                  <rect x="91" y="98" width="6" height="10" fill="#171a1f" stroke="none" />
+                </g>
+              </svg>
+            </div>
+            <div class="station station-solid st-build">
+              <p class="billboard">/build CODE</p>
+              <svg class="room-box" viewBox="0 0 200 170" aria-hidden="true">
+                <polygon class="room-wall-left" points="100,80 20,125 20,55 100,10" />
+                <polygon class="room-wall-right" points="100,80 180,125 180,55 100,10" />
+                <polygon class="room-floor" points="100,80 20,125 100,170 180,125" />
+                <!-- item: standing desk with laptop -->
+                <g class="room-item" fill="var(--paper)">
+                  <rect x="120" y="112" width="36" height="6" />
+                  <rect x="122" y="118" width="4" height="14" fill="#171a1f" stroke="none" />
+                  <rect x="150" y="118" width="4" height="14" fill="#171a1f" stroke="none" />
+                  <rect x="128" y="104" width="20" height="8" fill="var(--cyan)" />
+                </g>
+                <!-- character: Tech-Bro CEO -->
+                <g class="room-character">
+                  <polygon points="63,150 60,124 100,124 97,150" fill="#171a1f" />
+                  <circle cx="80" cy="106" r="15" fill="#ffd9b8" />
+                  <rect x="70" y="92" width="20" height="7" rx="2" fill="#171a1f" stroke="none" />
+                  <rect x="72" y="126" width="8" height="6" fill="var(--yellow)" />
+                </g>
+              </svg>
+            </div>
+            <div class="station station-solid st-check">
+              <p class="billboard">/check REVIEW</p>
+              <svg class="room-box" viewBox="0 0 200 170" aria-hidden="true">
+                <polygon class="room-wall-left" points="100,80 20,125 20,55 100,10" />
+                <polygon class="room-wall-right" points="100,80 180,125 180,55 100,10" />
+                <polygon class="room-floor" points="100,80 20,125 100,170 180,125" />
+                <!-- item: the magic ball -->
+                <g class="room-item">
+                  <rect x="128" y="122" width="20" height="6" fill="var(--pink)" stroke="none" />
+                  <circle cx="138" cy="108" r="12" fill="#eaf6ff" />
+                  <circle cx="134" cy="104" r="4" fill="var(--paper)" opacity=".7" stroke="none" />
+                </g>
+                <!-- character: Scrum Oracle -->
+                <g class="room-character">
+                  <polygon points="58,150 63,120 97,120 102,150" fill="var(--yellow)" />
+                  <circle cx="80" cy="104" r="15" fill="#ffd9b8" />
+                  <polygon points="68,98 80,82 92,98" fill="#171a1f" stroke="none" />
+                </g>
+              </svg>
+            </div>
+            <div class="station station-ghost st-kit">
+              <p class="billboard">/kit EQUIP</p>
+              <div class="plate-wrap"><div class="plate"></div></div>
+            </div>
+            <div class="station station-ghost st-fix">
+              <p class="billboard">/fix REPAIR</p>
+              <div class="plate-wrap"><div class="plate"></div></div>
+            </div>
           </div>
         </div>
         <figcaption class="flow-caption" id="flow-title">

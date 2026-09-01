@@ -86,6 +86,8 @@ KEEP_ALWAYS = (
     "first/aesthetic/UBIQUITOUS_LANGUAGE.md",
     "first/aesthetic/CONTEXT.md",
     "README.md",
+    "QA.md",
+    "docs/SPEC/SHOT_OBSERVATION.md",
 )
 
 

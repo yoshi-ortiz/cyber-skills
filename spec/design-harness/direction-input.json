@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "briefConstraints": [],
+  "observations": [
+    {"corpusItem":"text-b6d62b2e3bfa","locator":"moodboards/CONTEXT.md","observation":"The folder is user-supplied reference material and must remain source evidence, not a deliverable."},
+    {"corpusItem":"image-605bc295b111","locator":"cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png","observation":"A dense illustrated world uses crisp dark outlines, saturated flat colors, simple silhouettes, and many small comic interactions."},
+    {"corpusItem":"image-09d4736f9156","locator":"isometric cartoon/Pasted 2026-08-28 at 5.52.41 p.m..png","observation":"Four compact product-like buildings repeat a strong axonometric box, colored faces, readable labels, and tiny character details."},
+    {"corpusItem":"image-9a93b2b1a6bb","locator":"isometric cartoon/Pasted 2026-08-28 at 5.52.47 p.m..png","observation":"The poster shows a large isometric field with repeated modules and a warm paper ground, supporting a diagram that can carry many stations."},
+    {"corpusItem":"image-ee2da3a6d590","locator":"isometric cartoon/Pasted 2026-08-28 at 5.53.24 p.m..png","observation":"A playful board-game scene pairs flat colors, dark contour lines, and a clear central conflict between spaces, objects, and routes."},
+    {"corpusItem":"text-57a28cedce86","locator":"llm-shots/art prompt.txt","observation":"The supplied prompt specifies six labeled spaces, four equal main rooms, two pale kiosks, and a one-way closed infinity road."},
+    {"corpusItem":"image-558e44271c41","locator":"llm-shots/clear layout.png","observation":"The centered crossing composition is immediately scannable, but its rooms are visibly too small to carry the inventory."},
+    {"corpusItem":"image-e060fe402798","locator":"llm-shots/fucked shots/watermarked_img_1601036776744645981.jpg","observation":"The road topology is the closest visible precedent for a closed central X with both outer return arcs, although the watermark and duplicated labels make it unsuitable as a style source."},
+    {"corpusItem":"image-baf36e96a0b5","locator":"llm-shots/good room space, wrong roads.png","observation":"The four large open rooms give protagonists and props breathing room, but the roads branch and dead-end instead of closing as one loop."},
+    {"corpusItem":"text-967a09e3cd51","locator":"llm-shots/prompts/Room Inventory Write.md","observation":"The inventory prioritizes large spacious rooms, one complete road, pale kiosks, protagonists, grouped scenes, and exact billboard text."},
+    {"corpusItem":"text-50e7a05ac6af","locator":"llm-shots/prompts/deterministic-prompt.txt","observation":"The deterministic brief reinforces the exact sequence /first → /build → /land → /check → /first and repeated one-way arrows."},
+    {"corpusItem":"text-e2266c7b222e","locator":"llm-shots/prompts/graphics-prompt.json","observation":"The compiled prompt separates geometry from inventory and calls for crisp 2.5D isometric editorial illustration on warm off-white."},
+    {"corpusItem":"text-f877a25f7549","locator":"llm-shots/prompts/slices/avge-calls.json","observation":"The saved procedural calls establish repeatable geometric primitives for the scene rather than a one-off hand-drawn asset."},
+    {"corpusItem":"text-9d44c335576e","locator":"llm-shots/prompts/slices/geometry.txt","observation":"The geometry slice explicitly names the isometric-X layout, infinity-horizontal road, six space positions, and exact billboards."},
+    {"corpusItem":"text-567c893f891d","locator":"llm-shots/prompts/slices/inventory.txt","observation":"The inventory slice asks for protagonists, props, and visual jokes to be grouped into readable room vignettes."},
+    {"corpusItem":"text-f76c63a375f5","locator":"llm-shots/prompts/slices/manifest.json","observation":"The manifest makes the distinction between style, geometry, moodboard, and inventory explicit, with the moodboard used only for visual language."},
+    {"corpusItem":"text-164393271c50","locator":"llm-shots/prompts/slices/moodboard.txt","observation":"The moodboard slice names flat vector fills, dark outlines, warm off-white, simple faces, and a cute witty magazine register."},
+    {"corpusItem":"text-7e656792fd62","locator":"llm-shots/prompts/slices/style.txt","observation":"The style slice repeats the restrained visual grammar: 2.5D isometric, crisp outline, flat vector color, and simple faces."},
+    {"corpusItem":"text-a42163c9a79d","locator":"storytelling/rooms-inventory.md","observation":"The room inventory gives the subject-specific storytelling: six DevOps workspaces populated with protagonists, tools, props, and comedic situations."},
+    {"corpusItem":"image-7ef76224cfb7","locator":"wireframe sketches/Group 47.png","observation":"The wireframe is an unmistakable horizontal infinity symbol with a single central crossover, matching the workflow's closed-loop idea."}
+  ],
+  "omissions": [
+    {"corpusItem":"image-d44d2ac81373","reason":"Keep as counterevidence only: its monochrome treatment, awkward road drawing, and weak character craft conflict with the endorsed saturated illustrated direction."}
+  ],
+  "preferencePatterns": [],
+  "hypotheses": [
+    {
+      "id":"isometric-loop",
+      "thesis":"A miniature DevOps city should read as a closed one-way rail first, then reward a closer look with spacious isometric room vignettes.",
+      "signatureMove":"A continuous yellow infinity road visibly passes behind six labeled rooms and carries one-direction arrows through the central crossover.",
+      "visualSystem":{
+        "palette":"Warm off-white ground; near-black contour ink; saturated cyan, magenta, cobalt, and emerald main rooms; ghost-pastel peach and blue-gray kiosks; yellow rail as the only route accent.",
+        "typography":"Large rounded sans headline; compact monospace command labels on billboards; plain sans supporting copy; labels remain high-contrast and short.",
+        "grid":"A modular 12-column hero with equal X-positioned room footprints, matching kiosk modules, and one generous outer margin that keeps the loop legible at thumbnail size.",
+        "hierarchy":"The closed yellow rail is the first read; four equal rooms are the second; protagonists, billboards, and grouped props are the third; tiny jokes are optional detail.",
+        "imagery":"2.5D isometric index marks built from CSS primitives, with visible floors, cutaway walls, chunky dark contours, simple characters, and no external asset dependency.",
+        "voice":"Operational language with a playful wink: exact slash-command labels, short stage names, and no generic lifestyle slogans inside the map.",
+        "motion":"No motion is required for the static ranking artifact; if implemented later, a single-direction rail highlight may travel around the loop and must stop under reduced motion."
+      }
+    },
+    {
+      "id":"editorial-atlas",
+      "thesis":"The workflow can feel like a printed field guide: a ruled editorial map where the six workspaces become bold color plates connected by a route key.",
+      "signatureMove":"A numbered route key and oversized central crossover make the workflow order explicit before any room vignette is inspected.",
+      "visualSystem":{
+        "palette":"Warm paper, black rules, yellow route, saturated room plates, and pale kiosk plates with a restrained red annotation accent.",
+        "typography":"Condensed display face for atlas headings, monospace route numerals, and neutral sans captions.",
+        "grid":"A strict editorial column grid with a large map plate, a narrow annotation rail, and room cards aligned to shared baselines.",
+        "hierarchy":"Numbered route sequence first, map silhouette second, room stories third, supporting legend last.",
+        "imagery":"Flat illustrated plates and index symbols with minimal depth, avoiding photorealism and relying on the supplied isometric references only as visual precedent.",
+        "voice":"Direct, annotated, and slightly wry; labels explain the workflow without turning every object into a joke.",
+        "motion":"Static by default; a subtle route-drawing reveal could support orientation but should be removed under reduced motion."
+      }
+    }
+  ],
+  "comparison":[
+    {"hypothesis":"isometric-loop","corpusFit":5,"preferenceFit":5,"subjectSpecificity":5,"coherence":5,"executionLeverage":5,"tradeoff":"It preserves the endorsed isometric character while making the closed road the dominant proof point; it asks for more disciplined room scaling."},
+    {"hypothesis":"editorial-atlas","corpusFit":4,"preferenceFit":4,"subjectSpecificity":4,"coherence":4,"executionLeverage":4,"tradeoff":"It improves route annotation and print-like hierarchy, but risks flattening the spatial miniature quality that makes the subject memorable."}
+  ],
+  "selected":"isometric-loop",
+  "selectionRationale":"The references repeatedly support illustrated isometric rooms, saturated role colors, and the infinity wireframe, while the strongest counterevidence is about topology and room scale. The isometric-loop direction gives the road a single job—prove continuity—then uses the rooms for the subject-specific stories. The editorial-atlas remains a useful alternative for a later round if route annotation is still unclear.",
+  "cohort":["landing.hero.flow.isometric-loop","landing.hero.flow.editorial-atlas","landing.hero.flow.room-bay"],
+  "assets":[]
+}

@@ -1,0 +1,19 @@
+{
+  "budgets": {
+    "extractedChars": 24000,
+    "newVisuals": 4,
+    "outputTokens": 1200,
+    "toolCalls": 4,
+    "urls": 2
+  },
+  "companionAgentName": "Claude Code",
+  "language": "es",
+  "profiles": [
+    "art-direction"
+  ],
+  "sourcePolicy": "read-only",
+  "sourceRoot": "/Users/bebote-pro/Development/cyber-skills/moodboards",
+  "state": "proposed",
+  "title": "Hero de la portada",
+  "version": 1
+}

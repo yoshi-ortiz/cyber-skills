@@ -1,0 +1,89 @@
+{
+  "adoptedLedgers": {
+    ".superpowers/brainstorm/decisions.jsonl": {
+      "digest": "cab49882079e195cd7e65501fd1918548f25917e91e927c71de238e3a5a37b10",
+      "lines": 7
+    }
+  },
+  "elements": [
+    {
+      "bookmarked": false,
+      "description": "A rounded isometric map with a looping road connecting six labeled stations, dotted-grid background.",
+      "element": "landing.hero.flow.proposal-isometric-loop",
+      "evidence": "landing.hero.flow.proposal-isometric-loop",
+      "implemented": "design/hero-proposal-isometric-loop.html",
+      "preview": {
+        "path": "design/hero-proposal-isometric-loop.html",
+        "sha256": "f416e9862d5a74b1f7372a2ee59e7d408b8c8df79c3d869755537def502af018"
+      },
+      "scored": true,
+      "sentiment": null,
+      "source": "user",
+      "stars": 0,
+      "state": "rejected",
+      "supersededBy": null,
+      "title": "Isometric loop",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "A field-guide style route map with a numbered key sidebar, six stations plotted on a diagonal rail.",
+      "element": "landing.hero.flow.proposal-editorial-atlas",
+      "evidence": "landing.hero.flow.proposal-editorial-atlas",
+      "implemented": "design/hero-proposal-editorial-atlas.html",
+      "preview": {
+        "path": "design/hero-proposal-editorial-atlas.html",
+        "sha256": "fdcd3dd29ee62a0e56041835e05ebcd5e542b05fffefee45edad3a24d3d3c22e"
+      },
+      "scored": true,
+      "sentiment": null,
+      "source": "user",
+      "stars": 0,
+      "state": "rejected",
+      "supersededBy": null,
+      "title": "Editorial atlas",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "A spacious room-first floor-plan composition with a yellow loop connecting six rooms.",
+      "element": "landing.hero.flow.proposal-room-bay",
+      "evidence": "landing.hero.flow.proposal-room-bay",
+      "implemented": "design/hero-proposal-room-bay.html",
+      "preview": {
+        "path": "design/hero-proposal-room-bay.html",
+        "sha256": "ceaef589be46ef818a6598bdcd64c64f9ca0252949b2388886f7e83816202746"
+      },
+      "scored": true,
+      "sentiment": null,
+      "source": "user",
+      "stars": 0,
+      "state": "rejected",
+      "supersededBy": null,
+      "title": "Room bay",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "Isometric hero map: a continuous CSS rail connecting four sims-style cutaway rooms (floor + two back walls) and two ghost kiosks. Each main room holds a primitive-built SVG character (its room boss) and one signature item, matching rooms-inventory.md.",
+      "element": "landing.hero.flow.foundation",
+      "evidence": "User: 'take over where claude design left off, a website... the graphic should be css first, and vectors for characters+items sprite sheets. progress so far is the rail and floors, should not be floors but sims like rooms. the rail should not have gaps, those were formed on the sketch to signal flow, not gaps.' Replaced the four flat isometric diamonds with sims-style cutaway rooms (floor + two shaded back walls, formula-generated polygons) each holding a primitive-built SVG character (room boss) and one signature item, per rooms-inventory.md. Confirmed the rail (arcs+bars) has no real gaps and plugs directly into each room's corner.",
+      "implemented": "design/landing-flow-hero.html",
+      "preview": {
+        "path": "design/landing-flow-hero.html",
+        "sha256": "b8b27738148e907b8c3c5d28cd8299ca42c88db3e945c7fddbc9b8a1d995d184"
+      },
+      "scored": false,
+      "sentiment": "like",
+      "source": "agent",
+      "stars": 0,
+      "state": "proposed",
+      "supersededBy": null,
+      "title": "Landing hero (sims-style rooms)",
+      "tokens": null
+    }
+  ],
+  "state": "proposed",
+  "supersededCount": 0,
+  "version": 1
+}

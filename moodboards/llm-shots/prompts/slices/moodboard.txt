@@ -8,6 +8,7 @@ Pursue these references:
 
 Composition references:
 - llm-shots/clear layout.png (good layout; rooms undersized)
+- llm-shots/fucked shots/watermarked_img_1601036776744645981.jpg (only corpus item whose road closes: central X plus both outer return arcs, matching Group 47. Billboard strings correct. Counterevidence: watermarked, billboards duplicated, rooms small in frame)
 - llm-shots/good room space, wrong roads.png (good room scale; road topology fail)
 - wireframe sketches/Group 47.png (layout wireframe)
 

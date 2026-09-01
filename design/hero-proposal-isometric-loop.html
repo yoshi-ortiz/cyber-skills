@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cyber Skills — Isometric loop</title>
+  <style>
+    @layer reset, theme, components;
+    @layer reset {
+      body, h1, h2, h3, p, figure { margin: 0; }
+      button, a { font: inherit; }
+    }
+    @layer theme {
+      :root { color-scheme: light; --paper:#fffdf8; --ink:#171a1f; --yellow:#ffd229; --cyan:#13bdd0; --pink:#ec3d8f; --blue:#3176d8; --green:#42b86b; --peach:#fce3d1; --mist:#e7edf0; --muted:#5d6670; --line:3px; --shadow:5px 5px 0 var(--ink); }
+      body { min-block-size:100dvh; background:var(--paper); color:var(--ink); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+    }
+    @layer components {
+      .shell { max-inline-size:1360px; margin-inline:auto; padding:28px 42px 34px; }
+      .topbar { display:flex; align-items:center; justify-content:space-between; padding-block-end:18px; border-block-end:var(--line) solid var(--ink); }
+      .brand { display:flex; gap:10px; align-items:center; font:800 .86rem/1 ui-monospace,SFMono-Regular,monospace; letter-spacing:.13em; text-transform:uppercase; }
+      .mark { display:grid; place-items:center; inline-size:34px; block-size:34px; border:var(--line) solid var(--ink); border-radius:11px; background:var(--yellow); box-shadow:3px 3px 0 var(--ink); font-size:1.15rem; }
+      .round { color:var(--muted); font-size:.76rem; letter-spacing:.11em; text-transform:uppercase; }
+      .hero { display:grid; grid-template-columns:minmax(280px,.72fr) minmax(0,1.28fr); gap:44px; align-items:end; padding-block:62px 26px; }
+      .kicker { margin-block-end:16px; font:800 .74rem/1.3 ui-monospace,SFMono-Regular,monospace; letter-spacing:.16em; text-transform:uppercase; }
+      h1 { max-inline-size:620px; font-size:clamp(3rem,5.4vw,6.8rem); line-height:.88; letter-spacing:-.075em; text-wrap:balance; }
+      .lede { max-inline-size:460px; color:var(--muted); font-size:1.05rem; line-height:1.5; }
+      .lede code, .key code { color:var(--ink); font-family:ui-monospace,SFMono-Regular,monospace; font-weight:800; }
+      .map { position:relative; isolation:isolate; min-block-size:520px; overflow:hidden; border:var(--line) solid var(--ink); border-radius:26px; background:#fbf3df; box-shadow:var(--shadow); }
+      .map::before { content:""; position:absolute; inset:20px; z-index:-2; opacity:.36; background-image:radial-gradient(var(--ink) 1px,transparent 1px); background-size:16px 16px; }
+      .loop { position:absolute; z-index:-1; border:20px solid var(--yellow); box-shadow:0 0 0 3px var(--ink), inset 0 0 0 3px var(--ink); border-radius:50%; }
+      .loop.left { inset:116px auto 105px 22%; inline-size:31%; }
+      .loop.right { inset:116px 22% 105px auto; inline-size:31%; }
+      .cross { position:absolute; z-index:-1; inset-inline:36%; inset-block:45%; background:var(--yellow); border-block:3px solid var(--ink); transform:rotate(29deg) scaleY(1.8); }
+      .cross.two { transform:rotate(-29deg) scaleY(1.8); }
+      .arrow { position:absolute; z-index:2; display:grid; place-items:center; inline-size:36px; block-size:36px; border:var(--line) solid var(--ink); border-radius:50%; background:var(--paper); font:900 1.15rem/1 ui-monospace,SFMono-Regular,monospace; }
+      .a1 { inset:150px auto auto 28%; transform:rotate(24deg); } .a2 { inset:260px auto auto 46%; } .a3 { inset:150px 28% auto auto; transform:rotate(-24deg); } .a4 { inset:auto 46% 128px auto; transform:rotate(180deg); }
+      .room { position:absolute; display:grid; align-content:start; gap:5px; inline-size:190px; min-block-size:126px; padding:14px 14px 12px; border:var(--line) solid var(--ink); border-radius:17px; box-shadow:var(--shadow); transform:skewY(-4deg); }
+      .room strong { font:900 1.05rem/1 ui-monospace,SFMono-Regular,monospace; letter-spacing:-.04em; }
+      .room small { font-size:.75rem; font-weight:800; text-transform:uppercase; letter-spacing:.07em; }
+      .room .scene { display:flex; align-items:end; gap:8px; margin-block-start:6px; }
+      .room .scene i { display:block; inline-size:31px; block-size:34px; border:2px solid var(--ink); border-radius:14px 14px 8px 8px; background:color-mix(in oklab,var(--ink) 15%,white); box-shadow:2px 2px 0 var(--ink); }
+      .room .scene i:nth-child(2) { inline-size:45px; block-size:18px; border-radius:5px; background:var(--paper); }
+      .room.first { inset:34px auto auto 9%; background:var(--cyan); } .room.build { inset:auto auto 34px 9%; background:var(--pink); }
+      .room.land { inset:34px 9% auto auto; background:var(--blue); } .room.check { inset:auto 9% 34px auto; background:var(--green); }
+      .room.kit { inset:20px auto auto 44%; inline-size:108px; min-block-size:74px; background:var(--peach); } .room.fix { inset:auto 44% 20px auto; inline-size:108px; min-block-size:74px; background:var(--mist); }
+      .room.kit .scene, .room.fix .scene { margin-block-start:2px; } .room.kit .scene i, .room.fix .scene i { inline-size:22px; block-size:22px; }
+      .room.kit small, .room.fix small { font-size:.62rem; }
+      .legend { display:flex; justify-content:space-between; gap:18px; margin-block-start:30px; padding-block-start:15px; border-block-start:var(--line) solid var(--ink); }
+      .legend p { color:var(--muted); font-size:.83rem; line-height:1.4; } .legend b { color:var(--ink); }
+      :focus-visible { outline:3px solid var(--blue); outline-offset:4px; }
+      @media (max-width:900px) { .shell { padding-inline:20px; } .hero { grid-template-columns:1fr; gap:25px; padding-block-start:42px; } .map { min-block-size:490px; } h1 { max-inline-size:750px; } }
+      @media (max-width:620px) { .topbar { align-items:flex-start; } .round { max-inline-size:120px; text-align:end; } .map { min-block-size:640px; } .loop.left { inset:160px auto 150px 7%; inline-size:56%; } .loop.right { inset:160px 7% 150px auto; inline-size:56%; } .cross { inset-inline:36%; inset-block:46%; } .room { transform:scale(.79) skewY(-4deg); transform-origin:center; } .room.first { inset:48px auto auto -10px; } .room.build { inset:auto auto 48px -10px; } .room.land { inset:48px -10px auto auto; } .room.check { inset:auto -10px 48px auto; } .room.kit { inset:24px auto auto 34%; } .room.fix { inset:auto 34% 24px auto; } .legend { display:grid; } }
+      @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition-duration:0.01ms !important; animation-duration:0.01ms !important; } }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar"><div class="brand"><span class="mark">↗</span><span>Cyber Skills</span></div><p class="round">Proposal A · Isometric loop</p></header>
+    <section class="hero" aria-labelledby="title">
+      <div><p class="kicker">A visual rail for AI agents</p><h1 id="title">Keep the work moving.</h1><p class="lede">Six skill families, one closed route. The rail is the first read; the room jokes reward a closer look.</p></div>
+      <figure class="map" aria-label="Six labeled workspaces arranged around a continuous one-way infinity road">
+        <div class="loop left"></div><div class="loop right"></div><div class="cross"></div><div class="cross two"></div>
+        <span class="arrow a1" aria-hidden="true">↓</span><span class="arrow a2" aria-hidden="true">↘</span><span class="arrow a3" aria-hidden="true">↓</span><span class="arrow a4" aria-hidden="true">↖</span>
+        <article class="room first"><strong>/first</strong><small>sketch the idea</small><div class="scene"><i></i><i></i></div></article>
+        <article class="room build"><strong>/build</strong><small>ship the code</small><div class="scene"><i></i><i></i></div></article>
+        <article class="room land"><strong>/land</strong><small>deploy with context</small><div class="scene"><i></i><i></i></div></article>
+        <article class="room check"><strong>/check</strong><small>review the result</small><div class="scene"><i></i><i></i></div></article>
+        <article class="room kit"><strong>/kit</strong><small>equip</small><div class="scene"><i></i><i></i></div></article>
+        <article class="room fix"><strong>/fix</strong><small>repair</small><div class="scene"><i></i><i></i></div></article>
+      </figure>
+    </section>
+    <footer class="legend"><p><b>Route:</b> /first → /build → /land → /check → /first</p><p><b>Signature:</b> the same yellow rail returns through the crossover.</p></footer>
+  </main>
+</body>
+</html>

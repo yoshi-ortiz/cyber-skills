@@ -1276,6 +1276,16 @@ def render_html_preview(html: Path, out: Path, width: int = PREVIEW_WIDTH,
                 return "chrome"
             detail = (result.stderr or b"").decode("utf-8", "replace").strip()[:200]
         except subprocess.TimeoutExpired:
+            # Chrome can finish writing the screenshot and then hang on exit
+            # (GPU-process teardown, sandboxed disk) -- that hang fired this
+            # timeout, but the file on disk is still a complete, correct
+            # render. Discarding it here was falling back to qlmanage, whose
+            # QuickLook thumbnail cache is keyed by path, not content: it
+            # served a stale, garbled composite of a PREVIOUS render of this
+            # same path as the "current" comp, which is what actually shipped
+            # to the user as a bogus low-starred preview once.
+            if out.is_file() and out.stat().st_size:
+                return "chrome"
             detail = "timed out"
         finally:
             shutil.rmtree(profile, ignore_errors=True)

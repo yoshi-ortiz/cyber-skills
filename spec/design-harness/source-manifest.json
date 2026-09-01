@@ -1,0 +1,133 @@
+{
+  "algorithm": "sha256",
+  "entries": [
+    {
+      "bytes": 616,
+      "mediaType": "text/markdown",
+      "path": "CONTEXT.md",
+      "sha256": "c8228104c3fc8c63280fc5d5d1a30ee598cbf93bf77fa54074e5367b212f147a"
+    },
+    {
+      "bytes": 391342,
+      "mediaType": "image/png",
+      "path": "cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "sha256": "f792a330bd19431320883a5d6e30a104b9da3f0085a6f5b8313f8dcdb5aec318"
+    },
+    {
+      "bytes": 402851,
+      "mediaType": "image/png",
+      "path": "isometric cartoon/Pasted 2026-08-28 at 5.52.41 p.m..png",
+      "sha256": "b068c43373dabc51ffab806305b9f5a17c60b2bc2ac5e6aafe5acd31c22ecd9d"
+    },
+    {
+      "bytes": 306057,
+      "mediaType": "image/png",
+      "path": "isometric cartoon/Pasted 2026-08-28 at 5.52.47 p.m..png",
+      "sha256": "e3085a5ebb3f9421d97eb7b487f0112df3e6f5469b19aaf8d3d410782bfcd978"
+    },
+    {
+      "bytes": 409584,
+      "mediaType": "image/png",
+      "path": "isometric cartoon/Pasted 2026-08-28 at 5.53.24 p.m..png",
+      "sha256": "0db3a04569a3f16cab479ea4922b1038d445ff0bee346ed58a58b4ce170dc459"
+    },
+    {
+      "bytes": 9922,
+      "mediaType": "text/plain",
+      "path": "llm-shots/art prompt.txt",
+      "sha256": "ebf4b101ca9fe4c77aeb3e41bc473f50170f8a4cec785c17350b22b477191c6d"
+    },
+    {
+      "bytes": 828725,
+      "mediaType": "image/png",
+      "path": "llm-shots/best ugly shot.png",
+      "sha256": "b07dd7361cde9fa568b6cd2d8a135537a342e8b8259407967ea2bb3f0521e961"
+    },
+    {
+      "bytes": 130266,
+      "mediaType": "image/png",
+      "path": "llm-shots/clear layout.png",
+      "sha256": "4e0e61d8727371e963491fc2f5874df68a646cacc2f591c929c4c74ff548c814"
+    },
+    {
+      "bytes": 239602,
+      "mediaType": "image/jpeg",
+      "path": "llm-shots/fucked shots/watermarked_img_1601036776744645981.jpg",
+      "sha256": "3db0f51e41e094cd302f7cffe107bde0ff3b0a09daaa7d8f305d0977da0a26bc"
+    },
+    {
+      "bytes": 881388,
+      "mediaType": "image/png",
+      "path": "llm-shots/good room space, wrong roads.png",
+      "sha256": "a35fbe910ae5e802eed34f47ae6a7ccc4fd4c94cb6a36b750eba330c1bcbfcd2"
+    },
+    {
+      "bytes": 26752,
+      "mediaType": "text/markdown",
+      "path": "llm-shots/prompts/Room Inventory Write.md",
+      "sha256": "9e2c679998fec7041b53c51511224fa0d8398fb45d49b86d2a5f1cc66758d7b2"
+    },
+    {
+      "bytes": 10617,
+      "mediaType": "text/plain",
+      "path": "llm-shots/prompts/deterministic-prompt.txt",
+      "sha256": "25ce93aafb2671228ba0b2231681b29a63055efda6317c5e7bee6e0a8ac7db27"
+    },
+    {
+      "bytes": 21298,
+      "mediaType": "application/json",
+      "path": "llm-shots/prompts/graphics-prompt.json",
+      "sha256": "230aec39816c85da1fa4aa998bce234848fe8d1fc315488eee3f6f6731533e25"
+    },
+    {
+      "bytes": 3473,
+      "mediaType": "application/json",
+      "path": "llm-shots/prompts/slices/avge-calls.json",
+      "sha256": "5920e6065eccdbbe183d718623a55571ebb51a07096934ad766b65415298c636"
+    },
+    {
+      "bytes": 660,
+      "mediaType": "text/plain",
+      "path": "llm-shots/prompts/slices/geometry.txt",
+      "sha256": "ba6145e69ac334cfe8f96fe9fb8c6f62b92cb0d555dd50eb1de9a2dd97fc483d"
+    },
+    {
+      "bytes": 18090,
+      "mediaType": "text/plain",
+      "path": "llm-shots/prompts/slices/inventory.txt",
+      "sha256": "a2fb9614d224aeebb3406d74ee98502a3abc4af34258e7905a0b7f897a24a63c"
+    },
+    {
+      "bytes": 20386,
+      "mediaType": "application/json",
+      "path": "llm-shots/prompts/slices/manifest.json",
+      "sha256": "452a30c42b3c047b8979008fe708b5b5273a7a729e783b29b5caf6c97dc3d6f9"
+    },
+    {
+      "bytes": 760,
+      "mediaType": "text/plain",
+      "path": "llm-shots/prompts/slices/moodboard.txt",
+      "sha256": "4a74786232d32f633ca3aa90ee6c5c0537d26727212f1a16458f54d00f37c73f"
+    },
+    {
+      "bytes": 465,
+      "mediaType": "text/plain",
+      "path": "llm-shots/prompts/slices/style.txt",
+      "sha256": "831b28b16979c5024620bef44585eb7d3abf33a7fffe0799d31df28fbecfd4a5"
+    },
+    {
+      "bytes": 29857,
+      "mediaType": "text/markdown",
+      "path": "storytelling/rooms-inventory.md",
+      "sha256": "419c4bf5d16be2e6b96edc36c7cb36df2087e7488f66a0655b83f9879d94d05b"
+    },
+    {
+      "bytes": 30945,
+      "mediaType": "image/png",
+      "path": "wireframe sketches/Group 47.png",
+      "sha256": "7482e867442f7bcd001882372dec028f32c93156c7a22b7e73771adb191b6af7"
+    }
+  ],
+  "sourceRoot": "/Users/bebote-pro/Development/cyber-skills/moodboards",
+  "version": 1
+}

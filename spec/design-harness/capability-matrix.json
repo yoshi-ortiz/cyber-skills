@@ -1,0 +1,44 @@
+{
+  "profiles": [
+    "art-direction"
+  ],
+  "promotionChecks": [
+    "source-integrity",
+    "lineage",
+    "user-approval",
+    "domain-conformance"
+  ],
+  "requiredCapabilities": [
+    {
+      "adapter": null,
+      "available": false,
+      "category": "http"
+    },
+    {
+      "adapter": null,
+      "available": false,
+      "category": "image"
+    },
+    {
+      "adapter": null,
+      "available": false,
+      "category": "knowledge"
+    },
+    {
+      "adapter": null,
+      "available": false,
+      "category": "licensing"
+    },
+    {
+      "adapter": null,
+      "available": false,
+      "category": "pdf"
+    },
+    {
+      "adapter": null,
+      "available": false,
+      "category": "repository"
+    }
+  ],
+  "version": 1
+}

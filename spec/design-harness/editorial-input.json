@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "baselineAt": "2026-08-31T05:00:00Z",
+  "epics": [
+    {"id":"route","title":"Closed one-way route","critical":true},
+    {"id":"rooms","title":"Readable room stories","critical":true},
+    {"id":"system","title":"Illustrated visual system","critical":false},
+    {"id":"accessibility","title":"Readable labels and controls","critical":true}
+  ],
+  "elements": {
+    "landing.hero.flow.isometric-loop":"route",
+    "landing.hero.flow.editorial-atlas":"route",
+    "landing.hero.flow.room-bay":"rooms",
+    "landing.hero.flow.palette":"system",
+    "landing.hero.flow.type":"accessibility",
+    "landing.hero.flow.controls":"accessibility"
+  }
+}

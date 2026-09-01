@@ -13,7 +13,7 @@ the **context derail** failure. Doctrine: `CONTEXT.md` section "Two contexts".
 | Mode | State it reads and writes | Glossary |
 | --- | --- | --- |
 | **A, work the burndown** | `ROADMAP.md` (items in `TODO`/`IN-PROGRESS`/`BLOCKED`/`DONE`), `BUGS.md` (root causes), `CHANGELOG.md` (shipped) | `UBIQUITOUS_LANGUAGE.md` |
-| **B, audit skills against goals** | `GOAL.md` (why the shape is the shape, nothing contractual), `SPEC.md` (the contract, nothing speculative) | `UBIQUITOUS_LANGUAGE.md` |
+| **B, audit skills against goals** | `GOAL.md` (why the shape is the shape, nothing contractual), `SPEC.md` (the contract, nothing speculative), `QA.md` (shot evaluation rubric, universal) | `UBIQUITOUS_LANGUAGE.md` |
 
 An unsettled question goes to `GOAL.md`'s prototype backlog, never to `SPEC.md`.
 

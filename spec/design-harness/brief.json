@@ -1,12 +1,12 @@
 {
   "answers": [
     {
-      "answer": "",
+      "answer": "1 a quick guide landing page for installing an using prompt skill commands.\n\n2 later a full repo docs website.",
       "id": "ships",
       "prompt": "What are we actually shipping?"
     },
     {
-      "answer": "",
+      "answer": "designers looking for ai (harness app) prompts, to \n1 not waste burning tokens with shots from a messy repo, or long derailing useless shots\n2 aid with universal designer workflows\n3 build production ready code or tool rich project repos, with tight context epic and module grouping",
       "id": "audience",
       "prompt": "Who opens this, and what do they need from it?"
     },
