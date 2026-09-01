@@ -13,6 +13,7 @@ import os
 import shutil
 import signal
 import subprocess
+import time
 import sys
 import urllib.error
 import urllib.request
@@ -26,6 +27,8 @@ REPO = Path(__file__).resolve().parents[1]
 SKILL = REPO / "first" / "aesthetic"
 COMPANION = ".superpowers/brainstorm"
 HTTP_TIMEOUT = 5
+STARTUP_GRACE = 10
+STARTUP_POLL = 0.1
 
 
 def check_not_the_repo(project_root: Path) -> None:
@@ -55,12 +58,27 @@ def served_document(port: str, token: str) -> str:
     request = urllib.request.Request(
         f"http://localhost:{port}/",
         headers={"Cookie": f"brainstorm-key-{port}={token}"})
-    try:
-        with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as response:
-            return response.read().decode("utf-8", "replace")
-    except (urllib.error.URLError, OSError) as problem:
-        raise CookError(
-            f"companion unreachable on port {port}: {problem}") from problem
+    # `run` starts the companion and fetches immediately, so a refused
+    # connection usually means the socket is not bound YET, not that the
+    # companion is broken. Retrying only that case keeps a startup race from
+    # reading as a failed round, while a server that answers with an error
+    # still fails on the first try. Widening the timeout would not have
+    # helped: nothing is listening to be slow.
+    deadline = time.monotonic() + STARTUP_GRACE
+    while True:
+        try:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as response:
+                return response.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as problem:
+            raise CookError(
+                f"companion answered {problem.code} on port {port}") from problem
+        except (urllib.error.URLError, OSError) as problem:
+            refused = isinstance(getattr(problem, "reason", problem),
+                                 ConnectionRefusedError)
+            if not refused or time.monotonic() >= deadline:
+                raise CookError(
+                    f"companion unreachable on port {port}: {problem}") from problem
+            time.sleep(STARTUP_POLL)
 
 
 def screens_on_disk(project_root: Path) -> list[Path]:

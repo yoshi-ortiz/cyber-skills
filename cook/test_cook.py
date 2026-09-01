@@ -1,3 +1,6 @@
+import urllib.error
+import io
+import contextlib
 #!/usr/bin/env python3
 """Tests for the Food Product loop.
 
@@ -170,3 +173,42 @@ class APreviewMustActuallyDraw(unittest.TestCase):
                             '<div class="dh-shot" data-el="b"></div>')
         self.assertTrue(shots["a"]["drawn"])
         self.assertFalse(shots["b"]["drawn"])
+
+class TheStartupRaceIsARetryNotAFailure(unittest.TestCase):
+    """`run` starts the companion and fetches immediately. A refused socket
+    usually means it is not bound yet, and that used to fail the round."""
+
+    def test_a_refused_socket_is_retried_until_it_answers(self):
+        answers = [ConnectionRefusedError(), ConnectionRefusedError(), "<html>ok</html>"]
+
+        def flaky(request, timeout=None):
+            head = answers.pop(0)
+            if isinstance(head, Exception):
+                raise urllib.error.URLError(head)
+            return contextlib.closing(io.BytesIO(head.encode()))
+
+        with unittest.mock.patch.object(cook.urllib.request, "urlopen", flaky):
+            self.assertIn("ok", cook.served_document("1234", "t"))
+        self.assertEqual(answers, [])
+
+    def test_a_server_that_answers_with_an_error_fails_on_the_first_try(self):
+        calls = []
+
+        def erroring(request, timeout=None):
+            calls.append(1)
+            raise urllib.error.HTTPError("u", 500, "boom", {}, None)
+
+        with unittest.mock.patch.object(cook.urllib.request, "urlopen", erroring):
+            with self.assertRaises(cook.CookError) as raised:
+                cook.served_document("1234", "t")
+        self.assertIn("500", str(raised.exception))
+        self.assertEqual(len(calls), 1)
+
+    def test_a_socket_refused_past_the_grace_window_still_fails(self):
+        def refused(request, timeout=None):
+            raise urllib.error.URLError(ConnectionRefusedError())
+
+        with unittest.mock.patch.object(cook, "STARTUP_GRACE", 0), \
+             unittest.mock.patch.object(cook.urllib.request, "urlopen", refused):
+            with self.assertRaises(cook.CookError):
+                cook.served_document("1234", "t")
