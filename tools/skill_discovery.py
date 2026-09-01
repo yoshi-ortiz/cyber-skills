@@ -30,7 +30,7 @@ SKIP = frozenset({
 GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("kit", ("kit", "silly", "ora")),
     ("first", ("genesis", "knowledge", "aesthetic")),
-    ("check", ("build-context-token-vectors",)),
+    ("check", ("build-context-token-vectors", "tokens-qa")),
 )
 
 

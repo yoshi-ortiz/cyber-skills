@@ -18,7 +18,7 @@ BODY = (INDEX + "# 📦 INSTALL\n\n"
         "# ✨ SKILL PROMPTS\n\n## 🎒 /kit\n\n## 🇪🇸 /ora\n\n"
         "## 🔬 /build-context-token-vectors\n\n## 🎨 /aesthetic\n\n"
         "# 🧪 EXPERIMENTS\n\n## 🧬 /genesis\n\n## 📚 /knowledge\n\n"
-        "## 🃏 /silly\n")
+        "## 🃏 /silly\n\n## 🧾 /tokens-qa\n")
 
 MANIFEST = ("---\nname: knowledge\ndescription: Distils sources, and answers to "
             "enciclopedia.\ntranslations:\n  es: enciclopedia\n---\n")
@@ -33,6 +33,7 @@ SKILL_HOME: dict[str, tuple[str, ...]] = {
     "knowledge": ("first",),
     "aesthetic": ("first",),
     "build-context-token-vectors": ("check",),
+    "tokens-qa": ("check",),
 }
 
 

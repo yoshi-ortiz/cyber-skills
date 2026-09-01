@@ -75,6 +75,7 @@ FOG_FILES_EXTRA = (
 # channel; `main` carries nothing under them, KEEP_ALWAYS included.
 ALPHA_SKILLS = (
     "genesis",
+    "tokens-qa",
     "knowledge",
     "silly",
 )
@@ -179,6 +180,8 @@ def reasons() -> dict[str, str]:
         "first/aesthetic/scripts/contracts.py": "development tooling",
         "first/aesthetic/scripts/verify_references.py": "development tooling",
         "aesthetic": "alpha channel; not published to main",
+        "tokens-qa": "black-box Shot QA; alpha until the fix half has run "
+                     "against a real round",
         "genesis": "alpha channel; not published to main",
         "knowledge": "alpha channel; not published to main",
         "silly": "alpha channel; not published to main",
