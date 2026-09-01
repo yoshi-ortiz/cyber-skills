@@ -13,11 +13,22 @@ to 3,200 tokens because nothing declared a budget for it.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 CONTRACT_FILE = "CONTEXT.md"
 REQUIRED_FIELDS = ("purpose", "admits", "refuses")
+
+# Two kinds of violation with two different lifetimes. A directory that never
+# declared itself is a mistake, fixable in one commit. A file over its budget is
+# a standing debt with a known ceiling. Reported as one number, the permanent
+# red hides the fixable one -- `design/review/` and `shots/fucked/` both landed
+# undeclared and nobody saw, because the gate was already red.
+BUDGET_SUFFIX = "byte budget"
+
+
+def is_budget(violation: str) -> bool:
+    return violation.endswith(BUDGET_SUFFIX)
 
 
 @dataclass(frozen=True)
@@ -127,8 +138,14 @@ def main(argv: list[str] | None = None) -> int:
     import argparse, sys
     parser = argparse.ArgumentParser(description="check directory context contracts")
     parser.add_argument("--root", type=Path, default=Path("."))
+    parser.add_argument("--only", choices=("declared", "budget"),
+                        help="report one kind of violation; the other is not a failure")
     args = parser.parse_args(argv)
     reports = walk(args.root)
+    if args.only:
+        keep = is_budget if args.only == "budget" else (lambda v: not is_budget(v))
+        reports = [replace(r, violations=tuple(v for v in r.violations if keep(v)))
+                   for r in reports]
     sys.stdout.write(render(reports))
     return 1 if any(not r.ok for r in reports) else 0
 

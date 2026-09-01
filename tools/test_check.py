@@ -11,9 +11,14 @@ names = [name for name, _ in check.gates(Path("/tmp/unused"))]
 
 # Every documented gate is on the board. The whole point of the file is that
 # the two lists it replaces each missed half the other.
-for expected in ("contracts", "unit tests", "harness self-test", "index gate",
-                 "loanwords", "publish main", "publish alpha"):
+for expected in ("contracts-declared", "contracts-budget", "unit tests",
+                 "harness self-test", "index gate", "loanwords",
+                 "publish main", "publish alpha"):
     assert expected in names, f"{expected} is not a gate"
+
+# The split is the point: one half is allowed to be red, the other is not, and
+# a substring filter of "contracts" must still reach both.
+assert [n for n in names if "contracts" in n] == ["contracts-declared", "contracts-budget"]
 
 assert len(set(names)) == len(names), f"two gates share a name: {names}"
 

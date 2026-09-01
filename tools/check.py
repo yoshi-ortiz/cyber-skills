@@ -14,10 +14,13 @@ the docs already promise.
     python3 tools/check.py            # every gate
     python3 tools/check.py contracts  # only gates whose name contains this
 
-Exits non-zero if any gate fails. Two are red today on purpose -- `contracts`
-(R-15, four files over budget) and `self-test` (an .svg recorded as a preview).
-They are not filtered out. A checker with an allowlist of failures it forgives
-is the same thing as no checker.
+Exits non-zero if any gate fails. Exactly one is red on purpose today:
+`contracts-budget`, the R-15 debt of four files over the 30 KB budget.
+`contracts-declared` is its other half and must stay green.
+
+Nothing is filtered out. A checker with an allowlist of failures it forgives is
+the same thing as no checker -- but a checker whose red is permanent is read as
+one too, which is why the two halves are counted apart.
 """
 
 from __future__ import annotations
@@ -35,7 +38,14 @@ def gates(tree: Path) -> list[tuple[str, list[str]]]:
     """Name each gate by the question it answers, not the file it runs."""
     py, node = sys.executable, shutil.which("node")
     return [
-        ("contracts", [py, "first/aesthetic/scripts/contracts.py", "--root", "."]),
+        # Split on purpose. `contracts-declared` must be green: a directory that
+        # never declared itself is one commit from fixed. `contracts-budget` is
+        # the standing R-15 debt. One permanent red hid the other for long
+        # enough that two new undeclared directories shipped unnoticed.
+        ("contracts-declared", [py, "first/aesthetic/scripts/contracts.py",
+                                "--root", ".", "--only", "declared"]),
+        ("contracts-budget", [py, "first/aesthetic/scripts/contracts.py",
+                              "--root", ".", "--only", "budget"]),
         ("unit tests", [py, "-m", "unittest", "discover",
                         "-s", "first/aesthetic/scripts", "-p", "test_*.py"]),
         ("harness self-test", [py, "first/aesthetic/scripts/bootstrap_harness.py", "self-test"]),

@@ -601,9 +601,13 @@ class TheSkillKeepsTheUserInformed(unittest.TestCase):
     def test_editorial_output_uses_checked_review_images(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("desktop and narrow widths", skill)
-        self.assertIn("review_delivery.py", skill)
-        self.assertIn("absolute `image_path`", skill)
-        self.assertIn("URL, key, user-language request", skill)
+        self.assertIn("deliver.py", skill)
+        self.assertIn("review image\npath", skill)
+        # Prose can no longer drop the review images, because prose no longer
+        # orders them. `deliver` runs review_delivery and refuses without it.
+        deliver = (Path(__file__).resolve().parent / "deliver.py").read_text(encoding="utf-8")
+        self.assertIn("review_delivery.py", deliver)
+        self.assertIn("cannot act on", deliver)
 
     def test_first_reply_gives_the_page_and_key_before_any_status(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
@@ -619,7 +623,9 @@ class TheSkillKeepsTheUserInformed(unittest.TestCase):
             "## Continue and critique", 1)[0]
         self.assertIn('--status "<emoji + user-language', start)
         self.assertIn("activity changes", skill)
-        self.assertIn("status --project-root . --idle", publish)
+        self.assertIn("--idle-text", publish)
+        deliver = (Path(__file__).resolve().parent / "deliver.py").read_text(encoding="utf-8")
+        self.assertIn('"status", "--idle"', deliver)
 
     def test_plain_language_contract_is_loaded_before_the_first_update(self):
         root = Path(__file__).resolve().parent.parent
@@ -672,7 +678,7 @@ class TheSkillIsInvokedWithEditorialVerbs(unittest.TestCase):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
         self.assertNotIn("`doctor`", skill)
         self.assertNotIn("`stats`", skill)
-        self.assertIn("bootstrap_harness.py article --project-root", skill)
+        self.assertIn("deliver.py --project-root", skill)
         self.assertNotIn("editorial-board.html", skill)
 
 

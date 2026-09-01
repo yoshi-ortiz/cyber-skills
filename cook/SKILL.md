@@ -1,5 +1,6 @@
 ---
 name: cook
+disable-model-invocation: true
 description: Dev-only. Run this repository's skills against a throwaway project and assert what the person who ran it would actually see, so a success-shaped exit code cannot stand in for a working screen. Also reads a finished run back against what the user asked for, to catch a round that heard a complaint or a correction and changed nothing.
 ---
 

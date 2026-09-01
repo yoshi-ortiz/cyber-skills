@@ -163,8 +163,13 @@ and shot-evaluation contract. `QA.md` is universal and repo-agnostic; compiled
 sections only reach Design-Inference runs. None of these become a third runtime
 context whole-cloth.
 
-None of them reach a published tree — see `tools/fog.py`, which is the list, and
-`tools/CONTEXT.md`, which explains why generating `main` beats curating it.
+`GOAL.md`, `SPEC.md`, and `UBIQUITOUS_LANGUAGE.md` reach no published tree.
+`QA.md` and `docs/SPEC/SHOT_OBSERVATION.md` do, by name, because the shot
+contract is repo-agnostic and a skills repository that installs the skills
+without the rubric cannot judge a Shot. See `tools/fog.py` — `FOG_DIRS` is the
+fog list and `KEEP_ALWAYS` is the exception list, and that file is the truth
+here, not this paragraph — and `tools/CONTEXT.md`, which explains why
+generating `main` beats curating it.
 
 ## Channels
 

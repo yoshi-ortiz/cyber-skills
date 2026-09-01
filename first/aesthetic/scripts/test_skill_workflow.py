@@ -16,8 +16,7 @@ class SkillWorkflowTest(unittest.TestCase):
         positions = [skill.index(term) for term in (
             "editorial_workflow.py observe",
             "direction_context.py",
-            "bootstrap_harness.py article",
-            "bootstrap_harness.py publish",
+            "deliver.py --project-root",
         )]
         self.assertEqual(positions, sorted(positions))
         self.assertNotIn("editorial-board.html", skill)

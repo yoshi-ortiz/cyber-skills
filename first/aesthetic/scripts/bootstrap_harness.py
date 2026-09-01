@@ -3,6 +3,19 @@
 
 from __future__ import annotations
 
+# ponytail: 214 KB across 18 subcommands, 7x the 30 KB budget this directory
+# declares. Not split, because the smallest coherent slice -- the Chrome
+# rasterisation adapter (find_chrome, render_html_preview, trim_to_content,
+# preview_ink, check_preview_legible, and the four PREVIEW/CHROME constants) --
+# moves about 9 KB and leaves the file 6.8x over, so `contracts-budget` stays
+# red either way while every gate in the repository starts depending on a new
+# import edge. Upgrade path, in order, each ending in a green run of
+# `tools/check.py`: lift that adapter to `preview_render.py` with HarnessError
+# moved beside it; then the companion/ledger group (drain_companion,
+# adopt_companion, ledger_cursor_key, ledger_digest); then one module per verb
+# behind the argparse adapter this file becomes. Do it when a verb needs to
+# change, not as a standalone sweep.
+
 import argparse
 import base64
 import hashlib

@@ -1,3 +1,10 @@
+---
+purpose: one design project's harness state, the evidence and decisions a round reads back
+admits: the brief, decisions, editorial and direction records this project's rounds wrote
+refuses: skill payload, another project's state, anything a published tree carries
+max_file_bytes: 140000
+---
+
 # Design Harness Context
 
 This project uses an evidence-backed, iterative design harness.

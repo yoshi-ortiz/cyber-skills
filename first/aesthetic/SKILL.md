@@ -143,20 +143,18 @@ Require 4.5:1 text and 3:1 control contrast. Companion chrome follows
 ## Publish the established article
 
 ```bash
-python3 <skill>/scripts/bootstrap_harness.py article --project-root . \
+python3 <skill>/scripts/deliver.py --project-root . \
   --out design/aesthetic-ranking.html --cohort "<element ids>" \
   --round-label "<object>" --asks "<one plain design question>" \
+  --assessments /tmp/proposal-assessments.json \
+  --idle-text "<user-language request to review the new designs>" \
   --agent "<App | Model>" --agent-url "<task deep link>"
-python3 <skill>/scripts/bootstrap_harness.py publish --project-root . \
-  --screen design/aesthetic-ranking.html
-python3 <skill>/scripts/review_delivery.py --project-root . \
-  --cohort "<element ids>" --assessments /tmp/proposal-assessments.json
-python3 <skill>/scripts/bootstrap_harness.py status --project-root . --idle \
-  --text "<user-language request to review the new designs>"
 ```
 
-Delivery accepts only subject-specific rankable proposals. Lead with the
-URL, key, user-language request, and every absolute `image_path` emitted.
+One call, because dropping either of its last two steps is how a user gets a
+link to nothing. It prints `url`, `key`, `ask`, and every absolute review image
+path; lead the reply with exactly those. Delivery accepts only subject-specific
+rankable proposals.
 
 ## Continue and critique
 
