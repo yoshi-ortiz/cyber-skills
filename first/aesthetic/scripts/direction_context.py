@@ -178,8 +178,20 @@ def candidates(project_root: Path, skill_root: Path = SKILL_ROOT) -> list[dict[s
     Repo-Dev rail document sitting beside the design work has no route in,
     which is the contamination guard the skill states in prose.
     """
+    from graphics_flow import correction_bundles
+
     evidence = inference_context(project_root)
     rows: list[dict[str, Any]] = []
+
+    # A Shot the user sent back is the sharpest correction there is: they saw
+    # the delivered round and said what was wrong with it. It enters as a
+    # `correction`, which is what puts it ahead of every optional doctrine
+    # file -- taste guidance loses to the user's own words about this round.
+    # Only the bounded bundle crosses over; the Shot record itself stays out.
+    for bundle in correction_bundles(project_root):
+        rows.append(_chunk(f"correction:shot:{bundle['shotId']}", "correction",
+                           "evidence",
+                           f"{bundle['shotId']}: {bundle['correction']}", "dev-only"))
 
     for item in evidence["briefConstraints"]:
         rows.append(_chunk(f"brief:{item['id']}",

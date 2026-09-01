@@ -26,10 +26,16 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 KEY = re.compile(r"[?&]key=([0-9a-f]+)")
+
+# Resolved from this file, never from the cwd: `deliver.py` is called with a
+# --project-root that is not necessarily the repo it lives in.
+REPO_ROOT = HERE.parents[2]
+TOKENS_QA = REPO_ROOT / "check" / "tokens-qa" / "scripts" / "tokens_qa.py"
 
 
 class DeliveryError(Exception):
@@ -100,6 +106,30 @@ def deliver(project_root: Path, out: str, cohort: str, round_label: str, asks: s
             "ask": asks, "images": json.loads(images) if images else []}
 
 
+def record_shot(payload: dict, round_label: str, asks: str) -> None:
+    """Write the delivered round to the Shot ledger, so QA has something to read."""
+    images = payload.get("images") or {}
+    declared = images.get("images", []) if isinstance(images, dict) else []
+    artifacts = [{"path": item["image_path"], "role": "deliverable",
+                  "mime": "image/png"}
+                 for item in declared if isinstance(item, dict) and item.get("image_path")]
+    if not artifacts:
+        return
+    with tempfile.TemporaryDirectory(prefix="deliver-shot-") as staging:
+        stage = Path(staging)
+        request = stage / "request.txt"
+        request.write_text(asks, encoding="utf-8")
+        manifest = stage / "manifest.json"
+        manifest.write_text(json.dumps({"artifacts": artifacts}), encoding="utf-8")
+        done = subprocess.run(
+            [sys.executable, str(TOKENS_QA), "record", "first/aesthetic",
+             "--request", str(request), "--output-manifest", str(manifest),
+             "--scope", round_label],
+            cwd=str(REPO_ROOT), capture_output=True, text=True)
+    if done.returncode != 0:
+        raise DeliveryError((done.stderr or done.stdout).strip())
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -123,6 +153,16 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     json.dump(payload, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
+    # Recording happens HERE, not inside `deliver`, and it cannot fail the
+    # round. `deliver` already shells four subprocesses that each get to
+    # refuse; a fifth that could turn a delivered round into a failed one buys
+    # nothing, because by this line the screen is live and the payload is
+    # printed. An unrecorded round is a gap in QA, not a broken delivery.
+    try:
+        record_shot(payload, args.round_label, args.asks)
+    except Exception as unrecorded:
+        print(f"deliver: round delivered but not recorded: {unrecorded}",
+              file=sys.stderr)
     return 0
 
 

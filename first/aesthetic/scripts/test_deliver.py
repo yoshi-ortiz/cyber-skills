@@ -4,6 +4,8 @@
 `deliver` exists because two of its four steps used to get dropped. A test that
 only checked the happy path would not notice them being dropped again.
 """
+import contextlib
+import io
 import sys
 import unittest
 import unittest.mock
@@ -79,6 +81,35 @@ class Order(unittest.TestCase):
             self.run_with(["", self.PUBLISH_SAYS,
                            "Waiting for the agent to push a screen...", "", ""])
         self.assertIn("no URL", str(refused.exception))
+
+
+PAYLOAD = {"url": "http://localhost:1/?key=abc123", "key": "abc123",
+           "ask": "How strong?", "images": {"images": []}}
+ARGV = ["--project-root", "/tmp/p", "--out", "out.html", "--cohort", "a,b",
+        "--round-label", "hero", "--asks", "How strong?",
+        "--assessments", "/tmp/a.json", "--idle-text", "revisa"]
+
+
+class ShotRecord(unittest.TestCase):
+    """A round the QA tool never saw cannot be assessed. Recording is not
+    part of the delivery, though: it happens after the payload is printed,
+    and it may not turn a delivered round into a failed one."""
+
+    def test_a_delivered_round_is_recorded_as_a_shot(self):
+        with unittest.mock.patch.object(deliver, "deliver", return_value=PAYLOAD), \
+             unittest.mock.patch.object(deliver, "record_shot") as recorded, \
+             contextlib.redirect_stdout(io.StringIO()) as printed:
+            self.assertEqual(deliver.main(ARGV), 0)
+        recorded.assert_called_once()
+        self.assertIn("key=abc123", printed.getvalue())
+
+    def test_a_failed_recording_does_not_fail_the_delivery(self):
+        with unittest.mock.patch.object(deliver, "deliver", return_value=PAYLOAD), \
+             unittest.mock.patch.object(deliver, "record_shot",
+                                        side_effect=OSError("no such tool")), \
+             contextlib.redirect_stdout(io.StringIO()), \
+             contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(deliver.main(ARGV), 0)
 
 
 if __name__ == "__main__":

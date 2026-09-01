@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from graphics_flow import next_action, read_state
+from graphics_flow import (PROOF_KIND, correction_bundles, correction_id,
+                          next_action, read_state)
+from review_delivery import record_proof
 from test_text_to_graphics import _project
 from text_to_graphics import (build_svg, compile_slices, export_avge_calls,
                               record_adapter)
@@ -19,6 +22,7 @@ def _state(**overrides) -> dict:
         "slicesHash": "abc", "callsHash": "abc", "adapters": {"avge": "PASS"},
         "refinePending": [],
         "svgHash": "abc", "gateErrors": [],
+        "correctionsPending": [], "proofsMissing": [],
     }
     state.update(overrides)
     return state
@@ -28,7 +32,32 @@ class FlowTests(unittest.TestCase):
     """One next action from any state, with the reason it fired."""
 
     def test_a_finished_loop_reports_done(self) -> None:
+        """Green AND proven is done. Green alone is not.
+
+        This assertion used to read `done` off a state carrying no proof at
+        all, which is the bug: every structural gate passing says the bytes
+        are well formed, and says nothing about whether a human can see them.
+        """
         self.assertEqual(next_action(_state())["action"], "done")
+        self.assertEqual(
+            next_action(_state(proofsMissing=[PROOF_KIND]))["action"],
+            "verify-delivery")
+
+    def test_an_outstanding_correction_outranks_proving_a_delivery(self) -> None:
+        step = next_action(_state(
+            correctionsPending=[{"correctionId": "c0ffee", "shotId": "shot-1",
+                                 "correction": "the thumbnail is unreadable"}],
+            proofsMissing=[PROOF_KIND]))
+        self.assertEqual(step["action"], "apply-correction")
+        self.assertIn("shot-1", step["reason"])
+
+    def test_a_rejected_artifact_is_repaired_before_it_is_proven(self) -> None:
+        step = next_action(_state(
+            gateErrors=["road is not closed"],
+            correctionsPending=[{"correctionId": "c0ffee", "shotId": "shot-1",
+                                 "correction": "the thumbnail is unreadable"}],
+            proofsMissing=[PROOF_KIND]))
+        self.assertEqual(step["action"], "repair-output")
 
     def test_an_invalid_scene_outranks_everything_else(self) -> None:
         step = next_action(_state(sceneErrors=["road must be an object"],
@@ -93,6 +122,38 @@ class FlowTests(unittest.TestCase):
         self.assertIn("moodboards", step["reason"])
 
 
+class CorrectionTests(unittest.TestCase):
+    """A bundle has no natural identity, so it is given one."""
+
+    def _shot(self, project: Path) -> None:
+        shots = project / ".audit" / "shots"
+        shots.mkdir(parents=True, exist_ok=True)
+        (shots / "s.json").write_text(json.dumps({
+            "shot_id": "shot-1",
+            "user_feedback": {"correction": "the thumbnail is unreadable",
+                              "observed_at": "2026-09-01T02:51:48Z"}}),
+            encoding="utf-8")
+
+    def test_the_same_bundle_always_has_the_same_id(self) -> None:
+        self.assertEqual(correction_id("shot-1", "2026-09-01T02:51:48Z"),
+                         correction_id("shot-1", "2026-09-01T02:51:48Z"))
+        self.assertNotEqual(correction_id("shot-1", "2026-09-01T02:51:48Z"),
+                            correction_id("shot-2", "2026-09-01T02:51:48Z"))
+
+    def test_an_applied_correction_stops_firing(self) -> None:
+        with _project() as project:
+            self._shot(project)
+            pending = correction_bundles(project)
+            self.assertEqual([bundle["shotId"] for bundle in pending], ["shot-1"])
+            self.assertEqual(read_state(project)["correctionsPending"], pending)
+            support = project / "spec/design-harness" / "support.json"
+            payload = json.loads(support.read_text(encoding="utf-8")) \
+                if support.exists() else {}
+            payload["appliedCorrections"] = [pending[0]["correctionId"]]
+            support.write_text(json.dumps(payload), encoding="utf-8")
+            self.assertEqual(read_state(project)["correctionsPending"], [])
+
+
 class ReadStateTests(unittest.TestCase):
     def test_a_project_with_no_corpus_folder_is_told_so(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -113,7 +174,13 @@ class ReadStateTests(unittest.TestCase):
             build_svg(project)
             state = read_state(project)
             self.assertEqual(state["svgHash"], state["sceneHash"])
-            self.assertEqual(next_action(state)["action"], "done")
+            self.assertEqual(next_action(state)["action"], "verify-delivery")
+            image = project / "design" / "review" / "landing.hero.flow.png"
+            image.parent.mkdir(parents=True, exist_ok=True)
+            image.write_bytes(b"\x89PNG\r\n\x1a\n")
+            record_proof(project, project / "shots/landing.hero.flow.svg",
+                         image, PROOF_KIND)
+            self.assertEqual(next_action(read_state(project))["action"], "done")
 
     def test_a_fresh_project_needs_compiling_before_anything_is_drawn(self) -> None:
         with _project() as project:

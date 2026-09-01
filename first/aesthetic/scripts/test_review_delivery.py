@@ -197,6 +197,81 @@ class ReviewDeliveryTest(unittest.TestCase):
         self.assertEqual(second_target.read_bytes(), b"old-second")
         self.assertEqual([], list(review_dir.glob(".review-stage-*")))
 
+    def test_the_same_four_inputs_give_the_same_proof_key(self) -> None:
+        first = rd.proof_key("a" * 64, "1280", "Google Chrome 152.0.7977.65",
+                             "hero-browser-render")
+        second = rd.proof_key("a" * 64, "1280", "Google Chrome 152.0.7977.65",
+                              "hero-browser-render")
+        self.assertEqual(first, second)
+        self.assertTrue(rd._valid_digest(first))
+
+    def test_every_one_of_the_four_inputs_changes_the_key(self) -> None:
+        base = ("a" * 64, "1280", "Google Chrome 152.0.7977.65", "hero-browser-render")
+        keys = {rd.proof_key(*base)}
+        for index, replacement in enumerate(
+                ("b" * 64, "375", "Google Chrome 151.0.6000.1", "thumbnail")):
+            changed = list(base)
+            changed[index] = replacement
+            keys.add(rd.proof_key(*changed))
+        self.assertEqual(len(keys), 5)
+
+    def test_a_recorded_proof_names_the_image_a_human_can_open(self) -> None:
+        artifact = self.comp("cover")
+        image = self.root / "design" / "review" / "cover.png"
+        image.parent.mkdir(parents=True)
+        image.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+        descriptor = rd.record_proof(self.root, artifact, image,
+                                     "hero-browser-render")
+
+        self.assertEqual(descriptor["proofKey"],
+                         rd.proof_key(rd.sha256_file(artifact),
+                                      str(rd.REVIEW_WIDTH), rd.renderer_version(),
+                                      "hero-browser-render"))
+        self.assertEqual(Path(descriptor["image"]), image)
+        self.assertTrue(descriptor["observedAt"])
+        support = json.loads((self.output / "support.json").read_text(encoding="utf-8"))
+        self.assertEqual(support["proofs"], [descriptor])
+
+    def test_recording_a_proof_leaves_the_rest_of_support_json_alone(self) -> None:
+        (self.output / "support.json").write_text(
+            json.dumps({"version": 1, "adapters": {"avge": "PASS"}}), encoding="utf-8")
+        artifact = self.comp("cover")
+        image = self.root / "design" / "review" / "cover.png"
+        image.parent.mkdir(parents=True)
+        image.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+        rd.record_proof(self.root, artifact, image, "hero-browser-render")
+
+        support = json.loads((self.output / "support.json").read_text(encoding="utf-8"))
+        self.assertEqual(support["adapters"], {"avge": "PASS"})
+        self.assertEqual(len(support["proofs"]), 1)
+
+    def test_the_renderer_version_is_never_fabricated(self) -> None:
+        version = rd.renderer_version()
+        self.assertTrue(version)
+        self.assertIsInstance(version, str)
+
+    def test_delivering_a_cohort_records_a_proof_for_every_image(self) -> None:
+        first = self.comp("cover-a")
+        second = self.comp("cover-b")
+        self.decisions([("cover-a", first, None), ("cover-b", second, None)])
+        assessments = self.assessments_file([
+            self.assessment("cover-a"), self.assessment("cover-b")])
+
+        def renderer(source: Path, target: Path) -> str:
+            target.write_bytes(b"\x89PNG\r\n\x1a\n" + source.read_bytes())
+            return "fake"
+
+        rd.deliver_review_images(self.root, ["cover-a", "cover-b"], assessments,
+                                 renderer=renderer)
+
+        support = json.loads((self.output / "support.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(support["proofs"]), 2)
+        for proof in support["proofs"]:
+            self.assertTrue(Path(proof["image"]).is_file())
+            self.assertEqual(proof["kind"], "hero-browser-render")
+
 
 if __name__ == "__main__":
     unittest.main()

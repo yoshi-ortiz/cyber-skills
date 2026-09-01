@@ -128,6 +128,28 @@ class CompilePassTest(unittest.TestCase):
             self.assertNotIn("root cause", bundle)
 
 
+class CorrectionBundleTest(unittest.TestCase):
+    def test_a_bounded_correction_bundle_outranks_optional_doctrine(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _project(tmp)
+            shots = root / ".audit" / "shots"
+            shots.mkdir(parents=True)
+            (shots / "s.json").write_text(json.dumps({
+                "shot_id": "shot-1",
+                "user_feedback": {"correction": "the thumbnail is unreadable",
+                                  "observed_at": "2026-09-01T02:51:48Z"}}),
+                encoding="utf-8")
+
+            trace = dc.compile_pass(root, "proposal", budget=200)
+
+            self.assertEqual(trace["chunks"][0]["priority"], "correction")
+            admitted = [row["key"] for row in trace["chunks"] if row["admitted"]]
+            self.assertIn("correction:shot:shot-1", admitted)
+            self.assertIn("the thumbnail is unreadable", trace["bundle"])
+            self.assertTrue(any(row["priority"] == "doctrine" and not row["admitted"]
+                                for row in trace["chunks"]))
+
+
 class ProofGateTest(unittest.TestCase):
     def test_an_expensive_pass_waits_for_its_cheapest_proof(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
