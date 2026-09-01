@@ -3,6 +3,19 @@
 
 from __future__ import annotations
 
+# ponytail: 214 KB across 18 subcommands, 7x the 30 KB budget this directory
+# declares. Not split, because the smallest coherent slice -- the Chrome
+# rasterisation adapter (find_chrome, render_html_preview, trim_to_content,
+# preview_ink, check_preview_legible, and the four PREVIEW/CHROME constants) --
+# moves about 9 KB and leaves the file 6.8x over, so `contracts-budget` stays
+# red either way while every gate in the repository starts depending on a new
+# import edge. Upgrade path, in order, each ending in a green run of
+# `tools/check.py`: lift that adapter to `preview_render.py` with HarnessError
+# moved beside it; then the companion/ledger group (drain_companion,
+# adopt_companion, ledger_cursor_key, ledger_digest); then one module per verb
+# behind the argparse adapter this file becomes. Do it when a verb needs to
+# change, not as a standalone sweep.
+
 import argparse
 import base64
 import hashlib
@@ -1276,6 +1289,16 @@ def render_html_preview(html: Path, out: Path, width: int = PREVIEW_WIDTH,
                 return "chrome"
             detail = (result.stderr or b"").decode("utf-8", "replace").strip()[:200]
         except subprocess.TimeoutExpired:
+            # Chrome can finish writing the screenshot and then hang on exit
+            # (GPU-process teardown, sandboxed disk) -- that hang fired this
+            # timeout, but the file on disk is still a complete, correct
+            # render. Discarding it here was falling back to qlmanage, whose
+            # QuickLook thumbnail cache is keyed by path, not content: it
+            # served a stale, garbled composite of a PREVIOUS render of this
+            # same path as the "current" comp, which is what actually shipped
+            # to the user as a bogus low-starred preview once.
+            if out.is_file() and out.stat().st_size:
+                return "chrome"
             detail = "timed out"
         finally:
             shutil.rmtree(profile, ignore_errors=True)
