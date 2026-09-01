@@ -120,7 +120,9 @@ def record_shot(payload: dict, round_label: str, asks: str) -> None:
         request = stage / "request.txt"
         request.write_text(asks, encoding="utf-8")
         manifest = stage / "manifest.json"
-        manifest.write_text(json.dumps({"artifacts": artifacts}), encoding="utf-8")
+        manifest.write_text(json.dumps({"adapter": "graphic",
+                                        "artifacts": artifacts}),
+                            encoding="utf-8")
         done = subprocess.run(
             [sys.executable, str(TOKENS_QA), "record", "first/aesthetic",
              "--request", str(request), "--output-manifest", str(manifest),
