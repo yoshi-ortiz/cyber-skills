@@ -169,7 +169,17 @@ plausible theory is not evidence that the visible workflow works.
 After Cook is green, run the affected tests and `python3 tools/check.py`, then
 review the diff. Report the exact checks and ask the user to confirm commit and
 push. Do not silently cross that release boundary. After approval: commit the
-reviewed files, push the current branch, verify the remote contains the commit,
-run `kit sync cyber-skills`, and verify the installed Cook/Aesthetic copies
-contain that commit's behavior. The work is finished only after those facts are
-reported; a local green tree is ready to release, not released.
+reviewed files, push the current branch, verify the remote contains the commit.
+
+**Pushing `dev` installs nothing.** `kit sync` clones the channel branches, so
+a `dev` commit is invisible to it until a channel carries it. Verifying the
+installed copies straight after a `dev` push asserts something that cannot be
+true yet, and the honest read of a clean sync there is "nothing new was
+published", not "the release worked".
+
+Publishing a channel is a second decision, and which channel is a third:
+`main` is what every user installs. Name the channel, get it confirmed, then
+`python3 tools/release.py --channel <name> --push`, then `kit sync
+cyber-skills`, then verify the installed copies carry that commit's behavior.
+The work is finished only after those facts are reported; a local green tree
+is ready to release, not released.
