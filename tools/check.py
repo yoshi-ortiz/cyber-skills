@@ -56,6 +56,7 @@ def gates(tree: Path) -> list[tuple[str, list[str]]]:
         ("index gate", [py, "tools/index_gate.py"]),
         ("loanwords", [py, "tools/loanwords.py"]),
         ("fog tests", [py, "tools/test_fog.py"]),
+        ("release tests", [py, "tools/test_release.py"]),
         ("index gate tests", [py, "tools/test_index_gate.py"]),
         ("loanword tests", [py, "tools/test_loanwords.py"]),
         ("runner tests", [py, "tools/test_check.py"]),

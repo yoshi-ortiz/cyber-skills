@@ -34,6 +34,40 @@ def git(*argv: str, cwd: Path = ROOT) -> str:
     return done.stdout.strip()
 
 
+def blocking_changes(porcelain: str) -> list[str]:
+    """Tracked changes only.
+
+    `publish.py` ships what git tracks, so an untracked stray cannot reach a
+    published tree. Refusing the release over one only forced a stash-and-pop
+    around the release, which is a conflict risk taken on to avoid a file that
+    was never going to be published.
+    """
+    return [line for line in porcelain.splitlines()
+            if line.strip() and not line.startswith("??")]
+
+
+def worktree_holding(listing: str, channel: str) -> str | None:
+    """The worktree already holding `channel`, from `worktree list --porcelain`.
+
+    `worktree add --force` will happily check a branch out twice. The second
+    checkout leaves the first reporting staged changes nobody made, and a
+    commit there silently reverts the release.
+    """
+    path = ""
+    for line in listing.splitlines():
+        if line.startswith("worktree "):
+            path = line[len("worktree "):]
+        elif line == f"branch refs/heads/{channel}":
+            return path
+    return None
+
+
+def divergence(counts: str) -> tuple[int, int]:
+    """`rev-list --left-right --count channel...origin/channel` as (ahead, behind)."""
+    ahead, behind = counts.split()
+    return int(ahead), int(behind)
+
+
 def diff_tree(left: Path, right: Path) -> list[str]:
     """Repo-relative paths that differ between two trees, recursively."""
     changed = []
@@ -54,10 +88,28 @@ def diff_tree(left: Path, right: Path) -> list[str]:
 
 
 def release(channel: str, push: bool, dry_run: bool) -> int:
-    if git("status", "--porcelain"):
-        raise SystemExit("release: the working tree is dirty; commit or stash first")
+    dirty = blocking_changes(git("status", "--porcelain"))
+    if dirty:
+        raise SystemExit("release: tracked changes are uncommitted; commit or "
+                         "stash first:\n  " + "\n  ".join(dirty))
     source = git("rev-parse", "--short", "HEAD")
     branch = git("rev-parse", "--abbrev-ref", "HEAD")
+
+    held = worktree_holding(git("worktree", "list", "--porcelain"), channel)
+    if held:
+        raise SystemExit(
+            f"release: {channel} is checked out at {held}, and checking it out "
+            f"again would leave that worktree reporting changes nobody made.\n"
+            f"  git worktree remove {held}    # or `git worktree prune` if it is gone")
+
+    git("fetch", "origin", channel)
+    ahead, behind = divergence(
+        git("rev-list", "--left-right", "--count", f"{channel}...origin/{channel}"))
+    if behind:
+        raise SystemExit(
+            f"release: {channel} is {behind} commit(s) behind origin/{channel}. "
+            f"Committing on it would push non-fast-forward and leave it diverged.\n"
+            f"  git fetch origin {channel} && git branch -f {channel} origin/{channel}")
 
     with tempfile.TemporaryDirectory(prefix="cyber-skills-release-") as temp:
         out, work = Path(temp) / "tree", Path(temp) / "branch"
