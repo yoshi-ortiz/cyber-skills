@@ -1,0 +1,139 @@
+{
+  "valid": [
+    {
+      "name": "inline text without a corpus",
+      "record": {
+        "version": 1,
+        "shot_id": "text-01",
+        "scope": "Draft one release note",
+        "inputs": {
+          "corpus_refs": [],
+          "prompt_hash": "sha256:text",
+          "tools": []
+        },
+        "compute": {
+          "model": "model",
+          "harness": "harness",
+          "started_at": "2026-08-31T18:00:00Z",
+          "duration_ms": 5,
+          "tokens": {"input": 10, "output": 4, "profile": "exact"}
+        },
+        "output": {"adapter": "text", "inline": {"text": "Shipped."}},
+        "provenance": "inference",
+        "user_feedback": {"status": "pending"}
+      }
+    },
+    {
+      "name": "image corpus to graphic artifact",
+      "record": {
+        "version": 1,
+        "shot_id": "image-01",
+        "scope": "Render one hero",
+        "inputs": {
+          "corpus_refs": ["corpus/reference.png", "corpus/avoid.jpg"],
+          "prompt_hash": "sha256:image",
+          "tools": ["renderer"]
+        },
+        "compute": {
+          "model": "model",
+          "harness": "harness",
+          "started_at": "2026-08-31T18:00:00Z",
+          "duration_ms": 25,
+          "tokens": {"input": null, "output": null, "profile": "unavailable"}
+        },
+        "output": {
+          "adapter": "graphic",
+          "path": "shots/hero.png",
+          "mime": "image/png",
+          "bytes": 2048
+        },
+        "provenance": "procedural",
+        "user_feedback": {"status": "accepted", "rank": 1, "sentiment": "positive"}
+      }
+    },
+    {
+      "name": "audio corpus to document artifact",
+      "record": {
+        "version": 1,
+        "shot_id": "audio-01",
+        "scope": "Summarize one interview",
+        "inputs": {
+          "corpus_refs": ["corpus/interview.wav"],
+          "prompt_hash": "sha256:audio",
+          "tools": ["transcriber"]
+        },
+        "compute": {
+          "model": "model",
+          "harness": "harness",
+          "started_at": "2026-08-31T18:00:00Z",
+          "duration_ms": 40,
+          "tokens": {"input": 50, "output": 20, "profile": "estimated"}
+        },
+        "output": {"adapter": "document", "path": "out/interview.md", "mime": "text/markdown"},
+        "provenance": "corpus",
+        "user_feedback": {"status": "corrected", "correction": "Name the second speaker."}
+      }
+    },
+    {
+      "name": "mixed video and text corpus to bundle",
+      "record": {
+        "version": 1,
+        "shot_id": "mixed-01",
+        "scope": "Build one review bundle",
+        "inputs": {
+          "corpus_refs": ["corpus/demo.mp4", "corpus/brief.txt"],
+          "prompt_hash": "sha256:mixed",
+          "tools": ["frame-extractor", "reporter"],
+          "stack": ["python3"]
+        },
+        "compute": {
+          "model": "model",
+          "harness": "harness",
+          "started_at": "2026-08-31T18:00:00Z",
+          "duration_ms": 80,
+          "tokens": {"input": 80, "output": 30, "profile": "exact"}
+        },
+        "output": {"adapter": "bundle", "path": "out/review.json", "mime": "application/json"},
+        "provenance": "fetched",
+        "user_feedback": {"status": "rejected", "sentiment": "negative"}
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "corpus references must be a list",
+      "path": "$.inputs.corpus_refs",
+      "replace": ["inputs", "corpus_refs"],
+      "value": "corpus/reference.png"
+    },
+    {
+      "name": "tools must be a list",
+      "path": "$.inputs.tools",
+      "replace": ["inputs", "tools"],
+      "value": "renderer"
+    },
+    {
+      "name": "token counts cannot be negative",
+      "path": "$.compute.tokens.input",
+      "replace": ["compute", "tokens", "input"],
+      "value": -1
+    },
+    {
+      "name": "adapter is required",
+      "path": "$.output.adapter",
+      "delete": ["output", "adapter"]
+    },
+    {
+      "name": "rank must be numeric",
+      "path": "$.user_feedback.rank",
+      "replace": ["user_feedback", "rank"],
+      "value": "first"
+    },
+    {
+      "name": "unknown top-level fields are refused",
+      "path": "$.surprise",
+      "replace": ["surprise"],
+      "value": true
+    }
+  ]
+}

@@ -352,12 +352,14 @@ siempre y nunca madura solo hasta convertirse en aprobación.
 | **Channel** | `alpha` |
 
 <details>
-<summary><b>Spec completa: los tres verbos y los cuatro vetos duros</b></summary>
+<summary><b>Spec completa: los seis verbos y los cuatro vetos duros</b></summary>
 
 ```bash
-python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt --output out.md
+python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt --inline "<output>"
 python3 <skill>/scripts/tokens_qa.py observe .audit/shots/<id>.json [<candidate>.json]
-python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json "<your exact words>"
+python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json --status accepted
+python3 <skill>/scripts/tokens_qa.py assess-feedback --evidence turns.json --json
+python3 <skill>/scripts/tokens_qa.py correction .audit/shots/<id>.json
 ```
 
 `observe` imprime dos columnas, actual contra propuesta QA, dos filas por

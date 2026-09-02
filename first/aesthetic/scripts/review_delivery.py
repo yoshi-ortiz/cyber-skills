@@ -4,15 +4,20 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
+import subprocess
 import tempfile
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
-from bootstrap_harness import HarnessError, render_html_preview, sha256_file
+from bootstrap_harness import (HarnessError, find_chrome, render_html_preview,
+                               sha256_file)
+from graphics_flow import PROOF_KIND
 
 
 class DeliveryError(RuntimeError):
@@ -202,8 +207,104 @@ def _image_name(element: str) -> str:
     return f"{name}.png"
 
 
+# A review image is not a thumbnail. It is opened at full size in the reply and
+# it is the ONLY view of the work a user gets without visiting the companion, so
+# it has to show the design.
+#
+# It used to inherit `render_html_preview`'s default width, `PREVIEW_WIDTH` --
+# 510px, which is a phone. Every comp that is a real page therefore shipped its
+# MOBILE rendering: on the landing hero, 510px put the headline and the two
+# buttons in frame and pushed the isometric rail, the four rooms and every
+# station label -- the entire subject of the round -- below the fold. The user
+# was asked to rank a graphic that was not in the picture.
+#
+# 1280 is a desktop viewport, so a page comp renders the layout it was drawn
+# for. A comp authored small still reads: it is centred in a wider frame rather
+# than cropped by a narrower one, and being surrounded by white is recoverable
+# in a way that being cut in half is not.
+REVIEW_WIDTH = 1280
+
+
+def _render_review(html: Path, out: Path) -> str:
+    return render_html_preview(html, out, width=REVIEW_WIDTH)
+
+
+# A proof key pins FOUR things: the artifact's bytes, the viewport it was seen
+# at, the renderer that drew it, and which kind of view this is.
+#
+# The interface this came from named a fifth, `assets_hash`, and it is dropped
+# on purpose. A comp here is self-contained -- design/landing-flow-hero.html
+# carries no <link>, no @import and no remote src -- so every byte an asset
+# hash would cover is already inside the file `artifact_hash` hashes. A fifth
+# input fed from the same bytes is one more place to be wrong, not one more
+# thing proven. Do not add it back until an artifact genuinely references
+# something outside itself; then it has a source, and only then.
+def proof_key(artifact_hash: str, viewport: str, renderer_version: str,
+              kind: str) -> str:
+    return hashlib.sha256("\x1f".join(
+        (artifact_hash, str(viewport), renderer_version, kind)).encode()).hexdigest()
+
+
+_RENDERER_VERSION: str | None = None
+
+
+def renderer_version() -> str:
+    """What the rasteriser says it is, cached for the process.
+
+    Asked of the binary, never guessed. A proof recorded under an invented
+    version is worse than no proof at all: it claims a render some other
+    build produced. When the binary will not answer, its name stands in --
+    that is still something observed rather than something made up.
+    """
+    global _RENDERER_VERSION
+    if _RENDERER_VERSION is not None:
+        return _RENDERER_VERSION
+    chrome = find_chrome()
+    if not chrome:
+        _RENDERER_VERSION = "no renderer"
+        return _RENDERER_VERSION
+    try:
+        done = subprocess.run([chrome, "--version"], capture_output=True,
+                              text=True, timeout=10)
+        _RENDERER_VERSION = done.stdout.strip() or Path(chrome).name
+    except (OSError, subprocess.SubprocessError):
+        _RENDERER_VERSION = Path(chrome).name
+    return _RENDERER_VERSION
+
+
+def record_proof(project_root: Path, artifact: Path, image: Path,
+                 kind: str = PROOF_KIND,
+                 viewport: int = REVIEW_WIDTH) -> dict[str, str]:
+    """Record that this artifact was rendered, and where the image is.
+
+    Kept in `support.json` beside the adapter verdicts rather than in a file
+    of its own: it is the same question -- what did this round actually
+    observe -- and one more state file is one more thing to keep in step.
+    """
+    root = Path(project_root).resolve()
+    descriptor = {
+        "kind": kind,
+        "proofKey": proof_key(sha256_file(Path(artifact)), str(viewport),
+                              renderer_version(), kind),
+        "image": str(Path(image).resolve()),
+        "observedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    path = root / "spec" / "design-harness" / "support.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, Any] = ({} if not path.is_file()
+                               else json.loads(path.read_text(encoding="utf-8")))
+    payload.setdefault("version", 1)
+    payload["proofs"] = [proof for proof in payload.get("proofs") or []
+                         if not (isinstance(proof, Mapping)
+                                 and proof.get("proofKey") == descriptor["proofKey"])
+                         ] + [descriptor]
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8")
+    return descriptor
+
+
 def deliver_review_images(project_root: Path, cohort: Iterable[str], assessments_path: Path,
-                          renderer: Renderer = render_html_preview,
+                          renderer: Renderer = _render_review,
                           publisher: Publisher = _replace) -> list[ReviewImage]:
     root = project_root.resolve(strict=True)
     elements = list(cohort)
@@ -241,6 +342,20 @@ def deliver_review_images(project_root: Path, cohort: Iterable[str], assessments
             if sha256_file(preview.html_path) != preview.html_sha256:
                 raise DeliveryError(f"canonical HTML changed while rendering {preview.element}")
 
+        # A round with no changed drawing is not a round. Every image here
+        # rendering byte-identical to the one already published means the user
+        # is being handed the same artwork again and asked to rank it again --
+        # and the `--asks` question will be about a design that did not move.
+        # The comparison is free: both digests are already in hand.
+        unchanged = [preview.element for preview, _, target, digest in staged_images
+                     if target.is_file() and sha256_file(target) == digest]
+        if len(unchanged) == len(staged_images):
+            raise DeliveryError(
+                "every review image in this cohort is byte-identical to the one "
+                f"already published ({', '.join(unchanged)}). Nothing about the "
+                "artwork changed, so there is nothing new to rank. Change the "
+                "design, or change the cohort.")
+
         backups: dict[Path, Path | None] = {}
         published: list[Path] = []
         try:
@@ -263,10 +378,13 @@ def deliver_review_images(project_root: Path, cohort: Iterable[str], assessments
                     backup.replace(target)
             raise DeliveryError(f"could not publish the review cohort: {error}") from error
 
-    return [
+    images = [
         ReviewImage(preview.element, preview.html_path, preview.html_sha256, target, digest)
         for preview, _, target, digest in staged_images
     ]
+    for image in images:
+        record_proof(root, image.source_html, image.image_path)
+    return images
 
 
 def delivery_payload(images: Sequence[ReviewImage]) -> dict[str, list[dict[str, str]]]:

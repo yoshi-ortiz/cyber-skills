@@ -349,12 +349,14 @@ never quietly ripens into a pass.
 | **Channel** | `alpha` |
 
 <details>
-<summary><b>Full spec: the three verbs and the four hard vetoes</b></summary>
+<summary><b>Full spec: the six verbs and the four hard vetoes</b></summary>
 
 ```bash
-python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt --output out.md
+python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt --inline "<output>"
 python3 <skill>/scripts/tokens_qa.py observe .audit/shots/<id>.json [<candidate>.json]
-python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json "<your exact words>"
+python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json --status accepted
+python3 <skill>/scripts/tokens_qa.py assess-feedback --evidence turns.json --json
+python3 <skill>/scripts/tokens_qa.py correction .audit/shots/<id>.json
 ```
 
 `observe` prints two columns, current against QA proposal, two rows per metric.
