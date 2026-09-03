@@ -53,6 +53,18 @@ def ok(msg: str) -> None:
         print(text)
 
 
+def graphic_counts(html: str) -> tuple[int, int, int, int]:
+    """Count rendered row markup, never selector text inside injected scripts."""
+    page = re.sub(r"<script\b.*?</script>", "", html, flags=re.I | re.S)
+    rows = len(re.findall(r"<[^>]+\bdata-element=", page))
+    shots = len(re.findall(r'<[^>]+class="[^"]*\bdh-shot\b[^"]*"', page))
+    sized = len(re.findall(r'class="[^"]*\bdh-shot\b[^"]*"[^>]*'
+                           r'style="[^"]*inline-size', page))
+    art = len(re.findall(r'class="[^"]*\bdh-shot\b[^"]*"[^>]*>\s*'
+                         r'(?:<svg\b|<img\b|<div class="dh-shot-inner\b)', page))
+    return rows, shots, sized, art
+
+
 def newest_session(project: Path) -> Path | None:
     root = project / ".superpowers" / "brainstorm"
     sessions = [d for d in root.glob("*/") if (d / "state" / "server-info").is_file()] if root.is_dir() else []
@@ -304,8 +316,7 @@ def main() -> int:
     # Presence is not enough: every scoring row must carry its own graphic.
     # A hand-rolled row block passes a global "dh-shot appears somewhere" check
     # while showing the user nothing to judge.
-    rows = html.count("data-element=")
-    shots = html.count('class="dh-shot"')
+    rows, shots, sized, art = graphic_counts(html)
     if rows and shots < rows:
         fail(f"{rows - shots} of {rows} scoring row(s) have no component graphic "
              f"-- regenerate with `controls`, never hand-roll rows")
@@ -319,14 +330,12 @@ def main() -> int:
     # history passed a string count while rendering nothing: a stylesheet that
     # never injected, a host rule with higher specificity, artwork scaled to a
     # corner. Sizing must ride on the element itself.
-    sized = len(re.findall(r'class="dh-shot"[^>]*style="[^"]*inline-size', html))
     if rows and sized < rows:
         fail(f"{rows - sized} of {rows} graphic(s) rely on a stylesheet for their size -- "
              f"a host rule or a missing <style> makes them invisible. Re-run `embed`.")
         bad += 1
     else:
         ok("graphics carry their own sizing (cannot be collapsed by host CSS)")
-    art = len(re.findall(r'class="dh-shot"[^>]*>\s*<svg', html))
     if rows and art < rows:
         fail(f"{rows - art} row(s) have a frame but no artwork inside it")
         bad += 1

@@ -57,6 +57,14 @@ class SkillWorkflowTest(unittest.TestCase):
         self.assertIn("project.json.language", communication)
         self.assertIn("never\nchooses the language of chat", communication)
 
+    def test_each_loop_step_uses_the_live_adapter_and_one_invocation(self) -> None:
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("assistant_app.py", skill)
+        self.assertIn("before every loop step", skill.lower())
+        self.assertLess(skill.index("assistant_app.py"),
+                        skill.index("direction_context.py"))
+        self.assertIn("--invocation <skill@timestamp>", skill)
+
 
 if __name__ == "__main__":
     unittest.main()

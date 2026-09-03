@@ -106,7 +106,8 @@ def deliver(project_root: Path, out: str, cohort: str, round_label: str, asks: s
             "ask": asks, "images": json.loads(images) if images else []}
 
 
-def record_shot(payload: dict, round_label: str, asks: str) -> None:
+def record_shot(payload: dict, round_label: str, asks: str,
+                invocation: str = "") -> None:
     """Write the delivered round to the Shot ledger, so QA has something to read."""
     images = payload.get("images") or {}
     declared = images.get("images", []) if isinstance(images, dict) else []
@@ -123,10 +124,13 @@ def record_shot(payload: dict, round_label: str, asks: str) -> None:
         manifest.write_text(json.dumps({"adapter": "graphic",
                                         "artifacts": artifacts}),
                             encoding="utf-8")
+        command = [sys.executable, str(TOKENS_QA), "record", "first/aesthetic",
+                   "--request", str(request), "--output-manifest", str(manifest),
+                   "--scope", round_label]
+        if invocation:
+            command += ["--invocation", invocation]
         done = subprocess.run(
-            [sys.executable, str(TOKENS_QA), "record", "first/aesthetic",
-             "--request", str(request), "--output-manifest", str(manifest),
-             "--scope", round_label],
+            command,
             cwd=str(REPO_ROOT), capture_output=True, text=True)
     if done.returncode != 0:
         raise DeliveryError((done.stderr or done.stdout).strip())
@@ -145,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="user-language review request for the idle status")
     parser.add_argument("--agent", default="")
     parser.add_argument("--agent-url", default="")
+    parser.add_argument("--invocation", default="",
+                        help="skill@timestamp id returned by assistant_app.py")
     args = parser.parse_args(argv)
     try:
         payload = deliver(args.project_root.resolve(), args.out, args.cohort,
@@ -161,7 +167,7 @@ def main(argv: list[str] | None = None) -> int:
     # nothing, because by this line the screen is live and the payload is
     # printed. An unrecorded round is a gap in QA, not a broken delivery.
     try:
-        record_shot(payload, args.round_label, args.asks)
+        record_shot(payload, args.round_label, args.asks, args.invocation)
     except Exception as unrecorded:
         print(f"deliver: round delivered but not recorded: {unrecorded}",
               file=sys.stderr)

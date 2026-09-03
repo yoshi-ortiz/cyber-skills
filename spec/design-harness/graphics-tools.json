@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "domain": "editorial landing page for an AI skill and command harness",
+  "stack": ["HTML", "CSS", "SVG", "Python"],
+  "common": [
+    {
+      "name": "playwright-mcp",
+      "version": "@playwright/mcp@0.0.80",
+      "command": "playwright-mcp",
+      "source": "https://github.com/microsoft/playwright-mcp",
+      "license": "Apache-2.0",
+      "runtime": "Node 18 or newer",
+      "security": "Workspace-root file access by default; origin filters are not a security boundary",
+      "evidence": "Selected for browser rendering, viewport checks, and screenshots"
+    },
+    {
+      "name": "svgmaker-mcp",
+      "version": "@genwave/svgmaker-mcp@2.1.0",
+      "command": "svgmaker-mcp",
+      "source": "https://github.com/GenWaveLLC/svgmaker-mcp",
+      "license": "MIT",
+      "runtime": "Node 20.9 or newer; hosted operations require an API key",
+      "security": "Prompts and supplied inputs are sent to the hosted SVGMaker API",
+      "evidence": "Selected for vector generation, editing, conversion, and previews"
+    }
+  ],
+  "commonSufficient": true,
+  "whyCommonInsufficient": "",
+  "selectedNiche": null,
+  "customGeneration": true,
+  "architecture": [
+    {"name": "scene-topology", "purpose": "Closed route and deterministic placement for every named space"},
+    {"name": "room-system", "purpose": "Reusable isometric room and kiosk construction"},
+    {"name": "annotation-layer", "purpose": "Billboards and route labels that remain readable at delivery size"}
+  ],
+  "atomicAssets": [
+    {"name": "closed-road", "partOf": "scene-topology", "output": "One closed road polyline with the declared crossing and sequence"},
+    {"name": "main-room-block", "partOf": "room-system", "output": "Reusable low-walled isometric room primitive"},
+    {"name": "kiosk-block", "partOf": "room-system", "output": "Reusable compact isometric kiosk primitive"},
+    {"name": "billboard", "partOf": "annotation-layer", "output": "Reusable two-pole label carrying exact scene text"}
+  ]
+}

@@ -12,6 +12,12 @@ generated:
 
 Do not spend inference effort rebuilding common visual assets, and never hallucinate vector geometry.
 
+Before custom generation, run the tool-research gate in
+[text-to-graphics.md](text-to-graphics.md). It records the project domain and
+stack, tests the common toolbelt against the job, and requires architecture and
+named atomic assets. A candidate list is research history, not prompt context.
+Only the selected niche tool may cross into inference.
+
 ## Resolution order
 
 1. Reuse an asset already present in the project or corpus.

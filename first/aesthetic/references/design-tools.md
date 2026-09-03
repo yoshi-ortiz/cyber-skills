@@ -12,6 +12,17 @@ generated:
 
 The harness names the adapters a design project may need and records which ones were **observed**. It never assumes one is present: the compute invariant forbids claiming an MCP server or local tool without preflight evidence.
 
+## Installed graphics baseline
+
+Harness-core installs `playwright-mcp` and `svgmaker-mcp` as the common
+graphics toolbelt. Playwright renders and checks the result in a browser.
+SVGMaker generates, edits, converts, and previews vector assets. Use the exact
+manifest versions and record a preflight before use.
+
+Research the current project domain and stack before adding a niche tool.
+Select one only when the common toolbelt cannot perform the named job. Only the
+selected tool's sourced evidence may enter graphics inference.
+
 ## Preflight first
 
 Before the first shot, check what is actually wired, then record it:

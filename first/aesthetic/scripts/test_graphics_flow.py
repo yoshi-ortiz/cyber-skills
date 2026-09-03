@@ -18,6 +18,9 @@ def _state(**overrides) -> dict:
         "sceneErrors": [], "sceneHash": "abc", "corpusRoot": True,
         "corpusRootPath": "moodboards",
         "corpus": True, "tags": True,
+        "toolResearch": True, "toolResearchErrors": [],
+        "customPlanMissing": [],
+        "selectedTool": "avge", "selectedToolCommand": "avge-engine",
         "promptHash": "prompt", "slicesPromptHash": "prompt",
         "slicesHash": "abc", "callsHash": "abc", "adapters": {"avge": "PASS"},
         "refinePending": [],
@@ -68,6 +71,30 @@ class FlowTests(unittest.TestCase):
     def test_an_unobserved_corpus_comes_before_tagging(self) -> None:
         self.assertEqual(next_action(_state(corpus=False, tags=False))["action"],
                          "observe")
+
+    def test_tool_research_precedes_prompt_compilation(self) -> None:
+        step = next_action(_state(toolResearch=False, slicesHash="older"))
+        self.assertEqual(step["action"], "research-tools")
+        self.assertIn("domain and stack", step["reason"])
+
+    def test_custom_generation_requires_architecture_and_atomic_assets(self) -> None:
+        step = next_action(_state(customPlanMissing=["architecture", "atomicAssets"]))
+        self.assertEqual(step["action"], "plan-assets")
+        self.assertIn("architecture", step["reason"])
+
+    def test_common_tool_selection_controls_the_real_draw_route(self) -> None:
+        step = next_action(_state(
+            selectedTool="svgmaker", selectedToolCommand="svgmaker-mcp",
+            adapters={"avge": "PASS", "svgmaker": "PASS"}, svgHash=""))
+        self.assertEqual(step["action"], "run-selected-tool")
+        self.assertIn("svgmaker-mcp", step["reason"])
+
+    def test_only_the_selected_tool_needs_a_preflight(self) -> None:
+        step = next_action(_state(
+            selectedTool="svgmaker", selectedToolCommand="svgmaker-mcp",
+            adapters={"avge": "PASS"}, svgHash=""))
+        self.assertEqual(step["action"], "preflight")
+        self.assertIn("svgmaker", step["reason"])
 
     def test_slices_stale_against_the_scene_hash_recompile(self) -> None:
         step = next_action(_state(slicesHash="older"))
@@ -185,7 +212,7 @@ class ReadStateTests(unittest.TestCase):
     def test_a_fresh_project_needs_compiling_before_anything_is_drawn(self) -> None:
         with _project() as project:
             step = next_action(read_state(project))
-            self.assertIn(step["action"], {"compile", "export-avge"})
+            self.assertIn(step["action"], {"compile", "export-avge", "research-tools"})
 
 
 if __name__ == "__main__":

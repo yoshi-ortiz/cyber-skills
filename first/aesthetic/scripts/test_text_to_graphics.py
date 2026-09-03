@@ -15,6 +15,30 @@ STORE = "spec/design-harness"
 HARNESS_FILES = ("graphics-manifest.json", "scene-spec.json",
                  "corpus.json", "corpus-tags.json")
 
+TOOL_RESEARCH = {
+    "version": 1, "domain": "editorial developer-tool graphics",
+    "stack": ["HTML", "CSS", "SVG", "Python"],
+    "common": [
+        {"name": "playwright-mcp", "version": "@playwright/mcp@0.0.80",
+         "command": "playwright-mcp", "source": "https://github.com/microsoft/playwright-mcp",
+         "license": "Apache-2.0", "runtime": "Node 18+",
+         "security": "workspace roots only", "evidence": "command preflight passed"},
+        {"name": "svgmaker-mcp", "version": "@genwave/svgmaker-mcp@2.1.0",
+         "command": "svgmaker-mcp", "source": "https://github.com/GenWaveLLC/svgmaker-mcp",
+         "license": "MIT", "runtime": "Node 20.9+ and API key",
+         "security": "hosted API receives supplied inputs", "evidence": "command preflight passed"},
+    ],
+    "commonSufficient": False,
+    "whyCommonInsufficient": "The scene needs deterministic isometric topology.",
+    "selectedNiche": {"name": "avge", "version": "0.5.14", "command": "avge-engine",
+        "source": "installed MCP tool inventory", "license": "not observed",
+        "runtime": "Python 3.12", "security": "local project storage",
+        "evidence": "isometric_box and attach were observed"},
+    "customGeneration": True,
+    "architecture": [{"name": "isometric-loop", "purpose": "closed route and rooms"}],
+    "atomicAssets": [{"name": "road", "partOf": "isometric-loop", "output": "road polyline"}],
+}
+
 
 def _scene() -> dict:
     return json.loads((ROOT / STORE / "scene-spec.json").read_text(encoding="utf-8"))
@@ -32,6 +56,8 @@ def _project(**overrides: dict):
             if source.exists():
                 (store / name).write_text(source.read_text(encoding="utf-8"),
                                           encoding="utf-8")
+        (store / "graphics-tools.json").write_text(json.dumps(TOOL_RESEARCH),
+                                                    encoding="utf-8")
         inventory = ROOT / "moodboards/storytelling/rooms-inventory.md"
         if inventory.exists():
             target = project / "moodboards/storytelling/rooms-inventory.md"

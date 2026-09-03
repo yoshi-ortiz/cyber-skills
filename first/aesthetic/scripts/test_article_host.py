@@ -144,6 +144,13 @@ class DoctorCanStayQuiet(unittest.TestCase):
         self.assertIn("FAIL", doctor.line_for("fail", "server down", quiet=True))
         self.assertIn("ok", doctor.line_for("ok", "server answering", quiet=False))
 
+    def test_helper_source_is_not_counted_as_a_scoring_row(self):
+        import companion_doctor as doctor
+        html = ('<div data-element="x"><div class="dh-shot" '
+                'style="inline-size:10px"><svg></svg></div></div>'
+                '<script>const selector = "[data-element=]";</script>')
+        self.assertEqual(doctor.graphic_counts(html), (1, 1, 1, 1))
+
 
 class TheStableCompanionBoundary(unittest.TestCase):
     def test_idle_is_a_state_not_an_absence(self):
