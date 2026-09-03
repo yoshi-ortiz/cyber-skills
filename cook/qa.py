@@ -17,6 +17,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from errors import CookError
+from interval import invocations, latest_run, pick, text_of, touched_between
 
 TOKENS_QA = (Path(__file__).resolve().parents[1]
              / "check" / "tokens-qa" / "scripts" / "tokens_qa.py")
@@ -28,33 +29,10 @@ EXIT = {1: "a hard veto", 2: "schema or arguments", 3: "I/O",
 # arrives through --session rather than through a guess about its filesystem.
 SESSIONS = Path.home() / ".claude" / "projects"
 
-# The marker a skill's payload opens with. It is not something the user said,
-# so it is skipped as a turn -- but it names the skill directory that ran,
-# which is what scopes this whole read.
-SKILL_MARKER = re.compile(r"Base directory for this skill: (\S+)")
 NOT_A_USER_TURN = ("base directory for this skill:", "<command-name>",
                    "<local-command", "<command-message>")
 ANSWERED = re.compile(r'The user answered: "[^"]*"="([^"]*)"')
 COMMAND_ARGS = re.compile(r"<command-args>(.*?)</command-args>", re.S)
-# ponytail: English keywords. Only ever consulted together with "and nothing
-# changed", so a false positive cannot fail a round on its own.
-FRUSTRATION = ("broken", "fucked", "dafuq", "wtf", "doesn't work", "does not work",
-               "garbage", "useless", "terrible", "all wrong", "no sirve", "roto")
-
-# A correction is stronger evidence than frustration: it names an instruction
-# the run did not follow. "It's broken" is a symptom; "I asked for X" is a
-# requirement still outstanding.
-CORRECTION = tuple(re.compile(p, re.I) for p in (
-    r"\byou (did ?n[o']?t|didn't|never|forgot|failed to|were supposed)",
-    r"\bi (initially |already |actually |just )?(asked|requested|told you|said)\b",
-    r"\bnot what i\b",
-    r"\bshould (not |n't )?(be|stick|have|follow|take)\b",
-    r"\binstead of\b",
-))
-# Words too common to prove two corrections are the same instruction.
-COMMON = {"should", "would", "could", "that", "this", "with", "from", "have",
-          "just", "like", "also", "your", "make", "sure", "want", "need",
-          "skill", "thing", "only", "does", "what", "when", "then", "they"}
 
 
 def session_transcripts(project: Path) -> list[Path]:
@@ -76,60 +54,50 @@ def entries(transcript: Path) -> list[dict]:
     return list(rows_of(transcript))
 
 
-def text_of(entry: dict) -> tuple[str, list]:
-    content = entry.get("message", {}).get("content")
-    blocks = content if isinstance(content, list) else []
-    if isinstance(content, str):
-        return content, blocks
-    return " ".join(b.get("text", "") for b in blocks
-                    if isinstance(b, dict) and b.get("type") == "text"), blocks
+def selected(transcript: Path, skill: str = "", run_id: str = ""):
+    """The one run under audit. Naming a run that is not there is refused."""
+    runs = invocations(rows_of(transcript), skill)
+    run = pick(runs, run_id)
+    if run is None and run_id:
+        raise CookError(
+            f"{run_id} is not an invocation in {transcript}. Runs there: "
+            + (", ".join(r.run_id for r in runs) or "none"))
+    return run
 
 
-def latest_run(rows, skill: str = "") -> tuple[str, str, int]:
-    """The LATEST skill invocation: its name, its timestamp, its line index.
-
-    One transcript holds many runs of the same skill. Scoping to the first one
-    reads a round the user already called broken as evidence about the round
-    they just praised.
-    """
-    found = ("", "", -1)
-    for index, entry in enumerate(rows):
-        if entry.get("type") != "user":
-            continue
-        hit = SKILL_MARKER.search(text_of(entry)[0])
-        if hit:
-            name = Path(hit.group(1).split("\\n")[0]).name
-            if not skill or name == skill:
-                found = (name, entry.get("timestamp", ""), index)
-    return found
-
-
-def stream_run(transcript: Path, skill: str = "") -> Iterator[dict]:
-    """The rows after the latest invocation, one line at a time."""
-    start = latest_run(rows_of(transcript), skill)[2]
-    if start < 0:
+def stream_run(transcript: Path, skill: str = "", run_id: str = "") -> Iterator[dict]:
+    """The rows inside one invocation, one line at a time."""
+    run = selected(transcript, skill, run_id)
+    if run is None:
         return
     for index, entry in enumerate(rows_of(transcript)):
-        if index > start:
+        if run.start < index and (run.end < 0 or index < run.end):
             yield entry
 
 
-def normalized_evidence(transcript: Path, skill: str = "") -> dict:
-    """The bundle tokens-qa reads: the user's exact words, latest run only."""
-    name, started, _ = latest_run(rows_of(transcript), skill)
-    return {"transcript": str(transcript), "skill": name, "invoked_at": started,
-            "turns": user_turns(stream_run(transcript, skill)), "artifacts": []}
+def normalized_evidence(transcript: Path, skill: str = "", run_id: str = "") -> dict:
+    """The bundle tokens-qa reads: the user's exact words, one run only."""
+    run = selected(transcript, skill, run_id)
+    return {"transcript": str(transcript), "skill": run.skill if run else "",
+            "invoked_at": run.started if run else "",
+            "turns": user_turns(stream_run(transcript, skill, run_id)),
+            "artifacts": []}
 
 
-def assess_feedback(bundle: dict) -> list[dict]:
-    """tokens-qa's advisory read, through its published CLI and nothing else."""
+def assess_feedback(bundle: dict) -> dict:
+    """tokens-qa's read of what the user said, through its published CLI.
+
+    Cook owns none of this judgement. It used to keep its own frustration and
+    correction patterns beside this call, which made the same rules live in two
+    places and put one skill's doctrine inside a loop meant for all of them.
+    """
     handle, path = tempfile.mkstemp(suffix=".json")
     try:
         with os.fdopen(handle, "w", encoding="utf-8") as out:
             json.dump(bundle, out)
         try:
             done = subprocess.run(
-                [sys.executable, str(TOKENS_QA), "assess-feedback",
+                [sys.executable, str(TOKENS_QA), "shot-audit",
                  "--evidence", path, "--json"],
                 capture_output=True, text=True, timeout=30)
         except (OSError, subprocess.SubprocessError) as problem:
@@ -142,10 +110,10 @@ def assess_feedback(bundle: dict) -> list[dict]:
         envelope = {}
     if done.returncode != 0 or not envelope.get("ok"):
         raise CookError(
-            f"tokens-qa assess-feedback exited {done.returncode} "
+            f"tokens-qa shot-audit exited {done.returncode} "
             f"({EXIT.get(done.returncode, 'an exit code cook cannot interpret')}): "
             f"{envelope.get('error') or (done.stderr or done.stdout).strip()}")
-    return envelope["result"]["candidates"]
+    return envelope["result"]
 
 
 def user_turns(rows, after: str = "") -> list[str]:
@@ -181,7 +149,8 @@ def user_turns(rows, after: str = "") -> list[str]:
     return list(dict.fromkeys(said))
 
 
-def tracked_changes(project_root: Path, since: str = "") -> list[str]:
+def tracked_changes(project_root: Path, since: str = "",
+                    until: str = "") -> list[str]:
     """What the run touched: uncommitted edits plus commits made during it.
 
     Uncommitted work alone was wrong -- committing the fix emptied the list and
@@ -196,8 +165,13 @@ def tracked_changes(project_root: Path, since: str = "") -> list[str]:
         return done.stdout.splitlines() if done.returncode == 0 else []
 
     changed = [line[3:] for line in git("status", "--porcelain") if line[3:]]
+    changed = touched_between(project_root, changed, since, until)
     if since:
-        changed += git("log", "--oneline", f"--since={since}")
+        # A commit made after the next run began belongs to that run, not this
+        # one. Without the ceiling an audited earlier round is credited with
+        # every commit that followed it.
+        window = ["--oneline", f"--since={since}"]
+        changed += git("log", *window, *([f"--until={until}"] if until else []))
     return changed
 
 
@@ -214,16 +188,18 @@ def resolve_transcript(project_root: Path, given: Path | None) -> Path:
         "nothing. Pass --session if your agent app keeps transcripts elsewhere.")
 
 
-def feedback(project_root: Path, transcript: Path | None = None) -> dict:
+def feedback(project_root: Path, transcript: Path | None = None,
+             run_id: str = "") -> dict:
     """Did the run change anything after the user said it was wrong?"""
     path = resolve_transcript(project_root, transcript)
-    evidence = normalized_evidence(path)
+    run = selected(path, "", run_id)
+    evidence = normalized_evidence(path, "", run_id)
     skill, started, said = evidence["skill"], evidence["invoked_at"], evidence["turns"]
-    complaints = [t for t in said if any(w in t.lower() for w in FRUSTRATION)]
-    corrections = [t for t in said if any(p.search(t) for p in CORRECTION)]
-    restated = repeated(corrections)
-    changed = tracked_changes(project_root, since=started)
-    candidates = assess_feedback(evidence)
+    audit = assess_feedback(evidence)
+    complaints, corrections = audit["complaints"], audit["corrections"]
+    restated = audit["restated"]
+    changed = tracked_changes(project_root, since=started,
+                              until=run.ended if run else "")
 
     errors = []
     if (complaints or corrections) and not changed:
@@ -237,23 +213,9 @@ def feedback(project_root: Path, transcript: Path | None = None) -> dict:
             "an instruction was restated after already being given, so the run did "
             f"not act on it the first time: {text[:220]!r}")
     return {"transcript": str(path), "skill": skill, "since": started,
+            "run_id": run.run_id if run else "",
             "userTurns": len(said), "complaints": complaints,
             "corrections": corrections, "restated": restated, "changed": changed,
             "warnings": [f"{c['field']} = {c['value']} ({c['confidence']})"
-                         for c in candidates],
+                         for c in audit["candidates"]],
             "errors": errors, "passed": not errors}
-
-
-def repeated(corrections: list[str], floor: int = 3) -> list[str]:
-    """Corrections that restate an earlier one.
-
-    Whether an instruction was *satisfied* is a judgement cook cannot make. That
-    the user had to say it twice is a fact, and it is the same evidence: an
-    instruction repeated is an instruction that did not land.
-    """
-    words = [set(re.findall(r"[a-z]{4,}", c.lower())) - COMMON for c in corrections]
-    out = []
-    for i, later in enumerate(words):
-        if any(len(later & earlier) >= floor for earlier in words[:i]):
-            out.append(corrections[i])
-    return out

@@ -40,6 +40,54 @@ def envelope(done):
     return json.loads(done.stdout)
 
 
+class ShotAudit(unittest.TestCase):
+    """Complaints, corrections and restatements are a QA judgement. They belong
+    to this package, not to whichever loop happens to be asking."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.root = Path(self.dir.name)
+        self.addCleanup(self.dir.cleanup)
+
+    def audit(self, *turns):
+        path = self.root / "evidence.json"
+        path.write_text(json.dumps({"turns": list(turns)}), encoding="utf-8")
+        done = run("shot-audit", "--evidence", str(path), "--json")
+        return done, json.loads(done.stdout or "{}")
+
+    def test_a_complaint_is_reported_as_one(self):
+        done, body = self.audit("this is broken")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(body["result"]["complaints"], ["this is broken"])
+
+    def test_an_instruction_restated_is_reported_as_restated(self):
+        _, body = self.audit(
+            "i initially requested to take over the claude design website",
+            "you did not follow instructions about the claude design website")
+        result = body["result"]
+        self.assertEqual(len(result["corrections"]), 2)
+        self.assertEqual(len(result["restated"]), 1)
+
+    def test_praise_is_neither_a_complaint_nor_a_correction(self):
+        _, body = self.audit("that screenshot looks great")
+        self.assertEqual(body["result"]["complaints"], [])
+        self.assertEqual(body["result"]["corrections"], [])
+
+    def test_the_advisory_candidates_come_back_in_the_same_read(self):
+        """One call, so a caller never has to run two commands and correlate
+        their answers by hand."""
+        _, body = self.audit("looks good")
+        self.assertEqual([c["field"] for c in body["result"]["candidates"]],
+                         ["status"])
+
+    def test_a_bundle_without_turns_names_its_json_path(self):
+        path = self.root / "evidence.json"
+        path.write_text(json.dumps({"nope": []}), encoding="utf-8")
+        done = run("shot-audit", "--evidence", str(path), "--json")
+        self.assertEqual(done.returncode, 2)
+        self.assertEqual(json.loads(done.stdout)["path"], "$.turns")
+
+
 class Recording(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
@@ -69,6 +117,29 @@ class Recording(unittest.TestCase):
         self.assertEqual(artifact["path"], str(art))
         digest = "sha256:" + hashlib.sha256(blob).hexdigest()
         self.assertEqual(body["result"]["artifacts"][0]["sha256"], digest)
+
+    def test_a_shot_carries_the_invocation_that_produced_it(self):
+        """Without a run identity on the record, a Shot cannot be joined back to
+        the session, table and feedback that belong to the same round."""
+        done = run("record", "first/aesthetic", "--request", str(self.request),
+                   "--inline", "the output", "--invocation", "aesthetic@t3",
+                   "--json", cwd=self.root)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        path = Path(envelope(done)["result"]["path"])
+        record = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(record["inputs"]["invocation"], "aesthetic@t3")
+        self.assertEqual(record["version"], 2)
+
+    def test_a_shot_recorded_without_an_invocation_is_still_valid(self):
+        """Every record already on disk was written without one. Requiring it
+        would rewrite history rather than migrate it."""
+        done = run("record", "first/aesthetic", "--request", str(self.request),
+                   "--inline", "the output", "--json", cwd=self.root)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        path = Path(envelope(done)["result"]["path"])
+        record = json.loads(path.read_text(encoding="utf-8"))
+        self.assertNotIn("invocation", record["inputs"])
+        self.assertEqual(run("observe", str(path)).returncode, 0)
 
     def test_a_recorded_file_is_version_2_on_disk(self):
         done = run("record", "first/aesthetic", "--request", str(self.request),

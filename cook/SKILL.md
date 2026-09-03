@@ -25,7 +25,8 @@ smuggles one skill's audience into a loop meant for all of them.
 | Command | Reach |
 | --- | --- |
 | `feedback` | any skill -- it reads the transcript and git, nothing else |
-| `run`, `doctor` | `aesthetic` only, today |
+| `route`, `deliver` | any skill -- they resolve names and read git, and own no rules |
+| `run`, `doctor`, `prove` | `aesthetic` only, today |
 
 `run` and `doctor` drive `bootstrap_harness.py` and parse its companion markup
 (`dh-fb`, `data-rank`, `dh-shot`), so they are aesthetic-shaped by construction.
@@ -44,7 +45,40 @@ python3 cook/cook.py doctor --project-root /tmp/cook-run   # check an existing r
 python3 cook/cook.py clean  --project-root /tmp/cook-run
 python3 cook/cook.py feedback --project-root .             # the real project, read-only
 python3 cook/cook.py feedback --project-root . --session <file.jsonl>
+python3 cook/cook.py feedback --project-root . --invocation aesthetic@<stamp>
+python3 cook/cook.py route                                 # do the routed skills resolve
+python3 cook/cook.py prove   --project-root /tmp/cook-prove  # the real path, with a Shot
+python3 cook/cook.py deliver --project-root .              # the release boundary, reported
 ```
+
+## The route
+
+A round walks `zoom-out`, then `diagnosing-bugs`, then `ponytail-review`, and
+stops at reviewed commit and push. `route` resolves those three against the
+installed skills directory and fails naming any that are missing, because a
+route that only resolves on the machine that wrote it is not a route.
+
+Each step is a name, a path and one line saying why it is there. **Cook owns
+the ordering and nothing else.** The moment a step carries the routed skill's
+rules, those rules live in two places and the copy here is the one that goes
+stale. `cook/route.py` is the table; the doctrine stays in the skill it points
+at.
+
+`zoom-out` is in no install manifest today (R-43), so on a clean host expect it
+to be the one that does not resolve. That is a real finding, not a bug in the
+resolver.
+
+## One run, one identity
+
+A transcript holds many runs. Each is bounded at both ends by the start of the
+next one, and carries a `run_id` of `skill@timestamp`. That id scopes the turns,
+the working tree and the commits, and it is what a Shot records in
+`inputs.invocation`, so the session, the artifact, the table and the feedback
+all join by one identity rather than by "most recent".
+
+`git status --porcelain` carries no clock, so before this a tree that was
+already dirty counted as the run having changed something, and a round that
+heard a complaint and edited nothing passed on somebody else's work.
 
 `feedback` is the only command that reads the repository, because the thing it
 reads -- the transcript of the run and what that run changed -- exists nowhere
@@ -167,9 +201,13 @@ plausible theory is not evidence that the visible workflow works.
 ## Finish the Food Product release
 
 After Cook is green, run the affected tests and `python3 tools/check.py`, then
-review the diff. Report the exact checks and ask the user to confirm commit and
-push. Do not silently cross that release boundary. After approval: commit the
-reviewed files, push the current branch, verify the remote contains the commit.
+review the diff. `cook deliver` reports that boundary: the four reviews R-74
+names, which of them you have confirmed, and the tree state a reviewer needs.
+It reads git and writes nothing, and **there is no flag that commits, pushes or
+publishes** -- the same way `run` has no flag to open the repository as a
+project root. Report the exact checks and ask the user to confirm. After
+approval: commit the reviewed files, push the current branch, verify the remote
+contains the commit.
 
 **Pushing `dev` installs nothing.** `kit sync` clones the channel branches, so
 a `dev` commit is invisible to it until a channel carries it. Verifying the

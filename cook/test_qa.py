@@ -193,23 +193,9 @@ class ACommittedFixStillCounts(unittest.TestCase):
 class ACorrectionIsStrongerThanAComplaint(unittest.TestCase):
     """"It's broken" is a symptom. "I asked for X" is still outstanding."""
 
-    def test_an_unmet_instruction_is_a_correction(self):
-        for text in ("i initially requested to take over the design website",
-                     "you did not create a css layout"):
-            self.assertTrue(any(p.search(text) for p in qa.CORRECTION), text)
-
-    def test_plain_praise_is_not_a_correction(self):
-        self.assertFalse(any(p.search("that screenshot looks great")
-                             for p in qa.CORRECTION))
-
-    def test_an_instruction_restated_is_one_that_did_not_land(self):
-        texts = ["i initially requested to take over the claude design website",
-                 "you did not follow instructions about the claude design website"]
-        self.assertEqual(qa.repeated(texts), [texts[1]])
-
-    def test_two_unrelated_corrections_are_not_a_restatement(self):
-        self.assertEqual(qa.repeated(["i asked for a css layout on the rails",
-                                      "you did not translate the companion copy"]), [])
+    # The patterns themselves now live in tokens-qa, the universal QA boundary,
+    # and are tested there. What is left here is what cook still owns: a round
+    # that heard one and changed nothing.
 
     def test_corrections_alone_fail_a_round_that_changed_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:

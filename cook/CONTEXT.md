@@ -1,6 +1,6 @@
 ---
 purpose: run this repository's own skills against a throwaway project and assert what the user would see, and whether the run absorbed what they said
-admits: the Food Product loop, its tests, the user-feedback read-back, diagnostic handoff, and release confirmation
+admits: the Food Product loop, its tests, the user-feedback read-back, the invocation interval that scopes it, route resolution, the real-path proof, diagnostic handoff, and release-boundary reporting
 refuses: skill payload, design project state, anything a published tree carries
 max_file_bytes: 12000
 ---
@@ -17,6 +17,12 @@ transcript and git, and writes nothing. It deliberately does not read any
 skill's state files: a loop that understands `decisions.json` has stopped being
 universal and joined one project's shot, which is this directory's own
 contamination rule turned inward.
+
+The same rule applies to judgement. Cook used to keep its own frustration and
+correction patterns beside a call asking tokens-qa for that judgement, so one
+rule lived in two places. It now asks `tokens_qa.py shot-audit` and keeps none
+of it. Cook owns ordering and correlation; every rule it applies belongs to the
+skill or the contract it came from.
 
 Fog, on purpose and permanently. This directory is registered in
 `tools/fog.py` FOG_DIRS and in `tools/skill_discovery.py` SKIP, so it publishes

@@ -5,6 +5,8 @@ A validator that passes a bad record, a verdict that reads praise into a
 correction, a token total that compares across profiles, and a table that drops
 a metric. Everything else fails loudly on its own.
 """
+import contextlib
+import io
 import json
 import copy
 import sys
@@ -105,7 +107,136 @@ class Verdict(unittest.TestCase):
         self.assertEqual(qa.vetoes(record), ["scope_breach"])
 
 
+class ContextDerail(unittest.TestCase):
+    """The veto QA.md names and nothing could ever raise.
+
+    `findings` was written once, as `[]`, and never appended to, so
+    `context_derail` reported `none` on every shot ever recorded -- including
+    the ones the user rejected for exactly that reason.
+
+    The veto is universal; the context map is the project's. This package
+    never learns a folder layout: it classifies whatever it is handed.
+    """
+    CONTEXTS = {"api": ("src/api/",), "ui": ("src/ui/",)}
+
+    def test_one_context_alone_is_not_a_derail(self):
+        self.assertEqual(qa.derail_finding(["src/api/auth.py"], self.CONTEXTS), [])
+        self.assertEqual(qa.derail_finding(["src/ui/login.tsx"], self.CONTEXTS), [])
+        self.assertEqual(qa.derail_finding([], self.CONTEXTS), [])
+
+    def test_a_path_no_context_claims_is_not_a_derail(self):
+        self.assertEqual(qa.derail_finding(["README.md"], self.CONTEXTS), [])
+
+    def test_no_declared_contexts_means_nothing_to_observe(self):
+        self.assertEqual(qa.derail_finding(["src/api/a.py", "src/ui/b.tsx"], {}), [])
+
+    def test_both_contexts_in_one_pass_raise_the_veto(self):
+        found = qa.derail_finding(["src/api/auth.py", "src/ui/login.tsx"], self.CONTEXTS)
+        self.assertEqual([f["id"] for f in found], ["context_derail"])
+        self.assertEqual(found[0]["status"], "present")
+        # The evidence names the contexts and a path from each, or a reader
+        # cannot act on it.
+        self.assertIn("api", found[0]["evidence"])
+        self.assertIn("ui", found[0]["evidence"])
+        self.assertIn("src/api/auth.py", found[0]["evidence"])
+
+    def test_the_veto_reaches_the_report(self):
+        record = shot(findings=qa.derail_finding(
+            ["src/api/a.py", "src/ui/b.tsx"], self.CONTEXTS))
+        self.assertEqual(qa.vetoes(record), ["context_derail"])
+        self.assertEqual(qa.metrics(record)["hard_vetoes"], "context_derail")
+
+    def test_a_context_spec_parses_from_the_command_line(self):
+        self.assertEqual(qa.parse_contexts(["api=src/api/", "ui=src/ui/,web/"]),
+                         {"api": ("src/api/",), "ui": ("src/ui/", "web/")})
+
+    def test_a_malformed_context_spec_is_refused_not_ignored(self):
+        with self.assertRaises(qa.Refused):
+            qa.parse_contexts(["src/api/"])
+
+
+class ScopeBreach(unittest.TestCase):
+    """The second finding id with a reader and no writer.
+
+    `scope` is the one bounded task a Shot claims. Nothing compared that claim
+    against what the pass actually wrote, so a run could name a narrow scope,
+    edit half the tree, and still report `hard_vetoes: none`.
+
+    Universal like the derail: the caller declares which paths the bounded task
+    was allowed to touch. This package never guesses a layout.
+    """
+
+    def test_writing_only_inside_the_declared_scope_is_clean(self):
+        self.assertEqual(
+            qa.scope_finding(["src/api/a.py", "src/api/b.py"], ("src/api/",)), [])
+
+    def test_no_declared_scope_paths_means_nothing_to_check(self):
+        self.assertEqual(qa.scope_finding(["anything.py"], ()), [])
+
+    def test_writing_outside_the_declared_scope_raises_the_veto(self):
+        found = qa.scope_finding(["src/api/a.py", "docs/readme.md", "web/app.js"],
+                                 ("src/api/",))
+        self.assertEqual([f["id"] for f in found], ["scope_breach"])
+        self.assertEqual(found[0]["status"], "present")
+        # Names what fell outside, or it cannot be acted on.
+        self.assertIn("docs/readme.md", found[0]["evidence"])
+        self.assertIn("web/app.js", found[0]["evidence"])
+
+    def test_the_veto_reaches_the_report(self):
+        record = shot(findings=qa.scope_finding(["out/of/scope.py"], ("src/",)))
+        self.assertEqual(qa.vetoes(record), ["scope_breach"])
+        self.assertEqual(qa.metrics(record)["hard_vetoes"], "scope_breach")
+
+    def test_both_vetoes_can_stand_on_one_shot(self):
+        paths = ["src/api/a.py", "src/ui/b.tsx"]
+        found = (qa.derail_finding(paths, {"api": ("src/api/",), "ui": ("src/ui/",)})
+                 + qa.scope_finding(paths, ("src/api/",)))
+        self.assertEqual(sorted(qa.vetoes(shot(findings=found))),
+                         ["context_derail", "scope_breach"])
+
+
+class RecordPrintsTheTable(unittest.TestCase):
+    """`record` printed a path. Reading the shot it just wrote took a second
+    command, so the number a person came for was never on screen."""
+
+    def test_recording_prints_the_observation_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            here = Path(tmp)
+            req = here / "req.txt"
+            req.write_text("draw the thing", encoding="utf-8")
+            argv = ["record", "some-skill", "--request", str(req),
+                    "--inline", "the output", "--scope", "one-bounded-task"]
+            cwd = Path.cwd()
+            try:
+                import os
+                os.chdir(here)
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    self.assertEqual(qa.main(argv), 0)
+            finally:
+                os.chdir(cwd)
+            printed = out.getvalue()
+            self.assertIn("one-bounded-task", printed)
+            self.assertIn("hard_vetoes", printed)
+            self.assertIn("verdict", printed)
+            self.assertIn("+---", printed)   # the ascii table, not a path
+
+
 class Metrics(unittest.TestCase):
+    def test_admitted_context_is_a_field_a_valid_shot_may_carry(self):
+        """`metrics` read `inputs.admitted_context`; the contract refused it as
+        an unknown field. Two modules in one package, disagreeing, with the
+        suite green -- so `context.status` could only ever say not_observed."""
+        record = shot()
+        record["inputs"]["admitted_context"] = ["first/aesthetic/scripts"]
+        qa.validate(record)
+        self.assertEqual(qa.metrics(record)["context.status"], "observed")
+
+    def test_admitted_context_with_a_derail_reads_contaminated(self):
+        record = shot(findings=[{"id": "context_derail", "status": "present"}])
+        record["inputs"]["admitted_context"] = ["first/aesthetic/scripts", "design"]
+        self.assertEqual(qa.metrics(record)["context.status"], "contaminated")
+
     def test_absent_admitted_context_is_not_observed_never_clean(self):
         self.assertEqual(qa.metrics(shot())["context.status"], "not_observed")
 

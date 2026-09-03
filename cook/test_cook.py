@@ -9,12 +9,15 @@ catch, so the case that matters most here is `test_an_unreadable_page_fails`:
 a checker that cannot see the page must say so rather than report a pass.
 """
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 import unittest.mock
 from pathlib import Path
 
 import cook
+import doctor as companion
 import qa
 import screen
 
@@ -35,11 +38,21 @@ class TheRepositoryIsNotAProjectRoot(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cook.check_not_the_repo(Path(tmp))
 
+    def test_prove_is_refused_inside_the_repository_too(self):
+        """The real-path proof writes a Shot and a round. Same guard, and it has
+        to be asserted separately: a new verb is a new way past it."""
+        done = subprocess.run(
+            [sys.executable, str(Path(cook.__file__)), "prove",
+             "--project-root", str(cook.REPO / "spec")],
+            capture_output=True, text=True)
+        self.assertEqual(done.returncode, 2, done.stdout or done.stderr)
+        self.assertIn("contamination", json.loads(done.stdout)["error"])
+
 
 class AScreenIsToldFromTheShell(unittest.TestCase):
     """Parsed structure, never a substring of the document."""
 
-    def _parse(self, document: str) -> cook.Screen:
+    def _parse(self, document: str) -> screen.Screen:
         parsed = screen.Screen()
         parsed.feed(document)
         return parsed
@@ -47,13 +60,13 @@ class AScreenIsToldFromTheShell(unittest.TestCase):
     def test_the_placeholder_heading_is_read(self):
         parsed = self._parse("<html><body><h1>Brainstorm Companion</h1>"
                              "<p>Waiting for the agent to push a screen...</p></body></html>")
-        self.assertIn(cook.PLACEHOLDER_HEADING, parsed.headings)
+        self.assertIn(screen.PLACEHOLDER_HEADING, parsed.headings)
 
     def test_a_real_screen_carries_its_own_heading(self):
         parsed = self._parse("<html><body><h1>Cover round</h1>"
                              '<div class="dh-fb" data-element="cover.hero">'
                              '<button data-rank="5">5</button></div></body></html>')
-        self.assertNotIn(cook.PLACEHOLDER_HEADING, parsed.headings)
+        self.assertNotIn(screen.PLACEHOLDER_HEADING, parsed.headings)
         self.assertEqual(parsed.rankable_elements, {"cover.hero"})
 
     def test_an_unrelated_button_is_not_a_ranking_control(self):
@@ -79,26 +92,23 @@ class NoScreenIsNoPass(unittest.TestCase):
     def test_an_empty_content_directory_yields_no_screens(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
-            (project / cook.COMPANION / "1-1" / "state").mkdir(parents=True)
-            self.assertEqual(cook.screens_on_disk(project), [])
+            (project / companion.COMPANION / "1-1" / "state").mkdir(parents=True)
+            self.assertEqual(companion.screens_on_disk(project), [])
 
     def test_a_published_screen_is_found(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
-            content = project / cook.COMPANION / "1-1" / "content"
+            content = project / companion.COMPANION / "1-1" / "content"
             content.mkdir(parents=True)
             (content / "screen.html").write_text("<h1>x</h1>", encoding="utf-8")
-            self.assertEqual([p.name for p in cook.screens_on_disk(project)],
+            self.assertEqual([p.name for p in companion.screens_on_disk(project)],
                              ["screen.html"])
 
     def test_missing_companion_state_is_an_error_not_a_pass(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(cook.CookError):
-                cook.companion_address(Path(tmp))
+                companion.companion_address(Path(tmp))
 
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class TheRoundStopsWhatItStarted(unittest.TestCase):
@@ -106,7 +116,7 @@ class TheRoundStopsWhatItStarted(unittest.TestCase):
     tree under a live one leaves it serving a directory that is gone."""
 
     def pid_file(self, project: Path, pid: int) -> None:
-        state = project / cook.COMPANION / "1-1" / "state"
+        state = project / companion.COMPANION / "1-1" / "state"
         state.mkdir(parents=True)
         (state / "server.pid").write_text(str(pid), encoding="utf-8")
 
@@ -115,7 +125,7 @@ class TheRoundStopsWhatItStarted(unittest.TestCase):
             project = Path(tmp)
             self.pid_file(project, 4242)
             killed = []
-            with unittest.mock.patch.object(cook.os, "kill",
+            with unittest.mock.patch.object(companion.os, "kill",
                                             lambda pid, sig: killed.append(pid)):
                 self.assertEqual(cook.stop_companion(project), [4242])
             self.assertEqual(killed, [4242])
@@ -125,7 +135,7 @@ class TheRoundStopsWhatItStarted(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
             self.pid_file(project, 4242)
-            with unittest.mock.patch.object(cook.os, "kill",
+            with unittest.mock.patch.object(companion.os, "kill",
                                             side_effect=ProcessLookupError):
                 self.assertEqual(cook.stop_companion(project), [])
 
@@ -133,7 +143,7 @@ class TheRoundStopsWhatItStarted(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
             self.pid_file(project, 0)
-            (project / cook.COMPANION / "1-1" / "state" / "server.pid").write_text("nonsense")
+            (project / companion.COMPANION / "1-1" / "state" / "server.pid").write_text("nonsense")
             self.assertEqual(cook.stop_companion(project), [])
 
     def test_no_companion_state_stops_nothing(self):
@@ -187,8 +197,8 @@ class TheStartupRaceIsARetryNotAFailure(unittest.TestCase):
                 raise urllib.error.URLError(head)
             return contextlib.closing(io.BytesIO(head.encode()))
 
-        with unittest.mock.patch.object(cook.urllib.request, "urlopen", flaky):
-            self.assertIn("ok", cook.served_document("1234", "t"))
+        with unittest.mock.patch.object(companion.urllib.request, "urlopen", flaky):
+            self.assertIn("ok", companion.served_document("1234", "t"))
         self.assertEqual(answers, [])
 
     def test_a_server_that_answers_with_an_error_fails_on_the_first_try(self):
@@ -198,9 +208,9 @@ class TheStartupRaceIsARetryNotAFailure(unittest.TestCase):
             calls.append(1)
             raise urllib.error.HTTPError("u", 500, "boom", {}, None)
 
-        with unittest.mock.patch.object(cook.urllib.request, "urlopen", erroring):
+        with unittest.mock.patch.object(companion.urllib.request, "urlopen", erroring):
             with self.assertRaises(cook.CookError) as raised:
-                cook.served_document("1234", "t")
+                companion.served_document("1234", "t")
         self.assertIn("500", str(raised.exception))
         self.assertEqual(len(calls), 1)
 
@@ -208,7 +218,10 @@ class TheStartupRaceIsARetryNotAFailure(unittest.TestCase):
         def refused(request, timeout=None):
             raise urllib.error.URLError(ConnectionRefusedError())
 
-        with unittest.mock.patch.object(cook, "STARTUP_GRACE", 0), \
-             unittest.mock.patch.object(cook.urllib.request, "urlopen", refused):
+        with unittest.mock.patch.object(companion, "STARTUP_GRACE", 0), \
+             unittest.mock.patch.object(companion.urllib.request, "urlopen", refused):
             with self.assertRaises(cook.CookError):
-                cook.served_document("1234", "t")
+                companion.served_document("1234", "t")
+
+if __name__ == "__main__":
+    unittest.main()

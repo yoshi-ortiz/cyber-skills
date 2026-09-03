@@ -194,5 +194,36 @@ class CorrectionBundleIsBounded(unittest.TestCase):
         self.assertEqual(got["artifacts"], [])
 
 
+class ACorrectionIsStrongerThanAComplaint(unittest.TestCase):
+    """"It's broken" is a symptom. "I asked for X" is still outstanding.
+
+    These moved here from cook, which used to keep its own copy of the rules
+    beside a call asking this package for the same judgement.
+    """
+
+    def test_an_unmet_instruction_is_a_correction(self):
+        for text in ("i initially requested to take over the design website",
+                     "you did not create a css layout"):
+            self.assertTrue(any(p.search(text) for p in fb.CORRECTION), text)
+
+    def test_plain_praise_is_not_a_correction(self):
+        self.assertFalse(any(p.search("that screenshot looks great")
+                             for p in fb.CORRECTION))
+
+    def test_an_instruction_restated_is_one_that_did_not_land(self):
+        texts = ["i initially requested to take over the claude design website",
+                 "you did not follow instructions about the claude design website"]
+        self.assertEqual(fb.repeated(texts), [texts[1]])
+
+    def test_two_unrelated_corrections_are_not_a_restatement(self):
+        self.assertEqual(fb.repeated(["i asked for a css layout on the rails",
+                                      "you did not translate the companion copy"]), [])
+
+    def test_frustration_alone_is_a_complaint_not_a_correction(self):
+        got = fb.audit(["this is broken"])
+        self.assertEqual(got["complaints"], ["this is broken"])
+        self.assertEqual(got["corrections"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
