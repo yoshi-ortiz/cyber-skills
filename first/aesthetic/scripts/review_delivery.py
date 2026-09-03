@@ -55,13 +55,18 @@ class ProposalAssessment:
     signature_legible: bool
     explanatory_only: bool
     generic_default: bool
+    # Scoped to graphic proposals: an illustration that only reads at display
+    # size is not the illustration that ships. Every rejected character round
+    # in this project looked fine at 200px and unreadable at 54px, which is
+    # the size the diagram actually uses.
+    shown_at_delivery_size: bool
 
     def __post_init__(self) -> None:
         if not self.element:
             raise DeliveryError("proposal assessment element is empty")
         for field in (
             "rankable_design", "subject_specific", "signature_legible",
-            "explanatory_only", "generic_default",
+            "explanatory_only", "generic_default", "shown_at_delivery_size",
         ):
             if type(getattr(self, field)) is not bool:
                 raise DeliveryError(f"assessment {self.element}.{field} must be boolean")
@@ -69,6 +74,7 @@ class ProposalAssessment:
     @property
     def passes(self) -> bool:
         return (self.rankable_design and self.subject_specific and self.signature_legible
+                and self.shown_at_delivery_size
                 and not self.explanatory_only and not self.generic_default)
 
 
@@ -177,11 +183,11 @@ def load_passing_assessments(path: Path,
     assessments: dict[str, ProposalAssessment] = {}
     expected_keys = {
         "element", "rankable_design", "subject_specific", "signature_legible",
-        "explanatory_only", "generic_default",
+        "explanatory_only", "generic_default", "shown_at_delivery_size",
     }
     for raw in raw_assessments:
         if not isinstance(raw, Mapping) or set(raw) != expected_keys:
-            raise DeliveryError("each proposal assessment must contain the six required fields")
+            raise DeliveryError("each proposal assessment must contain the seven required fields")
         assessment = ProposalAssessment(**raw)
         if assessment.element in assessments:
             raise DeliveryError(f"duplicate assessment for {assessment.element}")

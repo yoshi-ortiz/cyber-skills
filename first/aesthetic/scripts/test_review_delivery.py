@@ -48,6 +48,7 @@ class ReviewDeliveryTest(unittest.TestCase):
             "signature_legible": True,
             "explanatory_only": False,
             "generic_default": False,
+            "shown_at_delivery_size": True,
         }
         value.update(changes)
         return value
@@ -103,6 +104,10 @@ class ReviewDeliveryTest(unittest.TestCase):
             {"signature_legible": False},
             {"explanatory_only": True},
             {"generic_default": True},
+            # An illustration judged only at display size ships unjudged at the
+            # size the diagram uses. Three character rounds read fine at 200px
+            # and were rejected at 54px.
+            {"shown_at_delivery_size": False},
         )
         for changes in failures:
             with self.subTest(changes=changes):

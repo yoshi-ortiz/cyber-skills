@@ -386,6 +386,38 @@ class TheModuleRendersOrStaysQuiet(unittest.TestCase):
             self.assertEqual(len(staged), 1)
             self.assertEqual(staged[0].read_bytes(), b"good")
 
+    def test_a_fully_tagged_corpus_still_stages_its_reference_images(self):
+        """The live failure: staging keyed off the pending folder, so a project
+        whose image folders were all tagged served no thumbnail at all, and the
+        reference the round argues from had no file for an <img> to point at."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store = root / STORE
+            source = root / "references"
+            store.mkdir(parents=True)
+            source.mkdir()
+            shot = source / "ref.jpg"
+            shot.write_bytes(b"ref")
+            digest = hashlib.sha256(b"ref").hexdigest()
+            (store / "corpus.json").write_text(json.dumps({
+                "version": 1, "items": [
+                    {"path": "covers/ref.jpg", "kind": "image",
+                     "mediaType": "image/jpeg", "inspectPath": str(shot),
+                     "sha256": digest},
+                ],
+            }), encoding="utf-8")
+            (store / "corpus-tags.json").write_text(json.dumps({
+                "version": 1, "tags": {digest: {
+                    "aspects": ["illustration"], "at": "2026-09-02T00:00:00Z",
+                    "group": "covers", "note": "", "quality": "finished",
+                    "stance": "pursue"}},
+            }), encoding="utf-8")
+
+            self.assertEqual(ct.untagged_groups(root), [])
+            staged = ct.stage_corpus_thumbnails(root, root / "content")
+            self.assertEqual([p.read_bytes() for p in staged], [b"ref"])
+            self.assertIn("/files/corpus-", ct.render_corpus_tags(root))
+
 
 if __name__ == "__main__":
     unittest.main()

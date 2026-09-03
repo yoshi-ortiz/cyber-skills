@@ -135,6 +135,7 @@ python3 <skill>/scripts/golden_rules.py --design spec/design-harness/candidate.j
 ```
 
 Never invent SVG paths. Follow [asset-sourcing.md](references/asset-sourcing.md).
+Figures: settle construction, then character. [interpret-art.md](references/interpret-art.md).
 
 Generated graphics are proposals, not silent assets: record the scene element
 with its preview as an unscored decision and include it in the article cohort so

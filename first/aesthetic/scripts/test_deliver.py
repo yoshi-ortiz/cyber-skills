@@ -6,7 +6,9 @@ only checked the happy path would not notice them being dropped again.
 """
 import contextlib
 import io
+import json
 import sys
+import tempfile
 import unittest
 import unittest.mock
 from pathlib import Path
@@ -25,7 +27,7 @@ class Order(unittest.TestCase):
 
         with unittest.mock.patch.object(deliver, "step", side_effect=fake):
             payload = deliver.deliver(
-                Path("/tmp/p"), "out.html", "a,b", "hero", "How strong?",
+                Path("/tmp/p"), "out.html", "a,b,c", "hero", "How strong?",
                 kwargs.get("assessments", "/tmp/a.json"), "revisa")
         return calls, payload
 
@@ -68,7 +70,7 @@ class Order(unittest.TestCase):
 
         with unittest.mock.patch.object(deliver, "step", side_effect=fake):
             with self.assertRaises(deliver.DeliveryError) as refused:
-                deliver.deliver(Path("/tmp/p"), "out.html", "a,b", "hero",
+                deliver.deliver(Path("/tmp/p"), "out.html", "a,b,c", "hero",
                                 "How strong?", None, "revisa")
         self.assertIn("cannot act on", str(refused.exception))
         # "before publishing" is the assertion, not a figure of speech: nothing
@@ -85,7 +87,7 @@ class Order(unittest.TestCase):
 
 PAYLOAD = {"url": "http://localhost:1/?key=abc123", "key": "abc123",
            "ask": "How strong?", "images": {"images": []}}
-ARGV = ["--project-root", "/tmp/p", "--out", "out.html", "--cohort", "a,b",
+ARGV = ["--project-root", "/tmp/p", "--out", "out.html", "--cohort", "a,b,c",
         "--round-label", "hero", "--asks", "How strong?",
         "--assessments", "/tmp/a.json", "--idle-text", "revisa"]
 
@@ -110,6 +112,121 @@ class ShotRecord(unittest.TestCase):
              contextlib.redirect_stdout(io.StringIO()), \
              contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(deliver.main(ARGV), 0)
+
+    def test_the_live_state_invocation_joins_the_recorded_shot(self):
+        run_id = "aesthetic@2026-09-03T10:00:00Z"
+        with unittest.mock.patch.object(deliver, "deliver", return_value=PAYLOAD), \
+             unittest.mock.patch.object(deliver, "record_shot") as recorded, \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(deliver.main(ARGV + ["--invocation", run_id]), 0)
+        recorded.assert_called_once_with(PAYLOAD, "hero", "How strong?", run_id)
+
+
+class HandAuthoredSvgIsRefused(unittest.TestCase):
+    """`shoot` refuses a comp that draws its own <svg>, but delivery never
+    routes through `shoot`, so a cohort of invented paths shipped to a user
+    with the rule intact and unenforced. An element the user already reacted
+    to is settled and stays deliverable."""
+
+    COHORT = "hero.a,hero.b,hero.c"   # a legal round, so only the SVG rule is under test
+
+    def _project(self, tmp, sentiment):
+        root = Path(tmp)
+        store = root / "spec" / "design-harness"
+        store.mkdir(parents=True)
+        (root / "comp.html").write_text(
+            "<html><svg><path d='M0 0'/></svg></html>", encoding="utf-8")
+        (root / "clean.html").write_text(
+            "<html><div class='shape'></div></html>", encoding="utf-8")
+        entry = lambda name, preview: {
+            "element": name, "sentiment": sentiment if name == "hero.a" else None,
+            "scored": False, "preview": {"path": preview, "sha256": ""}}
+        (store / "decisions.json").write_text(json.dumps({"version": 1, "elements": [
+            entry("hero.a", "comp.html"),
+            entry("hero.b", "clean.html"),
+            entry("hero.c", "clean.html")]}), encoding="utf-8")
+        return root
+
+    def test_a_fresh_proposal_that_hand_authors_svg_never_reaches_the_user(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._project(tmp, None)
+            with unittest.mock.patch.object(deliver, "step") as ran:
+                with self.assertRaises(deliver.DeliveryError) as refused:
+                    deliver.deliver(root, "out.html", self.COHORT, "r", "a?",
+                                    "assessments.json", "idle")
+            self.assertIn("hand-author", str(refused.exception))
+            self.assertIn("hero.a", str(refused.exception))
+            ran.assert_not_called()  # refused before the live screen is touched
+
+    def test_an_element_the_user_already_thumbed_stays_deliverable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._project(tmp, "like")
+
+            def fake(argv, project_root):
+                return ("http://x/?key=a" if argv[1:2] == ["open"] else "[]")
+
+            with unittest.mock.patch.object(deliver, "step", side_effect=fake):
+                payload = deliver.deliver(root, "out.html", self.COHORT, "r", "a?",
+                                          "assessments.json", "idle")
+            self.assertEqual(payload["key"], "a")
+
+
+class ACohortOfOneIsNotARound(unittest.TestCase):
+    """SKILL.md has always said "a 3-6 element cohort". Nothing enforced it.
+
+    Three rounds shipped a single unscored proposal and all three were rejected
+    on sight: a lone proposal asks "do you like this?", which is not a design
+    question a user can answer with a rank. The rule existed; the guard did not.
+    """
+
+    def _ledger(self, tmp, elements):
+        root = Path(tmp)
+        store = root / "spec" / "design-harness"
+        store.mkdir(parents=True)
+        (store / "decisions.json").write_text(json.dumps(
+            {"version": 1, "elements": elements}), encoding="utf-8")
+        return root
+
+    def _entry(self, name, scored):
+        return {"element": name, "scored": scored, "sentiment": None,
+                "preview": {"path": "c.html", "sha256": ""}}
+
+    def test_two_fresh_proposals_are_refused_as_a_round(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._ledger(tmp, [self._entry("hero.a", False),
+                                      self._entry("hero.b", False)])
+            with unittest.mock.patch.object(deliver, "step") as ran:
+                with self.assertRaises(deliver.DeliveryError) as refused:
+                    deliver.deliver(root, "out.html", "hero.a,hero.b", "r", "a?",
+                                    "assessments.json", "idle")
+            self.assertIn("3", str(refused.exception))
+            ran.assert_not_called()
+
+    def test_three_fresh_proposals_are_a_round(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._ledger(tmp, [self._entry("hero.a", False),
+                                      self._entry("hero.b", False),
+                                      self._entry("hero.c", False)])
+
+            def fake(argv, project_root):
+                return ("http://x/?key=a" if argv[1:2] == ["open"] else "[]")
+
+            with unittest.mock.patch.object(deliver, "step", side_effect=fake):
+                deliver.deliver(root, "out.html", "hero.a,hero.b,hero.c", "r", "a?",
+                                "assessments.json", "idle")
+
+    def test_re_asking_about_something_already_ranked_is_not_a_fresh_round(self):
+        """A continuation carries a scored element, and re-asking about one
+        settled thing is a legitimate round of one."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._ledger(tmp, [self._entry("hero.a", True)])
+
+            def fake(argv, project_root):
+                return ("http://x/?key=a" if argv[1:2] == ["open"] else "[]")
+
+            with unittest.mock.patch.object(deliver, "step", side_effect=fake):
+                deliver.deliver(root, "out.html", "hero.a", "r", "a?",
+                                "assessments.json", "idle")
 
 
 if __name__ == "__main__":

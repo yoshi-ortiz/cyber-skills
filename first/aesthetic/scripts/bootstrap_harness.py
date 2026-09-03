@@ -267,10 +267,14 @@ def main() -> int:
             if not hits:
                 print("No recorded preview hand-authors <svg>.")
             else:
+                # Non-zero, because a check that cannot fail is a comment. This
+                # printed three violations and exited 0 while the round that
+                # carried them shipped.
                 print(f"{len(hits)} recorded preview(s) hand-author <svg> -- redraw in HTML/CSS "
-                     "and `shoot` + `decide --preview` again:")
+                     "and `shoot` + `decide --preview` again:", file=sys.stderr)
                 for hit in hits:
-                    print(f"  {hit['element']}\t{hit['path']}")
+                    print(f"  {hit['element']}\t{hit['path']}", file=sys.stderr)
+                return 1
         elif args.command == "shoot":
             check_no_hand_authored_svg(args.html)
             renderer = render_html_preview(args.html, args.out, args.width)

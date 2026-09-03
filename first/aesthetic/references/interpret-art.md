@@ -49,3 +49,34 @@ Redrawing under a user-ranked id leaves nothing to judge. Record new work with `
 Signals: stars = execution; sentiment = direction. Full semantics: [companion-contract.md](companion-contract.md).
 
 Never treat this skill's scripts as writable during a design run.
+
+## Illustration: settle the construction language before the character
+
+A figure carries two independent decisions, and a round that asks about both at
+once gets an answer about neither. Split them, in this order:
+
+1. **Construction language.** How any figure in this project is built — head to
+   body ratio, contour weight, whether fills are flat or shaded, which
+   primitives are allowed. Cohort: 3 languages that differ in *construction*,
+   not in colour. Same subject in each, or the comparison is not controlled.
+2. **Character design.** Who this particular figure is, inside the settled
+   language. Cohort: 3 readings of the same written brief, differing by
+   **silhouette first** — at delivery size the outline is the only mark left,
+   so hair and stance separate characters and interior detail does not.
+
+Quote the character's line from the inventory onto the sheet. A round judged
+against the agent's memory of the brief is judged against the wrong thing.
+
+Do not carry a character forward from a language round. A language round proves
+a grammar; the figure in it is a placeholder and shipping it is how a cast ends
+up as one recoloured mascot.
+
+## Judge every proposal at delivery size
+
+Render each proposal twice on the same sheet: once large enough to see the
+craft, once at the size the artifact actually uses it, on the background it
+actually sits on. `shown_at_delivery_size` in the assessment is that check, and
+`review_delivery.py` refuses a cohort where any element fails it.
+
+Detail that vanishes at delivery size is not neutral. It costs consistency
+across the whole cast and buys nothing where the work is read.
