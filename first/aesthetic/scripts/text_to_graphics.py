@@ -34,6 +34,7 @@ STYLE_SLICE_MAX = 4000
 INVENTORY_PER_SPACE_MAX = 3000
 GEOMETRY_SLICE_MAX = 8000
 MOODBOARD_SLICE_MAX = 12000
+TOOLS_SLICE_MAX = 6000
 
 REQUIRED_SCENE_KEYS = ("version", "element", "layout", "road", "positions",
                        "mainRooms", "kiosks", "billboards")
@@ -254,6 +255,11 @@ def _geometry_directive(scene: Mapping[str, Any]) -> str:
 
 
 def compile_slices(project_root: Path) -> dict[str, Any]:
+    from graphics_tool_research import context, load as load_tool_research
+
+    research = load_tool_research(project_root)
+    if research is None:
+        raise GraphicsError("missing graphics-tools.json; run status and research-tools")
     manifest = load_manifest(project_root)
     scene = load_scene(project_root, manifest)
     errors = validate_scene(scene)
@@ -272,6 +278,8 @@ def compile_slices(project_root: Path) -> dict[str, Any]:
     refine = "\n".join(
         ["REFINE EXISTING ATTEMPTS - edit or reuse these; do not spend a fresh shot."]
         + [f"- {path}: {note}" for path, note in refine_references(project_root)])
+    tools = _truncate(json.dumps(context(research), ensure_ascii=False, sort_keys=True),
+                      TOOLS_SLICE_MAX)
 
     slices = {
         "version": 1,
@@ -281,6 +289,7 @@ def compile_slices(project_root: Path) -> dict[str, Any]:
         "moodboard": moodboard,
         "inventory": inventory,
         "refine": refine,
+        "tools": tools,
         "sceneSpecHash": _sha256_bytes(
             json.dumps(scene, sort_keys=True).encode("utf-8")),
         "promptInputsHash": prompt_inputs_hash(project_root, manifest, scene),
@@ -308,6 +317,7 @@ def compile_slices(project_root: Path) -> dict[str, Any]:
             "moodboard": moodboard,
             "inventory": inventory,
             "refine": refine,
+            "tools": tools,
         },
     }
     _atomic_json(compiled, graphics_prompt)
@@ -652,6 +662,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("gate", help="parse the drawn scene and check it")
     sub.add_parser("status", help="print the one next action and why")
     sub.add_parser("build", help="draw with the in-repo renderer (rung 2b)")
+    tools = sub.add_parser("research-tools")
+    tools.add_argument("--evidence", required=True, type=Path)
     pre = sub.add_parser("preflight", help="record what an adapter probe saw")
     pre.add_argument("--adapter", required=True)
     pre.add_argument("--verdict", required=True, choices=VERDICTS)
@@ -698,6 +710,13 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if step["action"] == "done" else 2
         elif args.command == "build":
             result = build_svg(root)
+            json.dump(result, sys.stdout, indent=2, sort_keys=True)
+            sys.stdout.write("\n")
+        elif args.command == "research-tools":
+            from graphics_tool_research import FILE, validate
+
+            result = validate(_read_json(args.evidence))
+            _atomic_json(root / STORE / FILE, result)
             json.dump(result, sys.stdout, indent=2, sort_keys=True)
             sys.stdout.write("\n")
         elif args.command == "preflight":

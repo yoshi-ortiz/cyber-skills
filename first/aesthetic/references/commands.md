@@ -104,11 +104,15 @@ python3 scripts/bootstrap_harness.py describe --project-root . \
 ## Adopting clicks
 
 ```bash
-python3 scripts/bootstrap_harness.py adopt --project-root . \
-  --companion-ledger .superpowers/brainstorm/decisions.jsonl
+python3 scripts/assistant_app.py --project-root . \
+  --companion-ledger .superpowers/brainstorm/decisions.jsonl \
+  --invocation <skill@timestamp> --turn "<latest user or companion turn>"
 ```
 
-`0 adopted` means **no feedback was captured**. Say so plainly rather than moving on.
+Run this before every Loop step. A dead companion stops the command before it
+adopts ranking, brief, or corpus tags. The result keeps those states and Tokens
+QA complaint, correction, and restatement fields separate. `0 adopted` means
+no feedback was captured. Say so plainly rather than moving on.
 
 ## Putting scoring inside the prototype
 
@@ -157,13 +161,14 @@ compile it instead of prompting for it. Full doctrine in
 
 ```bash
 python3 scripts/text_to_graphics.py --project-root . status   # the one next action
-python3 scripts/text_to_graphics.py --project-root . init     # observe, seed-tags, compile, export-avge
+python3 scripts/text_to_graphics.py --project-root . research-tools --evidence /tmp/graphics-tools.json
 ```
 
 `status` is the whole flow. It reads the artifacts, prints one action and the
 reason it fired, and exits 2 while anything is outstanding. Run it, do what it
-names, run it again. The remaining verbs are `observe`, `seed-tags`, `compile`,
-`export-avge`, `preflight`, `build`, `gate`, and `moodboard`; `status` decides
+names, run it again. The remaining verbs are `observe`, `seed-tags`,
+`research-tools`, `compile`, `export-avge`, `preflight`, `build`, `gate`, and
+`moodboard`; `status` decides
 which one is next, so do not sequence them by hand.
 
 `preflight` records an adapter probe you ran yourself and refuses a verdict with

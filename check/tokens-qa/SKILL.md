@@ -17,7 +17,7 @@ repository scan standing in for evidence: context you cannot see is
 `FIX` for fix, repair, improve, rewrite, next version. Both match, or neither
 matches, choose `OBSERVE` — it writes nothing, so a wrong guess costs a read.
 
-## Five verbs
+## Six verbs
 
 ```bash
 python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt \
@@ -28,6 +28,7 @@ python3 <skill>/scripts/tokens_qa.py observe .audit/shots/<id>.json
 python3 <skill>/scripts/tokens_qa.py compare <baseline>.json <candidate>.json
 python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json --status accepted
 python3 <skill>/scripts/tokens_qa.py assess-feedback --evidence turns.json --json
+python3 <skill>/scripts/tokens_qa.py shot-audit --evidence turns.json --json
 python3 <skill>/scripts/tokens_qa.py correction .audit/shots/<id>.json
 ```
 
@@ -37,6 +38,12 @@ exactly one of `--inline` and `--output-manifest`. A manifest is
 `{"adapter": ..., "artifacts": [{"role", "path", "mime"}]}`; each artifact is
 sized and hashed as bytes, never decoded, so a PNG records like prose. An
 inline payload over 65536 bytes is refused.
+
+`--invocation <run-id>` records which run produced the Shot, in
+`inputs.invocation`. Optional, and it stays optional: every record already
+on disk was written without one, so requiring it would rewrite history
+rather than migrate it. With it, a session, its artifact, its table and its
+feedback join by one identity instead of by whichever was most recent.
 
 `observe` validates one record and prints the two-column table, optionally
 against a candidate. `compare` is the same table with both records required.
@@ -51,6 +58,14 @@ refuses every write; record a new shot instead.
 `assess-feedback` reads an evidence bundle whose `turns` is a list of strings
 and names the fields a human might want to set. It is advisory, and it writes
 no record.
+
+`shot-audit` reads the same bundle and answers the harder question in one
+call: which turns are complaints, which are corrections, which corrections
+restate an earlier one, and the advisory candidates as well. An instruction
+restated is an instruction that did not land, and that is a fact about the
+turns rather than a judgement about the work. This lives here because it is
+universal: a loop that keeps its own copy of these patterns has forked the
+rules, which is exactly what cook was doing before this verb existed.
 
 `correction` emits the bounded bundle an adapter may act on. Six keys, and
 nothing else from the record travels. Handing an adapter the whole Shot is how

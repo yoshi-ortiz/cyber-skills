@@ -59,6 +59,7 @@ def prompt_inputs_hash(project_root: Path, manifest: Mapping[str, Any],
         "outputs": (manifest.get("outputs") or {}).get("prompts"),
         "corpus": optional("corpus.json"),
         "tags": optional("corpus-tags.json"),
+        "toolResearch": optional("graphics-tools.json"),
     }
     encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()

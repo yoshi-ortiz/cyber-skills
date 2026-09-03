@@ -80,6 +80,13 @@ FLOW = (
      lambda st: "no corpus.json, so nothing has been observed yet"),
     ("seed-tags", lambda st: not st["tags"],
      lambda st: "corpus is observed but untagged, and only pursue tags reach a slice"),
+    ("research-tools", lambda st: not st["toolResearch"] or bool(st["toolResearchErrors"]),
+     lambda st: ("research the project domain and stack before custom generation"
+                 if not st["toolResearchErrors"] else
+                 "fix graphics-tools.json: " + "; ".join(st["toolResearchErrors"]))),
+    ("plan-assets", lambda st: bool(st["customPlanMissing"]),
+     lambda st: "custom generation needs " + ", ".join(st["customPlanMissing"])
+                + " before prompt compilation"),
     ("refine", lambda st: bool(st["refinePending"]),
      lambda st: "edit or reuse refine-tagged attempts before spending a fresh shot: "
                 + ", ".join(st["refinePending"])),
@@ -88,15 +95,24 @@ FLOW = (
     ("compile", lambda st: _stale(st["slicesPromptHash"], st["promptHash"]),
      lambda st: "corpus context changed: roles, tags, or another prompt input "
                 "changed since compilation"),
-    ("export-avge", lambda st: _stale(st["callsHash"], st["sceneHash"]),
+    ("export-avge", lambda st: st["selectedTool"] == "avge"
+     and _stale(st["callsHash"], st["sceneHash"]),
      lambda st: "scene changed since avge-calls.json was exported"),
-    ("preflight", lambda st: st["svgHash"] != st["sceneHash"] and not st["adapters"],
-     lambda st: "no adapter verdict on record, so the draw step has no route"),
+    ("preflight", lambda st: st["svgHash"] != st["sceneHash"]
+     and st["adapters"].get(st["selectedTool"]) not in ("PASS", "BLOCKED"),
+     lambda st: f"the selected {st['selectedTool']} adapter has no verdict on record"),
     ("run-avge", lambda st: st["svgHash"] != st["sceneHash"]
+     and st["selectedTool"] == "avge"
      and st["adapters"].get("avge") == "PASS",
      lambda st: "AVGE is PASS, so run avge-calls.json through the AVGE Engine MCP"),
+    ("run-selected-tool", lambda st: st["svgHash"] != st["sceneHash"]
+     and st["selectedTool"] != "avge"
+     and st["adapters"].get(st["selectedTool"]) == "PASS",
+     lambda st: f"run the compiled graphics prompt through the selected "
+                f"{st['selectedToolCommand']} command"),
     ("build", lambda st: st["svgHash"] != st["sceneHash"],
-     lambda st: f"AVGE is {st['adapters'].get('avge', 'unknown')}, "
+     lambda st: f"{st['selectedTool']} is "
+                f"{st['adapters'].get(st['selectedTool'], 'unknown')}, "
                 "so draw with the in-repo renderer instead"),
     ("repair-output", lambda st: bool(st["gateErrors"]),
      lambda st: "the gate rejected the drawn scene: " + "; ".join(st["gateErrors"])),
@@ -145,6 +161,20 @@ def read_state(project_root: Path) -> dict[str, Any]:
                              or "shots/output.svg")
     corpus_root = project_root / str((manifest.get("corpus") or {}).get("root")
                                      or "moodboards")
+    from graphics_tool_research import (ToolResearchError, load as load_tool_research,
+                                        production_tool)
+    tool_research, tool_errors = None, []
+    try:
+        tool_research = load_tool_research(project_root)
+    except (OSError, ToolResearchError) as exc:
+        tool_errors = [str(exc)]
+    missing = []
+    if tool_research and tool_research["customGeneration"]:
+        if not tool_research["architecture"]:
+            missing.append("architecture")
+        if not tool_research["atomicAssets"]:
+            missing.append("atomicAssets")
+    selected = production_tool(tool_research) if tool_research else {"name": "", "command": ""}
     state = {
         "sceneErrors": errors,
         "corpusRoot": corpus_root.is_dir() and any(corpus_root.rglob("*.*")),
@@ -154,6 +184,11 @@ def read_state(project_root: Path) -> dict[str, Any]:
         "promptHash": prompt_inputs_hash(project_root, manifest, scene),
         "corpus": (store / "corpus.json").exists(),
         "tags": (store / "corpus-tags.json").exists(),
+        "toolResearch": tool_research is not None,
+        "toolResearchErrors": tool_errors,
+        "customPlanMissing": missing,
+        "selectedTool": selected["name"],
+        "selectedToolCommand": selected["command"],
         "slicesHash": _recorded_hash(slices),
         "slicesPromptHash": _recorded_field(slices, "promptInputsHash"),
         "refinePending": [path for path, _ in refine_references(project_root)],

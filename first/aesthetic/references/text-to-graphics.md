@@ -35,11 +35,14 @@ this file tells you what order to work in, because the order is computed.
 | `add-corpus` | Put reference material under the manifest's corpus root. There is nothing to observe yet |
 | `observe` | `text_to_graphics.py observe` |
 | `seed-tags` | `text_to_graphics.py seed-tags`, then tag by hand for anything the manifest hints miss |
+| `research-tools` | Research the project domain and stack, then run `text_to_graphics.py research-tools --evidence <json>` |
+| `plan-assets` | Name the architecture and atomic assets in the research evidence, then record it again |
 | `refine` | Edit or reuse every named near-hit attempt. Retag it when resolved; do not launch a fresh shot |
 | `compile` | `text_to_graphics.py compile` |
 | `export-avge` | `text_to_graphics.py export-avge` |
 | `preflight` | Probe the adapter yourself, then record what you saw (below) |
 | `run-avge` | Execute every call in `slices/avge-calls.json` through the AVGE Engine MCP |
+| `run-selected-tool` | Send the compiled prompt only to the selected production command named by `status` |
 | `build` | `text_to_graphics.py build`, the in-repo renderer, when no adapter is available |
 | `repair-output` | The gate rejected the drawing. Fix the cause the reason names, then redraw |
 | `done` | Every gate passes and no artifact is stale |
@@ -47,6 +50,18 @@ this file tells you what order to work in, because the order is computed.
 An output is stale when no recorded attempt drew it from the current scene hash.
 Prompt slices are stale when the scene, corpus, corpus roles, or tags change.
 An artifact with no attempt behind it has unknown provenance and is redrawn.
+
+## Tool research gate
+
+Custom generation cannot compile until `graphics-tools.json` names the project
+domain, stack, exact harness-core toolbelt pins, and planned architecture. Start
+with `playwright-mcp` and `svgmaker-mcp`. If they cannot perform the named job,
+record why and retain one selected niche tool with its version, command, primary
+source, license, runtime, security limits, and observed preflight evidence.
+
+Rejected candidates never enter the compiled `tools` slice. Decompose custom
+work into named architecture parts and atomic assets. Every asset must name its
+owning architecture part before a prompt can compile.
 
 ## Resolution order
 

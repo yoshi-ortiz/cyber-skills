@@ -16,8 +16,8 @@ LOBE_X = 700.0
 LOBE_Y = 440.0
 ROAD_SAMPLES = 96
 
-ROOM = {"hw": 250.0, "hd": 95.0, "h": 40.0}
-KIOSK = {"hw": 95.0, "hd": 48.0, "h": 30.0}
+ROOM = {"hw": 250.0, "hd": 95.0, "h": 22.0}
+KIOSK = {"hw": 95.0, "hd": 48.0, "h": 16.0}
 
 BACKGROUND = "#faf5ee"
 ROAD_STROKE = "#f4c430"
@@ -182,10 +182,10 @@ def _box_svg(box: Mapping[str, Any]) -> list[str]:
     right = f"{cx:.1f},{cy + hd:.1f} {cx + hw:.1f},{cy:.1f} " \
             f"{cx + hw:.1f},{cy + h:.1f} {cx:.1f},{cy + hd + h:.1f}"
     return [
-        f'<g id="{box["slug"]}">',
-        f'<polygon points="{left}" fill="{_shade(fill, 0.62)}" stroke="{OUTLINE}" stroke-width="3"/>',
-        f'<polygon points="{right}" fill="{_shade(fill, 0.80)}" stroke="{OUTLINE}" stroke-width="3"/>',
-        f'<polygon points="{_diamond(box)}" fill="{fill}" stroke="{OUTLINE}" stroke-width="3"/>',
+        f'<g id="{box["slug"]}" stroke-linejoin="round" stroke-linecap="round">',
+        f'<polygon points="{left}" fill="{_shade(fill, 0.62)}" stroke="{OUTLINE}" stroke-width="4"/>',
+        f'<polygon points="{right}" fill="{_shade(fill, 0.80)}" stroke="{OUTLINE}" stroke-width="4"/>',
+        f'<polygon points="{_diamond(box)}" fill="{fill}" stroke="{OUTLINE}" stroke-width="4"/>',
         "</g>",
     ]
 

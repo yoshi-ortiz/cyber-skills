@@ -65,6 +65,59 @@ RULES = (
 )
 
 
+# The hard read, kept apart from RULES above on purpose. RULES answer "which
+# field might a human want to set, and how sure are we"; these answer "did the
+# user object, and did they have to say it twice". Same words, different
+# question, and collapsing them would make one of the two answers wrong.
+#
+# English keywords, imperfect. A caller may only ever use them together with
+# evidence that nothing changed, so a false positive cannot fail a round alone.
+FRUSTRATION = ("broken", "fucked", "dafuq", "wtf", "doesn't work", "does not work",
+               "garbage", "useless", "terrible", "all wrong", "no sirve", "roto")
+
+# A correction is stronger evidence than frustration: it names an instruction
+# the run did not follow. "It's broken" is a symptom; "I asked for X" is a
+# requirement still outstanding.
+CORRECTION = tuple(re.compile(p, re.I) for p in (
+    r"\byou (did ?n[o']?t|didn't|never|forgot|failed to|were supposed)",
+    r"\bi (initially |already |actually |just )?(asked|requested|told you|said)\b",
+    r"\bnot what i\b",
+    r"\bshould (not |n't )?(be|stick|have|follow|take)\b",
+    r"\binstead of\b",
+))
+# Words too common to prove two corrections are the same instruction.
+COMMON = {"should", "would", "could", "that", "this", "with", "from", "have",
+          "just", "like", "also", "your", "make", "sure", "want", "need",
+          "skill", "thing", "only", "does", "what", "when", "then", "they"}
+
+
+def repeated(corrections: Sequence[str], floor: int = 3) -> list[str]:
+    """Corrections that restate an earlier one.
+
+    Whether an instruction was *satisfied* is a judgement no automated read can
+    make. That the user had to say it twice is a fact, and it is the same
+    evidence: an instruction repeated is an instruction that did not land.
+    """
+    words = [set(re.findall(r"[a-z]{4,}", c.lower())) - COMMON for c in corrections]
+    out = []
+    for i, later in enumerate(words):
+        if any(len(later & earlier) >= floor for earlier in words[:i]):
+            out.append(corrections[i])
+    return out
+
+
+def audit(turns: Sequence[str]) -> dict:
+    """Everything this boundary can say about what the user said in one run."""
+    corrections = [t for t in turns if any(p.search(t) for p in CORRECTION)]
+    return {
+        "complaints": [t for t in turns
+                       if any(w in t.lower() for w in FRUSTRATION)],
+        "corrections": corrections,
+        "restated": repeated(corrections),
+        "candidates": [c._asdict() for c in assess(turns)],
+    }
+
+
 class FeedbackCandidate(NamedTuple):
     field: str
     value: str

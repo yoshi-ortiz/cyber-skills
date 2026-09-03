@@ -42,6 +42,37 @@ class DeliveryError(Exception):
     """A step refused. The round is not delivered and the reply has no URL."""
 
 
+MIN_FRESH_COHORT = 3
+
+
+def scored_elements(project_root: Path) -> set[str]:
+    """Elements the user has already ranked. A round re-asking about one of
+    these is a continuation, not an exploration, so it may carry fewer than
+    `MIN_FRESH_COHORT`."""
+    ledger = Path(project_root) / "spec" / "design-harness" / "decisions.json"
+    if not ledger.is_file():
+        return set()
+    entries = json.loads(ledger.read_text(encoding="utf-8")).get("elements", [])
+    return {str(e.get("element")) for e in entries
+            if isinstance(e, dict) and e.get("scored") is True}
+
+
+def accepted_elements(project_root: Path) -> set[str]:
+    """Elements the user has already reacted to, by thumb or by star.
+
+    Read as "settled": whatever is wrong with the drawing, the user has seen it
+    and said something, so a gate does not get to withdraw it under them.
+    """
+    ledger = Path(project_root) / "spec" / "design-harness" / "decisions.json"
+    if not ledger.is_file():
+        return set()
+    entries = json.loads(ledger.read_text(encoding="utf-8")).get("elements", [])
+    return {str(entry.get("element")) for entry in entries
+            if isinstance(entry, dict)
+            and (entry.get("sentiment") in {"like", "dislike"}
+                 or entry.get("scored") is True)}
+
+
 def step(argv: list[str], project_root: Path) -> str:
     done = subprocess.run([sys.executable, *argv, "--project-root", str(project_root)],
                           capture_output=True, text=True)
@@ -66,6 +97,48 @@ def deliver(project_root: Path, out: str, cohort: str, round_label: str, asks: s
     if not assessments:
         raise DeliveryError("no --assessments: a published round with no review "
                             "images is a link the user cannot act on")
+
+    # Also before anything is written. `shoot` refuses a comp that draws its own
+    # <svg>, but delivery never routes through `shoot`, so a cohort of invented
+    # paths reached a user with the rule intact and unenforced. One guard here
+    # covers every element a round can carry, because they all pass through it.
+    #
+    # Only elements the user has never reacted to. A preview they have already
+    # thumbed or scored is theirs, and re-refusing it would brick delivery over
+    # a decision they already made; a fresh proposal has no such standing, and
+    # inventing SVG paths is precisely what it must not do.
+    # A lone proposal asks "do you like this?", which is not a question a rank
+    # answers. SKILL.md has always required a 3-6 element cohort; three rounds
+    # shipped one unscored element each and all three were rejected on sight,
+    # because nothing here read the rule. A continuation -- a round re-asking
+    # about something already ranked -- is exempt: that IS one bounded question.
+    names = [n.strip() for n in cohort.split(",") if n.strip()]
+    try:
+        settled = scored_elements(project_root)
+    except OSError:
+        settled = set()
+    if len(names) < MIN_FRESH_COHORT and not (set(names) & settled):
+        raise DeliveryError(
+            f"a cohort of {len(names)} unranked proposal(s) is not a round: "
+            f"SKILL.md asks for {MIN_FRESH_COHORT}-6 so the user ranks between "
+            "real alternatives instead of approving the only option. Add "
+            "proposals, or include an element they have already ranked.")
+
+    sys.path.insert(0, str(HERE))
+    from harness_preview import audit_recorded_svg
+    try:
+        drawn = {hit["element"] for hit in audit_recorded_svg(project_root)}
+        answered = accepted_elements(project_root)
+    except OSError:
+        drawn, answered = set(), set()  # no ledger means nothing to refuse
+    invented = [name.strip() for name in cohort.split(",")
+                if name.strip() and name.strip() in drawn - answered]
+    if invented:
+        raise DeliveryError(
+            "these cohort previews hand-author <svg>: " + ", ".join(invented)
+            + ". A comp is drawn in HTML/CSS, or references a sourced asset with "
+            "<img src=\"...\">. See asset-sourcing.md; run `bootstrap_harness.py "
+            "audit-svg` for the full list.")
 
     harness = str(HERE / "bootstrap_harness.py")
     article = [harness, "article", "--out", out, "--cohort", cohort,
@@ -106,7 +179,8 @@ def deliver(project_root: Path, out: str, cohort: str, round_label: str, asks: s
             "ask": asks, "images": json.loads(images) if images else []}
 
 
-def record_shot(payload: dict, round_label: str, asks: str) -> None:
+def record_shot(payload: dict, round_label: str, asks: str,
+                invocation: str = "") -> None:
     """Write the delivered round to the Shot ledger, so QA has something to read."""
     images = payload.get("images") or {}
     declared = images.get("images", []) if isinstance(images, dict) else []
@@ -123,10 +197,13 @@ def record_shot(payload: dict, round_label: str, asks: str) -> None:
         manifest.write_text(json.dumps({"adapter": "graphic",
                                         "artifacts": artifacts}),
                             encoding="utf-8")
+        command = [sys.executable, str(TOKENS_QA), "record", "first/aesthetic",
+                   "--request", str(request), "--output-manifest", str(manifest),
+                   "--scope", round_label]
+        if invocation:
+            command += ["--invocation", invocation]
         done = subprocess.run(
-            [sys.executable, str(TOKENS_QA), "record", "first/aesthetic",
-             "--request", str(request), "--output-manifest", str(manifest),
-             "--scope", round_label],
+            command,
             cwd=str(REPO_ROOT), capture_output=True, text=True)
     if done.returncode != 0:
         raise DeliveryError((done.stderr or done.stdout).strip())
@@ -145,6 +222,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="user-language review request for the idle status")
     parser.add_argument("--agent", default="")
     parser.add_argument("--agent-url", default="")
+    parser.add_argument("--invocation", default="",
+                        help="skill@timestamp id returned by assistant_app.py")
     args = parser.parse_args(argv)
     try:
         payload = deliver(args.project_root.resolve(), args.out, args.cohort,
@@ -161,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
     # nothing, because by this line the screen is live and the payload is
     # printed. An unrecorded round is a gap in QA, not a broken delivery.
     try:
-        record_shot(payload, args.round_label, args.asks)
+        record_shot(payload, args.round_label, args.asks, args.invocation)
     except Exception as unrecorded:
         print(f"deliver: round delivered but not recorded: {unrecorded}",
               file=sys.stderr)

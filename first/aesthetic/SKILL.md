@@ -11,10 +11,15 @@ requested diagram, scene, or illustration routes to
 
 ## Route before designing
 
-Read [user-communication.md](references/user-communication.md) before any
-user-visible update. Inspect `spec/design-harness/` before opening or
-initializing the generic ranking workflow. If `scene-spec.json` or
-`graphics-manifest.json` exists, run:
+Read [user-communication.md](references/user-communication.md). Run before every Loop step after opening the companion:
+
+```bash
+python3 <skill>/scripts/assistant_app.py --project-root . \
+  --companion-ledger .superpowers/brainstorm/decisions.jsonl \
+  --invocation <skill@timestamp> --turn "<latest turn>"
+```
+
+With `scene-spec.json` or `graphics-manifest.json`, run:
 
 ```bash
 python3 <skill>/scripts/text_to_graphics.py --project-root . status
@@ -68,12 +73,10 @@ python3 <skill>/scripts/editorial_workflow.py seed --project-root . \
 
 ## Read the user first
 
-Adopt feedback. Record chat constraints in the brief before inference; user
-words outrank references and doctrine.
+Record chat constraints in the brief before inference; user words outrank
+references and doctrine.
 
 ```bash
-python3 <skill>/scripts/bootstrap_harness.py adopt --project-root . \
-  --companion-ledger .superpowers/brainstorm/decisions.jsonl
 python3 <skill>/scripts/brief_workflow.py answer --project-root . \
   --event-id <stable-id> --at <ISO-8601> --id <brief-field> --answer "<user words>"
 python3 <skill>/scripts/direction_context.py --project-root . \
@@ -132,6 +135,7 @@ python3 <skill>/scripts/golden_rules.py --design spec/design-harness/candidate.j
 ```
 
 Never invent SVG paths. Follow [asset-sourcing.md](references/asset-sourcing.md).
+Figures: settle construction, then character. [interpret-art.md](references/interpret-art.md).
 
 Generated graphics are proposals, not silent assets: record the scene element
 with its preview as an unscored decision and include it in the article cohort so
@@ -148,7 +152,8 @@ python3 <skill>/scripts/deliver.py --project-root . \
   --round-label "<object>" --asks "<one plain design question>" \
   --assessments /tmp/proposal-assessments.json \
   --idle-text "<user-language request to review the new designs>" \
-  --agent "<App | Model>" --agent-url "<task deep link>"
+  --agent "<App | Model>" --agent-url "<task deep link>" \
+  --invocation <skill@timestamp>
 ```
 
 One call, because dropping either of its last two steps is how a user gets a
