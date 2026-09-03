@@ -1,13 +1,42 @@
 {
   "adapters": {
-    "avge": "PASS"
+    "avge": "BLOCKED"
   },
+  "appliedCorrections": [
+    "8651bbcb58d71d257a994635a3fe89842c7794637446d901cae81fe183516500"
+  ],
   "evidence": {
     "avge": {
-      "at": "2026-08-30T23:48:55.302441+00:00",
-      "saw": "MCP tools/list returned create_primitive, create_line_pattern, batch, export_svg, and render_preview from AVGE Engine 0.5.14",
-      "verdict": "PASS"
+      "at": "2026-09-02T05:32:41.542570+00:00",
+      "saw": "no avge-engine MCP tools (create_primitive, export_svg, render_preview) present in this session's deferred or loaded tool list; ToolSearch for avge/create_primitive/export_svg returned nothing",
+      "verdict": "BLOCKED"
     }
   },
+  "proofs": [
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.foundation.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-02T05:36:16.312879+00:00",
+      "proofKey": "15d5fb0ccc8dcf25f31ea291b74b87869b7cda96c54350523c7d555ea86142ed"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.foundation.character-sticker.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-02T05:49:05.604766+00:00",
+      "proofKey": "a8c9acbe722e1443fb84d4603c1f600ef22382806d7650ec5c6e86b0ff097207"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.foundation.character-tinyfigure.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-02T05:49:05.605990+00:00",
+      "proofKey": "8fee41a670aea7ac694daf00673c7b8d12b3341e5b459dbd2b8691b542093526"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.foundation.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-02T16:38:31.510221+00:00",
+      "proofKey": "586f5f2a4fe2005d634eea4d06008e9961fac3868e977f442e3975dadb0a74a8"
+    }
+  ],
   "version": 1
 }

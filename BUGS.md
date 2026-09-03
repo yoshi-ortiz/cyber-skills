@@ -705,6 +705,15 @@ bakes its palette or the theming moves. That is a design decision, and it
 belongs to the cartoon round the user has already scheduled ("cartoons drawings
 will need their own round"), not to a layout pass.
 
+**2026-09-02.** `deliver.py` now refuses a cohort element whose preview
+hand-authors `<svg>`, unless the user has already thumbed or scored it. That
+was added after a round of hand-drawn cartoon characters shipped and was
+rejected on sight: `shoot` had always refused such a comp, but delivery never
+routed through `shoot`, and `audit-svg` printed its three violations and exited
+0. `landing.hero.flow.foundation` carries a thumb, so it stays deliverable; any
+NEW character work does not. Sprite extraction is therefore on the critical
+path for the cartoon round, not optional to it.
+
 ## B-027 · The installed skill is a copy, so edits to it are silently lost · open (needs a human)
 
 **Symptom.** `~/.claude/skills/aesthetic` is a symlink, which reads as a live

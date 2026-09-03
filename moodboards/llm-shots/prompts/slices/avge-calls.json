@@ -13,7 +13,7 @@
       "params": {
         "depth": 0.32,
         "fill": "#00bcd4",
-        "height": 0.06,
+        "height": 0.033,
         "new_prefix": "first",
         "shadow": true,
         "width": 0.38,
@@ -27,7 +27,7 @@
       "params": {
         "depth": 0.32,
         "fill": "#e91e63",
-        "height": 0.06,
+        "height": 0.033,
         "new_prefix": "build",
         "shadow": true,
         "width": 0.38,
@@ -41,7 +41,7 @@
       "params": {
         "depth": 0.32,
         "fill": "#1565c0",
-        "height": 0.06,
+        "height": 0.033,
         "new_prefix": "land",
         "shadow": true,
         "width": 0.38,
@@ -55,7 +55,7 @@
       "params": {
         "depth": 0.32,
         "fill": "#2e7d32",
-        "height": 0.06,
+        "height": 0.033,
         "new_prefix": "check",
         "shadow": true,
         "width": 0.38,
@@ -69,7 +69,7 @@
       "params": {
         "depth": 0.1,
         "fill": "#fff5f0",
-        "height": 0.04,
+        "height": 0.021,
         "new_prefix": "kit",
         "shadow": false,
         "width": 0.14,
@@ -83,7 +83,7 @@
       "params": {
         "depth": 0.1,
         "fill": "#f5f8fa",
-        "height": 0.04,
+        "height": 0.021,
         "new_prefix": "fix",
         "shadow": false,
         "width": 0.14,
@@ -149,6 +149,6 @@
     }
   ],
   "element": "landing.hero.flow",
-  "sceneSpecHash": "a4fefe20b18ab8c0d6c253ae467cbda8488a9e74f5d4c605040bef1b3744b3b5",
+  "sceneSpecHash": "0589931ebc390b583c9c6db8bf29337f45bb2750b2943cc42f559601bad0dc0d",
   "version": 1
 }

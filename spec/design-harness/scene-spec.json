@@ -85,42 +85,42 @@
       "y": 0.06,
       "width": 0.38,
       "depth": 0.32,
-      "height": 0.06
+      "height": 0.033
     },
     "lower-left": {
       "x": 0.04,
       "y": 0.52,
       "width": 0.38,
       "depth": 0.32,
-      "height": 0.06
+      "height": 0.033
     },
     "upper-right": {
       "x": 0.52,
       "y": 0.06,
       "width": 0.38,
       "depth": 0.32,
-      "height": 0.06
+      "height": 0.033
     },
     "lower-right": {
       "x": 0.52,
       "y": 0.52,
       "width": 0.38,
       "depth": 0.32,
-      "height": 0.06
+      "height": 0.033
     },
     "left-center": {
       "x": 0.19,
       "y": 0.44,
       "width": 0.14,
       "depth": 0.1,
-      "height": 0.04
+      "height": 0.021
     },
     "right-center": {
       "x": 0.67,
       "y": 0.44,
       "width": 0.14,
       "depth": 0.1,
-      "height": 0.04
+      "height": 0.021
     }
   }
 }
