@@ -1,172 +1,115 @@
-# Roadmap
+# 🗺️ Roadmap
 
-The burndown. One row per item, each in exactly one state, so "what is left"
-is answerable without reading prose.
+Remaining implementation only. Contracts live in [SPEC.md](SPEC.md), open
+questions in [GOAL.md](GOAL.md), defects in [BUGS.md](BUGS.md), and shipped
+work in [CHANGELOG.md](CHANGELOG.md).
 
-States: `TODO` · `IN-PROGRESS` · `BLOCKED` · `DONE`
+States: ⚪ `TODO` · 🟡 `IN-PROGRESS` · 🔴 `BLOCKED` · ✅ `DONE`
 
-Bugs live in [BUGS.md](BUGS.md) with their root causes. Shipped changes live in
-[CHANGELOG.md](CHANGELOG.md). This file is what remains.
+## 🧱 codebase / development enviroment
 
-Fog. Lives on `dev`, never published to `main`.
+The architecture backlog is visible before delivery work so the rail is built
+against deliberate seams. The first five rows harden the development
+environment; the two Aesthetic rows remain post-MVP.
 
-Contract and vocabulary: [SPEC.md](SPEC.md), [GOAL.md](GOAL.md),
-[UBIQUITOUS_LANGUAGE.md](UBIQUITOUS_LANGUAGE.md). Promoted specs live under
-`docs/SPEC/`.
+| ID | Core controller | State | Item | Bugs | Module | Depends on |
+| --- | --- | --- | --- | --- | --- | --- |
+| R-54 | [`skill_discovery.py`](tools/skill_discovery.py) · [`fog.py`](tools/fog.py) · [`index_gate.py`](tools/index_gate.py) | ✅ `DONE` | Deepen the Skill Catalog | [B-021](BUGS.md), [B-027](BUGS.md) | [`tools/`](tools/), [`kit/silly/`](kit/silly/) | — |
+| R-58 | [`CLAUDE.md`](CLAUDE.md) · [`CONTEXT.md`](CONTEXT.md) | ✅ `DONE` | Make Repo-Dev context queryable | — | Repo-Dev context | R-54 |
+| R-61 | [`genesis_flow.py`](first/genesis/scripts/genesis_flow.py) | ✅ `DONE` | Deepen deterministic Genesis | — | [`first/genesis/`](first/genesis/) | R-54 |
+| R-17 | [`check.py`](tools/check.py) · [`release.py`](tools/release.py) · [`cook.py`](cook/cook.py) | ✅ `DONE` | Deepen Release Verification | [B-023](BUGS.md) | [`tools/`](tools/), [`cook/`](cook/) | R-54, R-61 |
+| R-16 | [`loanwords.py`](tools/loanwords.py) | ✅ `DONE` | Enforce ubiquitous language | — | [`tools/`](tools/) | — |
+| R-56 | [`server.cjs`](first/aesthetic/companion/server.cjs) · [`trace_preview.py`](tools/trace_preview.py) · [`vectors.py`](check/build-context-token-vectors/scripts/vectors.py) | ⚪ `TODO` | Deepen the Companion Host *(post-MVP)* | [B-024](BUGS.md) | [`first/aesthetic/companion/`](first/aesthetic/companion/) | MVP release |
+| R-66 | [`assistant_app.py`](first/aesthetic/scripts/assistant_app.py) · [`graphics_flow.py`](first/aesthetic/scripts/graphics_flow.py) · [`deliver.py`](first/aesthetic/scripts/deliver.py) | ⚪ `TODO` | Deepen the Aesthetic Run *(post-MVP)* | [B-013](BUGS.md), [B-026](BUGS.md) | [`first/aesthetic/`](first/aesthetic/) | R-56, MVP release |
 
-## The rail
+Build order:
 
-Six **families**, one command surface. Prefix routes; no router command.
+1. R-54 makes skill identity, family, channel, aliases, origin, and path one
+   catalog fact consumed by index, publish, install, and roadmap adapters.
+2. R-58 gives cold Repo-Dev entry a goals → roadmap → module map instead of a
+   whole-repository document walk.
+3. R-61 makes named Genesis doctrine the source; the Python flow becomes an
+   adapter instead of a second lifecycle.
+4. R-17 makes one gate registry drive local checks, CI, Cook, and release;
+   R-16 guards the vocabulary shared by those contracts.
+5. Ship the routing-only MVP.
+6. R-56 and R-66 deepen the deferred Aesthetic runtime after the rail is stable.
 
-| Family | Phase | Shipped in this repo | Planned owner |
-| --- | --- | --- | --- |
-| `kit` | Day 0 on-ramp | `kit/` (`starter-pack`, `silly` nested) | `kit/SKILL.md` |
-| `first` | Plan | `first/genesis/`, `first/knowledge/`, `first/aesthetic/` | genesis + aesthetic |
-| `build` | Code · Build · Test | — | `build/SKILL.md` |
-| `land` | Release · Deploy | — | `land/SKILL.md` |
-| `check` | Monitor (return arc) | `check/build-context-token-vectors/` | `check/SKILL.md` |
-| `fix` | Operate (bare on-ramp) | — | `fix/SKILL.md` |
+## 🚂 MVP — route proven public skills
 
-```text
-kit → first → build → land
-        ↑         │
-        └── check ┘
-        └── fix ──┘
-```
+The MVP adds no Aesthetic capability and does not reimplement the public skills
+it routes. Each family owns sequence, aliases, and handoff only.
 
-Eat-your-own-food: Repo-Dev work runs through these skills. After a commit here,
-`kit sync` re-arms the collection; graphics and the landing hero ship through
-`aesthetic` / `text-to-graphics` on **this** checkout (`design/`,
-`shots/landing.hero.flow.svg`), not hand-copy.
+### 🧰 Sprint 1 — **kit + first**
 
-Out of repo scope: work that only applies to an external design fixture (e.g.
-`keynote-performance` preview redraws). Harness lessons from that fixture stay;
-the fixture's ledger does not.
-
-## Epics
-
-Open rows grouped by what unblocks what. Priority order:
-
-1. **E1 Platform plumbing** — R-54, R-56, R-51, R-43
-2. **E4 Aesthetic core** — R-15, R-62, R-24
-3. **E2 Token intelligence** — R-50, R-52, R-53, R-55, R-57, R-40
-4. **E3 Companion surface** — R-18, R-60 (after R-56)
-5. **E5 Rail command surface** — R-35, R-36, R-34, R-45, R-49, R-37, R-46, R-47, R-44, R-38
-6. **E6 Repo-Dev ergonomics** — R-58, R-41, R-42, R-61, R-16, R-17
-7. **Design E-A → E-B → E-C** — after E4 is healthy
-
-| Epic | North star |
-| --- | --- |
-| **E1** | `kit sync` after a commit re-arms everything; one corpus module; one server seam |
-| **E2** | Every published benchmark number is reproducible from repo data |
-| **E3** | No Loop step runs unless the browser ledger is live and replayable |
-| **E4** | `bootstrap_harness.py` under budget; this repo's landing hero ships via `text_to_graphics.py` |
-| **E5** | Every name in SPEC resolves to a stub or skill without a router |
-| **E6** | Entering burndown mode costs less than one skill walk |
-
-### E1 — Platform plumbing
-
-| id | State | Item | Notes |
-| --- | --- | --- | --- |
-| R-54 | `TODO` | One module owns the skill corpus | B-021. Six frontmatter parsers, no interface. R-55 and R-57 depend on this. |
-| R-56 | `TODO` | Decide the companion seam: shared, or gated identical | `trace_preview.py` and `vectors.py` duplicate the loopback server wholesale. |
-| R-51 | `IN-PROGRESS` | Port harness-core to one tested Python file | `harness.py` landed; remaining Windows parity for sync/onboard, then drop bash. Lives in harness-core. |
-| R-43 | `TODO` | Index `collection.yaml`, add missing sources | `poteto`, `poteto-mode`, `zoom-out` not in any manifest today. |
-
-### E2 — Token intelligence
-
-| id | State | Item | Notes |
-| --- | --- | --- | --- |
-| R-50 | `IN-PROGRESS` | Build the inference context compiler | [Contract](docs/SPEC/INFERENCE_CONTEXT_COMPILER.md). Slice in `direction_context.py`; remaining: per-skill declarations, exact tokenizer, advisory ranker. |
-| R-52 | `TODO` | Agreed tokenization, visualized and gated | [Contract](docs/SPEC/AGREED_TOKENIZATION.md). Durable sha256-pinned verdicts; gate refuses stale agreements. |
-| R-53 | `TODO` | Advisory clustering over the corpus | [Contract](docs/SPEC/ADVISORY_CLUSTERING.md). EVoC proposals for semantic group and contamination risk; advisory only. |
-| R-55 | `TODO` | Flows become repo data; benchmark gains release mode | `token_bench.py` flows are CLI strings today, not reproducible repo data. |
-| R-57 | `TODO` | Narrow the vectors interface | B-023. Split corpus load → R-54, serve → R-56; expose `embed()` and `cluster()` as callables. |
-| R-40 | `TODO` | Measure the host's actual enabled collection | Model-invoked descriptions only; installed count is not context load. |
-
-### E3 — Companion surface
-
-| id | State | Item | Notes |
-| --- | --- | --- | --- |
-| R-18 | `TODO` | Companion live-check, every run | Hard precondition before any other Loop step; not an unchecked `open`. |
-| R-60 | `TODO` | Generalize companion form-state sync | Loopback app under `.superpowers/`: inputs sync to durable file data (pattern from `trace_preview.py`). Blocked on R-56. |
-
-### E4 — Aesthetic core health
-
-| id | State | Item | Notes |
-| --- | --- | --- | --- |
-| R-15 | `DONE` | Split `bootstrap_harness.py` | Repaid 2026-09-01. 216,757 B to 25,326 B across thirteen `harness_*` seams; `editorial_workflow.py` 34,911 B to 3,858 B across four. `test_article.py` and `test_adopt.py` split by subject. No file in the repository is over its budget, `contracts-budget` is green, and `tools/check.py` is 27/27. Public surface, CLI help for all eighteen subcommands, and all 515 test ids verified unchanged. |
-| R-62 | `TODO` | Run this repo's graphics and website as a Food Product | `landing.hero.flow` through `text_to_graphics.py` → `design/landing-flow-hero.html`. Proof = `kit sync` then a green graphics run on this checkout. |
-| R-24 | `TODO` | Cap golden-rule retry cost | B-013. Retries must narrow scope, not re-attempt the same rejected spec. |
-| R-25 | `TODO` | Explicit `subject` in `editorial.json` | Durable model behind R-21; not urgent while dotted-id convention holds. |
-
-### E5 — Rail command surface
-
-| id | State | Item | Notes |
-| --- | --- | --- | --- |
-| R-35 | `TODO` | Ship five `first-*` stubs | Over `genesis` and `aesthetic`; do not write a second planning skill. |
-| R-36 | `TODO` | Write `build`, `land`, and `fix` | `build` routes ponytail/tdd; `land` owns burndown state machine; `fix` owns the rail. |
-| R-34 | `TODO` | Write `check` | Read-only; `check-` prefix routes. |
-| R-45 | `TODO` | Teach `alias.py` anchor and ghost-argument stubs | Whole aliases exist; § and ⇢ kinds do not. |
-| R-49 | `TODO` | Record routerless rail in SPEC | Prefix scheme is intentional; document so it is not "fixed" later. |
-| R-37 | `TODO` | Add `design` and `español` modes to `kit` | Two rows in the mode table; no new skill. |
-| R-46 | `TODO` | Approve-features gate | Between sketch and build; decision moment is unrecorded today. |
-| R-47 | `TODO` | Legibility gate on build output | Green tests are not evidence a non-coder can read the deliverable. |
-| R-44 | `TODO` | Two pasteable monitor prompts | `check-user-metrics`, `check-production-health`; zero description tax. |
-| R-38 | `TODO` | Declare `phase` in frontmatter | G-2. Declare without gate; load-bearing for `genesis` and `aesthetic` only. |
-
-### E6 — Repo-Dev ergonomics
-
-| id | State | Item | Notes |
-| --- | --- | --- | --- |
-| R-58 | `TODO` | Give the burndown a query interface | Mode A entry is ~73 KB across five files; query `IN-PROGRESS`, `R-43`, last bug. |
-| R-41 | `TODO` | Write the rail as a `CLAUDE.md` import | Fixed bytes at session start, not a command to remember. |
-| R-42 | `TODO` | Move measurements to hooks / statusLine | Token rail and burndown off the command surface. |
-| R-61 | `TODO` | Deterministic markdown | Fenced blocks in skill doctrine are production code, like notebook cells: named, gated, replayable. `graphics_flow.FLOW` is the reference; extend to kit/genesis paths. |
-| R-16 | `TODO` | Enforce ubiquitous language | Checker over `UBIQUITOUS_LANGUAGE.md` banned synonyms. |
-| R-17 | `TODO` | Automate verification in CI | `check.py` today is manual. |
-
-### Design — three phases
-
-Domain-neutral workflow in
-[`platform-support.md`](aesthetic/references/platform-support.md). E-01 is
-`DONE`. Defer external adapter epics until E4 Food Product is green on this repo.
-
-| id | State | Family | Phase | Epic | Exit |
+| ID | Core controller | State | Item | Bugs | Module |
 | --- | --- | --- | --- | --- | --- |
-| E-02 | `TODO` | `first` | **E-A** Discover & frame | Brief + design contract | `DES-09` |
-| E-03 | `TODO` | `first` | **E-A** | Inspiration adapters | `DES-01`–`DES-04` |
-| E-04 | `TODO` | `first` | **E-A** | Editable workspaces | `DES-05`–`DES-07` |
-| E-05 | `TODO` | `build` | **E-B** Build & prove | Blind operator control | `DES-08` |
-| E-06 | `TODO` | `build` | **E-B** | Sketch-to-production | `DES-10`–`DES-12` |
-| E-07 | `TODO` | `build` | **E-B** | Screenshot TDD | `DES-13` |
-| E-08 | `TODO` | `land` | **E-C** Ship & publish | Observable deployment | `DES-14` |
-| E-09 | `TODO` | `land` | **E-C** | Deliverables + publication | `DES-15`–`DES-17` |
+|  |  |  | **🧰 `kit`** |  |  |
+| R-37 | [`kit/SKILL.md`](kit/SKILL.md) · [`harness.py`](../harness-core/harness.py) | 🟡 `IN-PROGRESS` | Add explicit domain activation and `español` mode to Kit *(scoped acquisition shipped; legacy exposure cleanup and español remain)* | — | [`kit/`](kit/) + `harness-core` |
+| R-43 | [`manifest_gate.py`](tools/manifest_gate.py) | ⚪ `TODO` | Index every routed public skill and origin | — | [`tools/`](tools/) + `harness-core` |
+| R-51 | [`harness.py`](../harness-core/harness.py) · [`collection.toml`](../harness-core/collection.toml) | ✅ `DONE` | Complete portable installation | [B-028](BUGS.md) | [`harness-core`](../harness-core/) |
+| R-67 | [`mcp.toml`](../harness-core/mcp.toml) | 🟡 `IN-PROGRESS` | Sync a secret-free MCP catalog through managed adapters to agents and VS Code *(catalog shipped; adapters remain)* | — | [`kit/`](kit/) + `harness-core` |
+|  |  |  | **🎭 `silly`** |  |  |
+| R-45 | [`alias.py`](kit/silly/scripts/alias.py) | ✅ `DONE` | Generate whole, anchor, and ghost aliases | — | [`kit/silly/`](kit/silly/) |
+|  |  |  | **🧭 `first`** |  |  |
+| R-35 | [`genesis/SKILL.md`](first/genesis/SKILL.md) | ✅ `DONE` | Route `brainstorming`, `ask-matt`, `prototype`, and `grilling` | — | [`first/`](first/) |
+| R-41 | [`genesis/SKILL.md`](first/genesis/SKILL.md) | 🟡 `IN-PROGRESS` | Make `first-work-style` write the project-owned domain rail *(contract shipped; field evidence remains)* | — | [`first/`](first/) + `harness-core` |
+| R-38 | [`manifest_gate.py`](tools/manifest_gate.py) | ✅ `DONE` | Declare the First workflow phase | — | [`first/genesis/`](first/genesis/) |
+| R-46 | [ADR contract](first/genesis/references/architecture-decisions.md) | ✅ `DONE` | Hand accepted decisions from First to Build | — | [`first/genesis/`](first/genesis/) |
 
-`check` reads this table; `fix` returns the first failing epic to `TODO` or
-`BLOCKED`.
+Five of nine are done. R-37's legacy exposure cleanup and language mode,
+R-41's field evidence, R-43's origin gate, and R-67's MCP adapters remain:
 
-## Done
+1. **R-43 needs verified selectors, then code.** pstack's source is now known
+   as `cursor/plugins`, but its CLI advertises `Poteto Mode` and no `zoom-out`;
+   the current Matt Pocock source also does not advertise `zoom-out`. gstack
+   advertises only its bundle, not separate `review` or `land-and-deploy`
+   leaves. Resolve those
+   declared origins before making the manifest gate enforce them.
 
-R-01–R-10 repo bootstrap. R-11–R-12 corpus tagging. R-14 design quality
-judged (external fixture used as measurement only). R-19–R-23, R-27–R-30
-companion and brief. R-31–R-33, R-39, R-48 rail topology and invocation audit. R-59 graphics loop
-(`graphics_flow.py` + `text_to_graphics.py status`).
-E-01 support contract.
+### 🏗️ Sprint 2 — build + land
 
-Closed out of repo scope: **R-13** (external fixture SVG previews, B-007),
-**R-26** (external fixture ring type, B-017).
+| ID | Core controller | State | Item | Bugs | Module |
+| --- | --- | --- | --- | --- | --- |
+|  |  |  | **🏗️ `build`** |  |  |
+| R-36 | [`build/SKILL.md`](build/SKILL.md) | ✅ `DONE` | Route `ponytail`, `tdd`, `code-review`, and `verification-before-completion` | — | [`build/`](build/) |
+|  |  |  | **🚢 `land`** |  |  |
+| R-64 | [`land/SKILL.md`](land/SKILL.md) | ✅ `DONE` | Route `finishing-a-development-branch` and `land-and-deploy` | — | [`land/`](land/) |
 
-Detail for each shipped row: [CHANGELOG.md](CHANGELOG.md).
+### 🛠️ Sprint 3 — fix + check
 
-## Working notes
+| ID | Core controller | State | Item | Bugs | Module |
+| --- | --- | --- | --- | --- | --- |
+|  |  |  | **🛠️ `fix`** |  |  |
+| R-63 | [`fix/SKILL.md`](fix/SKILL.md) | ✅ `DONE` | Route `diagnosing-bugs` and `systematic-debugging` | — | [`fix/`](fix/) |
+|  |  |  | **🔎 `check`** |  |  |
+| R-34 | [`check/SKILL.md`](check/SKILL.md) | ✅ `DONE` | Route `zoom-out` and `review` read-only | — | [`check/`](check/) |
 
-**Published article is static.** After a render change, run `article` + `publish`
-or `article` with no `--cohort` before screenshotting:
+All four routers ship on `alpha`. Each declares its sections as anchor targets
+and its flat names as aliases, so `alias.py link --fun` installs them; none
+reimplements a skill it routes. Bare `fix` moved from a `kit` alias to the `fix`
+family, leaving every public name with one owner.
 
-```bash
-python3 first/aesthetic/scripts/bootstrap_harness.py article \
-  --project-root . --out /tmp/check.html
-```
+`zoom-out` and `land-and-deploy` are routed by name while R-43 resolves their
+declared origins. The routers name the skill, never a source the manifest gate
+has not verified.
 
-**Installed copy does not sync itself.** Run `kit sync` after editing skills here.
+## 🎨 Deferred — Aesthetic and custom capabilities
+
+| ID | Core controller | State | Item | Bugs | Skill / module |
+| --- | --- | --- | --- | --- | --- |
+| R-18 | [`assistant_app.py`](first/aesthetic/scripts/assistant_app.py) | ⚪ `TODO` | Enforce the companion live-check on every Loop entry | — | [`first/aesthetic/`](first/aesthetic/) |
+| R-24 | [`golden_rules.py`](first/aesthetic/scripts/golden_rules.py) | ⚪ `TODO` | Cap golden-rule retry cost | [B-013](BUGS.md) | [`first/aesthetic/`](first/aesthetic/) |
+| R-50 | [`direction_context.py`](first/aesthetic/scripts/direction_context.py) | 🟡 `IN-PROGRESS` | Complete the inference context compiler | — | [`first/aesthetic/`](first/aesthetic/) |
+| R-60 | [`brief_workflow.py`](first/aesthetic/scripts/brief_workflow.py) | ⚪ `TODO` | Generalize durable form-state sync | — | [`first/aesthetic/`](first/aesthetic/) |
+| R-62 | [`graphics_flow.py`](first/aesthetic/scripts/graphics_flow.py) · [`text_to_graphics.py`](first/aesthetic/scripts/text_to_graphics.py) | 🟡 `IN-PROGRESS` | Ship this repository as an Aesthetic Food Product | [B-026](BUGS.md), [B-027](BUGS.md) | [`first/aesthetic/`](first/aesthetic/) |
+| R-52 | [`tokens_qa.py`](check/tokens-qa/scripts/tokens_qa.py) | ⚪ `TODO` | Gate agreed tokenization | — | [`check/tokens-qa/`](check/tokens-qa/) |
+| R-57 | [`vectors.py`](check/build-context-token-vectors/scripts/vectors.py) | ⚪ `TODO` | Narrow the vectors interface | [B-023](BUGS.md) | [`check/build-context-token-vectors/`](check/build-context-token-vectors/) |
+| R-55 | [`token_bench.py`](tools/token_bench.py) | ⚪ `TODO` | Make benchmark inputs reproducible repo data | — | [`tools/`](tools/) |
+| R-40 | [`skill_discovery.py`](tools/skill_discovery.py) | ⚪ `TODO` | Measure the host's enabled collection | — | [`tools/`](tools/) |
+
+## 🧪 Unscheduled
+
+Legibility and product-monitoring choices remain prototypes in
+[GOAL.md](GOAL.md). Design adapters remain in the
+[platform-support contract](first/aesthetic/references/platform-support.md).

@@ -14,6 +14,12 @@ cannot disagree about what fog is.
 from __future__ import annotations
 
 from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
+
+from skill_catalog import ALPHA_SKILLS, owner_of
+
+if TYPE_CHECKING:
+    from skill_catalog import SkillRecord
 
 # Exact paths, relative to the repository root.
 FOG_FILES = (
@@ -73,13 +79,6 @@ FOG_FILES_EXTRA = (
 
 # Skills not ready for a stable tree. They stay on `dev` and ship on the alpha
 # channel; `main` carries nothing under them, KEEP_ALWAYS included.
-ALPHA_SKILLS = (
-    "genesis",
-    "tokens-qa",
-    "knowledge",
-    "silly",
-)
-
 # Never fog, whatever else matches. The skill's own instructional payload is
 # the reason `main` exists at all.
 KEEP_ALWAYS = (
@@ -104,17 +103,21 @@ def walk(root: Path) -> list[Path]:
             and not any(part in SKIP_DIRS for part in path.relative_to(root).parts)]
 
 
-def is_alpha(relative: str) -> bool:
+def is_alpha(relative: str, records: list["SkillRecord"] | None = None) -> bool:
     """True when this path belongs to a skill that has not reached `main`."""
+    if records is not None:
+        owner = owner_of(PurePosixPath(relative), records)
+        return owner is not None and owner.channel == "alpha"
     return any(part in ALPHA_SKILLS
                for part in PurePosixPath(relative).parts)
 
 
-def is_fog(relative: str, channel: str = "main") -> bool:
+def is_fog(relative: str, channel: str = "main",
+           records: list["SkillRecord"] | None = None) -> bool:
     """True when this repo-relative path must not reach a published tree."""
     path = PurePosixPath(relative)
     text = path.as_posix()
-    if channel == "main" and is_alpha(text):
+    if channel == "main" and is_alpha(text, records):
         return True
     if text in KEEP_ALWAYS:
         return False
@@ -145,9 +148,9 @@ def reasons() -> dict[str, str]:
                                "that a published tree does not carry",
         "first/CONTEXT.md": "workflow family container; Repo-Dev routing, not skill payload",
         "check/CONTEXT.md": "workflow family container; Repo-Dev routing, not skill payload",
-        "build/CONTEXT.md": "workflow family placeholder; Repo-Dev routing, not skill payload",
-        "land/CONTEXT.md": "workflow family placeholder; Repo-Dev routing, not skill payload",
-        "fix/CONTEXT.md": "workflow family placeholder; Repo-Dev routing, not skill payload",
+        "build/CONTEXT.md": "workflow family container; Repo-Dev routing, not skill payload",
+        "land/CONTEXT.md": "workflow family container; Repo-Dev routing, not skill payload",
+        "fix/CONTEXT.md": "workflow family container; Repo-Dev routing, not skill payload",
         "kit/spanish/CONTEXT.md": "Spanish skill grouping; Repo-Dev routing, not skill payload",
         "docs": "requirements and distilled knowledge; development state",
         ".audit": "session decision log; development state",
@@ -184,4 +187,8 @@ def reasons() -> dict[str, str]:
         "genesis": "alpha channel; not published to main",
         "knowledge": "alpha channel; not published to main",
         "silly": "alpha channel; not published to main",
+        "build": "family router; alpha until it has run a real branch",
+        "land": "family router; alpha until it has cut a real release",
+        "check": "family router; alpha until it has read a real round",
+        "fix": "family router; alpha until it has restored a real break",
     }

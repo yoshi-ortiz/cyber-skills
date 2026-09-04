@@ -18,7 +18,8 @@ BODY = (INDEX + "# 📦 INSTALL\n\n"
         "# ✨ SKILL PROMPTS\n\n## 🎒 /kit\n\n## 🇪🇸 /ora\n\n"
         "## 🔬 /build-context-token-vectors\n\n## 🎨 /aesthetic\n\n"
         "# 🧪 EXPERIMENTS\n\n## 🧬 /genesis\n\n## 📚 /knowledge\n\n"
-        "## 🃏 /silly\n\n## 🧾 /tokens-qa\n")
+        "## 🃏 /silly\n\n## 🧾 /tokens-qa\n\n## 🔍 /check\n\n## 🔨 /build\n\n"
+        "## 🚢 /land\n\n## 🩹 /fix\n")
 
 MANIFEST = ("---\nname: knowledge\ndescription: Distils sources, and answers to "
             "enciclopedia.\ntranslations:\n  es: enciclopedia\n---\n")
@@ -34,6 +35,12 @@ SKILL_HOME: dict[str, tuple[str, ...]] = {
     "aesthetic": ("first",),
     "build-context-token-vectors": ("check",),
     "tokens-qa": ("check",),
+    # The four family routers sit at the root, so their name is their family
+    # and `with_phase` leaves them alone.
+    "check": (),
+    "build": (),
+    "land": (),
+    "fix": (),
 }
 
 
@@ -41,13 +48,25 @@ def skill_dir(root: Path, name: str) -> Path:
     return root.joinpath(*SKILL_HOME[name], name)
 
 
+def with_phase(text: str, name: str) -> str:
+    """Declare `phase` wherever SKILL_HOME says the family and the name differ.
+
+    Added here rather than into every fixture manifest: the gate reads the
+    family off the tree, so the tree is the one place that knows the answer.
+    """
+    family = SKILL_HOME[name][0] if SKILL_HOME[name] else ""
+    if not family or family == name:
+        return text
+    return text.replace("---\n", f"---\nphase: {family}\n", 1)
+
+
 def build(root: Path, readme: str, translation: str | None,
           manifest: str = MANIFEST) -> None:
     for name in grouped():
         path = skill_dir(root, name)
         path.mkdir(parents=True, exist_ok=True)
-        (path / "SKILL.md").write_text(
-            manifest if name == "knowledge" else f"---\nname: {name}\n---\n")
+        (path / "SKILL.md").write_text(with_phase(
+            manifest if name == "knowledge" else f"---\nname: {name}\n---\n", name))
     (root / "README.md").write_text(readme)
     if translation is not None:
         (root / "README.es.md").write_text(translation)

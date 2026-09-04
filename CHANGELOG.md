@@ -7,6 +7,37 @@ Fog. Lives on `dev`, never published to `main`.
 
 ## [Unreleased]
 
+### Added
+
+- **The rest of the rail ships.** `build`, `land`, `check`, and `fix` were four
+  reserved directories holding a `CONTEXT.md` apiece. Each is now a family
+  router on the `alpha` channel: `build` sequences `ponytail`, `tdd`,
+  `test-driven-development`, `code-review`, `verification-before-completion`,
+  and `semgrep`; `land` sequences `finishing-a-development-branch` and
+  `land-and-deploy`; `check` sequences `zoom-out`, `graphify`, and `review` and
+  writes nothing; `fix` sequences `diagnosing-bugs`, `systematic-debugging`,
+  and `poteto-mode`. Every router owns order and handoff only, and reimplements
+  none of the skills it names. R-36, R-64, R-34, R-63.
+- **Bare `fix` has one owner.** `kit` answered to `fix` for a broken install at
+  the same time the spec promised it to the `fix` family. `kit` keeps `doctor`,
+  `repair`, `troubleshoot`, and `conflict`; bare `fix` is the family's. A name
+  with two owners is the defect `check`'s Ontology section exists to catch, and
+  the package was carrying one.
+- **Anchor and ghost-argument aliases.** `alias.py` generated only whole
+  aliases, so a name pointing at one section of a skill, or at a skill plus
+  the argument it runs with, had nowhere to come from. A skill declares them
+  in its own frontmatter — `anchors:` maps a name to the section it
+  bookmarks, `arguments:` maps a name to the argument it bakes in — and
+  `link --stubs` writes them. Opt-in like every other kind. R-45.
+- **`phase` is declared and gated.** Where a skill's name does not say which
+  family it sits in — `genesis` is phase `first` — the frontmatter now has to
+  say so, and `manifest_gate.py` refuses the file that does not. Seven skills
+  declare it; the ones whose name already answers the question do not. R-38.
+- **Genesis names the four skills it drives.** `brainstorming` and `grilling`
+  at the interview, `prototype` for an open question blocking a spec row, and
+  `ask-matt` when the flow itself is the question. Routing only: whatever a
+  driven skill produces still lands in the file its step names. R-35.
+
 ### Fixed
 
 - **Review images rendered at phone width.** Every page comp shipped its
@@ -29,14 +60,63 @@ Fog. Lives on `dev`, never published to `main`.
   immediately, so a socket not yet bound read as a broken companion.
 - **Two thirds of the test suite ran in no gate.** Three tokens-qa suites and
   all of cook were invisible to `tools/check.py`.
+- **Four more test files ran in no gate, for the same reason.** The previous
+  fix added rows to a hand-written list, so the list kept producing the bug:
+  the companion's live security test (B-023) plus the Genesis, knowledge, and
+  silly suites were executed by nothing. `check.py` finds every `test_*.py`
+  now and reads each one to choose how to run it, and its own test fails if
+  any test file is covered by no gate.
 
 ### Changed
 
+- **The roadmap is one MVP release.** The six workflow families now ship in
+  three explicit sprints: `kit` + `first`, `build` + `land`, then `fix` +
+  `check`. Each sprint groups work by skill, with direct links from every
+  item to its bug, module, and core controller. Settled topology stays in
+  `SPEC.md`, completed work stays here, and detailed Design adapter
+  obligations stay with their owning contract. Architecture upgrades precede
+  an MVP that only routes established public skills; Aesthetic stays deferred.
+- **Genesis owns the ADR doctrine.** Target projects record accepted,
+  hard-to-reverse boundary decisions under `docs/adr/`; specs remain
+  authoritative, Build enforces the decision gate, and Land checks release
+  traceability only when the release implements or supersedes that decision.
 - **R-15 repaid.** No file in this repository is over its declared byte
   budget, and `tools/check.py` is 27/27 for the first time.
 
 ### Added
 
+- **One verification registry (R-17).** `tools/check.py` no longer keeps a
+  hand-written list of test files: `test_gates()` finds every `test_*.py` in
+  the repository and reads each one to decide how to run it, so a test is
+  inside a gate the moment it lands. `tools/release.py` asks that same board
+  before it publishes a channel, so a release proves what a local run proves
+  instead of accepting `publish --check` as the whole claim. Cook's round was
+  already a row on the board; there is no CI configuration in this repository
+  to drive, and the one that lands calls `check.py`.
+- **Canonical Genesis doctrine (R-61).** `SKILL.md`'s state-machine table is
+  now the source of the file topology, read by `genesis_flow.py` rather than
+  restated in it. Adding a row to the doctrine checks that file with no Python
+  edit; naming a path the doctrine dropped fails `test_genesis_flow.py`
+  instead of silently never firing. Ordering stays in the evaluator, because
+  which gap to close first is behaviour and the table carries no order.
+  `docs/adr/` is canonical topology but not a gate: the ADR contract makes a
+  record conditional on a boundary decision, so its absence is not a gap.
+- **Ubiquitous-language gate (R-16).** `tools/loanwords.py` now parses all 68
+  canonical Repo-Dev terms and their avoided semantic aliases from the root
+  glossary. Explicitly typed contract blocks get boundary-aware diagnostics
+  with file, line, alias, and replacement; history, code, translations, and the
+  separate Design-Inference language stay outside that semantic gate. R-16 no
+  longer depends on Genesis runtime work.
+- **Queryable Repo-Dev entry (R-58).** `tools/repo_context.py` returns bounded,
+  deterministic slices for active states, exact roadmap items, the latest or
+  exact bug, and catalog-backed module ownership. `CLAUDE.md` now routes cold
+  entry through literal queries while Markdown remains the authoritative store.
+- **One Skill Catalog boundary (R-54).** Immutable records now own each local
+  skill's identity, family, channel, names, origin, path, doctrine body, and
+  UTF-8 body size. Index, publication, and dev-install adapters consume those
+  records; duplicate identities fail rather than overwrite, and publication
+  matches a skill root instead of any same-named path component. The vectors
+  dashboard now reports stored UTF-8 body bytes, closing B-021.
 - **The rail.** `GOAL.md` (why), `SPEC.md` (the settled contract), and
   `UBIQUITOUS_LANGUAGE.md` (root-scoped, distinct from `aesthetic`'s own).
   Names two independent token-weight axes, cost and signal density, where

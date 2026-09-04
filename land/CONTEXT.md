@@ -1,9 +1,15 @@
 ---
-purpose: workflow family placeholder for Release · Deploy
-admits: CONTEXT.md only until R-36 ships land/SKILL.md
-refuses: skills parked here before the family router exists
+purpose: the land family router for Release and Deploy
+admits: SKILL.md, and any reference this family alone needs
+refuses: reimplementations of the public skills it routes, and this package's own publication doctrine, which lives in tools/
+max_file_bytes: 8000
 ---
 
 # land
 
-Reserved for the `land` family and burndown state machine (R-36).
+Routes the Release and Deploy stop on the rail. [SKILL.md](SKILL.md) owns the
+burndown state machine and the release handoff; `finishing-a-development-branch`
+and `land-and-deploy` arrive through the harness collection.
+
+The irreversible stop. It does not verify: a branch that arrives without
+`build`'s Pre-release evidence goes back rather than forward.
