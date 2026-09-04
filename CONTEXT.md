@@ -24,7 +24,7 @@ another.
 | [kit/](kit/) | [kit](kit/SKILL.md), [starter-pack](kit/starter-pack/), [silly](kit/silly/), [ora](kit/spanish/ora/) | Day 0 on-ramp |
 | [first/](first/) | [genesis](first/genesis/), [knowledge](first/knowledge/), [aesthetic](first/aesthetic/) | Plan |
 | [check/](check/) | [build-context-token-vectors](check/build-context-token-vectors/) | Monitor |
-| [build/](build/), [land/](land/), [fix/](fix/) | *(routers planned, R-36)* | Build · Ship · Operate |
+| [build/](build/), [land/](land/), [fix/](fix/) | *(routers planned, R-36, R-64, and R-63)* | Build · Ship · Operate |
 | [tools/](tools/) | Publication pipeline | Repo-Dev fog |
 | [assets/](assets/) | README imagery | neither |
 
@@ -87,11 +87,12 @@ answer to.
 The README's three H1 sections are fixed: `INSTALL`, `SKILL PROMPTS`,
 `EXPERIMENTS`. Translations rename them, so the gate compares by position.
 Promotion out of `EXPERIMENTS` is the same edit as publication: remove the
-skill from `ALPHA_SKILLS`, move its section, and the gate agrees again.
+skill from the catalog's `ALPHA_SKILLS`, move its section, and the gate agrees
+again.
 
 ### Groups
 
-`GROUPS` in `tools/skill_discovery.py` orders the index by rail family: `kit`,
+`GROUPS` in `tools/skill_catalog.py` orders the index by rail family: `kit`,
 `first`, and `check` today. Every skill belongs to exactly one group, and the
 table lists them in that order in every language.
 
@@ -144,6 +145,17 @@ when asked. Nothing about a second name reaches a published tree.
 **Design-Inference Context** is an agent running a skill to produce creative
 decisions. **Repo-Dev Context** is an agent changing a skill's own code,
 contracts, or tests.
+
+Repo-Dev has two modes. Pick one query surface; do not mix Design-Inference
+into either. `tools/repo_context.py` reads the authoritative stores and returns
+only the matching item, state, bug, or catalog module.
+
+| Mode | Query entry | Authoritative stores | Glossary |
+| --- | --- | --- | --- |
+| **A — burndown** | `python3 tools/repo_context.py summary`; `state`, `item`, `bug`, or `module` | `ROADMAP.md`, `BUGS.md`, `CHANGELOG.md` | `UBIQUITOUS_LANGUAGE.md` |
+| **B — audit** | Open the exact unsettled question or contract named by the item | `GOAL.md`, `SPEC.md`, `QA.md` | `UBIQUITOUS_LANGUAGE.md` |
+
+An unsettled question goes to `GOAL.md`'s prototype backlog, never to `SPEC.md`.
 
 They use vocabulary that looks alike and means different things. A root cause is
 an engineering finding; a Direction is a creative thesis. A budget is a byte

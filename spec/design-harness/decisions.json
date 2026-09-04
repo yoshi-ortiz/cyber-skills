@@ -77,13 +77,165 @@
       "sentiment": "like",
       "source": "agent",
       "stars": 0,
+      "state": "rejected",
+      "supersededBy": "landing.hero.flow.character.construction-a",
+      "title": "Landing hero (sims-style rooms)",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "Chibi-sticker construction language (A1/A2/A3): arc mouth, asymmetric pose, collar on the shoulders, head at 40% (A1) vs 50% (A2, max-chibi) vs A1 plus attitude marks (A3, expressive). Bottom row of every card shows the figure at actual in-room size.",
+      "element": "landing.hero.flow.character.construction-a",
+      "evidence": "Direct answer to the 2026-09-02 correction on ec5a7f18: prior cartoon characters were rejected as 'horrible'. Settles which chibi-sticker proportions read best at room scale before spending a shot per boss.",
+      "implemented": "design/cast-style-a-deeper.html",
+      "preview": {
+        "path": "design/cast-style-a-deeper.html",
+        "sha256": "57b26349071b0e05f6c9de2b7d9ac086cb6bec4b8390b1fc29af45b5739be07a"
+      },
+      "scored": false,
+      "sentiment": null,
+      "source": "agent",
+      "stars": 0,
       "state": "proposed",
       "supersededBy": null,
-      "title": "Landing hero (sims-style rooms)",
+      "title": "Construction language: chibi sticker (A1/A2/A3)",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "One character (Acid Rockstar), three procedural CSS construction languages: A Chibi sticker (40% head, heavy contour, flat fills), B Flat silhouette (no outline, color-contrast only), C Bold line-art (contour is the drawing, paper-white fills). Bottom row of every card is actual in-room size.",
+      "element": "landing.hero.flow.character.style-round",
+      "evidence": "Direct answer to shot e70fbfd9's correction: 'characters must be procedurally generated, not fetched vector art... 2 or 3 styles, focus on quality.' A was carried forward and deepened into construction-a.",
+      "implemented": "design/cast-style-round.html",
+      "preview": {
+        "path": "design/cast-style-round.html",
+        "sha256": "05f46d2b53d096a5af22e55f3c9edcbbafe7546a0f028b71d2f5ed4e6fd48d9c"
+      },
+      "scored": false,
+      "sentiment": null,
+      "source": "agent",
+      "stars": 0,
+      "state": "proposed",
+      "supersededBy": null,
+      "title": "Three cartoon construction languages (A/B/C)",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "Acid Rockstar (/first room boss), three character readings on the settled A1 construction language: Stage punk (vertical, mohawk, rectangular shades), Glam diva (horizontal, oversized hair and lenses), Art-director dandy (diagonal, swept quiff and scarf, leans on the 'creative director' half of the brief).",
+      "element": "landing.hero.flow.character.first.acid-rockstar",
+      "evidence": "Direct answer to shot 5f943b34's correction: 'the inference still needs character design options before sticking to a single vague chosen option, this does not represent an acid rockstar.' Three distinct silhouettes instead of one generic chibi in glasses.",
+      "implemented": "design/cast-acid-rockstar.html",
+      "preview": {
+        "path": "design/cast-acid-rockstar.html",
+        "sha256": "f9378a99ccfc0732ff4a46eba3c48d7d65cce6019a4de12bc3e102de7ed70966"
+      },
+      "scored": true,
+      "sentiment": "like",
+      "source": "user",
+      "stars": 0,
+      "state": "superseded",
+      "supersededBy": "landing.hero.flow.character.first.final",
+      "title": "/first room boss: Acid Rockstar (3 readings)",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "Acid Rockstar, final /first design: art-director dandy's diagonal silhouette (swept quiff, scarf, raised marker) carrying glam diva's louder scale and colour clash (bigger tinted lenses, violet torso, orange collar/scarf).",
+      "element": "landing.hero.flow.character.first.final",
+      "evidence": "Direct answer to the user's verdict on the three readings: 'glam diva and art director dandy is the vibe' (stage punk rejected). Combines both kept readings into the one shipped character.",
+      "implemented": "design/cast-first-final.html",
+      "preview": {
+        "path": "design/cast-first-final.html",
+        "sha256": "e6f567cdf7abfe7cc052351c4c95c501dbb40680bc7b9eebcd245e384d5d0fc9"
+      },
+      "scored": true,
+      "sentiment": "dislike",
+      "source": "user",
+      "stars": 0,
+      "state": "rejected",
+      "supersededBy": "landing.hero.flow.character.craft-round",
+      "title": "/first room boss: final (glam art-director)",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "Tech-Bro CEO (/build room boss), two readings on the same settled A1 grammar: (1) Standing-desk swagger -- side-part hair, open branded vest, smartwatch, confident older-founder register; (2) Founder hoodie -- hood up, backwards cap, wireless clicker, younger scrappier register.",
+      "element": "landing.hero.flow.character.build.ceo",
+      "evidence": "First /build reading pair, carrying the flamboyant-but-confident register settled by the /first verdict. Answers rooms-inventory.md's Tech-Bro CEO brief: branded vest, smartwatch, reusable bottle, absolute confidence. Two readings so this is a real choice, not one vague default.",
+      "implemented": "design/cast-build-ceo.html",
+      "preview": {
+        "path": "design/cast-build-ceo.html",
+        "sha256": "126b38df0a6900716fad872c865b4a5ba401c51dc81ae10ecf7d5cf2efa5cd2d"
+      },
+      "scored": true,
+      "sentiment": "dislike",
+      "source": "user",
+      "stars": 0,
+      "state": "rejected",
+      "supersededBy": "landing.hero.flow.character.craft-round",
+      "title": "/build room boss: two readings (swagger / hoodie)",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "Construction-language craft test, one skeleton and one prop (glasses) in three fill/contour/shadow treatments: A Flat & bold (the shipped control -- solid single-tone fills, uniform 6px outline, no shading); B Shaded & soft (gradient highlight per shape, thinner 3px outline, cast drop-shadow); C Poster cutout (no outline, two flat high-contrast colours, hard silhouette edges).",
+      "element": "landing.hero.flow.character.craft-round",
+      "evidence": "Direct answer to the user's correction: 'the cartoon illustration is too lazy poor, looks drawn like a toddler in MS Paint.' Diagnosis: flat single-tone fills with a uniform heavy outline and no shading is exactly that look. Per interpret-art.md, construction language (flat vs shaded fills) is a variable to settle before character/prop detail, and interior props die at delivery size anyway, so every character-specific prop is stripped back to one skeleton and one signature item to isolate craft from inventory.",
+      "implemented": "design/cast-craft-round.html",
+      "preview": {
+        "path": "design/cast-craft-round.html",
+        "sha256": "211cb7d0c9c7caf448d41f1ab73f513971bf407fdef37d1653f438c300a6b8de"
+      },
+      "scored": true,
+      "sentiment": "dislike",
+      "source": "user",
+      "stars": 0,
+      "state": "rejected",
+      "supersededBy": "landing.hero.flow.character.cast-six",
+      "title": "Craft test: flat vs shaded vs poster cutout",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "All six room bosses in one language, rebuilt against what the reference images do rather than what the manifest prose says: dot eyes, legs standing on the floor, one bold silhouette shape each (hair mass, open vest, headset, held ball, shopping bag, magnifier), flat saturated fills under a heavy black contour.",
+      "element": "landing.hero.flow.character.cast-six",
+      "evidence": "Direct answer to 'we were doing a cartoon characters round and I asked the characters to be improved'. Drawn after actually opening the pursued references instead of reading their filenames: they carry dot eyes, visible legs, one bold shape per figure, and 19-20% ink coverage. Every fill is measured from moodboards/; palette-audit reports 94% corpus fit against 31% for the rejected craft round.",
+      "implemented": "design/cast-six-bosses.html",
+      "preview": {
+        "path": "design/cast-six-bosses.html",
+        "sha256": "1c1b7e9cd4a232fcf4a7676973912c6f60d4fe7ff40b2e37ee8f650888342256"
+      },
+      "scored": true,
+      "sentiment": "dislike",
+      "source": "user",
+      "stars": 0,
+      "state": "rejected",
+      "supersededBy": "landing.hero.flow.character.cast-varied",
+      "title": "The cast: six room bosses, corpus register",
+      "tokens": null
+    },
+    {
+      "bookmarked": false,
+      "description": "Six room bosses given six different builds. Rounded blob bodies, legs and shoes rather than boxes; headwear removed from everyone except the Commander, whose headset is his signature; hair drawn as a shape following the skull; per-figure height, width and head size so silhouettes separate before colour does; the CEO's vest in formal navy.",
+      "element": "landing.hero.flow.character.cast-varied",
+      "evidence": "Answers four corrections at once: bodies were square, everyone wore a hat, the CEO's vest was the wrong colour, and the cast looked identical. Body widths now run 52 to 79px and heads 52 to 63px, measured in the DOM rather than asserted. Navy is user-directed and absent from the corpus, which the palette audit reports rather than hides.",
+      "implemented": "design/cast-varied.html",
+      "preview": {
+        "path": "design/cast-varied.html",
+        "sha256": "4b9ff04ca8abe504e05b948332a7c4f0d7564970fbf8ed085de5b33bd6894ce8"
+      },
+      "scored": false,
+      "sentiment": null,
+      "source": "agent",
+      "stars": 0,
+      "state": "proposed",
+      "supersededBy": null,
+      "title": "The cast: six builds, not one build recoloured",
       "tokens": null
     }
   ],
   "state": "proposed",
-  "supersededCount": 0,
+  "supersededCount": 5,
   "version": 1
 }

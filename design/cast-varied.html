@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber Skills — the cast, six different builds</title>
+<style>
+  /* Colour measured from moodboards/, except --navy, which the user asked for
+     directly and the corpus does not contain. Stated rather than hidden.
+     Construction from spec/design-harness/character-observations.json. */
+  :root{
+    --ink:#000000; --white:#ffffff;
+    --skin:#f5c0bc; --tan:#d4875b; --cream:#f8c167;
+    --red:#fd4337; --orange:#ff6918; --yellow:#ffb800;
+    --green:#009a44; --lime:#07d370; --blue:#128fd1; --cyan:#2acad6;
+    --violet:#625bc3; --pink:#dd5caf; --pale:#c1e5e3; --slate:#8d88a6;
+    --navy:#22317a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--white);color:var(--ink);
+       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  .sheet{max-width:1120px;margin:0 auto;padding:34px 40px 52px}
+  .kicker{font:800 .7rem/1.3 ui-monospace,Menlo,monospace;letter-spacing:.18em;
+          text-transform:uppercase;color:var(--slate)}
+  h1{margin:8px 0 6px;font-size:2rem;letter-spacing:-.03em}
+  .lede{margin:0 0 20px;max-width:76ch;color:#3d3d3d;line-height:1.5;font-size:.88rem}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .card{border:3px solid var(--ink);border-radius:14px;overflow:hidden;background:#fff}
+  .card h2{margin:0;padding:11px 14px 2px;font:800 .82rem/1.2 ui-monospace,Menlo,monospace}
+  .card p{margin:0;padding:0 14px 10px;font-size:.73rem;line-height:1.45;color:#3d3d3d;
+          min-height:4.2em}
+  .plate{display:grid;place-items:end center;padding:12px 0 4px;
+         border-top:3px solid var(--ink);min-height:210px}
+  .room{display:grid;place-items:center;gap:6px;padding:11px 0 13px;
+        border-top:3px solid var(--ink)}
+  .room span{font:800 .57rem/1 ui-monospace,Menlo,monospace;letter-spacing:.12em;
+             text-transform:uppercase}
+  .stage{position:relative;width:150px;height:196px}
+  .stage i{position:absolute;display:block}
+  .mini{width:56px;height:73px;overflow:hidden}
+  .mini .stage{transform:scale(.373);transform-origin:0 0}
+
+  /* Arms pivot at the shoulder and every prop is a child of the arm, so a
+     held object cannot drift out of the hand at any angle. */
+  .arm{border:4px solid var(--ink);border-radius:9px;transform-origin:7px 8px}
+  .hand{left:-6px;top:31px;width:26px;height:26px}
+
+  /* Nothing here is a rectangle. Corpus bodies are blobs and corpus legs are
+     rounded, which is most of what separates the reference from a box drawing. */
+  .body{border:4px solid var(--ink)}
+  .legL,.legR{border:4px solid var(--ink);border-radius:7px 7px 4px 4px}
+  .shoeL,.shoeR{border:4px solid var(--ink);border-radius:11px 11px 9px 9px;height:15px}
+  .head{background:var(--skin);border:4px solid var(--ink);border-radius:50%}
+  .ear{background:var(--skin);border:4px solid var(--ink);border-radius:50%;
+       width:15px;height:15px}
+  .eyeL,.eyeR{background:var(--white);border:3px solid var(--ink);border-radius:50%}
+  .pupL,.pupR{background:var(--ink);border-radius:50%;width:7px;height:8px}
+  .mouth{background:var(--white);border:3px solid var(--ink)}
+  /* Hair follows the skull on an irregular edge. It is not a block sitting on
+     top of the head, which is what read as "everyone is wearing a hat". */
+  .hair{border:4px solid var(--ink)}
+
+  /* ============ /first Acid Rockstar. Tall and narrow, and the only figure
+     whose hair IS the silhouette. ============ */
+  .b1 .body{left:48px;top:84px;width:56px;height:60px;background:var(--violet);
+            border-radius:46% 46% 34% 34%}
+  .b1 .arm{width:14px;height:46px;top:88px;background:var(--violet)}
+  .b1 .armL{left:38px;transform:rotate(21deg)}
+  .b1 .armR{left:100px;transform:rotate(-34deg)}
+  .b1 .legL{left:58px;top:138px;width:15px;height:30px;background:var(--blue)}
+  .b1 .legR{left:79px;top:138px;width:15px;height:30px;background:var(--blue)}
+  .b1 .shoeL{left:51px;top:162px;width:26px;background:var(--yellow)}
+  .b1 .shoeR{left:76px;top:162px;width:26px;background:var(--yellow)}
+  .b1 .head{left:49px;top:28px;width:56px;height:56px}
+  .b1 .ear{left:43px;top:52px}
+  .b1 .hair{left:26px;top:4px;width:102px;height:52px;background:var(--orange);
+            border-radius:62% 66% 32% 38% / 74% 78% 26% 22%;transform:rotate(-3deg)}
+  .b1 .lockL{left:24px;top:38px;width:26px;height:44px;background:var(--orange);
+             border:4px solid var(--ink);border-radius:64% 26% 48% 56%;
+             transform:rotate(-16deg)}
+  .b1 .lockR{left:104px;top:38px;width:26px;height:44px;background:var(--orange);
+             border:4px solid var(--ink);border-radius:26% 64% 56% 48%;
+             transform:rotate(16deg)}
+  .b1 .eyeL{left:58px;top:48px;width:17px;height:18px;background:var(--pale)}
+  .b1 .eyeR{left:79px;top:48px;width:17px;height:18px;background:var(--pale)}
+  .b1 .pupL{left:64px;top:54px} .b1 .pupR{left:85px;top:54px}
+  .b1 .bridge{left:74px;top:54px;width:8px;height:5px;background:var(--ink);
+              border-radius:3px}
+  .b1 .mouth{left:68px;top:68px;width:19px;height:11px;border-radius:4px 4px 11px 11px}
+  .b1 .scarf{left:50px;top:80px;width:52px;height:12px;background:var(--yellow);
+             border:4px solid var(--ink);border-radius:7px}
+  .b1 .mic{left:-4px;top:26px;width:14px;height:26px;background:var(--red);
+           border:4px solid var(--ink);border-radius:7px}
+
+  /* ============ /build Tech-Bro CEO. No headwear at all. Squarer shoulders
+     than the rest because he is the formal one, navy vest as asked. ============ */
+  .b2 .body{left:42px;top:82px;width:67px;height:62px;background:var(--white);
+            border-radius:38% 38% 24% 24%}
+  .b2 .vestL{left:40px;top:80px;width:26px;height:66px;background:var(--navy);
+             border:4px solid var(--ink);border-radius:36% 8% 20% 22%}
+  .b2 .vestR{left:85px;top:80px;width:26px;height:66px;background:var(--navy);
+             border:4px solid var(--ink);border-radius:8% 36% 22% 20%}
+  .b2 .arm{width:15px;height:47px;top:86px;background:var(--skin)}
+  .b2 .armL{left:33px;transform:rotate(16deg)}
+  .b2 .armR{left:103px;transform:rotate(-126deg)}
+  .b2 .legL{left:57px;top:140px;width:16px;height:28px;background:var(--slate)}
+  .b2 .legR{left:79px;top:140px;width:16px;height:28px;background:var(--slate)}
+  .b2 .shoeL{left:50px;top:162px;width:27px;background:var(--white)}
+  .b2 .shoeR{left:76px;top:162px;width:27px;background:var(--white)}
+  .b2 .head{left:45px;top:26px;width:60px;height:58px}
+  .b2 .ear{left:39px;top:50px}
+  /* Short side-parted hair that hugs the skull, no block on top. */
+  .b2 .hair{left:43px;top:22px;width:64px;height:26px;background:var(--ink);
+            border-radius:60% 54% 8% 26% / 88% 82% 14% 20%}
+  .b2 .eyeL{left:56px;top:46px;width:16px;height:18px}
+  .b2 .eyeR{left:78px;top:46px;width:16px;height:18px}
+  .b2 .pupL{left:62px;top:52px} .b2 .pupR{left:84px;top:52px}
+  .b2 .mouth{left:66px;top:66px;width:19px;height:11px;border-radius:4px 4px 11px 11px}
+  .b2 .watch{left:-2px;top:24px;width:19px;height:14px;background:var(--yellow);
+             border:4px solid var(--ink);border-radius:4px}
+
+  /* ============ /land Mission Commander. Short and stocky, the widest body
+     of the six. Headset is real headwear, and it is his signature. ============ */
+  .b3 .body{left:36px;top:88px;width:79px;height:56px;background:var(--cream);
+            border-radius:44% 44% 30% 30%}
+  .b3 .arm{width:15px;height:42px;top:92px;background:var(--cream)}
+  .b3 .armL{left:27px;transform:rotate(28deg)}
+  .b3 .armR{left:109px;transform:rotate(-22deg)}
+  .b3 .legL{left:56px;top:140px;width:17px;height:26px;background:var(--blue)}
+  .b3 .legR{left:79px;top:140px;width:17px;height:26px;background:var(--blue)}
+  .b3 .shoeL{left:49px;top:160px;width:28px;background:var(--white)}
+  .b3 .shoeR{left:75px;top:160px;width:28px;background:var(--white)}
+  .b3 .head{left:44px;top:32px;width:63px;height:58px}
+  .b3 .hair{left:46px;top:28px;width:59px;height:22px;background:var(--tan);
+            border-radius:56% 56% 12% 12% / 84% 84% 16% 16%}
+  .b3 .band{left:36px;top:20px;width:79px;height:40px;border:6px solid var(--ink);
+            border-bottom:none;border-radius:40px 40px 0 0;background:none}
+  .b3 .cupL{left:31px;top:48px;width:19px;height:25px;background:var(--red);
+            border:4px solid var(--ink);border-radius:7px}
+  .b3 .cupR{left:101px;top:48px;width:19px;height:25px;background:var(--red);
+            border:4px solid var(--ink);border-radius:7px}
+  .b3 .boom{left:42px;top:70px;width:24px;height:7px;background:var(--ink);
+            border-radius:4px;transform:rotate(26deg)}
+  .b3 .eyeL{left:56px;top:52px;width:16px;height:17px}
+  .b3 .eyeR{left:78px;top:52px;width:16px;height:17px}
+  .b3 .pupL{left:62px;top:58px} .b3 .pupR{left:84px;top:58px}
+  .b3 .mouth{left:66px;top:71px;width:18px;height:10px;border-radius:4px 4px 10px 10px}
+  .b3 .collar{left:44px;top:84px;width:63px;height:12px;background:var(--red);
+              border:4px solid var(--ink);border-radius:7px}
+  .b3 .mug{left:-4px;top:24px;width:21px;height:21px;background:var(--white);
+           border:4px solid var(--ink);border-radius:4px 4px 8px 8px}
+
+  /* ============ /check Scrum Oracle. Narrowest of the six, a small round head
+     and a bob that follows the skull. ============ */
+  .b4 .body{left:50px;top:86px;width:52px;height:58px;background:var(--blue);
+            border-radius:48% 48% 36% 36%}
+  .b4 .arm{width:13px;height:44px;top:90px;background:var(--blue)}
+  .b4 .armL{left:41px;transform:rotate(24deg)}
+  .b4 .armR{left:100px;transform:rotate(-148deg)}
+  .b4 .legL{left:59px;top:138px;width:14px;height:30px;background:var(--violet)}
+  .b4 .legR{left:79px;top:138px;width:14px;height:30px;background:var(--violet)}
+  .b4 .shoeL{left:53px;top:162px;width:24px;background:var(--yellow)}
+  .b4 .shoeR{left:76px;top:162px;width:24px;background:var(--yellow)}
+  .b4 .head{left:52px;top:34px;width:52px;height:52px}
+  .b4 .ear{left:46px;top:54px}
+  .b4 .hair{left:48px;top:28px;width:60px;height:36px;background:var(--ink);
+            border-radius:54% 54% 40% 40% / 74% 74% 26% 26%}
+  .b4 .eyeL{left:60px;top:52px;width:15px;height:16px}
+  .b4 .eyeR{left:80px;top:52px;width:15px;height:16px}
+  .b4 .pupL{left:65px;top:57px} .b4 .pupR{left:85px;top:57px}
+  .b4 .mouth{left:69px;top:69px;width:17px;height:10px;border-radius:4px 4px 10px 10px}
+  .b4 .ball{left:-12px;top:20px;width:39px;height:39px;background:var(--cyan);
+            border:4px solid var(--ink);border-radius:50%}
+  .b4 .glint{left:-4px;top:27px;width:12px;height:9px;background:var(--white);
+             border-radius:50%;transform:rotate(148deg)}
+
+  /* ============ /kit Token Influencer. Wide styled hair, no hat, and the
+     widest stance. ============ */
+  .b5 .body{left:44px;top:86px;width:64px;height:58px;background:var(--yellow);
+            border-radius:44% 44% 32% 32%}
+  .b5 .arm{width:15px;height:44px;top:90px;background:var(--yellow)}
+  .b5 .armL{left:35px;transform:rotate(13deg)}
+  .b5 .armR{left:104px;transform:rotate(-24deg)}
+  .b5 .legL{left:56px;top:138px;width:16px;height:30px;background:var(--red)}
+  .b5 .legR{left:80px;top:138px;width:16px;height:30px;background:var(--red)}
+  .b5 .shoeL{left:49px;top:162px;width:27px;background:var(--white)}
+  .b5 .shoeR{left:77px;top:162px;width:27px;background:var(--white)}
+  .b5 .head{left:47px;top:30px;width:58px;height:56px}
+  .b5 .ear{left:41px;top:54px}
+  .b5 .hair{left:32px;top:10px;width:88px;height:46px;background:var(--pink);
+            border-radius:56% 56% 44% 44% / 72% 72% 28% 28%}
+  .b5 .eyeL{left:57px;top:50px;width:16px;height:17px}
+  .b5 .eyeR{left:79px;top:50px;width:16px;height:17px}
+  .b5 .pupL{left:63px;top:56px} .b5 .pupR{left:85px;top:56px}
+  .b5 .mouth{left:67px;top:69px;width:18px;height:11px;border-radius:4px 4px 11px 11px}
+  .b5 .bag{left:-11px;top:32px;width:36px;height:40px;background:var(--red);
+           border:4px solid var(--ink);border-radius:4px 4px 8px 8px}
+  .b5 .handle{left:-2px;top:20px;width:19px;height:19px;border:4px solid var(--ink);
+              border-bottom:none;border-radius:11px 11px 0 0;background:none}
+
+  /* ============ /fix Bug Doctor. Tallest and thinnest, long coat, no hat. */
+  .b6 .body{left:47px;top:82px;width:58px;height:66px;background:var(--white);
+            border-radius:42% 42% 26% 26%}
+  .b6 .arm{width:14px;height:48px;top:86px;background:var(--white)}
+  .b6 .armL{left:38px;transform:rotate(17deg)}
+  .b6 .armR{left:98px;transform:rotate(-24deg)}
+  .b6 .legL{left:58px;top:142px;width:15px;height:26px;background:var(--cyan)}
+  .b6 .legR{left:79px;top:142px;width:15px;height:26px;background:var(--cyan)}
+  .b6 .shoeL{left:51px;top:162px;width:26px;background:var(--ink)}
+  .b6 .shoeR{left:76px;top:162px;width:26px;background:var(--ink)}
+  .b6 .head{left:48px;top:24px;width:56px;height:56px}
+  .b6 .ear{left:42px;top:48px}
+  .b6 .hair{left:46px;top:20px;width:60px;height:24px;background:var(--ink);
+            border-radius:54% 58% 10% 14% / 86% 86% 16% 14%}
+  .b6 .eyeL{left:57px;top:44px;width:16px;height:17px}
+  .b6 .eyeR{left:79px;top:44px;width:16px;height:17px}
+  .b6 .pupL{left:63px;top:50px} .b6 .pupR{left:85px;top:50px}
+  .b6 .mouth{left:67px;top:63px;width:18px;height:10px;border-radius:4px 4px 10px 10px}
+  .b6 .collar{left:50px;top:78px;width:52px;height:12px;background:var(--lime);
+              border:4px solid var(--ink);border-radius:7px}
+  .b6 .lens{left:-13px;top:26px;width:36px;height:36px;background:var(--pale);
+            border:5px solid var(--ink);border-radius:50%}
+  .b6 .bug{left:0;top:34px;width:14px;height:12px;background:var(--green);
+           border:3px solid var(--ink);border-radius:50% 50% 44% 44%;
+           transform:rotate(24deg)}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <p class="kicker">Round · six builds, not one build in six colours</p>
+  <h1>The cast, told apart by silhouette</h1>
+  <p class="lede">Four corrections applied. Bodies are rounded blobs rather than boxes, and
+    so are the legs and shoes. The hat is gone from everyone except the Commander, whose
+    headset is his signature, and the rest carry hair that follows the skull. Each figure has
+    its own height, width and head size, so the silhouettes separate before the colour does.
+    The CEO's vest is formal navy, which the user asked for and the corpus does not contain.</p>
+
+  <div class="grid">
+
+    <div class="card">
+      <h2>/first &middot; Acid Rockstar</h2>
+      <p>Tall and narrow. The only one whose hair carries the silhouette, spilling wider than
+        the shoulders. Tinted lenses, yellow scarf, mic in the raised hand.</p>
+      <div class="plate"><div class="stage b1">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i><i class="body"></i><i class="scarf"></i>
+        <i class="arm armR"><i class="hand mic"></i></i>
+        <i class="lockL"></i><i class="lockR"></i><i class="ear"></i><i class="head"></i>
+        <i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="bridge"></i><i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b1">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i><i class="body"></i><i class="scarf"></i>
+        <i class="arm armR"><i class="hand mic"></i></i>
+        <i class="lockL"></i><i class="lockR"></i><i class="ear"></i><i class="head"></i>
+        <i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="bridge"></i><i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/build &middot; Tech-Bro CEO</h2>
+      <p>No headwear, short side-parted hair. Squarer shoulders than the rest because he is
+        the formal one, and the vest is navy over a white shirt.</p>
+      <div class="plate"><div class="stage b2">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i><i class="body"></i>
+        <i class="vestL"></i><i class="vestR"></i>
+        <i class="arm armR"><i class="hand watch"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b2">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i><i class="body"></i>
+        <i class="vestL"></i><i class="vestR"></i>
+        <i class="arm armR"><i class="hand watch"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/land &middot; Mission Commander</h2>
+      <p>Short and stocky, the widest body of the six. The headset is the one piece of real
+        headwear in the cast, and it is what names him.</p>
+      <div class="plate"><div class="stage b3">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armR"></i><i class="body"></i><i class="collar"></i>
+        <i class="arm armL"><i class="hand mug"></i></i>
+        <i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+        <i class="boom"></i><i class="band"></i><i class="cupL"></i><i class="cupR"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b3">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armR"></i><i class="body"></i><i class="collar"></i>
+        <i class="arm armL"><i class="hand mug"></i></i>
+        <i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+        <i class="boom"></i><i class="band"></i><i class="cupL"></i><i class="cupR"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/check &middot; Scrum Oracle</h2>
+      <p>The narrowest build, small round head under a bob. The ball hangs off the raised arm
+        so it stays in the hand at any angle.</p>
+      <div class="plate"><div class="stage b4">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i><i class="body"></i>
+        <i class="arm armR"><i class="hand ball"></i><i class="hand glint"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b4">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i><i class="body"></i>
+        <i class="arm armR"><i class="hand ball"></i><i class="hand glint"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/kit &middot; Token Influencer</h2>
+      <p>Widest stance, big styled pink hair and no hat. The hero bag hangs from the near hand
+        so it reads inside the silhouette.</p>
+      <div class="plate"><div class="stage b5">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armR"></i><i class="body"></i>
+        <i class="arm armL"><i class="hand handle"></i><i class="hand bag"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b5">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armR"></i><i class="body"></i>
+        <i class="arm armL"><i class="hand handle"></i><i class="hand bag"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/fix &middot; Bug Doctor</h2>
+      <p>Tallest and thinnest, long white coat over a lime collar. Magnifier raised with the
+        bug caught inside the lens.</p>
+      <div class="plate"><div class="stage b6">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i><i class="body"></i><i class="collar"></i>
+        <i class="arm armR"><i class="hand lens"></i><i class="hand bug"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b6">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i><i class="body"></i><i class="collar"></i>
+        <i class="arm armR"><i class="hand lens"></i><i class="hand bug"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="hair"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

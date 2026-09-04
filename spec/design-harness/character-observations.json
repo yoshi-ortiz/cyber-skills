@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "note": "Character construction read off the corpus itself. Every claim cites the reference and the crop box it was read from, so it can be re-looked-at rather than taken on trust. Regenerate any crop with: text_to_graphics.py crop --source <source> --box <box> --scale <scale> --out <path>",
+  "observations": [
+    {
+      "id": "eyes",
+      "source": "cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "box": [
+        96,
+        392,
+        120,
+        110
+      ],
+      "scale": 6,
+      "read": "Eyes are large white ovals carrying the same heavy black contour as the body, roughly a fifth of head width each. Small solid black dots appear only on figures under about 30px. A dot eye on a large figure is what reads as unfinished.",
+      "contradicts": "cast-six drew solid black dots at every size",
+      "rule": "Eyes are large white ovals with the same heavy dark outline as the body, about a fifth of head width each. Never small solid dots on a large figure."
+    },
+    {
+      "id": "hair",
+      "source": "cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "box": [
+        96,
+        392,
+        120,
+        110
+      ],
+      "scale": 6,
+      "read": "Hair is two stacked colour zones, an outer cap and an inner fringe, and the fringe meets the face on a shaped edge rather than a straight line. Never one flat blob.",
+      "contradicts": "cast-six drew one flat hair shape per character",
+      "rule": "Hair is two stacked colour zones, an outer mass and an inner fringe, meeting the face on a shaped edge. Never one flat blob, and never a hard block sitting on the head like a hat."
+    },
+    {
+      "id": "limb-attachment",
+      "source": "cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "box": [
+        96,
+        392,
+        120,
+        110
+      ],
+      "scale": 6,
+      "read": "Limbs overlap the body and are drawn over it with their own closed contour. They never butt against the body edge, which is what leaves a visible seam and reads as misalignment.",
+      "contradicts": "cast-six butted arms against the torso edge",
+      "rule": "Limbs overlap the body with their own closed outline. They never butt against the body edge."
+    },
+    {
+      "id": "ears",
+      "source": "cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "box": [
+        96,
+        392,
+        120,
+        110
+      ],
+      "scale": 6,
+      "read": "A small circle in the face colour sits proud of the head silhouette at ear height. It costs one shape and it is most of what stops a head reading as an egg.",
+      "rule": "A small circle in the face colour sits proud of the head silhouette at ear height."
+    },
+    {
+      "id": "mouth",
+      "source": "cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "box": [
+        258,
+        150,
+        126,
+        120
+      ],
+      "scale": 5,
+      "read": "Mouths are open shapes filled white inside the black contour, not a small solid arc. The white is what carries the expression at small size.",
+      "rule": "Mouths are open shapes filled white inside the outline, not a small solid arc."
+    },
+    {
+      "id": "pose",
+      "source": "isometric cartoon/Pasted 2026-08-28 at 5.52.41 p.m..png",
+      "box": [
+        0,
+        250,
+        230,
+        262
+      ],
+      "scale": 3,
+      "read": "Almost no figure stands square. Arms sit at different angles from each other, heads tilt, figures lean on and hang off scenery. Mirrored limbs read as a mannequin.",
+      "rule": "No figure stands square. Arms sit at different angles from each other, heads tilt, figures lean on and hang off the scenery."
+    },
+    {
+      "id": "colour-zones",
+      "source": "isometric cartoon/Pasted 2026-08-28 at 5.52.41 p.m..png",
+      "box": [
+        0,
+        250,
+        230,
+        262
+      ],
+      "scale": 3,
+      "read": "A figure carries three or four flat colour zones: headwear, top, legs, and footwear each differ. One body colour plus black legs is thinner than anything in the corpus.",
+      "rule": "Each figure carries three or four flat colour zones: hair, top, legs and footwear all differ."
+    },
+    {
+      "id": "contour",
+      "source": "cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "box": [
+        96,
+        392,
+        120,
+        110
+      ],
+      "scale": 6,
+      "read": "One contour weight for every part, with round caps and joins, at roughly one fortieth of figure height. Measured ink coverage across the pursued references is 4 to 20 percent.",
+      "rule": "One outline weight on every part, round caps and joins, about a fortieth of figure height."
+    },
+    {
+      "id": "layout-only-not-character",
+      "stance": "neutral",
+      "source": "llm-shots/clear layout, good cartoon.png",
+      "box": [
+        20,
+        30,
+        110,
+        90
+      ],
+      "scale": 6,
+      "read": "The user explicitly endorses both the layout and the cute cartoon register in this shot. At 512x288, its interior figures are under 20px, so it cannot supply reliable construction details by itself. Use it to preserve the overall cartoon result. Read faces, body shapes, poses and outline craft from the higher-resolution cartoon reference folder."
+    },
+    {
+      "id": "avoid-realistic-proportion",
+      "stance": "avoid",
+      "source": "llm-shots/best ugly shot, good layout.png",
+      "box": [
+        195,
+        150,
+        90,
+        110
+      ],
+      "scale": 5,
+      "read": "Explicit counterevidence, already tagged stance=avoid with the user's own note 'ugly cartoons'. This register is realistic human proportion (roughly 1:5 head-to-body, not the 1:2 chibi ratio used here), a uniform thin outline with no heavy contour, and no facial features beyond hair and a skin-coloured oval -- no eyes, no mouth. It is corporate flat-illustration people (Blush/unDraw register), not the chibi-mascot cartoon this cast is built in. Cited here as a boundary: the direction this project is NOT drawing in, confirming rather than changing the construction already in use.",
+      "rule": "Never realistic human proportion and never a faceless figure. Head is about half of total height, and every face carries eyes and a mouth."
+    }
+  ]
+}

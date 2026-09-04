@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber Skills — Acid Rockstar, settled</title>
+<style>
+  :root {
+    --paper: #faf5ee; --ink: #171a1f; --skin: #ffd9b8;
+    --lens: #ff77b8; --violet: #7b3ff2; --orange: #ff7a1a; --yellow: #ffd51f;
+    --cyan: #13c8db; --muted: #5d6670;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .sheet { max-width: 720px; margin: 0 auto; padding: 40px 44px 56px; }
+  .kicker { font: 800 .72rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+            letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 10px 0 6px; font-size: 2.1rem; letter-spacing: -.03em; }
+  .lede { margin: 0 0 32px; max-width: 60ch; color: var(--muted); line-height: 1.5; }
+  .row { display: grid; grid-template-columns: minmax(260px, 340px); }
+  .col { border: 3px solid var(--ink); border-radius: 18px; overflow: hidden;
+         background: #fff; box-shadow: 5px 5px 0 var(--ink); }
+  .col h2 { margin: 0; padding: 14px 16px 4px;
+            font: 800 1rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .col p { margin: 0; padding: 0 16px 14px; font-size: .82rem; line-height: 1.45;
+           color: var(--muted); }
+  .stage { position: relative; width: 180px; height: 230px; margin: 0 auto; }
+  .stage > i { position: absolute; display: block; }
+  .plate { display: grid; place-items: center; padding: 16px 0 10px;
+           border-top: 3px solid var(--ink); background: var(--paper); }
+  .at-size { display: grid; place-items: center; gap: 8px; padding: 16px 0 20px;
+             border-top: 3px solid var(--ink); background: var(--cyan); }
+  .at-size span { font: 800 .62rem/1 ui-monospace, Menlo, monospace;
+                  letter-spacing: .14em; text-transform: uppercase; }
+  .mini { width: 54px; height: 69px; }
+  .mini .stage { transform: scale(.3); transform-origin: 0 0; margin: 0; }
+
+  /* ============ A1, the settled construction grammar (unchanged) ============ */
+  .head  { left: 42px; top: 30px; width: 96px; height: 96px; background: var(--skin);
+           border: 5px solid var(--ink); border-radius: 50%; }
+  .torso { left: 44px; top: 124px; width: 92px; height: 92px;
+           border: 5px solid var(--ink); border-radius: 46% 46% 24% 24%; }
+  .armL  { left: 16px; top: 102px; width: 28px; height: 70px;
+           border: 5px solid var(--ink); border-radius: 999px; transform: rotate(34deg); }
+  .armR  { left: 130px; top: 130px; width: 28px; height: 66px;
+           border: 5px solid var(--ink); border-radius: 999px; transform: rotate(-16deg); }
+  .collar { left: 50px; top: 114px; width: 80px; height: 24px;
+            border: 5px solid var(--ink); border-radius: 999px; }
+  .smile { left: 74px; top: 92px; width: 32px; height: 18px;
+           border-bottom: 5px solid var(--ink); border-radius: 0 0 60% 60%; }
+
+  /* ---- Acid Rockstar, final: diagonal silhouette from Art-director dandy
+     (swept quiff, scarf, marker) carrying Glam diva's louder scale and
+     colour clash (bigger lenses, orange/violet against pink) instead of
+     dandy's muted cyan/pink. Both readings the user kept, one character. ---- */
+  .pF .quiff { left: 38px; top: -2px; width: 108px; height: 68px; background: var(--ink);
+               border-radius: 82% 26% 60% 40% / 84% 40% 60% 26%; transform: rotate(-12deg); }
+  .pF .sweep { left: 106px; top: 20px; width: 58px; height: 40px; background: var(--ink);
+               border-radius: 20% 70% 40% 60%; transform: rotate(26deg); }
+  .pF .torso { background: var(--violet); }
+  .pF .armL  { background: var(--violet); transform: rotate(40deg); top: 94px; }
+  .pF .armR  { background: var(--violet); }
+  .pF .collar { background: var(--orange); }
+  .pF .scarf { left: 118px; top: 130px; width: 22px; height: 66px; background: var(--orange);
+               border: 5px solid var(--ink); border-radius: 40% 40% 999px 999px;
+               transform: rotate(-10deg); }
+  .pF .bar   { left: 46px; top: 60px; width: 88px; height: 12px; background: var(--ink);
+               border-radius: 999px; }
+  .pF .lensL { left: 48px; top: 50px; width: 36px; height: 32px; background: var(--lens);
+               border: 5px solid var(--ink); border-radius: 50%; }
+  .pF .lensR { left: 96px; top: 50px; width: 36px; height: 32px; background: var(--lens);
+               border: 5px solid var(--ink); border-radius: 50%; }
+  .pF .marker { left: 4px; top: 76px; width: 14px; height: 42px; background: var(--yellow);
+                border: 5px solid var(--ink); border-radius: 4px; transform: rotate(22deg); }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <p class="kicker">Round · character design, settling /first room boss</p>
+  <h1>Acid Rockstar, settled</h1>
+  <p class="lede">User verdict on the three /first readings: &ldquo;glam diva and art director
+    dandy is the vibe.&rdquo; Stage punk is out. This carries both kept readings into one
+    character: dandy's diagonal silhouette and props, glam diva's scale and colour clash.</p>
+
+  <div class="row">
+    <div class="col">
+      <h2>Final &middot; Glam art-director</h2>
+      <p>Dandy's diagonal silhouette &mdash; swept quiff, scarf, raised marker &mdash; carrying
+        glam diva's scale and clash: bigger tinted lenses, violet torso against an orange collar
+        and scarf instead of dandy's muted cyan/pink. One character, both kept readings.</p>
+      <div class="plate"><div class="stage pF">
+        <i class="quiff"></i><i class="sweep"></i>
+        <i class="marker"></i><i class="armL"></i><i class="armR"></i><i class="scarf"></i>
+        <i class="torso"></i><i class="collar"></i>
+        <i class="head"></i><i class="bar"></i><i class="lensL"></i><i class="lensR"></i>
+        <i class="smile"></i>
+      </div></div>
+      <div class="at-size"><span>at room size</span><div class="mini"><div class="stage pF">
+        <i class="quiff"></i><i class="sweep"></i>
+        <i class="marker"></i><i class="armL"></i><i class="armR"></i><i class="scarf"></i>
+        <i class="torso"></i><i class="collar"></i>
+        <i class="head"></i><i class="bar"></i><i class="lensL"></i><i class="lensR"></i>
+        <i class="smile"></i>
+      </div></div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

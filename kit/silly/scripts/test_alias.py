@@ -23,6 +23,10 @@ translations:
   ja: hyakka
 aliases:
   - nerd-mode
+anchors:
+  knowledge-cite-it: Cite it
+arguments:
+  knowledge-deep: deep
 also:
   - reads the docs :: An index row can mention this too
 ---
@@ -36,17 +40,19 @@ class Frontmatter(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "SKILL.md"
             path.write_text(MANIFEST, encoding="utf-8")
-            fields, translations, aliases, also = alias.frontmatter(path)
+            fields, translations, aliases, also, stubs = alias.frontmatter(path)
         self.assertEqual(fields["name"], "knowledge")
         self.assertEqual(translations, {"es": "enciclopedia", "ja": "hyakka"})
         self.assertEqual(aliases, ["nerd-mode"])
         self.assertEqual(also, [("reads the docs", "An index row can mention this too")])
+        self.assertEqual(stubs, [("knowledge-cite-it", "anchor", "Cite it"),
+                                 ("knowledge-deep", "ghost", "deep")])
 
     def test_no_block_yields_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "SKILL.md"
             path.write_text("# no frontmatter\n", encoding="utf-8")
-            self.assertEqual(alias.frontmatter(path), ({}, {}, [], []))
+            self.assertEqual(alias.frontmatter(path), ({}, {}, [], [], []))
 
 
 class Tree(unittest.TestCase):
@@ -63,10 +69,12 @@ class Tree(unittest.TestCase):
 
     def test_manifest_lists_every_declared_name(self):
         rows = alias.manifested(self.root)
-        self.assertEqual([(a, c, k) for a, c, k, _ in rows],
-                         [("enciclopedia", "knowledge", "es"),
-                          ("hyakka", "knowledge", "ja"),
-                          ("nerd-mode", "knowledge", "fun")])
+        self.assertEqual([(a, c, k, d) for a, c, k, _, d in rows],
+                         [("enciclopedia", "knowledge", "es", ""),
+                          ("hyakka", "knowledge", "ja", ""),
+                          ("nerd-mode", "knowledge", "fun", ""),
+                          ("knowledge-cite-it", "knowledge", "anchor", "Cite it"),
+                          ("knowledge-deep", "knowledge", "ghost", "deep")])
 
     def test_one_language_installs_only_that_language(self):
         self.assertEqual(self.run_link("--lang", "es"), 0)
@@ -103,8 +111,10 @@ class Tree(unittest.TestCase):
         self.assertEqual(self.run_link("--lang", "es"), 0)
 
     def test_an_alias_never_manifests_aliases_of_its_own(self):
-        self.run_link("--lang", "es")
-        self.assertEqual(len(alias.manifested(self.root)), 3)
+        self.run_link("--lang", "es", "--stubs")
+        # the five knowledge declares, and not one more: a stub the run just
+        # wrote must never manifest names of its own.
+        self.assertEqual(len(alias.manifested(self.root)), 5)
 
     def test_unlink_removes_only_what_it_wrote(self):
         self.run_link("--lang", "es", )

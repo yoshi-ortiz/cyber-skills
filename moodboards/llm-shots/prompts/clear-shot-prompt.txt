@@ -1,0 +1,56 @@
+Edit the target image. Keep what works. Fix the drawing errors without replacing its personality.
+
+Target: moodboards/llm-shots/clear layout, good cartoon.png
+Keep its composition and cartoon register. Keep the compact isometric world, saturated flat color, heavy dark outlines, cute characters, and busy room interiors.
+
+Character reference:
+- moodboards/cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png
+Use these images for faces, body shapes, poses, outline weight, and comic detail. Do not replace them with corporate flat people or homemade geometric figures.
+
+Output
+- One 16:9 PNG at 1536 by 864 pixels.
+- Warm off-white background.
+- Draw no watermark, signature, logo, caption bar or frame border.
+
+Road
+- Draw one continuous horizontal infinity loop with both outer return curves and one central crossing. No dead ends.
+- Travel clockwise through /first -> /build -> /land -> /check -> /first.
+- Use one clockwise travel direction. No arrows face each other.
+
+Spaces
+- Draw four large rooms and two smaller kiosks. Draw no seventh space.
+- Open every space toward the viewer and fill it with furniture, props and characters. No closed or empty boxes.
+- Keep every space fully opaque. Kiosks may be smaller and paler, never transparent, blurred or ghosted.
+- Use low-walled open trays. Wall height is about one quarter of the floor's shorter side. No cubes.
+- Fill the frame with the six spaces and road. Keep an even outer margin near five percent and make interior props readable.
+- /first, upper-left, cyan, turquoise open room. Acid Rockstar with one clearly held mic. Glam-diva scale with art-director-dandy attitude.
+- /build, lower-left, magenta, hot-pink open room. Tech-Bro CEO with one clearly held watch. Formal navy vest over a white shirt. No hat or headwear.
+- /land, upper-right, cobalt, operational-blue open room. Mission Commander with one clearly held mug.
+- /check, lower-right, emerald, project-green open room. Scrum Oracle with one clearly held ball.
+- /kit, left-center, ghost-pastel-peach small kiosk. Token Influencer with one clearly held bag.
+- /fix, right-center, ghost-pastel-blue-gray small kiosk. Chief Bug Doctor with one clearly held lens.
+
+Labels
+- Draw exactly one viewer-facing billboard on two poles beside each space.
+- Draw one billboard per space and six total. Do not repeat a billboard or string.
+- Keep all text level on billboards. Put no text on walls, floors, roofs or the road.
+- Draw no numbering, step markers, legends or callout numerals.
+- Use only the exact billboard strings listed under Labels. Add no other words.
+- Reproduce these strings exactly. These are the only words in the image:
+- /build: "/build CODE"
+- /check: "/check REVIEW"
+- /first: "/first SKETCH"
+- /fix: "/fix REPAIR"
+- /kit: "/kit EQUIP"
+- /land: "/land DEPLOY"
+
+Characters
+- Draw chibi cartoon figures with heads near half their height, readable faces and the same heavy outline as the rooms.
+- Eyes are large white ovals with the same heavy dark outline as the body, about a fifth of head width each. Never small solid dots on a large figure.
+- Hair is two stacked colour zones, an outer mass and an inner fringe, meeting the face on a shaped edge. Never one flat blob, and never a hard block sitting on the head like a hat.
+- Limbs overlap the body with their own closed outline. They never butt against the body edge.
+- A small circle in the face colour sits proud of the head silhouette at ear height.
+- Mouths are open shapes filled white inside the outline, not a small solid arc.
+- No figure stands square. Arms sit at different angles from each other, heads tilt, figures lean on and hang off the scenery.
+- Each figure carries three or four flat colour zones: hair, top, legs and footwear all differ.
+- One outline weight on every part, round caps and joins, about a fortieth of figure height.

@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber Skills — six room bosses, corpus register</title>
+<style>
+  /* Every colour below is measured from moodboards/, not chosen.
+     Run: text_to_graphics.py palette-audit --design design/cast-six-bosses.html */
+  :root {
+    --paper:#ffffff; --ink:#000000; --skin:#f5c0bc; --skin2:#d4875b;
+    --red:#fd4337; --blue:#128fd1; --green:#009a44; --lime:#07d370;
+    --violet:#625bc3; --pink:#dd5caf; --orange:#ff6918; --yellow:#ffb800;
+    --sand:#f8c167; --cyan:#2acad6; --pale:#c1e5e3; --slate:#8d88a6;
+    --ground:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  .sheet{max-width:1120px;margin:0 auto;padding:36px 40px 56px}
+  .kicker{font:800 .7rem/1.3 ui-monospace,Menlo,monospace;letter-spacing:.18em;
+          text-transform:uppercase;color:var(--slate)}
+  h1{margin:8px 0 6px;font-size:2rem;letter-spacing:-.03em}
+  .lede{margin:0 0 10px;max-width:74ch;color:#4a4a4a;line-height:1.5;font-size:.9rem}
+  .swatches{display:flex;gap:0;margin:14px 0 30px;border:3px solid var(--ink);
+            border-radius:8px;overflow:hidden;max-width:520px}
+  .swatches i{display:block;height:22px;flex:1}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .card{border:3px solid var(--ink);border-radius:14px;overflow:hidden;background:#fff}
+  .card h2{margin:0;padding:11px 14px 2px;font:800 .82rem/1.2 ui-monospace,Menlo,monospace}
+  .card p{margin:0;padding:0 14px 10px;font-size:.74rem;line-height:1.45;color:#4a4a4a;
+          min-height:4.4em}
+  .plate{display:grid;place-items:center;padding:14px 0 6px;border-top:3px solid var(--ink)}
+  .room{display:grid;place-items:center;gap:6px;padding:12px 0 14px;
+        border-top:3px solid var(--ink)}
+  .room span{font:800 .58rem/1 ui-monospace,Menlo,monospace;letter-spacing:.12em;
+             text-transform:uppercase}
+  .stage{position:relative;width:150px;height:190px}
+  .stage>i{position:absolute;display:block}
+  .mini{width:56px;height:71px;overflow:hidden}
+  .mini .stage{transform:scale(.373);transform-origin:0 0}
+
+  /* ---------- shared construction ----------
+     Legs and feet so the figure stands instead of floating. Dot eyes, because
+     an arc mouth on a blank circle is the thing that read as unfinished at
+     room size. One bold silhouette shape per boss, never four small props. */
+  .legL,.legR{width:17px;height:34px;background:var(--ink);border-radius:0 0 4px 4px;top:132px}
+  .legL{left:56px} .legR{left:79px}
+  .shoeL,.shoeR{width:26px;height:13px;background:var(--ink);border-radius:7px;top:158px}
+  .shoeL{left:49px} .shoeR{left:76px}
+  .body{left:44px;top:78px;width:64px;height:62px;border:4px solid var(--ink);
+        border-radius:26% 26% 16% 16%}
+  .head{left:47px;top:22px;width:58px;height:58px;background:var(--skin);
+        border:4px solid var(--ink);border-radius:50%}
+  .eyeL,.eyeR{width:8px;height:8px;background:var(--ink);border-radius:50%;top:46px}
+  .eyeL{left:63px} .eyeR{left:82px}
+  .mouth{left:71px;top:60px;width:11px;height:6px;background:var(--ink);
+         border-radius:0 0 9px 9px}
+  .armL,.armR{width:15px;height:44px;border:4px solid var(--ink);border-radius:9px;top:84px}
+  .armL{left:29px;transform:rotate(14deg)} .armR{left:107px;transform:rotate(-14deg)}
+  .blush{width:9px;height:6px;background:var(--pink);border-radius:50%;top:58px;opacity:.85}
+
+  /* 1 · /first Acid Rockstar. Bold shape: the hair mass, wider than the body.
+     Glam diva scale, art-director attitude, which is the pair kept. */
+  /* The hair stops at the eye line rather than over it. Covering the face was
+     what made the first pass read as a helmet instead of a person. */
+  .b1 .hair{left:26px;top:0;width:100px;height:46px;background:var(--orange);
+            border:4px solid var(--ink);border-radius:56% 60% 18% 22%}
+  .b1 .lockL{left:20px;top:30px;width:28px;height:46px;background:var(--orange);
+             border:4px solid var(--ink);border-radius:60% 20% 40% 50%;transform:rotate(-12deg)}
+  .b1 .lockR{left:104px;top:30px;width:28px;height:46px;background:var(--orange);
+             border:4px solid var(--ink);border-radius:20% 60% 50% 40%;transform:rotate(12deg)}
+  .b1 .body{background:var(--violet)} .b1 .armL,.b1 .armR{background:var(--violet)}
+  /* Round tinted lenses, which is the pair the user kept, not a hard bar. */
+  .b1 .lensL{left:53px;top:42px;width:20px;height:18px;background:var(--pink);
+             border:4px solid var(--ink);border-radius:50%}
+  .b1 .lensR{left:79px;top:42px;width:20px;height:18px;background:var(--pink);
+             border:4px solid var(--ink);border-radius:50%}
+  .b1 .bridge{left:71px;top:48px;width:12px;height:5px;background:var(--ink);border-radius:3px}
+  .b1 .mouth{top:66px}
+  .b1 .scarf{left:46px;top:80px;width:60px;height:13px;background:var(--yellow);
+             border:4px solid var(--ink);border-radius:8px}
+  .b1 .armR{transform:rotate(-46deg);top:70px}
+
+  /* 2 · /build Tech-Bro CEO. Bold shape: the open vest, a colour block with
+     the shirt visible down the middle. */
+  .b2 .hair{left:47px;top:16px;width:58px;height:28px;background:var(--ink);
+            border-radius:50% 50% 0 0}
+  .b2 .body{background:#fff}
+  .b2 .vestL{left:42px;top:76px;width:26px;height:66px;background:var(--green);
+             border:4px solid var(--ink);border-radius:24% 8% 14% 16%}
+  .b2 .vestR{left:84px;top:76px;width:26px;height:66px;background:var(--green);
+             border:4px solid var(--ink);border-radius:8% 24% 16% 14%}
+  .b2 .armL,.b2 .armR{background:var(--skin)}
+  .b2 .armR{transform:rotate(-62deg);top:64px;left:104px}
+  .b2 .watch{left:112px;top:56px;width:16px;height:12px;background:var(--yellow);
+             border:3px solid var(--ink);border-radius:3px}
+
+  /* 3 · /land Mission Commander. Bold shape: headset arc plus boom mic. */
+  .b3 .hair{left:47px;top:16px;width:58px;height:26px;background:var(--skin2);
+            border-radius:50% 50% 0 0}
+  .b3 .band{left:41px;top:12px;width:70px;height:34px;border:5px solid var(--ink);
+            border-bottom:none;border-radius:36px 36px 0 0;background:none}
+  .b3 .cupL{left:35px;top:38px;width:18px;height:24px;background:var(--red);
+            border:4px solid var(--ink);border-radius:5px}
+  .b3 .cupR{left:99px;top:38px;width:18px;height:24px;background:var(--red);
+            border:4px solid var(--ink);border-radius:5px}
+  .b3 .boom{left:44px;top:60px;width:24px;height:6px;background:var(--ink);
+            border-radius:4px;transform:rotate(22deg)}
+  .b3 .body{background:var(--sand)} .b3 .armL,.b3 .armR{background:var(--sand)}
+  .b3 .collar{left:48px;top:74px;width:56px;height:12px;background:var(--red);
+              border:4px solid var(--ink);border-radius:7px}
+
+  /* 4 · /check Scrum Oracle. Bold shape: the ball held up over the head. */
+  .b4 .hair{left:43px;top:14px;width:66px;height:34px;background:var(--ink);
+            border-radius:50% 50% 10% 10%}
+  .b4 .body{background:var(--blue)} .b4 .armL,.b4 .armR{background:var(--blue)}
+  .b4 .armR{transform:rotate(-58deg);top:62px;left:104px}
+  .b4 .ball{left:96px;top:20px;width:44px;height:44px;background:var(--cyan);
+            border:4px solid var(--ink);border-radius:50%}
+  .b4 .glint{left:106px;top:29px;width:12px;height:9px;background:#fff;border-radius:50%}
+
+  /* 5 · /kit Token Influencer. Bold shape: the shopping bag, nearly a character. */
+  .b5 .hair{left:38px;top:8px;width:76px;height:40px;background:var(--pink);
+            border:4px solid var(--ink);border-radius:52% 52% 34% 34%}
+  .b5 .body{background:var(--yellow)} .b5 .armL,.b5 .armR{background:var(--yellow)}
+  .b5 .shades{left:53px;top:46px;width:46px;height:15px;background:var(--ink);border-radius:8px}
+  .b5 .mouth{top:68px}
+  .b5 .armL{transform:rotate(38deg);top:78px;left:26px}
+  .b5 .bag{left:2px;top:104px;width:40px;height:44px;background:var(--red);
+           border:4px solid var(--ink);border-radius:3px 3px 6px 6px}
+  .b5 .handle{left:12px;top:92px;width:20px;height:18px;border:4px solid var(--ink);
+              border-bottom:none;border-radius:12px 12px 0 0;background:none}
+
+  /* 6 · /fix Bug Doctor. Bold shape: the oversized magnifier. */
+  .b6 .hair{left:47px;top:16px;width:58px;height:26px;background:var(--ink);
+            border-radius:50% 50% 0 0}
+  .b6 .body{background:#fff} .b6 .armL,.b6 .armR{background:#fff}
+  .b6 .collar{left:48px;top:74px;width:56px;height:12px;background:var(--lime);
+              border:4px solid var(--ink);border-radius:7px}
+  .b6 .armR{transform:rotate(-52deg);top:68px;left:104px}
+  .b6 .lens{left:96px;top:14px;width:46px;height:46px;background:var(--pale);
+            border:5px solid var(--ink);border-radius:50%}
+  .b6 .grip{left:88px;top:56px;width:12px;height:26px;background:var(--ink);
+            border-radius:5px;transform:rotate(38deg)}
+  .b6 .bug{left:108px;top:28px;width:16px;height:14px;background:var(--green);
+           border:3px solid var(--ink);border-radius:50% 50% 45% 45%}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <p class="kicker">Round · six room bosses, drawn in the corpus register</p>
+  <h1>The cast, rebuilt</h1>
+  <p class="lede">Rebuilt against what the reference images actually do, rather than what
+    the manifest prose says about them. Corpus characters carry dot eyes, legs that stand on
+    the floor, one bold silhouette shape each, and flat saturated fills under a heavy black
+    contour. The previous rounds had none of those, which is what read as unfinished.
+    Every colour here is measured from <code>moodboards/</code>. Judge the bottom row first.</p>
+  <div class="swatches">
+    <i style="background:#fd4337"></i><i style="background:#ff6918"></i>
+    <i style="background:#ffb800"></i><i style="background:#f8c167"></i>
+    <i style="background:#009a44"></i><i style="background:#07d370"></i>
+    <i style="background:#128fd1"></i><i style="background:#2acad6"></i>
+    <i style="background:#625bc3"></i><i style="background:#dd5caf"></i>
+    <i style="background:#f5c0bc"></i><i style="background:#c1e5e3"></i>
+    <i style="background:#000000"></i>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <h2>/first &middot; Acid Rockstar</h2>
+      <p>Bold shape: a hair mass wider than the shoulders, the glam-diva scale you kept.
+        Round tinted lenses and a yellow scarf carry the art-director half.</p>
+      <div class="plate"><div class="stage b1">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="body"></i><i class="scarf"></i>
+        <i class="lockL"></i><i class="lockR"></i><i class="head"></i><i class="hair"></i>
+        <i class="lensL"></i><i class="lensR"></i><i class="bridge"></i><i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b1">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="body"></i><i class="scarf"></i>
+        <i class="lockL"></i><i class="lockR"></i><i class="head"></i><i class="hair"></i>
+        <i class="lensL"></i><i class="lensR"></i><i class="bridge"></i><i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/build &middot; Tech-Bro CEO</h2>
+      <p>Bold shape: the open vest as two colour blocks with the shirt showing between them,
+        so it reads as a garment over a garment. Smartwatch on the raised wrist.</p>
+      <div class="plate"><div class="stage b2">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="watch"></i><i class="body"></i>
+        <i class="vestL"></i><i class="vestR"></i>
+        <i class="head"></i><i class="hair"></i><i class="eyeL"></i><i class="eyeR"></i>
+        <i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b2">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="watch"></i><i class="body"></i>
+        <i class="vestL"></i><i class="vestR"></i>
+        <i class="head"></i><i class="hair"></i><i class="eyeL"></i><i class="eyeR"></i>
+        <i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/land &middot; Mission Commander</h2>
+      <p>Bold shape: the headset, a band arc plus two red cups and a boom mic. Nothing else
+        competes with it, which is why it survives at 56px.</p>
+      <div class="plate"><div class="stage b3">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="body"></i><i class="collar"></i>
+        <i class="head"></i><i class="hair"></i><i class="eyeL"></i><i class="eyeR"></i>
+        <i class="mouth"></i><i class="boom"></i>
+        <i class="band"></i><i class="cupL"></i><i class="cupR"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b3">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="body"></i><i class="collar"></i>
+        <i class="head"></i><i class="hair"></i><i class="eyeL"></i><i class="eyeR"></i>
+        <i class="mouth"></i><i class="boom"></i>
+        <i class="band"></i><i class="cupL"></i><i class="cupR"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/check &middot; Scrum Oracle</h2>
+      <p>Bold shape: the future-reading ball held overhead on a raised arm. The gesture is the
+        silhouette, so the character reads as doing something rather than posing.</p>
+      <div class="plate"><div class="stage b4">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="body"></i>
+        <i class="head"></i><i class="hair"></i><i class="eyeL"></i><i class="eyeR"></i>
+        <i class="mouth"></i><i class="ball"></i><i class="glint"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b4">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="body"></i>
+        <i class="head"></i><i class="hair"></i><i class="eyeL"></i><i class="eyeR"></i>
+        <i class="mouth"></i><i class="ball"></i><i class="glint"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/kit &middot; Token Influencer</h2>
+      <p>Bold shape: the hero shopping bag, carried low so it sits in the silhouette rather
+        than behind it. Pink hair block and bar shades above.</p>
+      <div class="plate"><div class="stage b5">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armR"></i><i class="body"></i>
+        <i class="handle"></i><i class="bag"></i><i class="armL"></i>
+        <i class="head"></i><i class="hair"></i><i class="shades"></i><i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b5">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armR"></i><i class="body"></i>
+        <i class="handle"></i><i class="bag"></i><i class="armL"></i>
+        <i class="head"></i><i class="hair"></i><i class="shades"></i><i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/fix &middot; Bug Doctor</h2>
+      <p>Bold shape: an oversized magnifier raised to the side, with the bug caught inside the
+        lens. Two shapes tell the whole job.</p>
+      <div class="plate"><div class="stage b6">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="body"></i><i class="collar"></i>
+        <i class="head"></i><i class="hair"></i><i class="eyeL"></i><i class="eyeR"></i>
+        <i class="mouth"></i><i class="grip"></i><i class="lens"></i><i class="bug"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b6">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="armL"></i><i class="armR"></i><i class="body"></i><i class="collar"></i>
+        <i class="head"></i><i class="hair"></i><i class="eyeL"></i><i class="eyeR"></i>
+        <i class="mouth"></i><i class="grip"></i><i class="lens"></i><i class="bug"></i>
+      </div></div></div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

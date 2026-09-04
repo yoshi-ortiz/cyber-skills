@@ -11,10 +11,22 @@ names = [name for name, _ in check.gates(Path("/tmp/unused"))]
 
 # Every documented gate is on the board. The whole point of the file is that
 # the two lists it replaces each missed half the other.
-for expected in ("contracts-declared", "contracts-budget", "unit tests",
+for expected in ("contracts-declared", "contracts-budget",
                  "harness self-test", "index gate", "loanwords",
                  "publish main", "publish alpha"):
     assert expected in names, f"{expected} is not a gate"
+
+# B-023: a test file that no gate runs is the failure this asserts away. Every
+# `test_*.py` is either discovered with its directory or run as the script it
+# is, and the runner is the one place that has to be true.
+covered = {argv[argv.index("-s") + 1] if "discover" in argv else argv[-1]
+           for _name, argv in check.gates(Path("/tmp/unused"))}
+for path in check.ROOT.rglob("test_*.py"):
+    relative = path.relative_to(check.ROOT)
+    if any(part.startswith(".") or part == "__pycache__" for part in relative.parts):
+        continue
+    assert str(relative) in covered or str(relative.parent) in covered, \
+        f"{relative} is run by no gate"
 
 # The split is the point: one half is allowed to be red, the other is not, and
 # a substring filter of "contracts" must still reach both.

@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from skill_discovery import discover
+from skill_discovery import catalog
 
 ROOT = Path(__file__).resolve().parent.parent
 STORE = Path.home() / ".agents" / "skills"
@@ -32,7 +32,7 @@ EXTRA = {"cook": "cook"}
 
 
 def targets(root: Path) -> dict[str, Path]:
-    found = {name: root / rel for name, rel in discover(root)}
+    found = {record.name: root.resolve() / record.path for record in catalog(root)}
     found.update({name: root / rel for name, rel in EXTRA.items()})
     return dict(sorted(found.items()))
 

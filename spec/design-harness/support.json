@@ -3,7 +3,9 @@
     "avge": "BLOCKED"
   },
   "appliedCorrections": [
-    "8651bbcb58d71d257a994635a3fe89842c7794637446d901cae81fe183516500"
+    "8651bbcb58d71d257a994635a3fe89842c7794637446d901cae81fe183516500",
+    "3a9de3bb60c255a1c5d2bc26e3ea351141f08c153fb122f06217eeb545bbcf7f",
+    "2ae812a2325e5562c6be3f64120b26e00b0670e14b9760831067d5fa496b1ab0"
   ],
   "evidence": {
     "avge": {
@@ -36,6 +38,54 @@
       "kind": "hero-browser-render",
       "observedAt": "2026-09-02T16:38:31.510221+00:00",
       "proofKey": "586f5f2a4fe2005d634eea4d06008e9961fac3868e977f442e3975dadb0a74a8"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.style-round.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-03T19:44:39.670565+00:00",
+      "proofKey": "446be708a0c9690d958633e34c424c10375367e681697cf3b70be116c42e39bc"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.construction-a.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-03T19:44:39.671445+00:00",
+      "proofKey": "4e67b23848c55cb40e9a7c59c5b14b83855bf0baf8432cea8ca0ddecb84eeda6"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.first.acid-rockstar.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-03T19:54:10.627889+00:00",
+      "proofKey": "a7d3cfeacb8130d489e41131ee7b7e136ecdd0d6c05c78b385f76fe60792e24c"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.build.ceo.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-03T19:54:10.629197+00:00",
+      "proofKey": "90d429a23b984582e83991fe1eba14c590493d9703a882c5ea06c29905cbf82a"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.first.final.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-03T20:03:53.788240+00:00",
+      "proofKey": "388df965c18bbd86ca08789e344a498476763e6237ee91a54d43846642da9e9a"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.craft-round.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-03T20:48:23.534400+00:00",
+      "proofKey": "05aa3915f4548d9e548998fcd549218ae893bf0961da0017e7ba1f9940d45cfc"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.cast-varied.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-03T21:06:42.724720+00:00",
+      "proofKey": "58aa4fc9289ea85ac7cf160078fa045c3da49f9c3c0feb52e8e9eb47cfa00f8c"
+    },
+    {
+      "image": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.cast-six.png",
+      "kind": "hero-browser-render",
+      "observedAt": "2026-09-03T21:06:42.726588+00:00",
+      "proofKey": "b6747da3e013fc04eedf28b20f35776d6049003b8b6c8d431ea79d53c4840e69"
     }
   ],
   "version": 1

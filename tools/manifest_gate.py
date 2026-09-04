@@ -29,14 +29,15 @@ NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 def check(root: Path, present: list[str]) -> list[str]:
     """Every frontmatter problem across the repo's skills, aliases included."""
-    from skill_discovery import discover
+    from skill_discovery import catalog
 
     problems: list[str] = []
     claimed: dict[str, str] = {}
 
-    for name, skill_dir in discover(root):
+    for record in catalog(root):
+        name, skill_dir = record.name, root.resolve() / record.path
         entry = skill_dir / "SKILL.md"
-        fields, translations, aliases, also = frontmatter(entry)
+        fields, translations, aliases, also, stubs = frontmatter(entry)
         description = fields.get("description", "")
 
         for key, value in fields.items():
@@ -45,6 +46,18 @@ def check(root: Path, present: list[str]) -> list[str]:
                     f"{name}/SKILL.md has an unquoted `: ` in `{key}`; YAML reads "
                     f"that as a nested mapping and skips the file, so the skill "
                     f"stops existing. Wrap the value in double quotes.")
+
+        # R-38. `phase` is the family a skill sits in, and it is load-bearing
+        # exactly where the two names differ -- `genesis` is phase `first`, so
+        # nothing about the skill's own name says which stretch of the rail it
+        # occupies. Where they match, the name already answers the question.
+        if record.family and record.family != name:
+            declared = fields.get("phase")
+            if declared != record.family:
+                problems.append(
+                    f"{name}/SKILL.md sits in the {record.family} family but "
+                    f"declares phase {declared!r}; a skill whose name does not "
+                    f"say its phase has to declare one")
 
         for trigger, _note in also:
             if trigger not in description:
@@ -55,6 +68,7 @@ def check(root: Path, present: list[str]) -> list[str]:
 
         second = {n: code for code, n in translations.items()}
         second.update({n: "fun" for n in aliases})
+        second.update({n: kind for n, kind, _detail in stubs})
         for word, code in second.items():
             if not NAME.fullmatch(word):
                 problems.append(f"{name}/SKILL.md declares {word!r} as a second "

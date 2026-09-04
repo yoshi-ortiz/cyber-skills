@@ -549,7 +549,7 @@ against a fake risky `npx` result and proves the assessment is reported while
 the real install and `sync-skills.sh` both execute successfully. Parser checks
 cover ANSI output and names with spaces; absent tables produce no advisory.
 
-## B-021 · Dashboard reports character counts as bytes · open
+## B-021 · Dashboard reports character counts as bytes · fixed
 
 **Symptom.** `build-context-token-vectors/scripts/vectors.py:177` emits
 `"bytes": len(texts[i])` into every per-skill record the dashboard renders.
@@ -573,7 +573,11 @@ fifth meaning.
 once as `len(text.encode("utf-8"))`, and every caller reads it rather than
 recomputing. Fixing `vectors.py` alone would leave the other three disagreeing.
 
-## B-022 · CLAUDE.md reports a gate count two short of reality · open
+**Guard.** `test_vectors_corpus.py` loads a frontmatter-wrapped Unicode body and
+proves the corpus record carries its exact UTF-8 byte size. The dashboard reads
+that stored fact from `PreparedCorpus`; it no longer calls `len()` on a string.
+
+## B-022 · CLAUDE.md reports a gate count two short of reality · fixed
 
 **Symptom.** `CLAUDE.md:27` reads "18/19 gates pass; `contracts` is red on
 purpose (R-15, four files over the 30 KB budget)." Running
@@ -595,7 +599,11 @@ count, so `CLAUDE.md` should cite the command instead of a number, the same
 argument `GOAL.md` makes for a re-runnable benchmark over a number in a
 document.
 
-## B-023 · The companion's live test runs in no gate · open
+**Closed 2026-09-03.** Both halves are done. `CLAUDE.md` no longer transcribes
+a count — it cites `python3 tools/check.py` — and that command now reports
+**30/30 gates pass**, so the failures this entry named are gone too.
+
+## B-023 · The companion's live test runs in no gate · closed
 
 **Symptom.** `build-context-token-vectors/scripts/test_vectors_live.py` exists,
 passes when invoked directly, and is executed by nothing. `tools/check.py`
@@ -615,9 +623,17 @@ cross-origin refusal (`Origin: https://example.com` must 403), its unknown
 parameter path (400), and that invalid input never reaches the `retune` seam.
 Those are the security properties of a server bound on loopback.
 
-**Fix.** R-57. Add it to `gates()` in the same shape as the `tools/` tests,
-which is the smallest change, and record the convention so the next skill that
-ships a test does not land in the same gap.
+**Fix.** R-17, and not the smallest change this entry proposed. Adding the file
+to `gates()` by hand would have closed this instance and left the mechanism
+that produced it, which was the list itself: three further files were in no
+gate at the time of the fix (`first/genesis/scripts/test_genesis_flow.py`,
+`first/knowledge/scripts/test_okf.py`, `kit/silly/scripts/test_alias.py`), and
+nothing had reported them. `check.py:test_gates()` now finds every `test_*.py`
+and reads it to choose how to run it: a `TestCase` is discovered with its
+directory, a file without one is run as the script it is. `test_check.py`
+asserts that every test file in the repository is covered by some gate, so the
+third convention -- assertions that no invocation reaches -- fails the runner's
+own test rather than passing silently.
 
 ## B-024 · A saved dashboard offers Retune controls that post into nothing · open
 
@@ -746,3 +762,100 @@ repository, so it needs a human who can see what is in there first:
 rm -rf ~/.agents/skills/aesthetic
 ln -s ~/Development/cyber-skills/first/aesthetic ~/.agents/skills/aesthetic
 ```
+
+**Repository protection.** R-54 routes dev-install targets through the Skill
+Catalog, while `dev_install.py` continues to refuse replacement when an
+installed copy differs from source. The external relink is still pending human
+action, so this defect remains open.
+
+---
+
+## B-028 · Kit ships doctrine for a harness that was never built · fixed
+
+**Symptom.** [kit/SKILL.md](../kit/SKILL.md) instructs `python3
+~/.harness-core/harness.py sync`, names `collection.toml` as the manifest, and
+states "`yq` is no longer needed: the manifest is TOML and `tomllib` is
+standard library." None of that exists. `harness.py` and `collection.toml`
+have never been in `harness-core` on any branch (`git log --all --
+harness.py collection.toml` is empty). What ships there is
+`pony.harness.sh` + `collection.yaml` + a `need_yq()` that exits with
+`brew install yq`. Kit is channel `main` and marked SHIPPED, so every
+documented command fails on a clean machine.
+
+**Root cause.** The rewrite landed as doctrine and never as code. `b88a389`
+wrote the Python/TOML commands into `kit/SKILL.md`; nothing built them. No
+gate could catch it: `tools/check.py` is 30/30 green because every gate
+validates this repo, and `harness-core` is a different one.
+
+**Why TOML, not just Python.** `tomllib` is stdlib, so the manifest parser
+stops depending on `yq`, so `install.sh` stops needing Homebrew to install
+`yq`. That removes the escalation prompt structurally rather than by policy.
+Node stays required — `install_skill()` shells out to `npx skills add` — so
+the rewrite drops the brew/yq leg only. Anthropic's Skill guidance names the
+pattern being removed: "Global package installation discouraged: Skills
+should only install packages locally to avoid interfering with the user's
+computer."
+
+**Fix.** Built `harness.py` + `collection.toml` in `harness-core`, porting
+`onboard`, `sync`, `add`, `status`, `upgrade` from `pony.harness.sh`. `[mcp]`
+was dropped rather than ported: [SKILL_SPEC.md:27](../SKILL_SPEC.md) already
+settles that kit does not own MCP installation, so those rows had no owner. No
+new kit mode: `starter` is one more word in the row that already means Sync,
+and the missing-dependency check is a `SystemExit` inside `sync`, not a
+command of its own -- kit's Fix mode already owns `doctor`.
+
+Found and fixed one thing the doctrine never named: `onboard.sh` wrote
+selections with `yq -i` straight into the git-tracked `collection.yaml`,
+which is why it was dirty in every checkout and why a future `upgrade`'s
+`git pull --ff-only` could conflict with itself. `collection.toml` is
+read-only now; a machine's picks go to `~/.harness-core.json`. kit/SKILL.md
+updated to match (the state-file split, and four commands that still read
+`harness x` instead of `harness.py x`). R-51.
+
+**Guard.** `test_harness.py`, six asserts: the install-path escape refusal,
+selection defaults (none/one category/empty), a hand-added source installing
+alongside the manifest, agent-list override, and the bare-vs-subset skill
+flags. The gate this entry actually asked for -- something asserting every
+literal command in `kit/SKILL.md` resolves in a `harness-core` checkout --
+is still not built. Nothing yet stops the next doctrine edit from drifting
+the same way this one did.
+
+**Retired with it.** `pony.harness.sh`, `collection.yaml`,
+`scripts/onboard.sh`, `scripts/ui.sh` and `scripts/test-ui.sh` are deleted --
+keeping a second implementation is what produced this bug in the first place,
+and git history holds them if a port turns out to have missed something.
+`install.sh` and `install.ps1` stay, because their raw URLs are published, but
+they are eight lines now: check `git`/`python3`, clone, hand over to
+`harness.py`. No Homebrew, no `yq`, no nvm, no `~/.zshrc` hook, no PATH shim.
+The last `yq` caller, `scripts/install-storybook-skill.sh`, now takes its
+agent flags from `HARNESS_AGENTS` instead of re-reading a manifest.
+
+**Unproven on a clean machine.** Everything above is verified by
+`test_harness.py` and `--dry-run` only. No `onboard` has yet run end to end on
+a box without the collection already installed.
+
+---
+
+## B-029 · A nested-repo source silently installs nothing · fixed
+
+**Symptom.** `collection.toml` declared `"yoshi-ortiz/cyber-skills" =
+["aesthetic", "ora"]`. Reproduced live against the real API: `npx skills add
+yoshi-ortiz/cyber-skills -l` finds **one** skill (`kit`) instead of the five
+this repo actually ships. `-s aesthetic -s ora` matches neither name, so the
+install runs, reports success, and installs nothing. Predates the B-028
+rewrite -- `pony.harness.sh` had the identical bug (`git show HEAD:pony.harness.sh`
+confirms the same `npx skills add` call, no `--full-depth`), so this has
+likely never worked, on either implementation.
+
+**Root cause.** `npx skills add` does not descend past the first `SKILL.md`
+it finds unless told to. cyber-skills nests every skill under a family
+directory (`first/aesthetic/`, `kit/spanish/ora/`); `--full-depth` is the flag
+that makes the walk continue past `kit/SKILL.md` to find the rest. Confirmed:
+1 skill found without the flag, 5 with it, on the real repo.
+
+**Fix.** `install()` in `harness.py` now always passes `--full-depth`. Every
+subset spec was silently broken by this, not just a bare `[]` -- `[]` never
+worked either, since the walk stops before finding anything to list.
+`collection.toml`'s cyber-skills entry is `[]` now that it actually resolves.
+
+**Guard.** `test_full_depth_is_always_passed` in `harness-core/test_harness.py`.

@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from loanwords import check
+from loanwords import check_translations, check_vocabulary, vocabulary
 
 
 def case(**files: str) -> int:
@@ -13,7 +13,7 @@ def case(**files: str) -> int:
         root = Path(tmp)
         for name, text in files.items():
             (root / name.replace("_", ".")).write_text(text, encoding="utf-8")
-        return len(check(root))
+        return len(check_translations(root))
 
 
 def test() -> None:
@@ -47,5 +47,55 @@ def test() -> None:
     print("OK")
 
 
+def vocabulary_test() -> None:
+    contract = """# Language
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Item** | One roadmap row | Task, ticket, story |
+| **Root cause** | Engineering finding | Fix, patch |
+"""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "UBIQUITOUS_LANGUAGE.md").write_text(contract)
+        terms = vocabulary(root / "UBIQUITOUS_LANGUAGE.md")
+        assert [(term.name, term.aliases) for term in terms] == [
+            ("Item", ("Task", "ticket", "story")),
+            ("Root cause", ("Fix", "patch")),
+        ]
+
+        (root / "CLAUDE.md").write_text(
+            "<!-- vocabulary: Item -->\nThis task is active.\n<!-- /vocabulary -->\n")
+        problems = check_vocabulary(root, paths=("CLAUDE.md",))
+        assert len(problems) == 1
+        assert "CLAUDE.md:2" in problems[0]
+        assert "task" in problems[0]
+        assert "Item" in problems[0]
+
+        # Only explicitly typed semantic blocks are governed. Code-like content
+        # and substrings remain literal rather than prose vocabulary.
+        (root / "CLAUDE.md").write_text(
+            """This task is historical explanation.
+<!-- vocabulary: Item -->
+This item is active; `task` is a CLI value and taskmaster is another word.
+```
+task --json
+```
+<!-- /vocabulary -->
+""")
+        assert check_vocabulary(root, paths=("CLAUDE.md",)) == []
+
+        (root / "BUGS.md").write_text("This task was renamed.\n")
+        (root / "first/aesthetic").mkdir(parents=True)
+        (root / "first/aesthetic/UBIQUITOUS_LANGUAGE.md").write_text(
+            "A task in another semantic context.\n")
+        assert check_vocabulary(root, paths=("CLAUDE.md",)) == []
+
+        (root / "CLAUDE.md").write_text(
+            "<!-- vocabulary: Missing term -->\ntext\n<!-- /vocabulary -->\n")
+        assert "unknown canonical term" in check_vocabulary(
+            root, paths=("CLAUDE.md",))[0]
+
+
 if __name__ == "__main__":
     test()
+    vocabulary_test()

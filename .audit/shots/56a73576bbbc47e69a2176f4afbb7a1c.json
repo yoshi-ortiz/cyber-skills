@@ -1,0 +1,44 @@
+{
+  "compute": {
+    "duration_ms": 0,
+    "harness": "Claude Code",
+    "model": "claude-opus-5",
+    "started_at": "2026-09-02T17:25:28Z",
+    "tokens": {
+      "input": 12,
+      "output": 31534,
+      "profile": "utf8_bytes_div4_ceil_v1"
+    }
+  },
+  "findings": [],
+  "inputs": {
+    "admitted_context": [
+      "design/cast-style-a-deeper.html",
+      "shots/cast-style-a-deeper.png"
+    ],
+    "corpus_refs": [],
+    "prompt_hash": "sha256:092f0f45fe7414401e032671716f7bb68b83cab3378bdbfef8847657b3cf110b",
+    "request": "yes this is better inference. go deeper on a.\n",
+    "target_skill": "first/aesthetic",
+    "tools": []
+  },
+  "output": {
+    "adapter": "graphic",
+    "artifacts": [
+      {
+        "bytes": 126135,
+        "mime": "image/png",
+        "path": "shots/cast-style-a-deeper.png",
+        "role": "deliverable",
+        "sha256": "sha256:a02261aec2bc695a29bf2d5557886df6f5eae1a4ab50145155b56b24ce2b58a6"
+      }
+    ]
+  },
+  "provenance": "inference",
+  "scope": "chibi-sticker-refinements",
+  "shot_id": "56a73576bbbc47e69a2176f4afbb7a1c",
+  "user_feedback": {
+    "status": "pending"
+  },
+  "version": 2
+}

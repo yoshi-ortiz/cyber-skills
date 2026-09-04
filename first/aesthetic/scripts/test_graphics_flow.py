@@ -17,7 +17,7 @@ def _state(**overrides) -> dict:
     state = {
         "sceneErrors": [], "sceneHash": "abc", "corpusRoot": True,
         "corpusRootPath": "moodboards",
-        "corpus": True, "tags": True,
+        "corpus": True, "tags": True, "unmeasuredImages": [],
         "toolResearch": True, "toolResearchErrors": [],
         "customPlanMissing": [],
         "selectedTool": "avge", "selectedToolCommand": "avge-engine",

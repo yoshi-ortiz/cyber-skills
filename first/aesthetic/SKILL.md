@@ -1,6 +1,7 @@
 ---
 name: aesthetic
 description: Design and art direction that reads as intentional, not templated. Use to start, continue, or critique visual work. Grounds direction in design fundamentals, and folds in a multimodal corpus and user sentiment when they exist, producing ranked decisions and an editorial burndown.
+phase: first
 ---
 
 # Aesthetic ranking

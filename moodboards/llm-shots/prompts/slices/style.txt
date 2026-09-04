@@ -1,7 +1,27 @@
 Clean 2.5D isometric editorial infographic, cartoon-round: every room block is squat and low-walled, never a tall cube, with soft rounded corners and edges on every outline. Crisp dark outlines with round joins (no sharp miters), flat vector fills, simple faces, warm off-white background. Cute witty magazine style, not photorealistic, not glossy 3D, not pixel art, not stock art.
 
+How this corpus builds a figure, read off the references:
+- Eyes are large white ovals with the same heavy dark outline as the body, about a fifth of head width each. Never small solid dots on a large figure.
+- Hair is two stacked colour zones, an outer mass and an inner fringe, meeting the face on a shaped edge. Never one flat blob, and never a hard block sitting on the head like a hat.
+- Limbs overlap the body with their own closed outline. They never butt against the body edge.
+- A small circle in the face colour sits proud of the head silhouette at ear height.
+- Mouths are open shapes filled white inside the outline, not a small solid arc.
+- No figure stands square. Arms sit at different angles from each other, heads tilt, figures lean on and hang off the scenery.
+- Each figure carries three or four flat colour zones: hair, top, legs and footwear all differ.
+- One outline weight on every part, round caps and joins, about a fortieth of figure height.
+
+Never draw figures in this register:
+- Never realistic human proportion and never a faceless figure. Head is about half of total height, and every face carries eyes and a mouth.
+
 Pursue these references:
 - cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png
+  measured: paper #fffeef, widest #009a44, ink #000000, fills #009a44 #fffeef #000000 #c4c4c4 #128fd1 #ff6918, contour covers 20% of the frame
 - isometric cartoon/Pasted 2026-08-28 at 5.52.41 p.m..png
+  measured: paper #ffffff, widest #ffffff, ink #080000, fills #ffffff #fd4337 #f8c167 #625bc3 #fc7e05 #080000, contour covers 19% of the frame
 - isometric cartoon/Pasted 2026-08-28 at 5.52.47 p.m..png
+  measured: paper #ffffff, widest #ffffff, ink #010000, fills #ffffff #ffdf00 #dcdcdc #b8b6b7 #868686 #010000, contour covers 4% of the frame
 - isometric cartoon/Pasted 2026-08-28 at 5.53.24 p.m..png
+  measured: paper #c1e5e3, widest #c1e5e3, fills #c1e5e3 #fefaee #d4875b #8d88a6 #4fac5c #f5c0bc, contour covers 7% of the frame
+
+Draw fills from these measured colours only, widest coverage first:
+#ffffff #c1e5e3 #ffdf00 #009a44 #000000 #128fd1 #d4875b #ff6918 #8d88a6 #4fac5c

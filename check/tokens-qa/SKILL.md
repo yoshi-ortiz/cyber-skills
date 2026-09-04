@@ -2,6 +2,7 @@
 name: tokens-qa
 description: Observe one Shot, measure what it cost, and say what it broke. Black-box QA over the declared request, the observable output, the token counts and the user's own words.
 disable-model-invocation: true
+phase: check
 ---
 
 # Tokens QA

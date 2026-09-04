@@ -17,11 +17,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fog import is_fog, reasons, walk
+from skill_catalog import catalog
 
 
 def check(tree: Path, channel: str = "main") -> int:
+    records = catalog(tree)
     found = [relative.as_posix() for relative in walk(tree)
-             if is_fog(relative.as_posix(), channel)]
+             if is_fog(relative.as_posix(), channel, records)]
     if not found:
         print(f"OK: {tree} carries no development fog.")
         return 0

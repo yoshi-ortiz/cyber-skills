@@ -4,6 +4,7 @@ description: Installs second names for the skills you already have, so a command
 disable-model-invocation: true
 also:
   - comandos en espanol :: Add commands in Spanish
+phase: kit
 ---
 
 # Silly

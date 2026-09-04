@@ -24,14 +24,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kit" / "silly" / "scripts"))
-from fog import ALPHA_SKILLS
 # The gate reads a manifest with the same parser that acts on it. A second
 # implementation here could disagree with `alias.py`, and a gate that passes
 # while the tool fails is the one bug this file exists to prevent.
 from alias import frontmatter
-from loanwords import check as localised_terms
+from loanwords import check_translations as localised_terms
 from manifest_gate import check as manifest_problems
-from skill_discovery import GROUPS, discover, grouped, names as skill_names
+from skill_discovery import GROUPS, catalog, grouped
 
 # Section index, not section title: translations rename these headings.
 STABLE, EXPERIMENTAL = 1, 2
@@ -41,10 +40,11 @@ SECTIONS = ("INSTALL", "SKILL PROMPTS", "EXPERIMENTS")
 def skills(root: Path) -> list[str]:
     """Every skill dir: a SKILL.md that is not an alias. A shipped alias has
     one too, and would otherwise demand its own group and row."""
-    return skill_names(root)
+    return [record.name for record in catalog(root)]
 
 
-Spec = tuple[dict[str, str], dict[str, str], list[str], list[tuple[str, str]]]
+Spec = tuple[dict[str, str], dict[str, str], list[str], list[tuple[str, str]],
+             list[tuple[str, str, str]]]
 
 
 def spec(path: Path) -> Spec:
@@ -55,9 +55,10 @@ def spec(path: Path) -> Spec:
 def second_names(entry: Spec) -> dict[str, str]:
     """Second *names*, as name -> language or `fun`. Not `also`, which is a
     row rather than a name."""
-    _, translations, aliases, _also = entry
+    _, translations, aliases, _also, stubs = entry
     return {name: code for code, name in translations.items()} | \
-           {name: "fun" for name in aliases}
+           {name: "fun" for name in aliases} | \
+           {name: kind for name, kind, _detail in stubs}
 
 
 def also_rows(entry: Spec) -> list[tuple[str, str]]:
@@ -132,9 +133,17 @@ def index_order(readme: Path) -> list[str]:
 def gate(root: Path) -> int:
     problems: list[str] = []
     readme = root / "README.md"
-    present = skills(root)
-    skill_paths = dict(discover(root))
-    specs = {name: spec(skill_paths[name] / "SKILL.md") for name in present}
+    records = catalog(root)
+    present = [record.name for record in records]
+    by_name = {record.name: record for record in records}
+    specs = {
+        record.name: (
+            {"name": record.name, "description": record.description},
+            dict(record.translations), list(record.aliases), list(record.also),
+            list(record.stubs),
+        )
+        for record in records
+    }
 
     problems.extend(localised_terms(root))
 
@@ -147,8 +156,9 @@ def gate(root: Path) -> int:
                             f"stop, or commas")
 
     for name in present:
+        record = by_name[name]
         found = [label for label, members in GROUPS if name in members]
-        if not found:
+        if record.family not in found:
             problems.append(f"{name}/ is in no index group; add it to GROUPS in "
                             f"tools/skill_discovery.py so the table stays a map of the package")
         elif len(found) > 1:
@@ -168,7 +178,7 @@ def gate(root: Path) -> int:
         code = language(path)
         want: list[str] = []
         for name in grouped():
-            entry = specs.get(name, ({}, {}, [], []))
+            entry = specs.get(name, ({}, {}, [], [], []))
             want.append(entry[1].get(code, name))
             want.extend(name for _ in also_rows(entry))
         order = index_order(path)
@@ -177,13 +187,14 @@ def gate(root: Path) -> int:
                             f"per skill, grouped in the order GROUPS declares")
 
     for name in present:
-        section = EXPERIMENTAL if name in ALPHA_SKILLS else STABLE
+        record = by_name[name]
+        section = EXPERIMENTAL if record.channel == "alpha" else STABLE
         where = placed.get(name)
         if where is None:
             problems.append(f"{name}/ has a SKILL.md but no `## /{name}` in README.md")
         elif where != section:
             problems.append(
-                f"{name}/ is on the {'alpha' if name in ALPHA_SKILLS else 'main'} "
+                f"{name}/ is on the {record.channel} "
                 f"channel but README.md lists it under {titles[where]!r}, "
                 f"expected {SECTIONS[section]!r}")
 

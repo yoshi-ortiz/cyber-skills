@@ -1,0 +1,45 @@
+{
+  "compute": {
+    "duration_ms": 0,
+    "harness": "Claude Code",
+    "model": "claude-opus-5",
+    "started_at": "2026-09-02T17:22:35Z",
+    "tokens": {
+      "input": 54,
+      "output": 27860,
+      "profile": "utf8_bytes_div4_ceil_v1"
+    }
+  },
+  "findings": [],
+  "inputs": {
+    "admitted_context": [
+      "design/cast-style-round.html",
+      "shots/cast-style-round.png"
+    ],
+    "corpus_refs": [],
+    "prompt_hash": "sha256:30bc5782c5941e188e5f98a284b6bbe0de56a14f86c436c0016e158841224f33",
+    "request": "characters must be procedurally generated, not fetched vector art. the problem is doing too much in one shot and sticking to one cartoon style when we need to explore different ones. 2 or 3 styles, focus on quality.\n",
+    "target_skill": "first/aesthetic",
+    "tools": []
+  },
+  "output": {
+    "adapter": "graphic",
+    "artifacts": [
+      {
+        "bytes": 111439,
+        "mime": "image/png",
+        "path": "shots/cast-style-round.png",
+        "role": "deliverable",
+        "sha256": "sha256:8156a116e5571dcc0dcbf048e0148c12dbe559bda1305e996172f19853343f12"
+      }
+    ]
+  },
+  "provenance": "inference",
+  "scope": "acid-rockstar-style-round",
+  "shot_id": "e70fbfd96ed94c7192dc79d04807f924",
+  "user_feedback": {
+    "sentiment": "positive",
+    "status": "accepted"
+  },
+  "version": 2
+}

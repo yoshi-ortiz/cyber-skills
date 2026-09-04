@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "note": "Defects already produced by a generator and rejected. Each entry names where it was seen and the constraint that forbids it, so a rejection becomes a line in the next prompt instead of a lesson only the last reader remembers. This is the reinforcement signal the deterministic prompt was throwing away.",
+  "failures": [
+    {
+      "id": "open-road",
+      "seenIn": "llm-shots/clear layout, good cartoon.png",
+      "defect": "The road is an X with four dead-end stubs. Neither outer return arc was drawn, so the loop never closes.",
+      "rule": "Draw one continuous horizontal infinity loop with both outer return curves and one central crossing. No dead ends.",
+      "constraint": "The road is ONE closed curve. After the central crossing it must return along an outer arc on the left from /first to /build and an outer arc on the right from /land to /check. Trace the whole path with a finger and end where you started, or it is wrong."
+    },
+    {
+      "id": "opposing-arrows",
+      "seenIn": "llm-shots/clear layout, good cartoon.png",
+      "defect": "Two direction arrows point at each other across the crossing.",
+      "rule": "Use one clockwise travel direction. No arrows face each other.",
+      "constraint": "Every arrow follows the same travel direction around the loop. No two arrows may point toward each other anywhere on the road."
+    },
+    {
+      "id": "invented-numerals",
+      "seenIn": "llm-shots/clear layout, good cartoon.png",
+      "defect": "Floating numerals 1, 2, 3, 4 were added beside the rooms. Nothing asked for them.",
+      "rule": "Draw no numbering, step markers, legends or callout numerals.",
+      "constraint": "Draw no numbering, no step markers, no legend, no callout numerals. The only text in the image is the six billboard strings listed below."
+    },
+    {
+      "id": "missing-billboards",
+      "seenIn": "llm-shots/clear layout, good cartoon.png",
+      "defect": "Zero billboards were drawn. Room names were painted onto the room walls instead.",
+      "rule": "Draw exactly one viewer-facing billboard on two poles beside each space.",
+      "constraint": "Draw exactly six billboards, one per space, each a flat rectangular panel held up by two visible vertical poles, standing on the ground near the space's front edge."
+    },
+    {
+      "id": "text-painted-on-walls",
+      "seenIn": "llm-shots/clear layout, good cartoon.png",
+      "defect": "Room labels were skewed onto the isometric wall and floor planes, which warped them into unreadable strokes.",
+      "rule": "Keep all text level on billboards. Put no text on walls, floors, roofs or the road.",
+      "constraint": "Never project text onto a wall, floor, roof or road surface. Billboard panels face the viewer square-on so their text stays unskewed and level."
+    },
+    {
+      "id": "invented-billboard-strings",
+      "seenIn": "llm-shots/clear layout, good cartoon.png",
+      "defect": "The generator produced 'qa tests', 'clean code', 'project status' and 'sketch idea' -- none of which were specified. The prompt it was given listed two different, conflicting strings for three of the six spaces, so it invented a third.",
+      "rule": "Use only the exact billboard strings listed under Labels. Add no other words.",
+      "constraint": "Reproduce each billboard string character for character from the one list below, including the leading slash. Add no other words anywhere in the image."
+    },
+    {
+      "id": "empty-rooms",
+      "seenIn": "llm-shots/clear layout, good cartoon.png",
+      "defect": "/land and /check were drawn as solid coloured cubes with an empty black doorway and no interior at all, while /first and /build were furnished.",
+      "rule": "Open every space toward the viewer and fill it with furniture, props and characters. No closed or empty boxes.",
+      "constraint": "Every one of the six spaces is cut open toward the viewer and filled with its own furniture, props and characters. No space may be a closed or empty box."
+    },
+    {
+      "id": "ghosted-kiosks",
+      "seenIn": "llm-shots/clear layout, good cartoon.png",
+      "defect": "/kit and /fix were rendered semi-transparent and nearly vanished. The prompt had asked for a 'deliberately faded-looking effect', which invited exactly this.",
+      "rule": "Keep every space fully opaque. Kiosks may be smaller and paler, never transparent, blurred or ghosted.",
+      "constraint": "Every space is fully opaque with the same outline weight. The kiosks are smaller and paler in fill than the four rooms, and that is the only difference. Do not use transparency, blur or ghosting."
+    },
+    {
+      "id": "tall-cubic-rooms",
+      "seenIn": "llm-shots/best ugly shot, good layout.png",
+      "defect": "Rooms were drawn as tall cubes. The user rejected this: 'the rooms walls are just too tall, should not be so cubic'.",
+      "rule": "Use low-walled open trays. Wall height is about one quarter of the floor's shorter side. No cubes.",
+      "constraint": "Rooms are low-walled open trays, wider and deeper than they are tall. Wall height is roughly one quarter of the floor's shorter side. A room must never read as a cube."
+    },
+    {
+      "id": "rooms-undersized",
+      "seenIn": "llm-shots/clear layout, good cartoon.png",
+      "defect": "Rooms occupy a small fraction of the frame, leaving large empty margins, so the interior stories are unreadable.",
+      "rule": "Fill the frame with the six spaces and road. Keep an even outer margin near five percent and make interior props readable.",
+      "constraint": "The six spaces and the road together fill the frame. Leave an even margin of roughly five percent and no more. Interior props must be large enough to identify at a glance."
+    },
+    {
+      "id": "realistic-people",
+      "seenIn": "llm-shots/best ugly shot, good layout.png",
+      "defect": "Figures were drawn at realistic human proportion with no faces, in a corporate flat-illustration register the user called 'ugly cartoons'.",
+      "rule": "Draw chibi cartoon figures with heads near half their height, readable faces and the same heavy outline as the rooms.",
+      "constraint": "Figures are chibi cartoon characters: head roughly half of total height, large white eyes with a dark contour, an open mouth, and the same heavy outline as everything else. Never realistic proportion, never a faceless figure."
+    },
+    {
+      "id": "duplicated-billboards",
+      "seenIn": "llm-shots/fucked shots/watermarked_img_1601036776744645981.jpg",
+      "defect": "Billboard panels were duplicated, so one space carried its string more than once.",
+      "rule": "Draw one billboard per space and six total. Do not repeat a billboard or string.",
+      "constraint": "One billboard per space and six in total. No space carries two, and no string appears twice in the image."
+    },
+    {
+      "id": "watermark",
+      "seenIn": "llm-shots/fucked shots/watermarked_img_1601036776744645981.jpg",
+      "defect": "The output carried a stock-image watermark across the frame.",
+      "rule": "Draw no watermark, signature, logo, caption bar or frame border.",
+      "constraint": "No watermark, signature, logo, caption bar or frame border of any kind."
+    }
+  ]
+}

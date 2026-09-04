@@ -8,61 +8,15 @@ skill name, not by family path.
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kit" / "silly" / "scripts"))
-from alias import MARKER, frontmatter
-
-# Six rail families from SPEC.md. A directory with this name may hold skills.
-WORKFLOW = frozenset({"kit", "first", "build", "land", "check", "fix"})
-
-# Top-level trees that are never skills, even if they contain a SKILL.md.
-SKIP = frozenset({
-    "tools", "assets", "docs", "design", "shots", "moodboards", "spec",
-    ".git", ".claude", ".superpowers", ".audit",
-    # `cook/` carries a SKILL.md so an agent can invoke it, but it is fog and
-    # ships on no channel, so the README must not be asked to index it.
-    "cook",
-})
-
-# README index: one group per family that ships skills today.
-GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("kit", ("kit", "silly", "ora")),
-    ("first", ("genesis", "knowledge", "aesthetic")),
-    ("check", ("build-context-token-vectors", "tokens-qa")),
-)
-
-
-def is_skill(skill_md: Path) -> bool:
-    """True when this SKILL.md names a real skill, not an installed alias stub."""
-    return not frontmatter(skill_md)[0].get(MARKER)
-
-
-def harvest(container: Path, found: dict[str, Path]) -> None:
-    """Find skill directories under a workflow family tree."""
-    for child in sorted(container.iterdir()):
-        if not child.is_dir():
-            continue
-        skill_md = child / "SKILL.md"
-        if skill_md.is_file() and is_skill(skill_md):
-            found[child.name] = child
-        else:
-            harvest(child, found)
+from skill_catalog import (ALPHA_SKILLS, GROUPS, ORIGIN, SKIP, WORKFLOW,
+                           SkillRecord, catalog, grouped_names, owner_of)
 
 
 def discover(root: Path) -> list[tuple[str, Path]]:
-    """Every skill as (canonical name, directory), sorted by name."""
-    found: dict[str, Path] = {}
-    for entry in sorted(root.iterdir()):
-        if not entry.is_dir() or entry.name in SKIP or entry.name.startswith("."):
-            continue
-        skill_md = entry / "SKILL.md"
-        if skill_md.is_file() and is_skill(skill_md):
-            found[entry.name] = entry
-        if entry.name in WORKFLOW:
-            harvest(entry, found)
-    return sorted(found.items())
+    """Compatibility projection as ``(canonical name, absolute directory)``."""
+    return [(record.name, root.resolve() / record.path) for record in catalog(root)]
 
 
 def names(root: Path) -> list[str]:
@@ -71,4 +25,4 @@ def names(root: Path) -> list[str]:
 
 def grouped() -> list[str]:
     """Every grouped skill, in the order the index table must list them."""
-    return [name for _, members in GROUPS for name in members]
+    return grouped_names()

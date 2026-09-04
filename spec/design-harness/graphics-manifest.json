@@ -2,6 +2,7 @@
   "adapters": {
     "agy": {
       "aspectRatio": "16:9",
+      "clearShotReference": "moodboards/llm-shots/clear layout, good cartoon.png",
       "command": "agy",
       "deliverable": false,
       "fallbackModel": "gemini-3-pro-image-preview",
@@ -94,6 +95,7 @@
     "attemptsLog": "spec/design-harness/inference-attempts.jsonl",
     "moodboardAttempts": "moodboards/llm-shots/attempts",
     "prompts": {
+      "clearShot": "moodboards/llm-shots/prompts/clear-shot-prompt.txt",
       "compiled": "moodboards/llm-shots/prompts/graphics-prompt.json",
       "slicesDir": "moodboards/llm-shots/prompts/slices"
     },

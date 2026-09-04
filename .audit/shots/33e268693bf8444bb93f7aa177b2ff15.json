@@ -1,0 +1,40 @@
+{
+  "compute": {
+    "duration_ms": 0,
+    "harness": "unknown",
+    "model": "unknown",
+    "started_at": "2026-09-02T16:38:31Z",
+    "tokens": {
+      "input": 29,
+      "output": 53063,
+      "profile": "utf8_bytes_div4_ceil_v1"
+    }
+  },
+  "findings": [],
+  "inputs": {
+    "corpus_refs": [],
+    "prompt_hash": "sha256:f1848ebc33f3daabb7d90116bae29259535fc0b708ed0072a4ed710d25003916",
+    "request": "Los personajes y objetos ahora son c\u00edrculos y p\u00edldoras en CSS, no SVG dibujado a mano. \u00bfSe ven mejor que antes?",
+    "target_skill": "first/aesthetic",
+    "tools": []
+  },
+  "output": {
+    "adapter": "graphic",
+    "artifacts": [
+      {
+        "bytes": 212251,
+        "mime": "image/png",
+        "path": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.foundation.png",
+        "role": "deliverable",
+        "sha256": "sha256:c79611ddf496a5a45425c5e11d27d11abbcdc27b0782eb9d4759f95c988e3b3e"
+      }
+    ]
+  },
+  "provenance": "inference",
+  "scope": "hero-css-characters",
+  "shot_id": "33e268693bf8444bb93f7aa177b2ff15",
+  "user_feedback": {
+    "status": "pending"
+  },
+  "version": 2
+}

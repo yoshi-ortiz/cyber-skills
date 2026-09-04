@@ -54,6 +54,40 @@ def correction_bundles(project_root: Path) -> list[dict[str, str]]:
     return bundles
 
 
+def unmeasured_images(project_root: Path) -> list[str]:
+    """Corpus images whose pixels nobody has read.
+
+    A file that failed to decode counts as read: the failure is recorded under
+    `unmeasured`, so the gap is visible and the flow does not loop on a JPEG
+    the measurer cannot open.
+    """
+    store = Path(project_root) / "spec" / "design-harness"
+    corpus_path = store / "corpus.json"
+    if not corpus_path.exists():
+        return []
+    try:
+        corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    images = {str(item.get("sha256")): str(item.get("path"))
+              for item in corpus.get("items") or []
+              if isinstance(item, Mapping) and item.get("kind") == "image"}
+    if not images:
+        return []
+    derived_path = store / "corpus-derived.json"
+    seen: set[str] = set()
+    if derived_path.exists():
+        try:
+            derived = json.loads(derived_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            derived = {}
+        seen = set((derived.get("images") or {}).keys())
+        seen |= {str(entry.get("sha256"))
+                 for entry in derived.get("unmeasured") or []
+                 if isinstance(entry, Mapping)}
+    return sorted(path for digest, path in images.items() if digest not in seen)
+
+
 def missing_proofs(support: Mapping[str, Any], artifact: Path) -> list[str]:
     """The proof kinds this artifact has no live evidence for."""
     if not artifact.exists():
@@ -80,6 +114,12 @@ FLOW = (
      lambda st: "no corpus.json, so nothing has been observed yet"),
     ("seed-tags", lambda st: not st["tags"],
      lambda st: "corpus is observed but untagged, and only pursue tags reach a slice"),
+    # Before every consumer of corpus colour. A prompt that names a reference
+    # nobody has read is a prompt directed by a filename, which is how a scene
+    # ends up in colours no reference contains.
+    ("measure-corpus", lambda st: bool(st["unmeasuredImages"]),
+     lambda st: "these references are cited by name but their pixels were never "
+                "read: " + ", ".join(st["unmeasuredImages"])),
     ("research-tools", lambda st: not st["toolResearch"] or bool(st["toolResearchErrors"]),
      lambda st: ("research the project domain and stack before custom generation"
                  if not st["toolResearchErrors"] else
@@ -184,6 +224,7 @@ def read_state(project_root: Path) -> dict[str, Any]:
         "promptHash": prompt_inputs_hash(project_root, manifest, scene),
         "corpus": (store / "corpus.json").exists(),
         "tags": (store / "corpus-tags.json").exists(),
+        "unmeasuredImages": unmeasured_images(project_root),
         "toolResearch": tool_research is not None,
         "toolResearchErrors": tool_errors,
         "customPlanMissing": missing,

@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "note": "One boss per space, as parameters rather than drawings. The renderer builds every figure from the same construction rules in character-observations.json, so a change to those rules moves all six at once and no figure can drift into its own style.",
+  "figures": {
+    "/first": {
+      "name": "Acid Rockstar",
+      "skin": "#f5c0bc", "top": "#625bc3", "legs": "#128fd1", "shoes": "#ffb800",
+      "hairOuter": "#ff6918", "hairInner": "#dd5caf", "hairStyle": "mane",
+      "lens": "#c1e5e3", "collar": "#ffb800",
+      "prop": "mic", "propColour": "#fd4337",
+      "direction": "Glam-diva scale with art-director-dandy attitude.",
+      "armNear": -38, "armFar": 21, "build": 0.92
+    },
+    "/build": {
+      "name": "Tech-Bro CEO",
+      "skin": "#f5c0bc", "top": "#ffffff", "legs": "#8d88a6", "shoes": "#ffffff",
+      "hairOuter": "#000000", "hairInner": "#000000", "hairStyle": "crop",
+      "vest": "#22317a",
+      "direction": "Formal navy vest over a white shirt. No hat or headwear.",
+      "prop": "watch", "propColour": "#ffb800",
+      "armNear": -122, "armFar": 16, "build": 1.0
+    },
+    "/land": {
+      "name": "Mission Commander",
+      "skin": "#f5c0bc", "top": "#f8c167", "legs": "#128fd1", "shoes": "#ffffff",
+      "hairOuter": "#d4875b", "hairInner": "#d4875b", "hairStyle": "crop",
+      "headgear": "headset", "headgearColour": "#fd4337", "collar": "#fd4337",
+      "prop": "mug", "propColour": "#ffffff",
+      "armNear": 30, "armFar": -20, "build": 1.12
+    },
+    "/check": {
+      "name": "Scrum Oracle",
+      "skin": "#f5c0bc", "top": "#128fd1", "legs": "#625bc3", "shoes": "#ffb800",
+      "hairOuter": "#000000", "hairInner": "#000000", "hairStyle": "bob",
+      "prop": "ball", "propColour": "#2acad6",
+      "armNear": -150, "armFar": 24, "build": 0.86
+    },
+    "/kit": {
+      "name": "Token Influencer",
+      "skin": "#f5c0bc", "top": "#ffb800", "legs": "#fd4337", "shoes": "#ffffff",
+      "hairOuter": "#dd5caf", "hairInner": "#ffb800", "hairStyle": "styled",
+      "prop": "bag", "propColour": "#fd4337",
+      "armNear": 13, "armFar": -24, "build": 0.96
+    },
+    "/fix": {
+      "name": "Chief Bug Doctor",
+      "skin": "#f5c0bc", "top": "#ffffff", "legs": "#2acad6", "shoes": "#000000",
+      "hairOuter": "#000000", "hairInner": "#000000", "hairStyle": "crop",
+      "collar": "#07d370",
+      "prop": "lens", "propColour": "#c1e5e3",
+      "armNear": -40, "armFar": 17, "build": 1.04
+    }
+  }
+}

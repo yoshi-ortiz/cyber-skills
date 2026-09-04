@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
 """The channel split: `main` drops alpha skills, `alpha` carries them."""
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fog import (ALPHA_SKILLS, FOG_DIRS, FOG_FILES, FOG_FILES_EXTRA,
                  FOG_GLOBS, is_fog, reasons)
 from publish import published_paths
+from skill_discovery import catalog
 
 
 def test() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        fixture = Path(tmp)
+        skill = fixture / "first" / "genesis"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\nname: genesis\n---\n")
+        records = catalog(fixture)
+        assert is_fog("first/genesis/SKILL.md", records=records)
+        assert not is_fog("assets/genesis/icon.svg", records=records)
+
     assert is_fog("first/genesis/SKILL.md")                # alpha skill on main
     assert is_fog("first/genesis/references/architecture.md")
     assert not is_fog("first/genesis/SKILL.md", "alpha")

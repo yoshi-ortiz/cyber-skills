@@ -2,6 +2,7 @@
 name: build-context-token-vectors
 description: Derive which installed skills are actually a skill's peers, then tune EVoC live in a browser companion without rebuilding the embeddings. Use before benchmarking a skill flow, so the comparison set is read off the corpus rather than assumed, and to see which skills have no peer at all.
 disable-model-invocation: true
+phase: check
 ---
 
 # Build context token vectors

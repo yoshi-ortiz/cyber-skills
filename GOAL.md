@@ -412,12 +412,11 @@ one file, and the question is whether it holds.
 
 ### Missing machinery, not missing names
 
-Three steps in the summary workflow that no family owns. These are the real
+Two steps in the summary workflow that no family owns. These are the real
 gaps: no amount of naming fixes them.
 
 | Step | Prototype | The question | Row |
 | --- | --- | --- | --- |
-| **2. Approve features** | A decision record between `first-idea-sketch` and `build` | Sketching produces options and building consumes a decision. The moment of deciding is unrecorded, so nothing can later say *why* this was built. Is it a `first` section, a `land` gate, or an ADR? | R-46 |
 | **3. Clean code for blind no coders** | A legibility check on what `build` hands back | Stated as an acceptance criterion and nothing verifies it. A green test run is not evidence the deliverable is legible to the person who cannot read the code. What would be? | R-47 |
 | **5. Portable ontology** | A read-only view of `DEPLOY`, `LIVE OPS / RUN`, `MONITOR`, `PLAN (view tickets)` | The only part of the workflow that describes a **running product** rather than the work of building one. Does it belong under `check-release-ontology`, or outside this package entirely? | G-4, R-39 |
 
@@ -425,7 +424,7 @@ gaps: no amount of naming fixes them.
 
 | Item | Prototype | The question | Row |
 | --- | --- | --- | --- |
-| Leader words in `collection.yaml` | Inline comments naming the top skills and `ponytail`, `ask-matt`, `poteto` | Only `ponytail` is a manifest entry. `ask-matt` arrives incidentally through the bare `mattpocock/skills` line, and `poteto` belongs to **pstack**, which is in no manifest at all -- nor is `zoom-out`, which `check` drives. A leader word that is not a source cannot be indexed, and a clean install produces a rail with holes in it. | R-43 |
+| Workflow origins in `collection.toml` | A machine-checked starter profile naming every routed skill and source | `cursor/plugins` is the verified pstack repository, but its current CLI exposes `Poteto Mode` and not `zoom-out`; the current Matt Pocock source does not expose it either. gstack exposes its bundle rather than separate `review` or `land-and-deploy` selectors. The starter cannot become executable until the declared origins match what clean installs can actually select. | R-43 |
 | `alias.py` stub kinds | Two more shapes in `stub()` | Anchor and ghost-argument stubs are one line each. Does the gate still hold when a name points at a section rather than a skill? | R-45 |
 
 ### Agreed tokenization, unanswered parts

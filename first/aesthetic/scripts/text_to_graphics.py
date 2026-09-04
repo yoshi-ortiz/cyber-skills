@@ -11,7 +11,6 @@ import hashlib
 import json
 import re
 import xml.etree.ElementTree as ET
-import subprocess
 import sys
 import tempfile
 import textwrap
@@ -25,6 +24,7 @@ from graphics_corpus import (prompt_inputs_hash, refine_references,
 STORE = Path("spec/design-harness")
 MANIFEST_FILE = "graphics-manifest.json"
 SCENE_FILE = "scene-spec.json"
+DERIVED_FILE = "corpus-derived.json"
 ATTEMPTS_FILE = "inference-attempts.jsonl"
 SUPPORT_FILE = "support.json"
 VERDICTS = ("PASS", "BLOCKED")
@@ -197,136 +197,19 @@ def inventory_sections(text: str) -> dict[str, str]:
     return sections
 
 
-def _inventory_directive(project_root: Path, scene: Mapping[str, Any]) -> str:
-    reference = scene.get("inventoryRef")
-    identifiers = [str(space["id"]) for space in spaces_of(scene)]
-    if not reference:
-        return "INVENTORY: none declared for this scene."
-    path = project_root / str(reference)
-    if not path.exists():
-        return f"INVENTORY: {reference} declared but not found; gap recorded."
-    sections = inventory_sections(path.read_text(encoding="utf-8"))
-    lines = ["INVENTORY PER SPACE - never send this to a style or image model."]
-    for identifier in identifiers:
-        section = sections.get(identifier)
-        lines.append(f"\n## {identifier}\n" + (
-            _truncate(section, INVENTORY_PER_SPACE_MAX) if section
-            else "(no inventory section; gap)"))
-    return "\n".join(lines)
-
-
-def _style_slice(project_root: Path, manifest: Mapping[str, Any]) -> str:
-    lines = [_style_directive(manifest)]
-    pursued = tagged_references(project_root, "illustration")
-    if pursued:
-        lines.append("\nPursue these references:")
-        lines += [f"- {path}" + (f" ({note})" if note else "")
-                  for path, note in pursued]
-    return "\n".join(lines)
-
-
-
-def _style_directive(manifest: Mapping[str, Any]) -> str:
-    directive = str(manifest.get("styleDirective") or "").strip()
-    if not directive:
-        raise GraphicsError("graphics-manifest.json missing styleDirective")
-    return directive
-
-
-def _geometry_directive(scene: Mapping[str, Any]) -> str:
-    sequence = " -> ".join((scene.get("road") or {}).get("sequence") or [])
-    billboards = scene.get("billboards") or {}
-    space_lines = []
-    for space in spaces_of(scene):
-        palette = space.get("palette")
-        if isinstance(palette, list):
-            palette = ", ".join(str(name) for name in palette)
-        space_lines.append(f"- {space['id']} at {space['position']} ({palette})")
-    return "\n".join([
-        "GEOMETRY ONLY - no character inventory prose.",
-        f"Layout: {scene.get('layout')}.",
-        f"Road: {(scene.get('road') or {}).get('shape')}, one-way {sequence}.",
-        "Spaces:",
-        *space_lines,
-        'The road element must carry id="road" so the gate can read its topology.',
-        "Billboards (exact text):",
-        *[f"- {key}: {billboards[key]}" for key in sorted(billboards)],
-    ])
-
 
 def compile_slices(project_root: Path) -> dict[str, Any]:
-    from graphics_tool_research import context, load as load_tool_research
+    """Delegate. The slices themselves live in `graphics_slices`."""
+    from graphics_slices import compile_slices as _compile
 
-    research = load_tool_research(project_root)
-    if research is None:
-        raise GraphicsError("missing graphics-tools.json; run status and research-tools")
-    manifest = load_manifest(project_root)
-    scene = load_scene(project_root, manifest)
-    errors = validate_scene(scene)
-    if errors:
-        raise GraphicsError("; ".join(errors))
+    return _compile(project_root)
 
-    style = _truncate(_style_slice(project_root, manifest), STYLE_SLICE_MAX)
-    geometry = _truncate(_geometry_directive(scene), GEOMETRY_SLICE_MAX)
-    composition = tagged_references(project_root, "composition")
-    moodboard = _truncate("\n".join(
-        [style, "", "Composition references:"]
-        + [f"- {path}" + (f" ({note})" if note else "") for path, note in composition]
-        + ["", "Match composition only. This is a moodboard probe, never a deliverable."]),
-        MOODBOARD_SLICE_MAX)
-    inventory = _inventory_directive(project_root, scene)
-    refine = "\n".join(
-        ["REFINE EXISTING ATTEMPTS - edit or reuse these; do not spend a fresh shot."]
-        + [f"- {path}: {note}" for path, note in refine_references(project_root)])
-    tools = _truncate(json.dumps(context(research), ensure_ascii=False, sort_keys=True),
-                      TOOLS_SLICE_MAX)
 
-    slices = {
-        "version": 1,
-        "element": scene["element"],
-        "style": style,
-        "geometry": geometry,
-        "moodboard": moodboard,
-        "inventory": inventory,
-        "refine": refine,
-        "tools": tools,
-        "sceneSpecHash": _sha256_bytes(
-            json.dumps(scene, sort_keys=True).encode("utf-8")),
-        "promptInputsHash": prompt_inputs_hash(project_root, manifest, scene),
-    }
+def measure_corpus_images(project_root: Path) -> dict[str, Any]:
+    """Delegate. Reading corpus pixels lives in `graphics_slices`."""
+    from graphics_slices import measure_corpus_images as _measure
 
-    outputs = manifest.get("outputs") or {}
-    prompts = outputs.get("prompts") or {}
-    compiled = project_root / str(prompts.get("compiled")
-                                 or "moodboards/llm-shots/prompts/graphics-prompt.json")
-    slices_dir = project_root / str(prompts.get("slicesDir")
-                                   or "moodboards/llm-shots/prompts/slices")
-    slices_dir.mkdir(parents=True, exist_ok=True)
-
-    graphics_prompt = {
-        "prompt": moodboard,
-        "negative_prompt": ("photorealistic, glossy 3D, pixel art, monochrome, "
-                            "broken road, dead-end road, small rooms, cramped cubes"),
-        "aspect_ratio": manifest.get("adapters", {}).get("agy", {}).get(
-            "aspectRatio", "16:9"),
-        "style": "isometric editorial infographic",
-        "background": "warm off-white",
-        "slices": {
-            "style": style,
-            "geometry": geometry,
-            "moodboard": moodboard,
-            "inventory": inventory,
-            "refine": refine,
-            "tools": tools,
-        },
-    }
-    _atomic_json(compiled, graphics_prompt)
-    for name, text in slices.items():
-        if name in {"version", "element", "sceneSpecHash", "promptInputsHash"}:
-            continue
-        (slices_dir / f"{name}.txt").write_text(text + "\n", encoding="utf-8")
-    _atomic_json(slices_dir / "manifest.json", slices)
-    return {"compiled": str(compiled), "slicesDir": str(slices_dir), "slices": slices}
+    return _measure(project_root)
 
 
 def _svg_texts(root: ET.Element) -> set[str]:
@@ -370,10 +253,31 @@ def gate_outputs(project_root: Path) -> dict[str, Any]:
     checks.append({"id": "svg-exists", "passed": root is not None})
 
     billboards = set((scene.get("billboards") or {}).values())
-    missing = sorted(billboards - _svg_texts(root)) if root is not None else sorted(billboards)
+    drawn_text = _svg_texts(root) if root is not None else set()
+    missing = sorted(billboards - drawn_text) if root is not None else sorted(billboards)
     if missing:
         errors.append(f"svg missing billboards: {', '.join(missing)}")
     checks.append({"id": "billboard-text-present", "passed": not missing})
+
+    # The machine-checkable half of known-failures.json. A generator invented
+    # signage and left rooms empty; whatever this renderer draws, it does not
+    # get to ship those two defects unnoticed.
+    stray = sorted(text for text in drawn_text if text and text not in billboards)
+    if stray:
+        errors.append("svg carries text no billboard declares: " + ", ".join(stray))
+    checks.append({"id": "no-invented-text", "passed": not stray})
+
+    populated = set()
+    if root is not None:
+        for node in root.iter(f"{SVG_NS}g"):
+            name = str(node.get("id") or "")
+            if name.endswith("_boss") and len(list(node)) > 0:
+                populated.add(name[:-len("_boss")])
+    wanted = {_slug(space["id"]) for space in spaces_of(scene)}
+    empty = sorted(wanted - populated)
+    if empty:
+        errors.append("spaces drawn with nobody in them: " + ", ".join(empty))
+    checks.append({"id": "no-empty-space", "passed": not empty})
 
     faults: list[str] = []
     if root is not None:
@@ -451,6 +355,29 @@ def record_adapter(project_root: Path, adapter: str, verdict: str,
     return record
 
 
+def corpus_evidence(project_root: Path) -> dict[str, Any]:
+    """The measured colour a render is allowed to draw from.
+
+    Sourced from the pursued illustration references, because those are the ones
+    the project said to follow. Empty when nothing has been measured, and the
+    renderer reports that as `unevidenced-constants` rather than passing an
+    invented palette off as observed.
+    """
+    from graphics_corpus import derived_measurements, evidenced_palette
+
+    pursued = [path for path, _ in tagged_references(project_root, "illustration")]
+    measured = derived_measurements(project_root)
+    followed = [measured[path] for path in pursued if path in measured]
+    if not followed:
+        return {}
+    papers = [record["paper"] for record in followed if record.get("paper")]
+    inks = [record["ink"] for record in followed if record.get("ink")]
+    return {"palette": evidenced_palette(project_root, pursued),
+            "paper": papers[0] if papers else None,
+            "ink": inks[0] if inks else None,
+            "references": pursued}
+
+
 def build_svg(project_root: Path) -> dict[str, Any]:
     """Draw with the in-repo renderer. Rung 2b, for when no adapter is available."""
     from iso_svg import build
@@ -463,11 +390,24 @@ def build_svg(project_root: Path) -> dict[str, Any]:
     out = project_root / str((manifest.get("outputs") or {}).get("vector")
                              or "shots/output.svg")
     out.parent.mkdir(parents=True, exist_ok=True)
-    svg = build(scene)
+    from iso_svg import layout
+
+    evidence = corpus_evidence(project_root)
+    cast_path = project_root / STORE / "cast.json"
+    cast = _read_json(cast_path) if cast_path.exists() else {}
+    plan = layout(scene, evidence, cast)
+    svg = build(scene, evidence, cast)
     out.write_text(svg, encoding="utf-8")
     append_attempt(project_root, {"adapter": "iso-svg", "outcome": "accepted",
-                                  "output": str(out), "sceneSpecHash": scene_hash(scene)})
-    return {"vector": str(out), "bytes": len(svg.encode("utf-8"))}
+                                  "output": str(out),
+                                  "paletteSource": plan["paletteSource"],
+                                  "paletteGaps": plan["paletteGaps"],
+                                  "sceneSpecHash": scene_hash(scene)})
+    return {"vector": str(out), "bytes": len(svg.encode("utf-8")),
+            "figures": sum(1 for box in plan["boxes"] if box.get("figure")),
+            "paletteSource": plan["paletteSource"],
+            "paletteGaps": plan["paletteGaps"],
+            "palette": evidence.get("palette") or []}
 
 
 
@@ -599,55 +539,15 @@ def refresh_corpus(project_root: Path) -> dict[str, Any]:
 
 
 def run_moodboard(project_root: Path, *, dry_run: bool = False) -> dict[str, Any]:
-    manifest = load_manifest(project_root)
-    pending = refine_references(project_root)
-    if pending:
-        raise GraphicsError(
-            "refine-tagged attempts are pending; edit or reuse them before spending "
-            "a fresh moodboard shot: " + ", ".join(path for path, _ in pending))
-    compile_slices(project_root)
-    agy = ((manifest.get("adapters") or {}).get("agy") or {})
-    model = agy.get("imageModel", "gemini-3.1-flash-image-preview")
-    compiled = project_root / "moodboards/llm-shots/prompts/graphics-prompt.json"
-    prompt = _read_json(compiled)["prompt"]
-    attempts_dir = project_root / str(
-        (manifest.get("outputs") or {}).get("moodboardAttempts")
-        or "moodboards/llm-shots/attempts")
-    attempts_dir.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    record = {
-        "adapter": "agy",
-        "model": model,
-        "promptHash": _sha256_bytes(prompt.encode("utf-8")),
-        "promptBytes": len(prompt.encode("utf-8")),
-        "outcome": "rejected" if dry_run else "mixed",
-        "note": "moodboard only; not deliverable",
-    }
-    if dry_run:
-        record["command"] = (
-            f"agy --dangerously-skip-permissions --print-timeout 15m -p "
-            f"'Call generate_image once: AspectRatio 16:9, model {model}, "
-            f"Prompt from {compiled}'"
-        )
-        append_attempt(project_root, record)
-        return record
+    from graphics_generation import run_moodboard as _run
 
-    instruction = (
-        "Call generate_image exactly ONCE with AspectRatio 16:9, "
-        f"ImageName moodboard_{stamp}, and the Prompt below. "
-        f"Save PNG under {attempts_dir}/. Print path or error.\n\n"
-        f"{prompt}"
-    )
-    cmd = ["agy", "--dangerously-skip-permissions", "--print-timeout", "15m", "-p", instruction]
-    completed = subprocess.run(cmd, cwd=project_root, capture_output=True, text=True)
-    record["exitCode"] = completed.returncode
-    record["stdoutTail"] = completed.stdout[-2000:]
-    record["stderrTail"] = completed.stderr[-2000:]
-    record["outcome"] = "accepted" if completed.returncode == 0 else "rejected"
-    append_attempt(project_root, record)
-    if completed.returncode != 0:
-        raise GraphicsError(f"agy moodboard failed: {completed.stderr[-500:]}")
-    return record
+    return _run(project_root, dry_run=dry_run)
+
+
+def run_clear_shot(project_root: Path, *, dry_run: bool = False) -> dict[str, Any]:
+    from graphics_generation import run_clear_shot as _run
+
+    return _run(project_root, dry_run=dry_run)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -658,6 +558,17 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("compile", help="emit adapter prompt slices and graphics-prompt.json")
     sub.add_parser("observe", help="refresh spec/design-harness/corpus.json from moodboards")
     sub.add_parser("seed-tags", help="apply graphics-manifest corpusTagHints to corpus-tags.json")
+    sub.add_parser("measure", help="read corpus image pixels into corpus-derived.json")
+    sub.add_parser("deterministic",
+                   help="compile the image prompt from scene, corpus and failures")
+    crop = sub.add_parser("crop", help="enlarge one region of a reference so it can be read")
+    crop.add_argument("--source", required=True, type=Path)
+    crop.add_argument("--box", required=True, help="left,top,width,height in source pixels")
+    crop.add_argument("--scale", type=int, default=3)
+    crop.add_argument("--out", required=True, type=Path)
+    audit = sub.add_parser("palette-audit",
+                           help="how much of a comp's colour the corpus evidences")
+    audit.add_argument("--design", required=True, type=Path)
     sub.add_parser("export-avge", help="write moodboards/llm-shots/prompts/slices/avge-calls.json")
     sub.add_parser("gate", help="parse the drawn scene and check it")
     sub.add_parser("status", help="print the one next action and why")
@@ -668,9 +579,12 @@ def main(argv: list[str] | None = None) -> int:
     pre.add_argument("--adapter", required=True)
     pre.add_argument("--verdict", required=True, choices=VERDICTS)
     pre.add_argument("--evidence", required=True)
-    init = sub.add_parser("init", help="observe, seed-tags, compile, export-avge")
+    init = sub.add_parser("init", help="observe, seed-tags, measure, compile, export-avge")
     mood = sub.add_parser("moodboard", help="run agy moodboard inference (not deliverable)")
     mood.add_argument("--dry-run", action="store_true", help="record command without calling agy")
+    clear = sub.add_parser("clear-shot", help="edit the approved clear shot through agy")
+    clear.add_argument("--dry-run", action="store_true",
+                       help="compile and record the handoff without calling agy")
 
     args = parser.parse_args(argv)
     root = args.project_root.resolve()
@@ -687,6 +601,36 @@ def main(argv: list[str] | None = None) -> int:
             result = seed_tags_from_manifest(root)
             json.dump(result, sys.stdout, indent=2, sort_keys=True)
             sys.stdout.write("\n")
+        elif args.command == "crop":
+            from corpus_measure import crop_png
+
+            box = tuple(int(part) for part in args.box.split(","))
+            if len(box) != 4:
+                raise GraphicsError("--box wants left,top,width,height")
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_bytes(crop_png(args.source.read_bytes(), box, args.scale))
+            json.dump({"crop": str(args.out), "source": str(args.source),
+                       "box": list(box), "scale": args.scale},
+                      sys.stdout, indent=2, sort_keys=True)
+            sys.stdout.write("\n")
+        elif args.command == "palette-audit":
+            from graphics_corpus import palette_audit
+
+            result = palette_audit(root, args.design)
+            json.dump(result, sys.stdout, indent=2, sort_keys=True)
+            sys.stdout.write("\n")
+            # Nothing measured means no verdict, not a pass.
+            return 0 if result["fit"] is not None and not result["unevidenced"] else 2
+        elif args.command == "deterministic":
+            from graphics_slices import deterministic_prompt
+
+            result = deterministic_prompt(root)
+            json.dump(result, sys.stdout, indent=2, sort_keys=True)
+            sys.stdout.write("\n")
+        elif args.command == "measure":
+            result = measure_corpus_images(root)
+            json.dump(result, sys.stdout, indent=2, sort_keys=True)
+            sys.stdout.write("\n")
         elif args.command == "export-avge":
             result = export_avge_calls(root)
             json.dump(result, sys.stdout, indent=2, sort_keys=True)
@@ -695,6 +639,7 @@ def main(argv: list[str] | None = None) -> int:
             steps = {
                 "observe": refresh_corpus(root),
                 "seedTags": seed_tags_from_manifest(root),
+                "measure": measure_corpus_images(root),
                 "compile": compile_slices(root),
                 "exportAvge": export_avge_calls(root),
             }
@@ -730,6 +675,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result["passed"] else 1
         elif args.command == "moodboard":
             result = run_moodboard(root, dry_run=args.dry_run)
+            json.dump(result, sys.stdout, indent=2, sort_keys=True)
+            sys.stdout.write("\n")
+        elif args.command == "clear-shot":
+            result = run_clear_shot(root, dry_run=args.dry_run)
             json.dump(result, sys.stdout, indent=2, sort_keys=True)
             sys.stdout.write("\n")
         return 0

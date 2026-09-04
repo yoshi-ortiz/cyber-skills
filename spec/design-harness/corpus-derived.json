@@ -1,0 +1,504 @@
+{
+  "images": {
+    "0db3a04569a3f16cab479ea4922b1038d445ff0bee346ed58a58b4ce170dc459": {
+      "aspect": 1.191,
+      "dominant": "#c1e5e3",
+      "height": 430,
+      "ink": null,
+      "inkShare": 0.0718,
+      "palette": [
+        {
+          "coverage": 0.326,
+          "hex": "#c1e5e3",
+          "rgb": [
+            193,
+            229,
+            227
+          ]
+        },
+        {
+          "coverage": 0.2537,
+          "hex": "#fefaee",
+          "rgb": [
+            254,
+            250,
+            238
+          ]
+        },
+        {
+          "coverage": 0.0818,
+          "hex": "#d4875b",
+          "rgb": [
+            212,
+            135,
+            91
+          ]
+        },
+        {
+          "coverage": 0.061,
+          "hex": "#8d88a6",
+          "rgb": [
+            141,
+            136,
+            166
+          ]
+        },
+        {
+          "coverage": 0.0581,
+          "hex": "#4fac5c",
+          "rgb": [
+            79,
+            172,
+            92
+          ]
+        },
+        {
+          "coverage": 0.031,
+          "hex": "#f5c0bc",
+          "rgb": [
+            245,
+            192,
+            188
+          ]
+        }
+      ],
+      "paper": "#c1e5e3",
+      "path": "isometric cartoon/Pasted 2026-08-28 at 5.53.24 p.m..png",
+      "width": 512
+    },
+    "4e0e61d8727371e963491fc2f5874df68a646cacc2f591c929c4c74ff548c814": {
+      "aspect": 1.778,
+      "dominant": "#ffffff",
+      "height": 288,
+      "ink": "#000000",
+      "inkShare": 0.0376,
+      "palette": [
+        {
+          "coverage": 0.7671,
+          "hex": "#ffffff",
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "coverage": 0.0518,
+          "hex": "#fdd542",
+          "rgb": [
+            253,
+            213,
+            66
+          ]
+        },
+        {
+          "coverage": 0.029,
+          "hex": "#2081f2",
+          "rgb": [
+            32,
+            129,
+            242
+          ]
+        },
+        {
+          "coverage": 0.0205,
+          "hex": "#07d370",
+          "rgb": [
+            7,
+            211,
+            112
+          ]
+        },
+        {
+          "coverage": 0.0171,
+          "hex": "#000000",
+          "rgb": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "coverage": 0.0106,
+          "hex": "#0deffd",
+          "rgb": [
+            13,
+            239,
+            253
+          ]
+        }
+      ],
+      "paper": "#ffffff",
+      "path": "llm-shots/clear layout, good cartoon.png",
+      "width": 512
+    },
+    "7482e867442f7bcd001882372dec028f32c93156c7a22b7e73771adb191b6af7": {
+      "aspect": 2.703,
+      "dominant": "#ffffff",
+      "height": 593,
+      "ink": null,
+      "inkShare": 0.0,
+      "palette": [
+        {
+          "coverage": 0.6637,
+          "hex": "#ffffff",
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "coverage": 0.3318,
+          "hex": "#ffb800",
+          "rgb": [
+            255,
+            184,
+            0
+          ]
+        }
+      ],
+      "paper": "#ffffff",
+      "path": "wireframe sketches/Group 47.png",
+      "width": 1603
+    },
+    "a35fbe910ae5e802eed34f47ae6a7ccc4fd4c94cb6a36b750eba330c1bcbfcd2": {
+      "aspect": 1.832,
+      "dominant": "#f5f9fa",
+      "height": 559,
+      "ink": "#000000",
+      "inkShare": 0.1149,
+      "palette": [
+        {
+          "coverage": 0.5056,
+          "hex": "#f5f9fa",
+          "rgb": [
+            245,
+            249,
+            250
+          ]
+        },
+        {
+          "coverage": 0.0965,
+          "hex": "#c7e1e0",
+          "rgb": [
+            199,
+            225,
+            224
+          ]
+        },
+        {
+          "coverage": 0.0655,
+          "hex": "#b8b8b8",
+          "rgb": [
+            184,
+            184,
+            184
+          ]
+        },
+        {
+          "coverage": 0.0426,
+          "hex": "#fdca30",
+          "rgb": [
+            253,
+            202,
+            48
+          ]
+        },
+        {
+          "coverage": 0.0212,
+          "hex": "#ecadcc",
+          "rgb": [
+            236,
+            173,
+            204
+          ]
+        },
+        {
+          "coverage": 0.0156,
+          "hex": "#000000",
+          "rgb": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "paper": "#f5f9fa",
+      "path": "llm-shots/good room space, wrong roads.png",
+      "width": 1024
+    },
+    "b068c43373dabc51ffab806305b9f5a17c60b2bc2ac5e6aafe5acd31c22ecd9d": {
+      "aspect": 0.887,
+      "dominant": "#ffffff",
+      "height": 512,
+      "ink": "#080000",
+      "inkShare": 0.1861,
+      "palette": [
+        {
+          "coverage": 0.3766,
+          "hex": "#ffffff",
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "coverage": 0.0469,
+          "hex": "#fd4337",
+          "rgb": [
+            253,
+            67,
+            55
+          ]
+        },
+        {
+          "coverage": 0.0363,
+          "hex": "#f8c167",
+          "rgb": [
+            248,
+            193,
+            103
+          ]
+        },
+        {
+          "coverage": 0.0341,
+          "hex": "#625bc3",
+          "rgb": [
+            98,
+            91,
+            195
+          ]
+        },
+        {
+          "coverage": 0.0322,
+          "hex": "#fc7e05",
+          "rgb": [
+            252,
+            126,
+            5
+          ]
+        },
+        {
+          "coverage": 0.023,
+          "hex": "#080000",
+          "rgb": [
+            8,
+            0,
+            0
+          ]
+        }
+      ],
+      "paper": "#ffffff",
+      "path": "isometric cartoon/Pasted 2026-08-28 at 5.52.41 p.m..png",
+      "width": 454
+    },
+    "b07dd7361cde9fa568b6cd2d8a135537a342e8b8259407967ea2bb3f0521e961": {
+      "aspect": 1.832,
+      "dominant": "#ffffff",
+      "height": 559,
+      "ink": "#000000",
+      "inkShare": 0.107,
+      "palette": [
+        {
+          "coverage": 0.4837,
+          "hex": "#ffffff",
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "coverage": 0.0563,
+          "hex": "#c8d6df",
+          "rgb": [
+            200,
+            214,
+            223
+          ]
+        },
+        {
+          "coverage": 0.0527,
+          "hex": "#fbcf28",
+          "rgb": [
+            251,
+            207,
+            40
+          ]
+        },
+        {
+          "coverage": 0.0366,
+          "hex": "#dd5caf",
+          "rgb": [
+            221,
+            92,
+            175
+          ]
+        },
+        {
+          "coverage": 0.0334,
+          "hex": "#2acad6",
+          "rgb": [
+            42,
+            202,
+            214
+          ]
+        },
+        {
+          "coverage": 0.0242,
+          "hex": "#000000",
+          "rgb": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "paper": "#ffffff",
+      "path": "llm-shots/best ugly shot, good layout.png",
+      "width": 1024
+    },
+    "e3085a5ebb3f9421d97eb7b487f0112df3e6f5469b19aaf8d3d410782bfcd978": {
+      "aspect": 0.727,
+      "dominant": "#ffffff",
+      "height": 512,
+      "ink": "#010000",
+      "inkShare": 0.0376,
+      "palette": [
+        {
+          "coverage": 0.3428,
+          "hex": "#ffffff",
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "coverage": 0.1757,
+          "hex": "#ffdf00",
+          "rgb": [
+            255,
+            223,
+            0
+          ]
+        },
+        {
+          "coverage": 0.1339,
+          "hex": "#dcdcdc",
+          "rgb": [
+            220,
+            220,
+            220
+          ]
+        },
+        {
+          "coverage": 0.1195,
+          "hex": "#b8b6b7",
+          "rgb": [
+            184,
+            182,
+            183
+          ]
+        },
+        {
+          "coverage": 0.0714,
+          "hex": "#868686",
+          "rgb": [
+            134,
+            134,
+            134
+          ]
+        },
+        {
+          "coverage": 0.0135,
+          "hex": "#010000",
+          "rgb": [
+            1,
+            0,
+            0
+          ]
+        }
+      ],
+      "paper": "#ffffff",
+      "path": "isometric cartoon/Pasted 2026-08-28 at 5.52.47 p.m..png",
+      "width": 372
+    },
+    "f792a330bd19431320883a5d6e30a104b9da3f0085a6f5b8313f8dcdb5aec318": {
+      "aspect": 0.75,
+      "dominant": "#009a44",
+      "height": 512,
+      "ink": "#000000",
+      "inkShare": 0.1998,
+      "palette": [
+        {
+          "coverage": 0.1632,
+          "hex": "#009a44",
+          "rgb": [
+            0,
+            154,
+            68
+          ]
+        },
+        {
+          "coverage": 0.1349,
+          "hex": "#fffeef",
+          "rgb": [
+            255,
+            254,
+            239
+          ]
+        },
+        {
+          "coverage": 0.1222,
+          "hex": "#000000",
+          "rgb": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "coverage": 0.1203,
+          "hex": "#c4c4c4",
+          "rgb": [
+            196,
+            196,
+            196
+          ]
+        },
+        {
+          "coverage": 0.1034,
+          "hex": "#128fd1",
+          "rgb": [
+            18,
+            143,
+            209
+          ]
+        },
+        {
+          "coverage": 0.0658,
+          "hex": "#ff6918",
+          "rgb": [
+            255,
+            105,
+            24
+          ]
+        }
+      ],
+      "paper": "#fffeef",
+      "path": "cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png",
+      "width": 384
+    }
+  },
+  "unmeasured": [
+    {
+      "path": "llm-shots/fucked shots/watermarked_img_1601036776744645981.jpg",
+      "reason": "not a PNG",
+      "sha256": "3db0f51e41e094cd302f7cffe107bde0ff3b0a09daaa7d8f305d0977da0a26bc"
+    }
+  ],
+  "version": 1
+}

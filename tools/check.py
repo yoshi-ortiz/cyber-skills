@@ -14,13 +14,15 @@ the docs already promise.
     python3 tools/check.py            # every gate
     python3 tools/check.py contracts  # only gates whose name contains this
 
-Exits non-zero if any gate fails. Exactly one is red on purpose today:
-`contracts-budget`, the R-15 debt of four files over the 30 KB budget.
-`contracts-declared` is its other half and must stay green.
+Exits non-zero if any gate fails. Nothing is filtered out: a checker with an
+allowlist of failures it forgives is the same thing as no checker -- but a
+checker whose red is permanent is read as one too, which is why
+`contracts-declared` and `contracts-budget` are counted apart rather than as
+one gate that stayed red through the R-15 debt.
 
-Nothing is filtered out. A checker with an allowlist of failures it forgives is
-the same thing as no checker -- but a checker whose red is permanent is read as
-one too, which is why the two halves are counted apart.
+The test gates are found rather than listed. `release.py` asks this board
+before it publishes, so one registry answers what proved means for a local
+run and for a release.
 """
 
 from __future__ import annotations
@@ -32,6 +34,36 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def test_gates(py: str) -> list[tuple[str, list[str]]]:
+    """Every `test_*.py` in the repository, run the way its own shape says.
+
+    B-023: the gate list named each test file by hand, so a file could be
+    written, pass when invoked, and be executed by nothing. Four were, at the
+    time this replaced the list. Finding the files removes the gap by
+    construction -- a new test is inside a gate the moment it lands.
+
+    Two conventions live here and both are real. A file with a `TestCase` is
+    found by `unittest discover` over its directory. A file without one puts
+    its assertions in a `test()` behind `__main__`, which discovery imports and
+    never calls, so it is run as the script it is. Sniffing the file is what
+    keeps the third case -- listed nowhere -- from existing again.
+    """
+    files = [path for path in sorted(ROOT.rglob("test_*.py"))
+             if not any(part.startswith(".") or part == "__pycache__"
+                        for part in path.relative_to(ROOT).parts)]
+    scripts = [path for path in files
+               if "TestCase" not in path.read_text(encoding="utf-8")]
+    directories = sorted({path.parent for path in files if path not in scripts})
+    return [
+        *((f"tests {directory.relative_to(ROOT)}",
+           [py, "-m", "unittest", "discover", "-s",
+            str(directory.relative_to(ROOT)), "-p", "test_*.py"])
+          for directory in directories),
+        *((f"tests {path.relative_to(ROOT)}", [py, str(path.relative_to(ROOT))])
+          for path in scripts),
+    ]
 
 
 def gates(tree: Path) -> list[tuple[str, list[str]]]:
@@ -46,24 +78,12 @@ def gates(tree: Path) -> list[tuple[str, list[str]]]:
                                 "--root", ".", "--only", "declared"]),
         ("contracts-budget", [py, "first/aesthetic/scripts/contracts.py",
                               "--root", ".", "--only", "budget"]),
-        ("unit tests", [py, "-m", "unittest", "discover",
-                        "-s", "first/aesthetic/scripts", "-p", "test_*.py"]),
         ("harness self-test", [py, "first/aesthetic/scripts/bootstrap_harness.py", "self-test"]),
-        *((f"tokens-qa {path.stem} passes", [py, str(path.relative_to(ROOT))])
-          for path in sorted(ROOT.glob("check/tokens-qa/scripts/test_*.py"))),
-        ("cook tests", [py, "-m", "unittest", "discover",
-                        "-s", "cook", "-p", "test_*.py"]),
+        # Found, not listed. The list this replaces is B-023's root cause.
+        *test_gates(py),
         ("index gate", [py, "tools/index_gate.py"]),
         ("loanwords", [py, "tools/loanwords.py"]),
-        ("fog tests", [py, "tools/test_fog.py"]),
-        ("release tests", [py, "tools/test_release.py"]),
-        ("dev install tests", [py, "tools/test_dev_install.py"]),
-        ("index gate tests", [py, "tools/test_index_gate.py"]),
-        ("loanword tests", [py, "tools/test_loanwords.py"]),
-        ("runner tests", [py, "tools/test_check.py"]),
-        ("token benchmark tests", [py, "tools/test_token_bench.py"]),
-        ("trace preview tests", [py, "tools/test_trace_preview.py"]),
-        ("publish main", [py, "tools/publish.py", "--out", str(tree / "main"), "--check"]),
+        ("publish main",[py, "tools/publish.py", "--out", str(tree / "main"), "--check"]),
         ("publish alpha", [py, "tools/publish.py", "--out", str(tree / "alpha"),
                            "--channel", "alpha", "--check"]),
         ("published tree is fog-free", [py, "tools/check_publication.py", str(tree / "main")]),

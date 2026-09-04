@@ -24,6 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fog import is_fog, walk
+from skill_catalog import catalog
 
 
 def tracked(root: Path) -> set[str]:
@@ -43,9 +44,10 @@ def tracked(root: Path) -> set[str]:
 def published_paths(root: Path, channel: str = "main") -> list[Path]:
     """Every file that belongs in a published tree, repo-relative."""
     known = tracked(root)
+    records = catalog(root)
     return [relative for relative in walk(root)
             if relative.as_posix() in known
-            and not is_fog(relative.as_posix(), channel)]
+            and not is_fog(relative.as_posix(), channel, records)]
 
 
 def publish(root: Path, out: Path, channel: str = "main") -> tuple[int, int]:

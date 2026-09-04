@@ -5,8 +5,10 @@ The git half fails loudly; `diff_tree` is the half that can report "already
 matches" over a real difference and let a stale channel look current, which is
 the exact failure this tool exists to prevent.
 """
+import subprocess
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import release
@@ -84,6 +86,23 @@ class AStaleChannelIsRefusedBeforeItDiverges(unittest.TestCase):
 
     def test_ahead_only_is_fine(self):
         self.assertEqual(release.divergence("3\t0"), (3, 0))
+
+
+class RedGatesRefuseTheRelease(unittest.TestCase):
+    """A release that ships an unproven tree is the failure worth stopping."""
+
+    def test_a_failing_board_raises(self):
+        with unittest.mock.patch.object(
+                release.subprocess, "run",
+                return_value=subprocess.CompletedProcess([], 1)):
+            with self.assertRaises(SystemExit):
+                release.verify()
+
+    def test_a_green_board_returns(self):
+        with unittest.mock.patch.object(
+                release.subprocess, "run",
+                return_value=subprocess.CompletedProcess([], 0)):
+            self.assertIsNone(release.verify())
 
 
 if __name__ == "__main__":

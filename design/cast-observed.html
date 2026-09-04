@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber Skills — the cast, built from observed construction</title>
+<style>
+  /* Colour measured from moodboards/. Construction read off the references and
+     recorded in spec/design-harness/character-observations.json, each claim
+     citing the crop it came from. */
+  :root{
+    --ink:#000000; --white:#ffffff;
+    --skin:#f5c0bc; --tan:#d4875b;
+    --red:#fd4337; --orange:#ff6918; --yellow:#ffb800; --sand:#f8c167;
+    --green:#009a44; --lime:#07d370; --blue:#128fd1; --cyan:#2acad6;
+    --violet:#625bc3; --pink:#dd5caf; --pale:#c1e5e3; --slate:#8d88a6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--white);color:var(--ink);
+       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  .sheet{max-width:1120px;margin:0 auto;padding:34px 40px 52px}
+  .kicker{font:800 .7rem/1.3 ui-monospace,Menlo,monospace;letter-spacing:.18em;
+          text-transform:uppercase;color:var(--slate)}
+  h1{margin:8px 0 6px;font-size:2rem;letter-spacing:-.03em}
+  .lede{margin:0 0 8px;max-width:76ch;color:#3d3d3d;line-height:1.5;font-size:.88rem}
+  .cites{margin:0 0 22px;max-width:76ch;font:600 .72rem/1.6 ui-monospace,Menlo,monospace;
+         color:#3d3d3d}
+  .cites b{color:var(--ink)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .card{border:3px solid var(--ink);border-radius:14px;overflow:hidden;background:#fff}
+  .card h2{margin:0;padding:11px 14px 2px;font:800 .82rem/1.2 ui-monospace,Menlo,monospace}
+  .card p{margin:0;padding:0 14px 10px;font-size:.73rem;line-height:1.45;color:#3d3d3d;
+          min-height:4.2em}
+  .plate{display:grid;place-items:center;padding:12px 0 4px;border-top:3px solid var(--ink)}
+  .room{display:grid;place-items:center;gap:6px;padding:11px 0 13px;
+        border-top:3px solid var(--ink)}
+  .room span{font:800 .57rem/1 ui-monospace,Menlo,monospace;letter-spacing:.12em;
+             text-transform:uppercase}
+  .stage{position:relative;width:150px;height:192px}
+  .stage i{position:absolute;display:block}
+  .mini{width:56px;height:72px;overflow:hidden}
+  .mini .stage{transform:scale(.375);transform-origin:0 0}
+
+  /* ================= shared skeleton =================
+     Arms pivot at the SHOULDER, not at their own centre. Rotating a pill about
+     its centre swings the shoulder end away from the body, which is what left
+     every arm in the last round visibly detached.
+     Each held prop is a CHILD of the arm, so it travels with the hand and
+     cannot drift out of it no matter what the arm angle is. */
+  .arm{width:15px;height:47px;border:4px solid var(--ink);border-radius:9px;
+       transform-origin:7px 8px;top:84px}
+  .armL{left:33px;transform:rotate(19deg)}
+  .armR{left:102px;transform:rotate(-19deg)}
+  .hand{left:-6px;top:33px;width:26px;height:26px}   /* the prop anchor */
+
+  .legL,.legR{width:16px;height:32px;border:4px solid var(--ink);
+              border-radius:3px 3px 5px 5px;top:134px}
+  .legL{left:56px} .legR{left:79px}
+  .shoeL,.shoeR{width:27px;height:14px;border:4px solid var(--ink);
+                border-radius:8px;top:158px}
+  .shoeL{left:48px} .shoeR{left:76px}
+
+  .body{left:43px;top:80px;width:65px;height:60px;border:4px solid var(--ink);
+        border-radius:24% 24% 14% 14%}
+  .ear{left:38px;top:48px;width:16px;height:16px;background:var(--skin);
+       border:4px solid var(--ink);border-radius:50%}
+  .head{left:45px;top:19px;width:61px;height:62px;background:var(--skin);
+        border:4px solid var(--ink);border-radius:50%}
+
+  /* Observed: large white ovals with the body's own contour weight, not dots. */
+  .eyeL,.eyeR{width:17px;height:19px;background:var(--white);
+              border:3px solid var(--ink);border-radius:50%;top:41px}
+  .eyeL{left:56px} .eyeR{left:78px}
+  .pupL,.pupR{width:7px;height:8px;background:var(--ink);border-radius:50%;top:48px}
+  .pupL{left:62px} .pupR{left:84px}
+  /* Observed: an open mouth filled white, not a small solid arc. */
+  .mouth{left:66px;top:62px;width:20px;height:12px;background:var(--white);
+         border:3px solid var(--ink);border-radius:4px 4px 11px 11px}
+
+  /* Observed: hair is two stacked zones and the fringe meets the face on a
+     shaped edge. `.cap` is the outer mass, `.fringe` the inner one. */
+  .cap{border:4px solid var(--ink)}
+  .fringe{border:4px solid var(--ink)}
+
+  /* ---------------- /first Acid Rockstar ---------------- */
+  .b1 .cap{left:24px;top:0;width:104px;height:48px;background:var(--pink);
+           border-radius:56% 58% 20% 24%}
+  .b1 .fringe{left:38px;top:26px;width:76px;height:26px;background:var(--orange);
+              border-radius:10% 10% 60% 46%}
+  .b1 .lockL{left:19px;top:32px;width:28px;height:48px;background:var(--pink);
+             border:4px solid var(--ink);border-radius:60% 20% 44% 52%;
+             transform:rotate(-13deg)}
+  .b1 .lockR{left:105px;top:32px;width:28px;height:48px;background:var(--pink);
+             border:4px solid var(--ink);border-radius:20% 60% 52% 44%;
+             transform:rotate(13deg)}
+  .b1 .body{background:var(--violet)}
+  .b1 .arm{background:var(--violet)}
+  .b1 .armR{transform:rotate(-38deg)}
+  .b1 .legL,.b1 .legR{background:var(--blue)}
+  .b1 .shoeL,.b1 .shoeR{background:var(--yellow)}
+  .b1 .eyeL,.b1 .eyeR{background:var(--pale)}      /* tinted lenses */
+  .b1 .bridge{left:71px;top:48px;width:12px;height:5px;background:var(--ink);
+              border-radius:3px}
+  .b1 .scarf{left:45px;top:76px;width:61px;height:13px;background:var(--yellow);
+             border:4px solid var(--ink);border-radius:8px}
+  .b1 .mic{left:-4px;top:28px;width:15px;height:28px;background:var(--red);
+           border:4px solid var(--ink);border-radius:7px}
+
+  /* ---------------- /build Tech-Bro CEO ---------------- */
+  .b2 .cap{left:42px;top:9px;width:67px;height:34px;background:var(--ink);
+           border-radius:52% 52% 6% 6%}
+  .b2 .fringe{left:52px;top:26px;width:48px;height:18px;background:var(--tan);
+              border-radius:8% 8% 54% 40%}
+  .b2 .body{background:var(--white)}
+  .b2 .vestL{left:41px;top:78px;width:25px;height:64px;background:var(--green);
+             border:4px solid var(--ink);border-radius:22% 6% 12% 14%}
+  .b2 .vestR{left:85px;top:78px;width:25px;height:64px;background:var(--green);
+             border:4px solid var(--ink);border-radius:6% 22% 14% 12%}
+  .b2 .arm{background:var(--skin)}
+  .b2 .armR{transform:rotate(-128deg)}
+  .b2 .legL,.b2 .legR{background:var(--slate)}
+  .b2 .shoeL,.b2 .shoeR{background:var(--white)}
+  .b2 .watch{left:-2px;top:26px;width:20px;height:15px;background:var(--yellow);
+             border:4px solid var(--ink);border-radius:4px}
+
+  /* ---------------- /land Mission Commander ---------------- */
+  .b3 .cap{left:42px;top:10px;width:67px;height:32px;background:var(--tan);
+           border-radius:52% 52% 6% 6%}
+  .b3 .fringe{left:52px;top:25px;width:48px;height:16px;background:var(--tan);
+              border-radius:8% 8% 50% 38%}
+  .b3 .band{left:36px;top:8px;width:79px;height:40px;border:6px solid var(--ink);
+            border-bottom:none;border-radius:40px 40px 0 0;background:none}
+  .b3 .cupL{left:30px;top:38px;width:20px;height:26px;background:var(--red);
+            border:4px solid var(--ink);border-radius:6px}
+  .b3 .cupR{left:101px;top:38px;width:20px;height:26px;background:var(--red);
+            border:4px solid var(--ink);border-radius:6px}
+  .b3 .boom{left:40px;top:60px;width:26px;height:7px;background:var(--ink);
+            border-radius:4px;transform:rotate(24deg)}
+  .b3 .body{background:var(--sand)}
+  .b3 .arm{background:var(--sand)}
+  .b3 .armL{transform:rotate(34deg)}
+  .b3 .collar{left:47px;top:76px;width:57px;height:13px;background:var(--red);
+              border:4px solid var(--ink);border-radius:7px}
+  .b3 .legL,.b3 .legR{background:var(--blue)}
+  .b3 .shoeL,.b3 .shoeR{background:var(--white)}
+  .b3 .mug{left:-4px;top:30px;width:22px;height:22px;background:var(--white);
+           border:4px solid var(--ink);border-radius:4px 4px 7px 7px}
+
+  /* ---------------- /check Scrum Oracle ---------------- */
+  .b4 .cap{left:40px;top:8px;width:71px;height:36px;background:var(--ink);
+           border-radius:52% 52% 8% 8%}
+  .b4 .fringe{left:50px;top:27px;width:52px;height:18px;background:var(--ink);
+              border-radius:8% 8% 56% 42%}
+  .b4 .body{background:var(--blue)}
+  .b4 .arm{background:var(--blue)}
+  .b4 .armR{transform:rotate(-152deg)}
+  .b4 .legL,.b4 .legR{background:var(--violet)}
+  .b4 .shoeL,.b4 .shoeR{background:var(--yellow)}
+  .b4 .ball{left:-13px;top:22px;width:42px;height:42px;background:var(--cyan);
+            border:4px solid var(--ink);border-radius:50%}
+  .b4 .glint{left:-4px;top:30px;width:13px;height:10px;background:var(--white);
+             border-radius:50%;transform:rotate(152deg)}
+
+  /* ---------------- /kit Token Influencer ---------------- */
+  .b5 .cap{left:33px;top:4px;width:85px;height:44px;background:var(--pink);
+           border-radius:52% 52% 26% 26%}
+  .b5 .fringe{left:45px;top:28px;width:62px;height:20px;background:var(--yellow);
+              border-radius:8% 8% 56% 44%}
+  .b5 .body{background:var(--yellow)}
+  .b5 .arm{background:var(--yellow)}
+  .b5 .armL{transform:rotate(11deg)}
+  .b5 .legL,.b5 .legR{background:var(--red)}
+  .b5 .shoeL,.b5 .shoeR{background:var(--white)}
+  .b5 .bag{left:-12px;top:34px;width:38px;height:42px;background:var(--red);
+           border:4px solid var(--ink);border-radius:3px 3px 6px 6px}
+  .b5 .handle{left:-3px;top:22px;width:20px;height:20px;border:4px solid var(--ink);
+              border-bottom:none;border-radius:11px 11px 0 0;background:none}
+
+  /* ---------------- /fix Bug Doctor ---------------- */
+  .b6 .cap{left:42px;top:9px;width:67px;height:33px;background:var(--ink);
+           border-radius:52% 52% 6% 6%}
+  .b6 .fringe{left:52px;top:26px;width:48px;height:17px;background:var(--ink);
+              border-radius:8% 8% 52% 40%}
+  .b6 .body{background:var(--white)}
+  .b6 .arm{background:var(--white)}
+  .b6 .armR{transform:rotate(-52deg)}
+  .b6 .collar{left:47px;top:76px;width:57px;height:13px;background:var(--lime);
+              border:4px solid var(--ink);border-radius:7px}
+  .b6 .legL,.b6 .legR{background:var(--cyan)}
+  .b6 .shoeL,.b6 .shoeR{background:var(--ink)}
+  .b6 .lens{left:-11px;top:26px;width:38px;height:38px;background:var(--pale);
+            border:5px solid var(--ink);border-radius:50%}
+  .b6 .bug{left:1px;top:36px;width:15px;height:13px;background:var(--green);
+           border:3px solid var(--ink);border-radius:50% 50% 44% 44%;
+           transform:rotate(52deg)}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <p class="kicker">Round · the cast, built from observed construction</p>
+  <h1>Six bosses, drawn from the references</h1>
+  <p class="lede">The last round took its colour from the corpus and then guessed at how a
+    figure is put together. This one reads the construction off the references too. Each rule
+    below cites the crop it came from, and any of them can be re-opened with
+    <code>text_to_graphics.py crop</code>.</p>
+  <p class="cites">
+    <b>eyes</b> large white ovals at the body's contour weight, never dots &nbsp;·&nbsp;
+    <b>hair</b> two stacked zones meeting the face on a shaped edge &nbsp;·&nbsp;
+    <b>ear</b> one circle proud of the head silhouette &nbsp;·&nbsp;
+    <b>mouth</b> an open shape filled white &nbsp;·&nbsp;
+    <b>limbs</b> overlap the body, pivoting at the shoulder &nbsp;·&nbsp;
+    <b>zones</b> four flat colours per figure: hair, top, legs, shoes
+  </p>
+
+  <div class="grid">
+
+    <div class="card">
+      <h2>/first &middot; Acid Rockstar</h2>
+      <p>Pink mass over an orange fringe, tinted lenses in place of the white of the eye, and
+        a mic in the raised hand. Violet top, blue legs, yellow boots.</p>
+      <div class="plate"><div class="stage b1">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i>
+        <i class="body"></i><i class="scarf"></i>
+        <i class="arm armR"><i class="hand mic"></i></i>
+        <i class="lockL"></i><i class="lockR"></i><i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="bridge"></i><i class="mouth"></i>
+        
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b1">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i>
+        <i class="body"></i><i class="scarf"></i>
+        <i class="arm armR"><i class="hand mic"></i></i>
+        <i class="lockL"></i><i class="lockR"></i><i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="bridge"></i><i class="mouth"></i>
+        
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/build &middot; Tech-Bro CEO</h2>
+      <p>Open vest as two green blocks over a white shirt, one arm thrown up with the
+        smartwatch on the wrist. Slate trousers, white sneakers.</p>
+      <div class="plate"><div class="stage b2">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i>
+        <i class="body"></i><i class="vestL"></i><i class="vestR"></i>
+        <i class="arm armR"><i class="hand watch"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b2">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i>
+        <i class="body"></i><i class="vestL"></i><i class="vestR"></i>
+        <i class="arm armR"><i class="hand watch"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/land &middot; Mission Commander</h2>
+      <p>Headset band, red cups and boom mic carry the whole read. Sand flight top, red
+        collar, blue legs, and a coffee in the near hand.</p>
+      <div class="plate"><div class="stage b3">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armR"></i>
+        <i class="body"></i><i class="collar"></i>
+        <i class="arm armL"><i class="hand mug"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+        <i class="boom"></i><i class="band"></i><i class="cupL"></i><i class="cupR"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b3">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armR"></i>
+        <i class="body"></i><i class="collar"></i>
+        <i class="arm armL"><i class="hand mug"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+        <i class="boom"></i><i class="band"></i><i class="cupL"></i><i class="cupR"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/check &middot; Scrum Oracle</h2>
+      <p>The future-reading ball is held overhead, and because it hangs off the arm it stays
+        in the hand at any angle. Blue top, violet legs, yellow shoes.</p>
+      <div class="plate"><div class="stage b4">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i>
+        <i class="body"></i>
+        <i class="arm armR"><i class="hand ball"></i><i class="hand glint"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b4">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i>
+        <i class="body"></i>
+        <i class="arm armR"><i class="hand ball"></i><i class="hand glint"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/kit &middot; Token Influencer</h2>
+      <p>Pink hair over a yellow fringe, and the hero shopping bag hanging from the near hand
+        so it sits inside the silhouette. Red legs, white trainers.</p>
+      <div class="plate"><div class="stage b5">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armR"></i>
+        <i class="body"></i>
+        <i class="arm armL"><i class="hand handle"></i><i class="hand bag"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b5">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armR"></i>
+        <i class="body"></i>
+        <i class="arm armL"><i class="hand handle"></i><i class="hand bag"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>/fix &middot; Bug Doctor</h2>
+      <p>White coat, lime collar, and an oversized magnifier raised in one hand with the bug
+        caught inside the lens. Cyan legs, black shoes.</p>
+      <div class="plate"><div class="stage b6">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i>
+        <i class="body"></i><i class="collar"></i>
+        <i class="arm armR"><i class="hand lens"></i><i class="hand bug"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div>
+      <div class="room"><span>at room size</span><div class="mini"><div class="stage b6">
+        <i class="legL"></i><i class="legR"></i><i class="shoeL"></i><i class="shoeR"></i>
+        <i class="arm armL"></i>
+        <i class="body"></i><i class="collar"></i>
+        <i class="arm armR"><i class="hand lens"></i><i class="hand bug"></i></i>
+        <i class="ear"></i><i class="head"></i><i class="cap"></i><i class="fringe"></i>
+        <i class="eyeL"></i><i class="eyeR"></i><i class="pupL"></i><i class="pupR"></i>
+        <i class="mouth"></i>
+      </div></div></div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

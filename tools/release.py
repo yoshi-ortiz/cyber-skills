@@ -87,6 +87,19 @@ def diff_tree(left: Path, right: Path) -> list[str]:
     return sorted(changed)
 
 
+def verify() -> None:
+    """Run the gate board, and refuse the release if any gate is red.
+
+    `publish.py --check` proves the tree builds, which is a smaller claim than
+    the one a release makes. `check.py` is the repository's one gate registry,
+    so the release asks it rather than deciding for itself what proved means.
+    """
+    done = subprocess.run([sys.executable, "tools/check.py"], cwd=ROOT)
+    if done.returncode != 0:
+        raise SystemExit("release: gates are red; fix them or run "
+                         "`python3 tools/check.py` to see what is failing")
+
+
 def release(channel: str, push: bool, dry_run: bool) -> int:
     dirty = blocking_changes(git("status", "--porcelain"))
     if dirty:
@@ -110,6 +123,12 @@ def release(channel: str, push: bool, dry_run: bool) -> int:
             f"release: {channel} is {behind} commit(s) behind origin/{channel}. "
             f"Committing on it would push non-fast-forward and leave it diverged.\n"
             f"  git fetch origin {channel} && git branch -f {channel} origin/{channel}")
+
+    # After the cheap refusals and before the tree is built: a red board should
+    # cost the seconds git took, not the minutes a publish takes. A dry run
+    # reports a diff and ships nothing, so it does not have to prove anything.
+    if not dry_run:
+        verify()
 
     with tempfile.TemporaryDirectory(prefix="cyber-skills-release-") as temp:
         out, work = Path(temp) / "tree", Path(temp) / "branch"

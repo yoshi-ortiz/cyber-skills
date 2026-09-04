@@ -1,0 +1,55 @@
+{
+  "compute": {
+    "duration_ms": 0,
+    "harness": "unknown",
+    "model": "unknown",
+    "started_at": "2026-09-03T19:44:39Z",
+    "tokens": {
+      "input": 45,
+      "output": 96895,
+      "profile": "utf8_bytes_div4_ceil_v1"
+    }
+  },
+  "findings": [],
+  "inputs": {
+    "corpus_refs": [],
+    "invocation": "aesthetic@2026-09-03T19:44:02Z",
+    "prompt_hash": "sha256:aa84491e7067ce85d14beac359258a041f2cee063c2b3178ff0366444205ccf9",
+    "request": "\u00bfCu\u00e1l de los tres jefes de sala (Stage punk, Glam diva, Art-director dandy) es el Acid Rockstar correcto, y con qu\u00e9 construcci\u00f3n (A1, A2 o A3) seguimos para los otros cinco?",
+    "target_skill": "first/aesthetic",
+    "tools": []
+  },
+  "output": {
+    "adapter": "graphic",
+    "artifacts": [
+      {
+        "bytes": 113357,
+        "mime": "image/png",
+        "path": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.style-round.png",
+        "role": "deliverable",
+        "sha256": "sha256:577a91906a0520501c33d8a4d3ccd903514ec2502812b64c0d4ed3a40fafed52"
+      },
+      {
+        "bytes": 128145,
+        "mime": "image/png",
+        "path": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.construction-a.png",
+        "role": "deliverable",
+        "sha256": "sha256:55ddf8e58ee4aad668ce1572292b5e9ffb925edd97abb96ea0c3ae279fdbca49"
+      },
+      {
+        "bytes": 146076,
+        "mime": "image/png",
+        "path": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.first.acid-rockstar.png",
+        "role": "deliverable",
+        "sha256": "sha256:8c0a1046464b67ad0f91ad89de56e81ff8e50034b66bfa8de32bb8cade267899"
+      }
+    ]
+  },
+  "provenance": "inference",
+  "scope": "personajes",
+  "shot_id": "36b1457e11af42d0b3ccbd213701d6d1",
+  "user_feedback": {
+    "status": "pending"
+  },
+  "version": 2
+}

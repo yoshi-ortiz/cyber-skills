@@ -9,6 +9,8 @@ max_file_bytes: 7250
 
 `SKILL.md` is loaded on every invocation and holds the steps only. Each step
 that has a contract behind it points into `references/` rather than growing.
+That includes the conditional ADR contract: Genesis owns its topology and
+lifecycle, while target projects own their accepted records under `docs/adr/`.
 
 User-invoked on purpose. The doctrine is expensive and applies to a decision
 someone is making deliberately: starting a project, starting a feature, or

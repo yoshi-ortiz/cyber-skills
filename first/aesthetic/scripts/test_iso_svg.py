@@ -52,5 +52,67 @@ class RenderTests(unittest.TestCase):
         self.assertIn('<polyline id="road"', iso_svg.build(SCENE))
 
 
+class CorpusPaletteTests(unittest.TestCase):
+    """Colour comes from the corpus, or the render admits it did not."""
+
+    # Seven colours for seven requests: four rooms, the road, two kiosks. With
+    # fewer, a reuse is unavoidable and `snap_palette` is right to reuse.
+    EVIDENCE = {"palette": ["#ffffff", "#128fd1", "#009a44", "#ffdf00",
+                            "#c1e5e3", "#d4875b", "#ff6918"],
+                "paper": "#fffeef", "ink": "#000000"}
+
+    def test_without_evidence_the_render_says_so(self) -> None:
+        plan = iso_svg.layout(SCENE)
+        self.assertEqual(plan["paletteSource"], "unevidenced-constants")
+        self.assertEqual(plan["paper"], iso_svg.BACKGROUND)
+
+    def test_every_fill_comes_from_the_measured_palette(self) -> None:
+        plan = iso_svg.layout(SCENE, self.EVIDENCE)
+        self.assertEqual(plan["paletteSource"], "corpus")
+        for box in plan["boxes"]:
+            self.assertIn(box["fill"], self.EVIDENCE["palette"])
+        self.assertEqual(plan["paper"], "#fffeef")
+        self.assertEqual(plan["ink"], "#000000")
+
+    def test_no_material_default_survives_into_the_drawing(self) -> None:
+        """The bug this exists to stop: #00bcd4 was never in any reference."""
+        svg = iso_svg.build(SCENE, self.EVIDENCE)
+        for invented in set(iso_svg.PALETTE_FILL.values()) | {iso_svg.ROAD_STROKE}:
+            self.assertNotIn(invented, svg)
+
+    def test_two_spaces_do_not_collapse_into_one_fill(self) -> None:
+        plan = iso_svg.layout(SCENE, self.EVIDENCE)
+        fills = [box["fill"] for box in plan["boxes"]]
+        self.assertEqual(len(fills), len(set(fills)))
+
+    def test_main_rooms_pick_before_ghost_kiosks(self) -> None:
+        """A near-white kiosk used to take the pale cyan the cyan room wanted."""
+        plan = iso_svg.layout(SCENE, self.EVIDENCE)
+        rooms = {room["id"] for room in SCENE["mainRooms"]}
+        first = next(box for box in plan["boxes"] if box["id"] in rooms)
+        self.assertEqual(first["fill"], "#128fd1")
+
+    def test_a_hue_the_corpus_lacks_is_reported_not_hidden(self) -> None:
+        plan = iso_svg.layout(SCENE, {"palette": ["#ffffff", "#000000"]})
+        wanted = {gap["requested"] for gap in plan["paletteGaps"]}
+        self.assertIn(iso_svg.PALETTE_FILL["magenta"], wanted)
+        for gap in plan["paletteGaps"]:
+            self.assertGreater(gap["distance"], iso_svg.HUE_GAP)
+
+    def test_an_evidenced_hue_is_not_reported_as_a_gap(self) -> None:
+        exact = sorted(set(iso_svg.PALETTE_FILL.values()) | {iso_svg.ROAD_STROKE})
+        plan = iso_svg.layout(SCENE, {"palette": exact})
+        self.assertEqual(plan["paletteGaps"], [])
+
+    def test_snapping_is_stable_across_runs(self) -> None:
+        once = iso_svg.snap_palette(["#00bcd4", "#e91e63"], self.EVIDENCE["palette"])
+        twice = iso_svg.snap_palette(["#00bcd4", "#e91e63"], self.EVIDENCE["palette"])
+        self.assertEqual(once, twice)
+
+    def test_more_hues_than_evidence_reuses_rather_than_inventing(self) -> None:
+        resolved = iso_svg.snap_palette(["#00bcd4", "#e91e63", "#1565c0"], ["#123456"])
+        self.assertEqual(set(resolved.values()), {"#123456"})
+
+
 if __name__ == "__main__":
     unittest.main()

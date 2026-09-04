@@ -51,19 +51,20 @@ autocompletes instead.
 explaining what its skill does is a second copy that will drift, which is why
 `starter-pack/SKILL.md` says only "read the other file" in 617 bytes.
 
-`kit/silly/scripts/alias.py` generates the whole kind today. Anchor and ghost
-argument are one line each in its `stub()` function, plus a field to carry the
-section or the argument. R-45.
+`kit/silly/scripts/alias.py` generates all three. A skill declares the second
+two in its own frontmatter -- `anchors:` maps a name to the section it
+bookmarks, `arguments:` maps a name to the argument it bakes in -- and
+`link --stubs` writes them. Every kind still installs only when asked for.
 
 ## The families
 
 | Core family | Core tasks (`SKILL.md` sections) | Aliases and arguments | Drives, and where it comes from |
 | --- | --- | --- | --- |
-| **`kit`**<br>*ships* | § Install<br>§ Sync<br>§ Fix | `starter-pack` ≡<br>`install` `setup` `init` `start` ⇢ install<br>`sync` `update` `upgrade` ⇢ sync<br>`doctor` `repair` `troubleshoot` `conflict` ⇢ fix<br>`kit design` ⇢ design<br>`kit español` ⇢ es | The whole manifest. `harness` reads `collection.yaml` and installs every source in it. |
-| **`first`**<br>*= `genesis`, ships* | § Interview before you architect<br>§ Promote to a spec<br>§ Fetch what you do not know<br>§ Source before you write<br>§ Update the state | `first-plan-roadmap` →§ Update the state<br>`first-take-note` →§ Interview<br>`first-idea-sketch` ⇢ sketch<br>`first-work-style` ⇢ style<br>`first-aesthetic` ≡ `aesthetic`<br>`plan` `genesis` ≡ | `ask-matt`, `prototype`, `grilling` — `mattpocock/skills` *(coding, bare)*<br>`brainstorming` — `obra/superpowers` *(coding, bare)*<br>`aesthetic`, `knowledge` — `yoshi-ortiz/cyber-skills` *(design)* |
+| **`kit`**<br>*ships* | § Domain<br>§ Install<br>§ Sync<br>§ Fix | `starter-pack` ≡<br>`install` `setup` `init` `start` ⇢ install<br>`sync` `update` `upgrade` ⇢ sync<br>`doctor` `repair` `troubleshoot` `conflict` ⇢ fix<br>`kit <domain...>` ⇢ explicit domain selection<br>`kit design` ⇢ design<br>`kit español` ⇢ es | The inert catalog. `harness` reads `collection.toml` and installs only the explicitly active domains. |
+| **`first`**<br>*= `genesis`, ships* | § Interview before you architect<br>§ Promote to a spec<br>§ Record accepted boundary decisions<br>§ Fetch what you do not know<br>§ Source before you write<br>§ Update the state | `first-plan-roadmap` →§ Update the state<br>`first-take-note` →§ Interview<br>`first-idea-sketch` ⇢ sketch<br>`first-work-style` ⇢ style<br>`first-aesthetic` ≡ `aesthetic` *(post-MVP)*<br>`plan` `genesis` ≡ | `ask-matt`, `prototype`, `grilling` — `mattpocock/skills` *(MVP)*<br>`brainstorming` — `obra/superpowers` *(MVP)*<br>`aesthetic`, `knowledge` — `yoshi-ortiz/cyber-skills` *(post-MVP)* |
 | **`build`**<br>*new* | § Clean code<br>§ QA tests<br>§ Pre-release | `build-clean-code` →§ Clean code<br>`build-qa-tests` →§ QA tests<br>`build-pre-release` →§ Pre-release<br>`to` `make` ≡ | `ponytail` — `DietrichGebert/ponytail` *(coding)*<br>`tdd`, `code-review` — `mattpocock/skills`<br>`test-driven-development`, `verification-before-completion` — `obra/superpowers`<br>`semgrep` — `semgrep/skills` *(security)* |
-| **`land`**<br>*new* | § Burndown<br>§ Release | `land-asap-burndown` ⇢ asap<br>`land-deployed-release` ⇢ deploy *(final goal)*<br>`do` `ship` `burndown` ≡ | Nothing external. The burndown state machine is the one genuinely new thing in this scheme; `ROADMAP.md` and `BUGS.md` are its store. |
-| **`check`**<br>*new* | § Progress<br>§ Ontology | `check-progress-goals` →§ Progress<br>`check-release-ontology` →§ Ontology<br>`check` ≡ | `zoom-out` — `pstack` *(R-43)*<br>`graphify` — `safishamsi/graphify` *(research)* |
+| **`land`**<br>*new* | § Burndown<br>§ Release | `land-asap-burndown` ⇢ asap<br>`land-deployed-release` ⇢ deploy *(final goal)*<br>`do` `ship` `burndown` ≡ | `finishing-a-development-branch` — `obra/superpowers`<br>`land-and-deploy` — `garrytan/gstack` |
+| **`check`**<br>*new* | § Progress<br>§ Ontology | `check-progress-goals` →§ Progress<br>`check-release-ontology` →§ Ontology<br>`check` ≡ | `zoom-out` — `pstack` *(R-43)*<br>`review` — `garrytan/gstack`<br>`graphify` — `safishamsi/graphify` *(research)* |
 | **`fix`**<br>*new, bare* | § Fix the code<br>§ Fix the rail | `fix` bare<br>`fix-context-derail` →§ Fix the rail<br>`rail` `unstick` ≡ | `diagnosing-bugs` — `mattpocock/skills`<br>`systematic-debugging` — `obra/superpowers`<br>`poteto-mode` — `pstack` *(R-43)* |
 
 **The rail lives in `fix`, not `check`.** `check` reads state and reports;
@@ -80,7 +81,7 @@ Every one of the six, before it is done:
 | A `CONTEXT.md` declaring `purpose`, `admits`, `refuses`, `max_file_bytes` | `contracts.py` enforces it, and the byte cap **is** the worst-case session load |
 | A `SKILL.md` whose sections are the anchor targets above | Anchors point at section names, so renaming a section breaks a command |
 | A deliberate invocation choice | Keep model invocation only when the agent must discover the skill cold or another skill drives it; otherwise declare `disable-model-invocation: true` and spend human cognitive load instead of model context |
-| `phase` in frontmatter | Load-bearing only where skill name and phase diverge (`genesis`, `aesthetic`). Declared without a gate until R-38. There is no `weight` field: the byte cap already is the worst case, and a family's sections differ in cost. |
+| `phase` in frontmatter | Required wherever the skill name and its family differ, which `manifest_gate.py` now refuses to let pass undeclared. Where the two match the name already answers the question. There is no `weight` field: the byte cap already is the worst case, and a family's sections differ in cost. |
 | A row in the README index and every translation it offers | `tools/index_gate.py` refuses otherwise |
 | Its second names present in its own `description` | The gate refuses a name the assistant has never heard of |
 

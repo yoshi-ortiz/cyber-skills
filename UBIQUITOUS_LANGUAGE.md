@@ -13,6 +13,21 @@ See Flagged ambiguities.
 Shot evaluation vocabulary is universal and lives in [QA.md](QA.md). Terms below
 point there; they are not redefined.
 
+## Enforcement
+
+`tools/loanwords.py` parses every table below. Because aliases are semantic,
+not globally forbidden strings, current Repo-Dev prose marks a governed block
+with `<!-- vocabulary: Item -->` and `<!-- /vocabulary -->`. The gate applies
+only that canonical term's avoided aliases inside the block and reports the
+file, line, alias, and replacement. This lets `Skill` and `Command` remain
+distinct concepts even though each word is a misleading substitute for the
+other in the wrong context.
+
+The governed surface is `CLAUDE.md`, `CONTEXT.md`, `SPEC.md`, `SKILL_SPEC.md`,
+and `ROADMAP.md`. The glossary itself, historical `BUGS.md` and `CHANGELOG.md`,
+translations, inline and fenced code, URLs, and the separate Design-Inference
+glossary are excluded deliberately.
+
 ## The rail
 
 | Term | Definition | Aliases to avoid |
@@ -114,8 +129,10 @@ repository.
 | **Goal** | The record of why the shape is the shape and what it costs, holding nothing contractual | Spec, plan, README |
 | **Spec** | The settled contract, fixed for the duration of a build and holding nothing speculative | Goal, proposal, draft |
 | **Prototype** | An unsettled item written as a question, to be answered with throwaway work before it earns a spec row | Wishlist item, TODO, backlog |
-| **Burndown** | The roadmap read as remaining work, one state per item | Backlog, todo list, sprint |
+| **Burndown** | The roadmap read as remaining work, one state per item | Backlog, todo list |
+| **Sprint** | A fixed release slice grouping related burndown items toward one exit | Burndown, iteration, cycle |
 | **Item** | One row of the burndown, in exactly one of `TODO`, `IN-PROGRESS`, `BLOCKED`, `DONE` | Task, ticket, story |
+| **Architecture decision record (ADR)** | An immutable accepted explanation for a hard-to-reverse boundary choice; the spec remains authoritative | Spec, proposal, draft |
 | **Root cause** | The engineering finding a bug closes on, never the symptom the fix suppressed | Fix, patch, resolution |
 
 ## Failure

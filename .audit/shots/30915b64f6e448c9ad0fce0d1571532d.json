@@ -1,0 +1,50 @@
+{
+  "compute": {
+    "duration_ms": 0,
+    "harness": "unknown",
+    "model": "unknown",
+    "started_at": "2026-09-03T20:48:23Z",
+    "tokens": {
+      "input": 40,
+      "output": 77075,
+      "profile": "utf8_bytes_div4_ceil_v1"
+    }
+  },
+  "findings": [],
+  "inputs": {
+    "corpus_refs": [],
+    "invocation": "aesthetic@2026-09-03T20:47:58Z",
+    "prompt_hash": "sha256:b2b152e1d042bc97c1b40f5f3e561cf81d7e773f97702fde0c3d937f023220a1",
+    "request": "Los seis jefes, redibujados con ojos de punto, piernas y una sola forma fuerte por personaje, en colores medidos del corpus. \u00bfYa se ven bien, y cu\u00e1l falla?",
+    "target_skill": "first/aesthetic",
+    "tools": []
+  },
+  "output": {
+    "adapter": "graphic",
+    "artifacts": [
+      {
+        "bytes": 150643,
+        "mime": "image/png",
+        "path": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.cast-six.png",
+        "role": "deliverable",
+        "sha256": "sha256:f276823c2870cba28fec31254f8d81543e847eecf8762439615c7da27ecd4d60"
+      },
+      {
+        "bytes": 157656,
+        "mime": "image/png",
+        "path": "/Users/bebote-pro/Development/cyber-skills/design/review/landing.hero.flow.character.craft-round.png",
+        "role": "deliverable",
+        "sha256": "sha256:4640e50c00e3f4d83856ae73d344a990dca0ce42ca5902cbd949a64bd9c5e5f8"
+      }
+    ]
+  },
+  "provenance": "inference",
+  "scope": "cast",
+  "shot_id": "30915b64f6e448c9ad0fce0d1571532d",
+  "user_feedback": {
+    "correction": "corpus does not shape characters so square; all characters have hats and look too identical; tech CEO should have no hat and a formal navy blue vest",
+    "sentiment": "negative",
+    "status": "rejected"
+  },
+  "version": 2
+}

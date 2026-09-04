@@ -28,6 +28,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
 HERE = Path(__file__).resolve().parent
 KEY = re.compile(r"[?&]key=([0-9a-f]+)")
@@ -175,8 +176,36 @@ def deliver(project_root: Path, out: str, cohort: str, round_label: str, asks: s
     step([harness, "status", "--idle", "--text", idle_text], project_root)
 
     found = KEY.search(url)
+    payload = json.loads(images) if images else []
     return {"url": url, "key": found.group(1) if found else "",
-            "ask": asks, "images": json.loads(images) if images else []}
+            "ask": asks, "images": payload,
+            "corpusFit": corpus_fit(project_root, payload)}
+
+
+def corpus_fit(project_root: Path, images: Any) -> list[dict]:
+    """How much of each delivered comp's colour the corpus evidences.
+
+    Reported, not refused. A round may legitimately propose a palette the
+    corpus has never shown, and the user is the one who decides that. What must
+    not happen again is shipping a comp in invented colour with nothing saying
+    so, which is how every character round in this project drifted.
+    """
+    from graphics_corpus import palette_audit
+
+    declared = images.get("images", []) if isinstance(images, dict) else []
+    report = []
+    for item in declared:
+        source = (item or {}).get("source_html") if isinstance(item, dict) else None
+        if not source or not Path(source).is_file():
+            continue
+        try:
+            audit = palette_audit(project_root, Path(source))
+        except OSError:
+            continue
+        report.append({"element": item.get("element"), "fit": audit["fit"],
+                       "unevidenced": [entry["declared"]
+                                       for entry in audit["unevidenced"]]})
+    return report
 
 
 def record_shot(payload: dict, round_label: str, asks: str,

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber Skills — Tech-Bro CEO, first pass</title>
+<style>
+  :root {
+    --paper: #faf5ee; --ink: #171a1f; --skin: #ffd9b8;
+    --hotpink: #ff4fa3; --navy: #1c2b6b; --mint: #7be0c4; --yellow: #ffd51f;
+    --muted: #5d6670;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .sheet { max-width: 800px; margin: 0 auto; padding: 40px 44px 56px; }
+  .kicker { font: 800 .72rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+            letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 10px 0 6px; font-size: 2.1rem; letter-spacing: -.03em; }
+  .lede { margin: 0 0 12px; max-width: 66ch; color: var(--muted); line-height: 1.5; }
+  .brief { margin: 0 0 32px; max-width: 66ch; padding: 12px 16px; font-size: .84rem;
+           line-height: 1.5; background: #fff; border: 3px solid var(--ink);
+           border-radius: 12px; }
+  .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; max-width: 720px; }
+  .col { border: 3px solid var(--ink); border-radius: 18px; overflow: hidden;
+         background: #fff; box-shadow: 5px 5px 0 var(--ink); }
+  .col h2 { margin: 0; padding: 14px 16px 4px;
+            font: 800 1rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .col p { margin: 0; padding: 0 16px 14px; font-size: .82rem; line-height: 1.45;
+           color: var(--muted); min-height: 5.6em; }
+  .stage { position: relative; width: 180px; height: 230px; margin: 0 auto; }
+  .stage > i { position: absolute; display: block; }
+  .plate { display: grid; place-items: center; padding: 16px 0 10px;
+           border-top: 3px solid var(--ink); background: var(--paper); }
+  .at-size { display: grid; place-items: center; gap: 8px; padding: 16px 0 20px;
+             border-top: 3px solid var(--ink); background: var(--hotpink); }
+  .at-size span { font: 800 .62rem/1 ui-monospace, Menlo, monospace;
+                  letter-spacing: .14em; text-transform: uppercase; }
+  .mini { width: 54px; height: 69px; }
+  .mini .stage { transform: scale(.3); transform-origin: 0 0; margin: 0; }
+
+  /* ============ A1, the settled construction grammar (unchanged) ============ */
+  .head  { left: 42px; top: 30px; width: 96px; height: 96px; background: var(--skin);
+           border: 5px solid var(--ink); border-radius: 50%; }
+  .torso { left: 44px; top: 124px; width: 92px; height: 92px;
+           border: 5px solid var(--ink); border-radius: 46% 46% 24% 24%; }
+  .armL  { left: 16px; top: 102px; width: 28px; height: 70px;
+           border: 5px solid var(--ink); border-radius: 999px; transform: rotate(34deg); }
+  .armR  { left: 130px; top: 130px; width: 28px; height: 66px;
+           border: 5px solid var(--ink); border-radius: 999px; transform: rotate(-16deg); }
+  .collar { left: 50px; top: 114px; width: 80px; height: 24px;
+            border: 5px solid var(--ink); border-radius: 999px; }
+  .smile { left: 74px; top: 92px; width: 32px; height: 18px;
+           border-bottom: 5px solid var(--ink); border-radius: 0 0 60% 60%; }
+
+  /* ---- Tech-Bro CEO, reading 1 · Standing-desk swagger: side-part hair,
+     open branded vest over the torso, smartwatch on the raised wrist,
+     confident wide stance. ---- */
+  .b1 .hair  { left: 50px; top: 24px; width: 80px; height: 46px; background: var(--ink);
+               border-radius: 60% 60% 20% 20%; }
+  .b1 .torso { background: var(--navy); }
+  .b1 .vest  { left: 50px; top: 128px; width: 80px; height: 82px; background: var(--mint);
+               border: 5px solid var(--ink); border-radius: 40% 40% 20% 20%; clip-path:
+               polygon(50% 0%, 100% 8%, 100% 100%, 0% 100%, 0% 8%); }
+  .b1 .armL  { background: var(--navy); transform: rotate(-52deg); top: 84px; left: 8px; }
+  .b1 .armR  { background: var(--navy); }
+  .b1 .watch { left: 4px; top: 76px; width: 18px; height: 14px; background: var(--yellow);
+               border: 4px solid var(--ink); border-radius: 4px; }
+  .b1 .collar { background: var(--hotpink); }
+  .b1 .bottle { left: 148px; top: 132px; width: 16px; height: 46px; background: #fff;
+                border: 5px solid var(--ink); border-radius: 6px 6px 10px 10px; }
+
+  /* ---- Tech-Bro CEO, reading 2 · Founder-hoodie: hood up, backwards cap
+     bill, one hand raised with a wireless clicker, the other holding a
+     reusable bottle low. Softer, younger register than reading 1. ---- */
+  .b2 .hood  { left: 30px; top: 6px; width: 120px; height: 66px; background: var(--mint);
+               border: 5px solid var(--ink); border-radius: 60% 60% 20% 20%; }
+  .b2 .cap   { left: 112px; top: 24px; width: 44px; height: 18px; background: var(--hotpink);
+               border: 4px solid var(--ink); border-radius: 4px 999px 999px 4px;
+               transform: rotate(-8deg); }
+  .b2 .torso { background: var(--navy); }
+  .b2 .armL  { background: var(--navy); }
+  .b2 .armR  { background: var(--navy); transform: rotate(-58deg); top: 78px; left: 130px; }
+  .b2 .clicker { left: 150px; top: 42px; width: 16px; height: 22px; background: var(--yellow);
+                 border: 4px solid var(--ink); border-radius: 4px; }
+  .b2 .collar { background: var(--mint); }
+  .b2 .bottle { left: 4px; top: 148px; width: 16px; height: 44px; background: #fff;
+                border: 5px solid var(--ink); border-radius: 6px 6px 10px 10px; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <p class="kicker">Round · character design, /build room boss</p>
+  <h1>Tech-Bro CEO, two opening readings</h1>
+  <p class="lede">Same settled A1 grammar as /first, same flamboyant-but-confident register.
+    Two readings so this is a real choice, not one vague default.</p>
+  <p class="brief"><strong>From rooms-inventory.md:</strong> Stereotypical Tech-Bro CEO &mdash;
+    branded vest, expensive sneakers, rolled sleeves, smartwatch, reusable bottle, and absolute
+    confidence in unfinished software.</p>
+
+  <div class="row">
+    <div class="col">
+      <h2>1 &middot; Standing-desk swagger</h2>
+      <p>Side-part hair, an open branded vest layered over the torso, a raised arm showing off
+        the smartwatch. Reads as the confident, slightly older founder.</p>
+      <div class="plate"><div class="stage b1">
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i><i class="vest"></i>
+        <i class="watch"></i><i class="bottle"></i><i class="collar"></i>
+        <i class="head"></i><i class="hair"></i><i class="smile"></i>
+      </div></div>
+      <div class="at-size"><span>at room size</span><div class="mini"><div class="stage b1">
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i><i class="vest"></i>
+        <i class="watch"></i><i class="bottle"></i><i class="collar"></i>
+        <i class="head"></i><i class="hair"></i><i class="smile"></i>
+      </div></div></div>
+    </div>
+
+    <div class="col">
+      <h2>2 &middot; Founder hoodie</h2>
+      <p>Hood up, backwards cap bill, one arm raised holding the wireless clicker, a reusable
+        bottle low in the other hand. Younger, scrappier register than reading 1.</p>
+      <div class="plate"><div class="stage b2">
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i>
+        <i class="clicker"></i><i class="bottle"></i><i class="collar"></i>
+        <i class="head"></i><i class="hood"></i><i class="cap"></i><i class="smile"></i>
+      </div></div>
+      <div class="at-size"><span>at room size</span><div class="mini"><div class="stage b2">
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i>
+        <i class="clicker"></i><i class="bottle"></i><i class="collar"></i>
+        <i class="head"></i><i class="hood"></i><i class="cap"></i><i class="smile"></i>
+      </div></div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

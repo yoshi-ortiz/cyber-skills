@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber Skills — Acid Rockstar, three cartoon styles</title>
+<style>
+  :root {
+    --paper: #faf5ee; --ink: #171a1f; --skin: #ffd9b8;
+    --pink: #f33da2; --cyan: #13c8db; --yellow: #ffd51f; --lens: #ff77b8;
+    --muted: #5d6670;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .sheet { max-width: 1180px; margin: 0 auto; padding: 40px 44px 56px; }
+  .kicker { font: 800 .72rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+            letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 10px 0 6px; font-size: 2.1rem; letter-spacing: -.03em; }
+  .lede { margin: 0 0 34px; max-width: 62ch; color: var(--muted); line-height: 1.5; }
+
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .col { border: 3px solid var(--ink); border-radius: 18px; overflow: hidden;
+         background: #fff; box-shadow: 5px 5px 0 var(--ink); }
+  .col h2 { margin: 0; padding: 14px 16px 4px;
+            font: 800 1rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .col p { margin: 0; padding: 0 16px 14px; font-size: .82rem; line-height: 1.45;
+           color: var(--muted); min-height: 4.4em; }
+
+  /* The figure lives in a fixed 180x230 frame so every style is judged at the
+     same scale, and `.mini` re-renders the identical markup at the size it
+     actually appears inside a room. A style that only works big is not a
+     style this diagram can use. */
+  .stage { position: relative; width: 180px; height: 230px; margin: 0 auto 6px; }
+  .stage > i { position: absolute; display: block; }
+  .plate { display: grid; place-items: center; padding: 18px 0 8px;
+           border-top: 3px solid var(--ink); background: var(--paper); }
+  .at-size { display: grid; place-items: center; gap: 8px; padding: 16px 0 20px;
+             border-top: 3px solid var(--ink); background: var(--cyan); }
+  .at-size span { font: 800 .62rem/1 ui-monospace, Menlo, monospace;
+                  letter-spacing: .14em; text-transform: uppercase; }
+  .mini { width: 54px; height: 69px; }
+  .mini .stage { transform: scale(.3); transform-origin: 0 0; margin: 0; }
+
+  /* ---------- A. Chibi sticker: head-dominant, heavy contour, flat fills.
+     Every part carries the same 5px ink contour, so overlapping shapes fuse
+     into one silhouette instead of reading as stacked parts. ---------- */
+  .a-hairback { left: 32px; top: 8px;  width: 116px; height: 86px; background: var(--ink);
+                border-radius: 58% 62% 40% 45% / 70% 66% 30% 34%; transform: rotate(-5deg); }
+  .a-spikeL   { left: 24px; top: 20px; width: 36px; height: 48px; background: var(--ink);
+                border-radius: 62% 18% 50% 40%; transform: rotate(-34deg); }
+  .a-spikeR   { left: 122px; top: 18px; width: 32px; height: 44px; background: var(--ink);
+                border-radius: 18% 62% 40% 50%; transform: rotate(30deg); }
+  .a-armL { left: 20px; top: 128px; width: 28px; height: 64px; background: var(--pink);
+            border: 5px solid var(--ink); border-radius: 999px; transform: rotate(14deg); }
+  .a-armR { left: 132px; top: 128px; width: 28px; height: 64px; background: var(--pink);
+            border: 5px solid var(--ink); border-radius: 999px; transform: rotate(-14deg); }
+  .a-torso { left: 44px; top: 122px; width: 92px; height: 88px; background: var(--pink);
+             border: 5px solid var(--ink); border-radius: 46% 46% 26% 26%; }
+  .a-scarf { left: 58px; top: 116px; width: 64px; height: 18px; background: var(--yellow);
+             border: 4px solid var(--ink); border-radius: 999px; }
+  .a-head  { left: 42px; top: 30px; width: 96px; height: 96px; background: var(--skin);
+             border: 5px solid var(--ink); border-radius: 50%; }
+  .a-bar   { left: 50px; top: 64px; width: 80px; height: 15px; background: var(--ink);
+             border-radius: 999px; }
+  .a-lensL { left: 55px; top: 58px; width: 28px; height: 24px; background: var(--lens);
+             border: 4px solid var(--ink); border-radius: 50%; }
+  .a-lensR { left: 97px; top: 58px; width: 28px; height: 24px; background: var(--lens);
+             border: 4px solid var(--ink); border-radius: 50%; }
+  .a-mouth { left: 80px; top: 96px; width: 22px; height: 12px; background: var(--ink);
+             border-radius: 0 0 999px 999px; }
+
+  /* ---------- B. Flat silhouette: no contour anywhere. The drawing is the
+     boundary between two fills, which is how the poster crowd figures survive
+     being 20px tall. Smaller head, so it reads as a person, not a mascot. -- */
+  .b-body  { left: 48px; top: 104px; width: 84px; height: 100px; background: var(--pink);
+             border-radius: 46% 46% 16% 16%; }
+  .b-armL  { left: 32px; top: 112px; width: 22px; height: 58px; background: var(--pink);
+             border-radius: 999px; transform: rotate(11deg); }
+  .b-armR  { left: 126px; top: 112px; width: 22px; height: 58px; background: var(--pink);
+             border-radius: 999px; transform: rotate(-11deg); }
+  .b-head  { left: 59px; top: 48px; width: 62px; height: 62px; background: var(--skin);
+             border-radius: 50%; }
+  .b-hair  { left: 52px; top: 36px; width: 76px; height: 46px; background: var(--ink);
+             border-radius: 60% 62% 28% 30%; transform: rotate(-5deg); }
+  .b-lock  { left: 47px; top: 58px; width: 20px; height: 34px; background: var(--ink);
+             border-radius: 60% 30% 40% 50%; transform: rotate(-14deg); }
+  .b-eyeL  { left: 73px; top: 76px; width: 7px; height: 8px; background: var(--ink);
+             border-radius: 50%; }
+  .b-eyeR  { left: 92px; top: 76px; width: 7px; height: 8px; background: var(--ink);
+             border-radius: 50%; }
+  .b-shade { left: 48px; top: 150px; width: 84px; height: 54px; background: #c72b83;
+             border-radius: 0 0 16% 16%; }
+
+  /* ---------- C. Bold line-art: the contour is the drawing and fills stay
+     paper, with exactly one accent. Editorial-ink register rather than
+     mascot. ---------- */
+  .c-hairL { left: 50px; top: 12px; width: 15px; height: 48px; background: var(--ink);
+             border-radius: 999px; transform: rotate(-30deg); }
+  .c-hairM { left: 84px; top: 4px;  width: 15px; height: 52px; background: var(--ink);
+             border-radius: 999px; transform: rotate(-2deg); }
+  .c-hairR { left: 114px; top: 14px; width: 15px; height: 46px; background: var(--ink);
+             border-radius: 999px; transform: rotate(28deg); }
+  .c-armL  { left: 26px; top: 126px; width: 24px; height: 62px; background: #fff;
+             border: 6px solid var(--ink); border-radius: 999px; transform: rotate(13deg); }
+  .c-armR  { left: 130px; top: 126px; width: 24px; height: 62px; background: #fff;
+             border: 6px solid var(--ink); border-radius: 999px; transform: rotate(-13deg); }
+  .c-torso { left: 47px; top: 120px; width: 86px; height: 88px; background: #fff;
+             border: 6px solid var(--ink); border-radius: 44% 44% 20% 20%; }
+  .c-lapel { left: 62px; top: 126px; width: 56px; height: 40px; background: var(--pink);
+             border-radius: 50% 50% 46% 46%; }
+  .c-head  { left: 46px; top: 34px; width: 88px; height: 88px; background: #fff;
+             border: 6px solid var(--ink); border-radius: 50%; }
+  .c-glassL { left: 56px; top: 62px; width: 28px; height: 28px; background: #fff;
+              border: 6px solid var(--ink); border-radius: 50%; }
+  .c-glassR { left: 96px; top: 62px; width: 28px; height: 28px; background: #fff;
+              border: 6px solid var(--ink); border-radius: 50%; }
+  .c-bridge { left: 83px; top: 73px; width: 14px; height: 6px; background: var(--ink); }
+  .c-mouth  { left: 78px; top: 100px; width: 24px; height: 7px; background: var(--ink);
+              border-radius: 999px; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <p class="kicker">Round · room boss illustration</p>
+  <h1>Acid Rockstar, three cartoon styles</h1>
+  <p class="lede">One character, three construction languages, all procedural CSS &mdash; no
+    fetched art and no hand-typed vector coordinates. Judge the bottom row first: that is the
+    size these actually appear at inside a room.</p>
+
+  <div class="row">
+
+    <div class="col">
+      <h2>A · Chibi sticker</h2>
+      <p>Head is 40% of the figure. One heavy contour on every part, flat saturated fills,
+        props read big. Closest to the mascot poster in the moodboard.</p>
+      <div class="plate">
+        <div class="stage">
+          <i class="a-hairback"></i><i class="a-spikeL"></i><i class="a-spikeR"></i>
+          <i class="a-armL"></i><i class="a-armR"></i><i class="a-torso"></i><i class="a-scarf"></i>
+          <i class="a-head"></i><i class="a-bar"></i><i class="a-lensL"></i><i class="a-lensR"></i>
+          <i class="a-mouth"></i>
+        </div>
+      </div>
+      <div class="at-size"><span>at room size</span>
+        <div class="mini"><div class="stage">
+          <i class="a-hairback"></i><i class="a-spikeL"></i><i class="a-spikeR"></i>
+          <i class="a-armL"></i><i class="a-armR"></i><i class="a-torso"></i><i class="a-scarf"></i>
+          <i class="a-head"></i><i class="a-bar"></i><i class="a-lensL"></i><i class="a-lensR"></i>
+          <i class="a-mouth"></i>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <h2>B · Flat silhouette</h2>
+      <p>No outline at all. Shapes are separated by colour contrast only, one tone darker at
+        the hem for weight. Smaller head, so it reads as a person rather than a mascot.</p>
+      <div class="plate">
+        <div class="stage">
+          <i class="b-body"></i><i class="b-shade"></i><i class="b-armL"></i><i class="b-armR"></i>
+          <i class="b-head"></i><i class="b-hair"></i><i class="b-lock"></i>
+          <i class="b-eyeL"></i><i class="b-eyeR"></i>
+        </div>
+      </div>
+      <div class="at-size"><span>at room size</span>
+        <div class="mini"><div class="stage">
+          <i class="b-body"></i><i class="b-shade"></i><i class="b-armL"></i><i class="b-armR"></i>
+          <i class="b-head"></i><i class="b-hair"></i><i class="b-lock"></i>
+          <i class="b-eyeL"></i><i class="b-eyeR"></i>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <h2>C · Bold line-art</h2>
+      <p>The contour is the drawing. Fills stay paper-white with exactly one accent, hair is
+        three strokes rather than a mass. Editorial-ink register.</p>
+      <div class="plate">
+        <div class="stage">
+          <i class="c-hairL"></i><i class="c-hairM"></i><i class="c-hairR"></i>
+          <i class="c-armL"></i><i class="c-armR"></i><i class="c-torso"></i><i class="c-lapel"></i>
+          <i class="c-head"></i><i class="c-glassL"></i><i class="c-glassR"></i>
+          <i class="c-bridge"></i><i class="c-mouth"></i>
+        </div>
+      </div>
+      <div class="at-size"><span>at room size</span>
+        <div class="mini"><div class="stage">
+          <i class="c-hairL"></i><i class="c-hairM"></i><i class="c-hairR"></i>
+          <i class="c-armL"></i><i class="c-armR"></i><i class="c-torso"></i><i class="c-lapel"></i>
+          <i class="c-head"></i><i class="c-glassL"></i><i class="c-glassR"></i>
+          <i class="c-bridge"></i><i class="c-mouth"></i>
+        </div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

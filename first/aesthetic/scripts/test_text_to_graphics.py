@@ -8,12 +8,14 @@ from pathlib import Path
 from graphics_flow import next_action, read_state
 from text_to_graphics import (build_svg, compile_slices, export_avge_calls,
                               gate_outputs, GraphicsError, prompt_inputs_hash,
-                              record_adapter, run_moodboard, validate_scene)
+                              record_adapter, run_clear_shot, run_moodboard,
+                              validate_scene)
 
 ROOT = Path(__file__).resolve().parents[3]
 STORE = "spec/design-harness"
 HARNESS_FILES = ("graphics-manifest.json", "scene-spec.json",
-                 "corpus.json", "corpus-tags.json")
+                 "corpus.json", "corpus-tags.json", "corpus-derived.json",
+                 "cast.json")
 
 TOOL_RESEARCH = {
     "version": 1, "domain": "editorial developer-tool graphics",
@@ -159,7 +161,7 @@ class CorpusDrivenPromptTests(unittest.TestCase):
             tags_path = project / STORE / "corpus-tags.json"
             tags = json.loads(tags_path.read_text())
             candidate = next(item for item in corpus["items"]
-                             if item["path"].endswith("clear layout.png"))
+                             if "clear layout" in item["path"])
             tags["tags"][candidate["sha256"]].update({
                 "stance": "refine", "role": "attempt",
                 "note": "keep the crossing; enlarge the rooms",
@@ -175,6 +177,203 @@ class CorpusDrivenPromptTests(unittest.TestCase):
             with self.assertRaisesRegex(GraphicsError, "before spending a fresh"):
                 run_moodboard(project, dry_run=True)
 
+    def test_character_observations_split_build_from_avoid(self) -> None:
+        """A counterevidence entry must read as a boundary, not an instruction.
+
+        Folding 'avoid' prose into the same list as 'build it this way' is how
+        a generator ends up quoting the register it was told to steer clear of.
+        """
+        with _project(**{
+            "character-observations": {
+                "version": 1,
+                "observations": [
+                    {"id": "ears", "source": "a.png", "box": [0, 0, 1, 1],
+                     "read": "long provenance essay about the ear",
+                     "rule": "One circle sits proud of the head silhouette."},
+                    {"id": "realism", "stance": "avoid",
+                     "source": "best ugly shot, good layout.png", "box": [0, 0, 1, 1],
+                     "read": "long provenance essay about proportion",
+                     "rule": "Never realistic human proportion."},
+                ],
+            },
+        }) as project:
+            style = compile_slices(project)["slices"]["style"]
+            self.assertIn("One circle sits proud", style)
+            self.assertIn("Never draw figures in this register:", style)
+            self.assertIn("Never realistic human proportion.", style)
+            # The boundary trails the build list, not the other way round.
+            self.assertLess(style.index("One circle sits proud"),
+                            style.index("Never draw figures in this register:"))
+            # Neither the provenance nor the source filename may travel. Naming
+            # an avoid-tagged file in a style prompt summons the register.
+            self.assertNotIn("long provenance essay", style)
+            self.assertNotIn("best ugly shot", style)
+
+    def test_no_observations_file_compiles_with_no_construction_section(self) -> None:
+        with _project() as project:
+            style = compile_slices(project)["slices"]["style"]
+            self.assertNotIn("How this corpus builds a figure", style)
+
+class EmptySpaceGateTests(unittest.TestCase):
+    """An empty room is one of the recorded failures. The gate owns it now."""
+
+    def test_a_space_with_no_boss_fails_the_gate(self) -> None:
+        with _project() as project:
+            cast_path = project / STORE / "cast.json"
+            cast = json.loads(cast_path.read_text())
+            cast["figures"].pop("/check")
+            cast_path.write_text(json.dumps(cast), encoding="utf-8")
+            build_svg(project)
+            result = gate_outputs(project)
+            self.assertFalse(result["passed"])
+            self.assertTrue(any("nobody in them" in e for e in result["errors"]))
+            self.assertIn("check", " ".join(result["errors"]))
+
+    def test_text_no_billboard_declares_fails_the_gate(self) -> None:
+        """A generator invented signage. This renderer may not."""
+        with _project() as project:
+            build_svg(project)
+            manifest = json.loads((project / STORE / "graphics-manifest.json").read_text())
+            svg = project / str((manifest.get("outputs") or {}).get("vector"))
+            svg.write_text(svg.read_text().replace("</svg>",
+                           '<text x="5" y="5">qa tests</text></svg>'), encoding="utf-8")
+            result = gate_outputs(project)
+            self.assertFalse(result["passed"])
+            self.assertTrue(any("no billboard declares" in e for e in result["errors"]))
+
+
+class DeterministicPromptTests(unittest.TestCase):
+    """The hand-written prompt stated the billboard text twice and disagreed
+    with itself on three of six, so the generator invented a third answer."""
+
+    def _prompt(self, project) -> str:
+        from graphics_slices import deterministic_prompt
+
+        result = deterministic_prompt(project)
+        return Path(result["deterministic"]).read_text(encoding="utf-8")
+
+    def test_each_billboard_string_appears_exactly_once(self) -> None:
+        with _project() as project:
+            scene = json.loads((project / STORE / "scene-spec.json").read_text())
+            text = self._prompt(project)
+            for want in scene["billboards"].values():
+                self.assertEqual(text.count(f'"{want}"'), 1, want)
+
+    def test_billboards_come_from_the_scene_and_keep_the_slash(self) -> None:
+        """The old prompt dropped the slash while demanding it be kept."""
+        with _project() as project:
+            scene = json.loads((project / STORE / "scene-spec.json").read_text())
+            text = self._prompt(project)
+            for space, want in scene["billboards"].items():
+                self.assertIn(f'- {space}: "{want}"', text)
+                self.assertTrue(want.startswith("/"), want)
+
+    def test_editing_the_scene_moves_the_prompt(self) -> None:
+        """A generated prompt cannot drift from its source. That was the bug."""
+        with _project() as project:
+            path = project / STORE / "scene-spec.json"
+            scene = json.loads(path.read_text())
+            scene["billboards"]["/fix"] = "/fix TRIAGE"
+            path.write_text(json.dumps(scene), encoding="utf-8")
+            text = self._prompt(project)
+            self.assertIn('"/fix TRIAGE"', text)
+            self.assertNotIn('"/fix REPAIR"', text)
+
+    def test_known_failures_reach_the_prompt_as_constraints(self) -> None:
+        with _project(**{"known-failures": {
+            "version": 1,
+            "failures": [{"id": "open-road", "seenIn": "a.png",
+                          "defect": "road did not close",
+                          "constraint": "The road is ONE closed curve."}],
+        }}) as project:
+            text = self._prompt(project)
+            self.assertIn("ALREADY REJECTED", text)
+            self.assertIn("The road is ONE closed curve.", text)
+            self.assertIn("road did not close", text)
+
+    def test_audit_only_observations_never_reach_the_generator(self) -> None:
+        """An entry with no `rule` is provenance for a reader, not an
+        instruction for an image model."""
+        with _project(**{"character-observations": {
+            "version": 1,
+            "observations": [
+                {"id": "eyes", "read": "long provenance essay",
+                 "rule": "Eyes are large white ovals."},
+                {"id": "meta", "read": "notes about how tagging works"},
+            ],
+        }}) as project:
+            text = self._prompt(project)
+            self.assertIn("Eyes are large white ovals.", text)
+            self.assertNotIn("notes about how tagging works", text)
+            self.assertNotIn("long provenance essay", text)
+
+    def test_shot_corrections_are_not_forwarded_to_the_image_model(self) -> None:
+        """Corrections aimed at other adapters are contamination here."""
+        with _project() as project:
+            shots = project / ".audit" / "shots"
+            shots.mkdir(parents=True)
+            (shots / "x.json").write_text(json.dumps({
+                "version": 2, "shot_id": "x",
+                "user_feedback": {"correction": "the companion app thumbnails"},
+            }), encoding="utf-8")
+            self.assertNotIn("companion app thumbnails", self._prompt(project))
+
+
+class ClearShotPromptTests(unittest.TestCase):
+    def _prompt(self, project: Path) -> str:
+        from graphics_slices import clear_shot_prompt
+
+        result = clear_shot_prompt(project)
+        return Path(result["clearShotPrompt"]).read_text(encoding="utf-8")
+
+    def test_prompt_treats_the_clear_shot_as_style_and_composition(self) -> None:
+        with _project() as project:
+            text = self._prompt(project)
+            self.assertIn("clear layout, good cartoon.png", text)
+            self.assertIn("Keep its composition and cartoon register", text)
+            self.assertIn("cartoon/Pasted 2026-08-28 at 5.53.02 p.m..png", text)
+
+    def test_prompt_contains_exact_scene_text_once_and_no_avoid_reference(self) -> None:
+        with _project() as project:
+            scene = json.loads((project / STORE / "scene-spec.json").read_text())
+            text = self._prompt(project)
+            for want in scene["billboards"].values():
+                self.assertEqual(text.count(f'"{want}"'), 1, want)
+            self.assertNotIn("best ugly shot", text)
+            self.assertNotIn("qa tests", text)
+            self.assertNotIn("clean code", text)
+
+    def test_prompt_uses_failure_constraints_without_the_failure_essay(self) -> None:
+        with _project(**{"known-failures": {
+            "version": 1,
+            "failures": [{"id": "open-road", "seenIn": "bad.png",
+                          "defect": "the old road stopped",
+                          "constraint": "Draw one closed road."}],
+        }}) as project:
+            text = self._prompt(project)
+            self.assertIn("Draw one closed road.", text)
+            self.assertNotIn("bad.png", text)
+            self.assertNotIn("the old road stopped", text)
+
+    def test_prompt_is_bounded_for_an_image_model(self) -> None:
+        with _project() as project:
+            text = self._prompt(project)
+            self.assertLessEqual(len(text.encode("utf-8")), 12000)
+            self.assertNotIn("Generated by", text)
+            self.assertNotIn("Do not hand-edit", text)
+
+    def test_dry_run_hands_the_clear_prompt_to_agy_without_running_it(self) -> None:
+        with _project() as project:
+            result = run_clear_shot(project, dry_run=True)
+            self.assertEqual(result["adapter"], "agy")
+            self.assertEqual(result["outcome"], "pending")
+            self.assertIn("--output-format json", result["command"])
+            self.assertIn("clear-shot-prompt.txt", result["prompt"])
+            self.assertIn("clear-shot-", result["output"])
+
+
+class SliceSeparationTests(unittest.TestCase):
+    """Each slice carries one concern, and a changed input goes stale."""
     def test_prompt_input_hash_changes_when_a_tag_changes(self) -> None:
         with _project() as project:
             manifest = json.loads((project / STORE / "graphics-manifest.json").read_text())

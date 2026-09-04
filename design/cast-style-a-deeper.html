@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber Skills — Chibi sticker, three refinements</title>
+<style>
+  :root {
+    --paper: #faf5ee; --ink: #171a1f; --skin: #ffd9b8; --skin-2: #f2b98d;
+    --pink: #f33da2; --cyan: #13c8db; --yellow: #ffd51f; --lens: #ff77b8;
+    --muted: #5d6670;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .sheet { max-width: 1180px; margin: 0 auto; padding: 40px 44px 56px; }
+  .kicker { font: 800 .72rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+            letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 10px 0 6px; font-size: 2.1rem; letter-spacing: -.03em; }
+  .lede { margin: 0 0 34px; max-width: 66ch; color: var(--muted); line-height: 1.5; }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .col { border: 3px solid var(--ink); border-radius: 18px; overflow: hidden;
+         background: #fff; box-shadow: 5px 5px 0 var(--ink); }
+  .col h2 { margin: 0; padding: 14px 16px 4px;
+            font: 800 1rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .col p { margin: 0; padding: 0 16px 14px; font-size: .82rem; line-height: 1.45;
+           color: var(--muted); min-height: 4.4em; }
+  .stage { position: relative; width: 180px; height: 230px; margin: 0 auto; }
+  .stage > i { position: absolute; display: block; }
+  .plate { display: grid; place-items: center; padding: 16px 0 10px;
+           border-top: 3px solid var(--ink); background: var(--paper); }
+  .at-size { display: grid; place-items: center; gap: 8px; padding: 16px 0 20px;
+             border-top: 3px solid var(--ink); background: var(--cyan); }
+  .at-size span { font: 800 .62rem/1 ui-monospace, Menlo, monospace;
+                  letter-spacing: .14em; text-transform: uppercase; }
+  .mini { width: 54px; height: 69px; }
+  .mini .stage { transform: scale(.3); transform-origin: 0 0; margin: 0; }
+
+  /* Shared chibi-sticker grammar, refined from round 1:
+     - the silhouette carries a 5px contour; interior marks are 4px or thinner,
+       so the figure reads as one shape first and detail second;
+     - the mouth is a border-bottom arc, not a filled blob, which was the part
+       that read as a grimace;
+     - the pose is asymmetric (one arm raised), because two mirrored pills
+       read as a doll and one raised arm reads as a person mid-gesture;
+     - the collar is wide enough to sit ON the shoulders instead of floating. */
+  .hairback { left: 30px; top: 6px; width: 120px; height: 92px; background: var(--ink);
+              border-radius: 60% 64% 38% 42% / 72% 68% 28% 32%; transform: rotate(-6deg); }
+  .spike1 { left: 18px; top: 16px; width: 42px; height: 54px; background: var(--ink);
+            border-radius: 64% 16% 52% 38%; transform: rotate(-38deg); }
+  .spike2 { left: 64px; top: -2px; width: 36px; height: 48px; background: var(--ink);
+            border-radius: 52% 48% 40% 40%; transform: rotate(-8deg); }
+  .spike3 { left: 120px; top: 12px; width: 38px; height: 50px; background: var(--ink);
+            border-radius: 16% 64% 38% 52%; transform: rotate(34deg); }
+  .armR { left: 130px; top: 130px; width: 28px; height: 66px; background: var(--pink);
+          border: 5px solid var(--ink); border-radius: 999px; transform: rotate(-16deg); }
+  .armL { left: 16px; top: 102px; width: 28px; height: 70px; background: var(--pink);
+          border: 5px solid var(--ink); border-radius: 999px; transform: rotate(34deg); }
+  .torso { left: 44px; top: 124px; width: 92px; height: 92px; background: var(--pink);
+           border: 5px solid var(--ink); border-radius: 46% 46% 24% 24%; }
+  .collar { left: 50px; top: 114px; width: 80px; height: 24px; background: var(--yellow);
+            border: 5px solid var(--ink); border-radius: 999px; }
+  .head { left: 42px; top: 30px; width: 96px; height: 96px; background: var(--skin);
+          border: 5px solid var(--ink); border-radius: 50%; }
+  .bar { left: 48px; top: 64px; width: 84px; height: 13px; background: var(--ink);
+         border-radius: 999px; }
+  .lensL { left: 53px; top: 57px; width: 30px; height: 26px; background: var(--lens);
+           border: 4px solid var(--ink); border-radius: 50%; }
+  .lensR { left: 97px; top: 57px; width: 30px; height: 26px; background: var(--lens);
+           border: 4px solid var(--ink); border-radius: 50%; }
+  /* An arc, not a filled shape: border-bottom + a bottom radius is a smile. */
+  .smile { left: 74px; top: 92px; width: 32px; height: 18px;
+           border-bottom: 5px solid var(--ink); border-radius: 0 0 60% 60%; }
+
+  /* B · max chibi — head to 50% of the figure, body and props shrink under it.
+     Overrides only what proportion touches. */
+  .b .head  { left: 30px; top: 18px; width: 120px; height: 120px; }
+  .b .hairback { left: 18px; top: -6px; width: 144px; height: 112px; }
+  .b .spike1 { left: 6px; top: 6px; width: 48px; height: 62px; }
+  .b .spike2 { left: 58px; top: -14px; width: 42px; height: 56px; }
+  .b .spike3 { left: 118px; top: 2px; width: 44px; height: 58px; }
+  .b .bar   { left: 38px; top: 78px; width: 104px; height: 15px; }
+  .b .lensL { left: 44px; top: 69px; width: 36px; height: 32px; }
+  .b .lensR { left: 100px; top: 69px; width: 36px; height: 32px; }
+  .b .smile { left: 72px; top: 112px; width: 36px; height: 20px; }
+  .b .collar { left: 58px; top: 132px; width: 64px; height: 20px; }
+  .b .torso { left: 54px; top: 140px; width: 72px; height: 68px; }
+  .b .armL  { left: 26px; top: 128px; width: 24px; height: 54px; }
+  .b .armR  { left: 128px; top: 144px; width: 24px; height: 52px; }
+
+  /* C · expressive — same proportions as A, plus the marks a face needs to
+     have an attitude: brows over the lenses, a highlight in the glass, blush. */
+  .browL { left: 55px; top: 45px; width: 26px; height: 7px; background: var(--ink);
+           border-radius: 999px; transform: rotate(-14deg); }
+  .browR { left: 99px; top: 45px; width: 26px; height: 7px; background: var(--ink);
+           border-radius: 999px; transform: rotate(14deg); }
+  .glintL { left: 59px; top: 61px; width: 10px; height: 8px; background: #fff;
+            border-radius: 50%; opacity: .85; }
+  .glintR { left: 103px; top: 61px; width: 10px; height: 8px; background: #fff;
+            border-radius: 50%; opacity: .85; }
+  .blushL { left: 50px; top: 90px; width: 18px; height: 11px; background: var(--skin-2);
+            border-radius: 50%; }
+  .blushR { left: 112px; top: 90px; width: 18px; height: 11px; background: var(--skin-2);
+            border-radius: 50%; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <p class="kicker">Round · going deeper on A</p>
+  <h1>Chibi sticker, three refinements</h1>
+  <p class="lede">Same construction language, three settings of it. Shared fixes across all
+    three: the mouth is an arc rather than a filled blob, the pose is asymmetric, and the collar
+    sits on the shoulders. Bottom row is actual in-room size.</p>
+
+  <div class="row">
+
+    <div class="col">
+      <h2>A1 · Refined</h2>
+      <p>Round-1 proportions with the craft fixed: arc mouth, one raised arm, wider collar,
+        bolder asymmetric hair. Head is 40% of the figure.</p>
+      <div class="plate"><div class="stage">
+        <i class="hairback"></i><i class="spike1"></i><i class="spike2"></i><i class="spike3"></i>
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i><i class="collar"></i>
+        <i class="head"></i><i class="bar"></i><i class="lensL"></i><i class="lensR"></i>
+        <i class="smile"></i>
+      </div></div>
+      <div class="at-size"><span>at room size</span><div class="mini"><div class="stage">
+        <i class="hairback"></i><i class="spike1"></i><i class="spike2"></i><i class="spike3"></i>
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i><i class="collar"></i>
+        <i class="head"></i><i class="bar"></i><i class="lensL"></i><i class="lensR"></i>
+        <i class="smile"></i>
+      </div></div></div>
+    </div>
+
+    <div class="col b">
+      <h2>A2 · Max chibi</h2>
+      <p>Head pushed to 50% of the figure, body and arms shrink under it. The props get bigger
+        with the head, so the character reads from further away.</p>
+      <div class="plate"><div class="stage">
+        <i class="hairback"></i><i class="spike1"></i><i class="spike2"></i><i class="spike3"></i>
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i><i class="collar"></i>
+        <i class="head"></i><i class="bar"></i><i class="lensL"></i><i class="lensR"></i>
+        <i class="smile"></i>
+      </div></div>
+      <div class="at-size"><span>at room size</span><div class="mini"><div class="stage">
+        <i class="hairback"></i><i class="spike1"></i><i class="spike2"></i><i class="spike3"></i>
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i><i class="collar"></i>
+        <i class="head"></i><i class="bar"></i><i class="lensL"></i><i class="lensR"></i>
+        <i class="smile"></i>
+      </div></div></div>
+    </div>
+
+    <div class="col">
+      <h2>A3 · Expressive</h2>
+      <p>A1 proportions plus the marks that give a face attitude: brows angled over the lenses,
+        a glint in each lens, blush. More character, more to keep consistent across six bosses.</p>
+      <div class="plate"><div class="stage">
+        <i class="hairback"></i><i class="spike1"></i><i class="spike2"></i><i class="spike3"></i>
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i><i class="collar"></i>
+        <i class="head"></i><i class="blushL"></i><i class="blushR"></i>
+        <i class="browL"></i><i class="browR"></i>
+        <i class="bar"></i><i class="lensL"></i><i class="lensR"></i>
+        <i class="glintL"></i><i class="glintR"></i><i class="smile"></i>
+      </div></div>
+      <div class="at-size"><span>at room size</span><div class="mini"><div class="stage">
+        <i class="hairback"></i><i class="spike1"></i><i class="spike2"></i><i class="spike3"></i>
+        <i class="armL"></i><i class="armR"></i><i class="torso"></i><i class="collar"></i>
+        <i class="head"></i><i class="blushL"></i><i class="blushR"></i>
+        <i class="browL"></i><i class="browR"></i>
+        <i class="bar"></i><i class="lensL"></i><i class="lensR"></i>
+        <i class="glintL"></i><i class="glintR"></i><i class="smile"></i>
+      </div></div></div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
