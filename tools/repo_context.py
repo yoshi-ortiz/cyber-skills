@@ -6,12 +6,16 @@ import argparse
 import json
 import re
 import sys
+import subprocess
 from pathlib import Path
 
 from skill_discovery import catalog, owner_of
 
 ROOT = Path(__file__).resolve().parents[1]
-STATE = re.compile(r"\b(TODO|IN-PROGRESS|BLOCKED|DONE)\b")
+sys.path.insert(0, str(ROOT / "first/genesis/scripts"))
+import compass
+
+QA = ROOT / "check/tokens-qa/scripts/tokens_qa.py"
 LINK = re.compile(r"\[([^]]+)]\([^)]+\)")
 BUG_HEADING = re.compile(r"^## (B-\d+)\s+·\s+(.+?)\s+·\s+(.+)$")
 
@@ -21,39 +25,73 @@ def _cell(text: str) -> str:
     return text.replace("`", "").strip()
 
 
-def _tables(path: Path) -> list[dict[str, str]]:
-    """Read every Markdown table by its headers, regardless of column order."""
-    lines = path.read_text(encoding="utf-8").splitlines()
-    rows: list[dict[str, str]] = []
-    index = 0
-    while index + 1 < len(lines):
-        line = lines[index]
-        separator = lines[index + 1]
-        if not line.startswith("|") or not separator.startswith("|") \
-                or not re.fullmatch(r"[|:\- ]+", separator):
-            index += 1
-            continue
-        headers = [_cell(part).lower() for part in line.strip("|").split("|")]
-        index += 2
-        while index < len(lines) and lines[index].startswith("|"):
-            values = [_cell(part) for part in lines[index].strip("|").split("|")]
-            values += [""] * (len(headers) - len(values))
-            rows.append(dict(zip(headers, values)))
-            index += 1
-    return rows
-
-
 def roadmap_rows(root: Path) -> list[dict[str, str]]:
-    rows = []
-    for row in _tables(root / "ROADMAP.md"):
-        identity = row.get("id", "")
-        if not re.fullmatch(r"R-\d+", identity):
+    return compass.roadmap_rows(root)
+
+
+def shot_query(root: Path, verb: str, *args: str) -> tuple[int, dict]:
+    """The observer owns feedback and proof; this adapter owns the Item join."""
+    done = subprocess.run([sys.executable, str(QA), verb, *args,
+                           "--project-root", str(root), "--json"],
+                          capture_output=True, text=True, timeout=30)
+    envelope = json.loads(done.stdout)
+    if done.returncode not in (0, 1):
+        raise ValueError(envelope.get("error") or done.stderr or "Shot query failed")
+    return done.returncode, envelope.get("result") or {}
+
+
+def next_feature(root: Path, item: str = "", workstream: str = "default") -> dict:
+    errors = check_compass(root)
+    if errors:
+        raise ValueError("; ".join(errors))
+    selected = compass.select(root, item=item, workstream=workstream)
+    identity = selected.get("item_id")
+    if not identity:
+        return selected
+    _, history = shot_query(root, "history", "--item-id", identity)
+    selected["observations"] = history
+    if not selected.get("scope") or not selected.get("proof"):
+        selected["next_action"] = "bound-task"
+        return selected
+    latest = history.get("latest")
+    if latest:
+        if latest["verdict"] == "failed":
+            selected["next_action"] = "apply-correction"
+        elif latest["verdict"] == "pending":
+            selected["next_action"] = "await-feedback"
+        else:
+            code, _ = shot_query(root, "gate", latest["path"])
+            selected["next_action"] = "close-item" if code == 0 else "verify-proof"
+    budget = selected.get("budget_tokens")
+    if budget and selected["next_action"] in {"continue-task", "advance-task", "apply-correction"}:
+        profiles = history.get("totals_by_profile", {})
+        if len(profiles) > 1 or any(b["input"] is None or b["output"] is None for b in profiles.values()):
+            selected["next_action"] = "resolve-budget"
+        elif sum(b["input"] + b["output"] for b in profiles.values()) >= int(budget):
+            selected["next_action"] = "budget-exhausted"
+    return selected
+
+
+def check_compass(root: Path) -> list[str]:
+    errors = compass.check(root)
+    rows = roadmap_rows(root)
+    for row in rows:
+        if not row.get("workstream") or row["state"] != "DONE":
             continue
-        match = STATE.search(row.get("state", ""))
-        if not match:
+        identity, shot = row["id"], row.get("shot", "")
+        if not shot:
+            errors.append(f"{identity}: DONE requires a Shot path")
             continue
-        rows.append({**row, "id": identity, "state": match.group(1)})
-    return rows
+        path = (root / shot).resolve()
+        if not path.is_relative_to(root.resolve() / ".audit/shots"):
+            errors.append(f"{identity}: Shot must belong to this project's .audit/shots")
+            continue
+        code, result = shot_query(root, "gate", str(path))
+        _, history = shot_query(root, "history", "--item-id", identity)
+        latest = history.get("latest") or {}
+        if code or result.get("item_id") != identity or latest.get("shot_id") != result.get("shot_id"):
+            errors.append(f"{identity}: latest Shot must be accepted with matching proof and no veto")
+    return errors
 
 
 def roadmap_state(root: Path, state: str) -> list[dict[str, str]]:
@@ -129,8 +167,11 @@ def module_context(root: Path, query: str) -> dict[str, object]:
 
 
 def summary(root: Path) -> dict[str, object]:
-    goal = next((line.strip() for line in (root / "GOAL.md").read_text(
-        encoding="utf-8").splitlines() if line.strip() and not line.startswith("#")), "")
+    text = (root / "GOAL.md").read_text(encoding="utf-8")
+    text = text.split("## The goal, in one line", 1)[-1]
+    paragraphs = re.split(r"\n\s*\n", text.strip())
+    goal = next((" ".join(part.split()) for part in paragraphs
+                 if part.strip() and not part.startswith("#")), "")
     return {
         "goal": goal,
         "in_progress": roadmap_state(root, "IN-PROGRESS"),
@@ -154,6 +195,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("summary")
+    next_cmd = commands.add_parser("next")
+    next_cmd.add_argument("--item", default="")
+    next_cmd.add_argument("--workstream", default="default")
+    commands.add_parser("check")
     state = commands.add_parser("state")
     state.add_argument("state")
     item = commands.add_parser("item")
@@ -166,7 +211,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     root = args.root.resolve()
     try:
-        if args.command == "summary":
+        if args.command == "next":
+            result = next_feature(root, args.item, args.workstream)
+        elif args.command == "check":
+            errors = check_compass(root)
+            print(json.dumps({"ok": not errors, "errors": errors}))
+            return 1 if errors else 0
+        elif args.command == "summary":
             result = summary(root)
         elif args.command == "state":
             result = roadmap_state(root, args.state)
@@ -176,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
             result = latest_bug(root) if args.latest else exact_bug(root, args.id)
         else:
             result = module_context(root, args.query)
-    except (LookupError, ValueError) as error:
+    except (LookupError, ValueError, OSError, subprocess.SubprocessError) as error:
         print(f"repo-context: {error}", file=sys.stderr)
         return 1
     if args.json:

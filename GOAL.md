@@ -8,9 +8,10 @@ them, and this file shrinks as that happens.
 
 ## The goal, in one line
 
-**A rail an LLM cannot fall off.** Not a collection of capable skills: a
-workflow with so few exits that an agent always knows where it is, what it is
-allowed to touch, and what it costs to find out.
+Advance feature burndown through verified, accepted results with fewer
+corrective attempts and lower token consumption. Genesis establishes the
+project context; Tokens QA records outcomes that improve the next attempt.
+The agent procedure lives in [CONTEXT.md](CONTEXT.md#feature-burndown).
 
 ## The failure it exists to prevent
 

@@ -72,7 +72,32 @@ def inline_output(text: str) -> tuple[dict, int]:
     return {"adapter": "text", "inline": {"text": text}}, size
 
 
-def manifest_output(path) -> tuple[dict, int, list[dict]]:
+def contained(root: Path, path, where: str = "$") -> Path:
+    root = root.resolve(strict=True)
+    target = (root / path).resolve()
+    if not target.is_relative_to(root):
+        raise Invalid(f"{where}: path escapes project root")
+    return target
+
+
+def shot_paths(root: Path):
+    directory = contained(root, ".audit/shots")
+    if not directory.exists():
+        return []
+    return [contained(root, path) for path in sorted(directory.glob("*.json"))]
+
+
+def verify_artifacts(record: dict, root: Path) -> list[str]:
+    failures = []
+    for index, artifact in enumerate(record["output"].get("artifacts", [])):
+        source = contained(root, artifact["path"], f"$.output.artifacts[{index}].path")
+        digest = sha256_file(source)
+        if artifact.get("sha256") != digest:
+            failures.append(f"artifact[{index}]: hash mismatch or absent")
+    return failures
+
+
+def manifest_output(path, root: Path | None = None) -> tuple[dict, int, list[dict]]:
     """`bytes` is the real file size and the digest is over the real bytes,
     streamed so a binary or oversized artifact is never decoded or held whole."""
     declared = load(path)
@@ -84,6 +109,8 @@ def manifest_output(path) -> tuple[dict, int, list[dict]]:
         if not isinstance(item, dict):
             raise Invalid(f"{at}: not a JSON object")
         source = Path(require_string(item.get("path"), f"{at}.path"))
+        if root is not None:
+            source = contained(root, source, f"{at}.path")
         entry = {"role": item.get("role") or "deliverable", "path": str(source),
                  "bytes": source.stat().st_size}
         if item.get("mime"):

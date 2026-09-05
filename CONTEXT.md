@@ -15,6 +15,9 @@ refuses: runtime skill doctrine -- every skill's conventions live inside that sk
 
 # Cyber skills
 
+Burndown first. Before package changes, after a correction, and when resuming
+work, follow [Feature burndown](#feature-burndown).
+
 Several skills ship together. They share a release, a publication pipeline, and
 nothing else. Each carries its own contract, and no skill's doctrine applies to
 another.
@@ -139,6 +142,56 @@ English command is a promise nobody can keep.
 
 [silly/](silly/) installs them, into an assistant's own skills folder and only
 when asked. Nothing about a second name reaches a published tree.
+
+## Feature burndown
+
+<!-- vocabulary: Item -->
+Advance the user's selected feature toward a verified, accepted result within
+its budget. This procedure governs Repo-Dev sessions. Genesis supplies the
+project discipline; Tokens QA supplies observations and user feedback.
+
+1. **Select.** Resolve the user's named roadmap item with
+   `python3 tools/repo_context.py item <id>`. Otherwise query
+   `python3 tools/repo_context.py state IN-PROGRESS` and select one item relevant
+   to this session. If none fits, read the current sprint's dependency-ready
+   `TODO` rows in document order. Explicit user direction determines scope;
+   deferred work becomes eligible when the user selects it. Selection ends with
+   one item ID and its intended user outcome. An authorized new feature gets a
+   roadmap row before implementation; a read-only answer needs no new row.
+2. **Bound.** Read the selected owner's `CONTEXT.md`, its accepted contract,
+   and the latest correction. State the next deliverable, permitted changes,
+   proof, and available time or token budget. Split work that exceeds the budget
+   into a smaller verifiable result. Keep optional ideas in `TODO`. This step
+   ends when the next action and its completion test are explicit.
+3. **Build and observe.** Execute that action. Use deterministic programs for
+   parsing, arithmetic, validation, and repeatable checks. For a Shot audit,
+   read `check/tokens-qa/SKILL.md`. Retain the request, artifact, proof, observed
+   usage, and the user's words. Distinguish measured usage from estimates and
+   unavailable data. This step ends with a result and its evidence.
+4. **Reconcile.** A correction stays attached to the same item and constrains
+   the next attempt. Rejection may require revising the plan or stopping work;
+   it does not authorize retries beyond scope or budget. Record an external
+   blocker and the condition that clears it. Mark `DONE` only when the item's
+   acceptance criteria pass, item-specific proof exists, and required user
+   acceptance is explicit. A hard veto prevents closure. Pending feedback
+   remains pending. End the session with the item ID, state, evidence, and next
+   action or blocker.
+
+One selected item per session keeps context bounded; independent sessions may
+work on different items. Research serves the selected acceptance question.
+Repository history and unrelated skill doctrine stay behind their pointers.
+
+The feedback loop aims to reduce corrective attempts and tokens per accepted
+result. Preserve negative feedback as evidence. Improvements must retain the
+user's requirements and pass the same checks. Reviewed evidence may change a
+future instruction or regression test; recording feedback alone trains no model.
+
+Run `python3 tools/repo_context.py --json next` for one eligible Item and its
+latest Shot feedback. Nonempty Workstream opts roadmap rows into enforcement.
+`python3 tools/repo_context.py check` runs in the package gate: managed DONE rows
+require their latest accepted, item-linked Shot, passing L2 and unchanged proof.
+Negative feedback routes back to correction; pending feedback is not acceptance.
+<!-- /vocabulary -->
 
 ## Two contexts, and why the split is load-bearing
 

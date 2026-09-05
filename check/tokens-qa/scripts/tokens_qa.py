@@ -46,7 +46,7 @@ def estimate(text: str) -> int:
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def parse_contexts(specs: list[str]) -> dict[str, tuple[str, ...]]:
@@ -67,6 +67,13 @@ def parse_contexts(specs: list[str]) -> dict[str, tuple[str, ...]]:
     return contexts
 
 
+def path_matches(path: str, prefixes: tuple[str, ...]) -> bool:
+    if ".." in Path(path).parts:
+        return False
+    return any(Path(path) == Path(prefix) or Path(prefix) in Path(path).parents
+               for prefix in prefixes)
+
+
 def scope_finding(paths: list[str], allowed: tuple[str, ...]) -> list[dict]:
     """`[scope_breach]` when the pass wrote outside its declared scope.
 
@@ -78,7 +85,7 @@ def scope_finding(paths: list[str], allowed: tuple[str, ...]) -> list[dict]:
     """
     if not allowed:
         return []
-    outside = sorted(p for p in paths if not p.startswith(tuple(allowed)))
+    outside = sorted(p for p in paths if not path_matches(p, allowed))
     if not outside:
         return []
     return [{"id": "scope_breach", "status": "present",
@@ -93,7 +100,7 @@ def derail_finding(paths: list[str],
     A path no context claims belongs to none: a shot is not derailed by a
     file nobody said was a boundary.
     """
-    hit = {name: sorted(p for p in paths if p.startswith(tuple(prefixes)))
+    hit = {name: sorted(p for p in paths if path_matches(p, prefixes))
            for name, prefixes in contexts.items()}
     hit = {name: found for name, found in hit.items() if found}
     if len(hit) < 2:
@@ -112,7 +119,8 @@ def cmd_record(args):
     request = Path(args.request).read_text(encoding="utf-8")
     digests: list[dict] = []
     if args.output_manifest:
-        output, size, digests = shot_io.manifest_output(args.output_manifest)
+        output, size, digests = shot_io.manifest_output(
+            args.output_manifest, Path(args.project_root) if args.project_root else None)
     else:
         output, size = shot_io.inline_output(args.inline)
     shot_id = uuid.uuid4().hex
@@ -123,23 +131,31 @@ def cmd_record(args):
     inputs = {"request": request, "target_skill": args.skill,
               "corpus_refs": [], "prompt_hash": sha256(request), "tools": []}
     if changed:
-        inputs["admitted_context"] = changed
+        inputs["changed_paths"] = changed
+    if args.admitted_context is not None:
+        inputs["admitted_context"] = args.admitted_context
     if args.invocation:
         inputs["invocation"] = args.invocation
+    telemetry = args.item_id is not None or any(value is not None for value in
+        (args.tokens_input, args.tokens_output, args.token_profile))
     record = validate({
         "version": 2, "shot_id": shot_id, "scope": args.scope or args.skill,
+        **({"item_id": args.item_id} if args.item_id is not None else {}),
         "inputs": inputs,
         "compute": {"model": args.model, "harness": args.harness,
-                    "started_at": now(), "duration_ms": 0,
-                    "tokens": {"input": estimate(request),
-                               "output": math.ceil(size / 4),
-                               "profile": "utf8_bytes_div4_ceil_v1"}},
+                    "started_at": now(), "duration_ms": args.duration_ms,
+                    "tokens": {"input": args.tokens_input if telemetry else estimate(request),
+                               "output": args.tokens_output if telemetry else math.ceil(size / 4),
+                               "profile": (args.token_profile or "unknown") if telemetry
+                               else "utf8_bytes_div4_ceil_v1"}},
         "output": output, "provenance": "inference",
+        **({"gates": shot_io.load(args.gates)} if args.gates else {}),
         "user_feedback": {"status": "pending"},
         "findings": (scope_finding(changed, scope_paths)
                      + derail_finding(changed, contexts)),
     })
-    target = Path.cwd() / ".audit" / "shots" / f"{shot_id}.json"
+    target = shot_io.contained(Path(args.project_root or Path.cwd()),
+                               f".audit/shots/{shot_id}.json")
     shot_io.create_shot(target, record)
     # The table, not the path. `record` used to print where it wrote, so
     # reading the numbers it had just computed took a second command and
@@ -153,8 +169,61 @@ def read_pair(base_path: str, cand_path: str | None):
     base = shot_io.read_shot(base_path)
     cand = shot_io.read_shot(cand_path) if cand_path else None
     text = table(metrics(base), metrics(cand) if cand else None)
-    return (1 if vetoes(base) else 0), {"verdict": verdict(base),
-                                        "hard_vetoes": vetoes(base)}, text
+    selected = cand if cand is not None else base
+    return (1 if vetoes(selected) else 0), {"verdict": verdict(selected),
+                                        "hard_vetoes": vetoes(selected)}, text
+
+
+def cmd_gate(args):
+    shot_io.contained(Path(args.project_root), args.shot)
+    record = shot_io.read_shot(args.shot)
+    failures = shot_io.verify_artifacts(record, Path(args.project_root))
+    if not record.get("item_id"):
+        failures.append("item_id required")
+    if verdict(record) != "accepted":
+        failures.append("acceptance required")
+    hard = vetoes(record)
+    failures.extend(hard)
+    if record.get("gates", {}).get("l2", {}).get("status") != "pass":
+        failures.append("l2 pass required")
+    if not any(a["role"] == "proof" for a in record["output"].get("artifacts", [])):
+        failures.append("proof artifact required")
+    result = {"item_id": record.get("item_id"), "shot_id": record["shot_id"],
+              "verdict": verdict(record), "ready": not failures,
+              "hard_vetoes": hard, "reasons": failures}
+    return int(bool(failures)), result, json.dumps(result, separators=(",", ":"))
+
+
+def cmd_history(args):
+    paths = shot_io.shot_paths(Path(args.project_root))
+    records = [shot_io.read_shot(path) for path in paths]
+    locations = {record["shot_id"]: str(path) for path, record in zip(paths, records)}
+    records = [r for r in records if r.get("item_id") == args.item_id]
+    records.sort(key=lambda r: (r["compute"]["started_at"], r["shot_id"]))
+    profiles = {}
+    for record in records:
+        tokens = record["compute"]["tokens"]
+        bucket = profiles.setdefault(tokens["profile"], {
+            "shots": 0, "input": 0, "output": 0,
+            "unknown_input": 0, "unknown_output": 0})
+        bucket["shots"] += 1
+        for key in ("input", "output"):
+            if tokens[key] is None:
+                bucket["unknown_" + key] += 1
+            else:
+                bucket[key] += tokens[key]
+    for bucket in profiles.values():
+        for key in ("input", "output"):
+            bucket["known_" + key] = bucket[key]
+            if bucket["unknown_" + key]:
+                bucket[key] = None
+    last = records[-1] if records else None
+    result = {"item_id": args.item_id, "shots": len(records), "latest": {
+        "shot_id": last["shot_id"], "verdict": verdict(last),
+        "path": locations[last["shot_id"]],
+        "correction": last["user_feedback"].get("correction")
+    } if last else None, "totals_by_profile": profiles}
+    return 0, result, json.dumps(result, separators=(",", ":"))
 
 
 def cmd_observe(args):
@@ -239,6 +308,14 @@ def parse(argv):
     rec.add_argument("--scope", default="")
     rec.add_argument("--model", default="unknown")
     rec.add_argument("--harness", default="unknown")
+    rec.add_argument("--item-id")
+    rec.add_argument("--gates", help="JSON L1/L2 observations; does not execute commands")
+    rec.add_argument("--project-root")
+    rec.add_argument("--admitted-context", nargs="*", default=None)
+    rec.add_argument("--tokens-input", type=int)
+    rec.add_argument("--tokens-output", type=int)
+    rec.add_argument("--token-profile")
+    rec.add_argument("--duration-ms", type=int)
     rec.add_argument("--changed", default="",
                      help="comma-separated paths this shot wrote, as the caller "
                           "observed them (absent: context.status not_observed)")
@@ -284,6 +361,14 @@ def parse(argv):
     cor.add_argument("--evidence", default="")
     cor.add_argument("--artifact", action="append", default=[])
     cor.set_defaults(run=cmd_correction)
+    gate = sub.add_parser("gate", parents=[common], help="check Item completion evidence")
+    gate.add_argument("shot")
+    gate.add_argument("--project-root", required=True)
+    gate.set_defaults(run=cmd_gate)
+    history = sub.add_parser("history", parents=[common], help="summarize Item attempts")
+    history.add_argument("--project-root", required=True)
+    history.add_argument("--item-id", required=True)
+    history.set_defaults(run=cmd_history)
     return parser.parse_args(argv)
 
 

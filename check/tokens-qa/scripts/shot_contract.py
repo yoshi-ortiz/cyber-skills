@@ -6,7 +6,7 @@ import copy
 CURRENT_VERSION = 2
 REQUIRED = ("shot_id", "scope", "inputs", "compute", "output",
             "provenance", "user_feedback")
-TOP_LEVEL = REQUIRED + ("version", "gates", "findings")
+TOP_LEVEL = REQUIRED + ("version", "gates", "findings", "item_id")
 # `admitted_context` is the surfaces a shot actually touched. `shot_view` has
 # always read it; this tuple has always refused it, so a valid shot could not
 # carry one and `context.status` could only ever say not_observed.
@@ -14,7 +14,7 @@ TOP_LEVEL = REQUIRED + ("version", "gates", "findings")
 # optional: every record already on disk was written without one, and making it
 # required would rewrite history instead of migrating it.
 INPUTS = ("prompt_hash", "tools", "corpus_refs", "stack", "request",
-          "target_skill", "admitted_context", "invocation")
+          "target_skill", "admitted_context", "invocation", "changed_paths")
 COMPUTE = ("model", "harness", "started_at", "duration_ms", "tokens", "passes")
 FEEDBACK = ("status", "sentiment", "correction", "rank", "evidence", "observed_at")
 PROVENANCE = ("corpus", "procedural", "fetched", "inference")
@@ -99,6 +99,8 @@ def validate_v2(record: object, where: str = "$") -> dict:
         raise Invalid(f"{where}.provenance: not one of {'/'.join(PROVENANCE)}")
     require_string(record["shot_id"], f"{where}.shot_id")
     require_string(record["scope"], f"{where}.scope")
+    if "item_id" in record:
+        require_string(record["item_id"], f"{where}.item_id")
 
     inputs = require_object(record["inputs"], f"{where}.inputs")
     only(inputs, f"{where}.inputs", *INPUTS)
@@ -116,6 +118,8 @@ def validate_v2(record: object, where: str = "$") -> dict:
         require_string_list(inputs["stack"], f"{where}.inputs.stack")
     if "admitted_context" in inputs:
         require_string_list(inputs["admitted_context"], f"{where}.inputs.admitted_context")
+    if "changed_paths" in inputs:
+        require_string_list(inputs["changed_paths"], f"{where}.inputs.changed_paths")
     if "request" in inputs:
         require_string(inputs["request"], f"{where}.inputs.request")
     if "target_skill" in inputs:
@@ -130,7 +134,7 @@ def validate_v2(record: object, where: str = "$") -> dict:
             raise Invalid(f"{where}.compute.{key}: required key is absent")
     for key in ("model", "harness", "started_at"):
         require_string(compute[key], f"{where}.compute.{key}")
-    require_count(compute["duration_ms"], f"{where}.compute.duration_ms")
+    require_count(compute["duration_ms"], f"{where}.compute.duration_ms", nullable=True)
     tokens = require_object(compute["tokens"], f"{where}.compute.tokens")
     only(tokens, f"{where}.compute.tokens", "input", "output", "profile")
     for key in ("input", "output", "profile"):

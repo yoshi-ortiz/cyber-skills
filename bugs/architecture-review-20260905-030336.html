@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Architecture review for cyber-skills</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+  </script>
+  <style>
+    body { background: #f5f5f0; }
+    .seam { border-style: dashed; }
+    .deep { background: linear-gradient(135deg, #172554, #1e3a8a); color: white; }
+    .leak { color: #b91c1c; }
+    .arrow { color: #64748b; font-size: 1.35rem; line-height: 1; }
+    .module { border: 1px solid #cbd5e1; border-radius: .65rem; background: white; padding: .75rem; }
+    .internal { border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); border-radius: .4rem; padding: .4rem; }
+  </style>
+</head>
+<body class="text-slate-900 antialiased">
+<main class="mx-auto max-w-6xl space-y-12 px-6 py-12">
+  <header class="border-b border-slate-300 pb-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="text-xs uppercase tracking-[0.22em] text-indigo-700">Architecture review</p>
+        <h1 class="mt-2 font-serif text-5xl tracking-tight">cyber-skills</h1>
+      </div>
+      <p class="font-mono text-sm text-slate-500">2026-09-05</p>
+    </div>
+    <div class="mt-6 flex flex-wrap gap-5 text-xs text-slate-600">
+      <span><span class="mr-2 inline-block h-3 w-5 border border-slate-500 bg-white"></span>module</span>
+      <span><span class="seam mr-2 inline-block h-3 w-5 border border-slate-500"></span>seam</span>
+      <span><span class="mr-2 text-red-700">&#8594;</span>leakage</span>
+      <span><span class="mr-2 inline-block h-3 w-5 bg-blue-950"></span>deep module</span>
+    </div>
+  </header>
+
+  <section class="grid gap-4 md:grid-cols-4">
+    <div class="module"><p class="text-xs uppercase tracking-wider text-slate-500">First commandment</p><p class="mt-2 font-serif text-xl">Burn down one proven feature at a time.</p></div>
+    <div class="module"><p class="text-xs uppercase tracking-wider text-slate-500">Genesis</p><p class="mt-2 font-serif text-xl">Compute the next action from project state.</p></div>
+    <div class="module"><p class="text-xs uppercase tracking-wider text-slate-500">Tokens QA</p><p class="mt-2 font-serif text-xl">Measure tokens per accepted result.</p></div>
+    <div class="module"><p class="text-xs uppercase tracking-wider text-slate-500">Scope rule</p><p class="mt-2 font-serif text-xl">One Shot, one item, one verdict.</p></div>
+  </section>
+
+  <section id="candidates" class="space-y-12">
+    <article id="burndown" class="rounded-2xl border border-slate-300 bg-white p-7 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="font-serif text-3xl">1. Deepen one Burndown module</h2>
+        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+        <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs text-indigo-700">two adapters</span>
+      </div>
+      <p class="mt-4 font-mono text-xs leading-5 text-slate-600">first/genesis/scripts/genesis_flow.py<br />tools/repo_context.py<br />first/genesis/scripts/test_genesis_flow.py<br />tools/test_repo_context.py</p>
+      <div class="mt-7 grid gap-5 lg:grid-cols-2">
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">Before</p>
+          <div class="relative min-h-72 rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div class="space-y-3">
+                <div class="module text-sm"><strong>Genesis</strong><br />regex parses states after a backtick</div>
+                <div class="module text-sm"><strong>Next action</strong><br />checks topology first</div>
+              </div>
+              <div class="text-center"><div class="arrow">&#8592;</div><div class="my-3 text-xs text-red-700">same ROADMAP</div><div class="arrow">&#8594;</div></div>
+              <div class="space-y-3">
+                <div class="module text-sm"><strong>Repo context</strong><br />table parser finds named columns</div>
+                <div class="module text-sm"><strong>Summary</strong><br />lists every in-progress row</div>
+              </div>
+            </div>
+            <p class="mt-6 rounded-lg bg-red-50 p-3 text-sm text-red-800">Burndown meaning leaks across two parsers. Their accepted Markdown already differs.</p>
+          </div>
+        </div>
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">After</p>
+          <div class="min-h-72 rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="deep rounded-xl border-4 border-blue-950 p-5">
+              <p class="text-xs uppercase tracking-wider text-blue-200">Deep Burndown module</p>
+              <p class="mt-2 text-lg font-semibold">One state model, one priority order, one proof rule</p>
+              <div class="mt-5 grid grid-cols-2 gap-2 text-xs">
+                <div class="internal">Markdown reader</div><div class="internal">state transitions</div>
+                <div class="internal">feature budget</div><div class="internal">proof evidence</div>
+              </div>
+            </div>
+            <div class="mt-5 flex items-center justify-center gap-4 text-sm">
+              <div class="module">Genesis adapter</div><span class="arrow">&#8592;</span><span class="seam border px-3 py-1">seam</span><span class="arrow">&#8594;</span><div class="module">Check adapter</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <p class="text-sm"><span class="font-semibold">Problem.</span> Two shallow modules interpret the same Burndown with different rules. Repo context also returns every active item without dependency order or one recommended action.</p>
+        <p class="text-sm"><span class="font-semibold">Solution.</span> Concentrate Markdown reading, state, feature budgets, proof and priority inside one deep Burndown module. Genesis and Check become adapters.</p>
+      </div>
+      <ul class="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
+        <li>locality: one state model</li><li>leverage: two callers</li><li>tests hit one seam</li><li>Linear stays optional</li>
+      </ul>
+    </article>
+
+    <article id="shot" class="rounded-2xl border border-slate-300 bg-white p-7 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="font-serif text-3xl">2. Pull Shot learning out of Aesthetic</h2>
+        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+        <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs text-indigo-700">ports and adapters</span>
+      </div>
+      <p class="mt-4 font-mono text-xs leading-5 text-slate-600">QA.md<br />docs/SPEC/SHOT_OBSERVATION.md<br />check/tokens-qa/scripts/*.py<br />cook/qa.py<br />cook/prove.py<br />cook/cook.py</p>
+      <div class="mt-7 grid gap-5 lg:grid-cols-2">
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">Before</p>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <pre class="mermaid">
+flowchart TB
+  T[Tokens QA CLI] --> S[Shot schema]
+  C[Cook QA] -->|subprocess| T
+  P[Cook prove] -->|hard-coded skill| A[first/aesthetic]
+  C -->|Claude transcript path| H[Host files]
+  Q[Universal QA contract] -. references .-> A
+  classDef leak stroke:#b91c1c,stroke-width:2px,color:#7f1d1d;
+  class A,H leak
+            </pre>
+          </div>
+        </div>
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">After</p>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <pre class="mermaid">
+flowchart TB
+  G[Project goal] --> L[Deep Shot learning module]
+  B[Burndown item] --> L
+  F[User feedback] --> L
+  O[Observed tokens and output] --> L
+  L --> N[Next bounded correction]
+  A[Aesthetic adapter] --> L
+  D[Document or code adapter] --> L
+  classDef deep fill:#172554,color:#fff,stroke:#172554,stroke-width:4px;
+  class L deep
+            </pre>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <p class="text-sm"><span class="font-semibold">Problem.</span> The Shot contract claims any tool-using task, but its only complete Food Product path discovers Aesthetic runs and Claude transcripts. The docs name five, six and eight verbs in three places.</p>
+        <p class="text-sm"><span class="font-semibold">Solution.</span> Keep goal progress, token cost, user verdict, contamination and correction retention in one deep Shot learning module. Put host and output knowledge in adapters.</p>
+      </div>
+      <ul class="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
+        <li>locality: verdict rules</li><li>leverage: every skill</li><li>Aesthetic becomes optional</li><li>small models get facts</li>
+      </ul>
+    </article>
+
+    <article id="genesis" class="rounded-2xl border border-slate-300 bg-white p-7 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="font-serif text-3xl">3. Deepen Genesis around the next action</h2>
+        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+        <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs text-indigo-700">in-process</span>
+      </div>
+      <p class="mt-4 font-mono text-xs leading-5 text-slate-600">first/genesis/SKILL.md<br />first/genesis/scripts/genesis_flow.py<br />first/genesis/references/sourcing.md<br />first/genesis/references/verification.md<br />first/knowledge/</p>
+      <div class="mt-7 grid gap-5 lg:grid-cols-2">
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">Before</p>
+          <div class="min-h-72 rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div class="module">Single-file doctrine</div><div class="module">Topology reader</div>
+              <div class="module">Sourcing reference</div><div class="module">Benchmark reference</div>
+              <div class="module">Knowledge skill</div><div class="module">Work-style mode</div>
+            </div>
+            <p class="mt-5 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">The agent must correlate six shallow pieces. The deterministic implementation checks only file presence, task state and coarse proof presence.</p>
+          </div>
+        </div>
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">After</p>
+          <div class="min-h-72 rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="mx-auto max-w-sm">
+              <div class="h-10 rounded-t-xl bg-indigo-200 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-indigo-950">Small prompt interface</div>
+              <div class="deep min-h-52 rounded-b-xl border-4 border-blue-950 p-5">
+                <p class="text-center text-lg font-semibold">Genesis project compass</p>
+                <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+                  <div class="internal">scope</div><div class="internal">domain research</div>
+                  <div class="internal">competitor and budget</div><div class="internal">domain risks</div>
+                  <div class="internal">urban glossary</div><div class="internal">one next action</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <p class="text-sm"><span class="font-semibold">Problem.</span> Genesis says the right things, but the prompt carries the correlation cost and the implementation proves too little for a universal bootstrap.</p>
+        <p class="text-sm"><span class="font-semibold">Solution.</span> Keep the prompt as the small-model interface. Move project inspection, research evidence, comparisons, budget checks and domain risk checks behind the Genesis seam.</p>
+      </div>
+      <ul class="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
+        <li>interface stays one file</li><li>implementation gains depth</li><li>one action per run</li><li>tests assert outcomes</li>
+      </ul>
+    </article>
+
+    <article id="package-health" class="rounded-2xl border border-slate-300 bg-white p-7 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="font-serif text-3xl">4. Move package health out of Aesthetic</h2>
+        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+        <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs text-indigo-700">ports and adapters</span>
+      </div>
+      <p class="mt-4 font-mono text-xs leading-5 text-slate-600">tools/check.py<br />tools/CONTEXT.md<br />first/aesthetic/scripts/contracts.py<br />first/aesthetic/scripts/bootstrap_harness.py<br />cook/</p>
+      <div class="mt-7 grid gap-5 lg:grid-cols-2">
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">Before</p>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <pre class="mermaid">
+flowchart TB
+  P[Package check] --> C[Aesthetic contracts]
+  P --> H[Aesthetic harness]
+  P --> J[Aesthetic JavaScript scan]
+  P --> F[Aesthetic Food Product]
+  D[Deferred skill] -. owns .-> P
+  classDef leak stroke:#b91c1c,stroke-width:2px,color:#7f1d1d;
+  class C,H,J,F,D leak
+            </pre>
+          </div>
+        </div>
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">After</p>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <pre class="mermaid">
+flowchart TB
+  P[Deep package health module] --> K[Kit checks]
+  P --> G[Genesis checks]
+  P --> T[Tokens QA checks]
+  P --> A[Aesthetic adapter]
+  R[Release] --> P
+  classDef deep fill:#172554,color:#fff,stroke:#172554,stroke-width:4px;
+  class P deep
+            </pre>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <p class="text-sm"><span class="font-semibold">Problem.</span> Tools refuses skill logic, yet package contracts, harness checks, JavaScript discovery and Food Product verification all run through Aesthetic.</p>
+        <p class="text-sm"><span class="font-semibold">Solution.</span> Put package contract and release verification in one Tools-owned deep module. Each skill supplies only its local runtime adapter.</p>
+      </div>
+      <ul class="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
+        <li>locality: package rules</li><li>leverage: every release</li><li>Aesthetic can stay deferred</li><li>tests cross one seam</li>
+      </ul>
+    </article>
+
+    <article id="domains" class="rounded-2xl border border-slate-300 bg-white p-7 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="font-serif text-3xl">5. Add deterministic domain and architecture guards</h2>
+        <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">Worth exploring</span>
+        <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs text-indigo-700">local-substitutable</span>
+      </div>
+      <p class="mt-4 font-mono text-xs leading-5 text-slate-600">first/genesis/SKILL.md<br />first/genesis/references/sourcing.md<br />first/genesis/references/architecture.md<br />first/genesis/scripts/genesis_flow.py<br />harness-core/collection.toml</p>
+      <div class="mt-7 grid gap-5 lg:grid-cols-2">
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">Before</p>
+          <div class="min-h-64 rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="module mx-auto max-w-xs text-center">Generic warning prose</div>
+            <div class="my-4 text-center text-red-700">&#8595; agent chooses what matters</div>
+            <div class="grid grid-cols-4 gap-2 text-center text-xs"><div class="module">web</div><div class="module">data</div><div class="module">security</div><div class="module">architecture</div></div>
+          </div>
+        </div>
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">After</p>
+          <div class="min-h-64 rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="deep rounded-xl p-5 text-center"><p class="text-xs uppercase tracking-wider text-blue-200">Domain guard module</p><p class="mt-2">Selected checks, fixtures and classical tools</p></div>
+            <div class="my-4 text-center text-slate-500">&#8595; declared project domains only</div>
+            <div class="grid grid-cols-4 gap-2 text-center text-xs"><div class="module">web adapter</div><div class="module">data adapter</div><div class="module">security adapter</div><div class="module">vertical slice</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <p class="text-sm"><span class="font-semibold">Problem.</span> Known model failures live as broad prose. Software guidance does not define or inspect vertical slices, so technical folders can scatter one feature.</p>
+        <p class="text-sm"><span class="font-semibold">Solution.</span> Deepen guards where real tools and fixtures exist. For software, inspect feature locality and keep input, rules, persistence, output and proof in one vertical slice.</p>
+      </div>
+      <ul class="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
+        <li>locality: domain failures</li><li>leverage: Genesis and Build</li><li>no guessed domain</li><li>classical checks first</li>
+      </ul>
+    </article>
+
+    <article id="rail" class="rounded-2xl border border-slate-300 bg-white p-7 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="font-serif text-3xl">6. Make the rail one graph</h2>
+        <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">Speculative</span>
+        <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs text-indigo-700">in-process</span>
+      </div>
+      <p class="mt-4 font-mono text-xs leading-5 text-slate-600">SPEC.md<br />tools/skill_catalog.py<br />kit/SKILL.md<br />first/genesis/SKILL.md<br />build/SKILL.md<br />land/SKILL.md<br />check/SKILL.md<br />fix/SKILL.md</p>
+      <div class="mt-7 grid gap-5 lg:grid-cols-2">
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">Before</p>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <pre class="mermaid">
+flowchart LR
+  S[SPEC prose] --> K[Kit]
+  S --> F[First]
+  S --> B[Build]
+  S --> L[Land]
+  S --> C[Check]
+  S --> X[Fix]
+  R[ROADMAP] -. repeats order .-> S
+  classDef leak stroke:#b91c1c,stroke-width:2px;
+  class R,S leak
+            </pre>
+          </div>
+        </div>
+        <div>
+          <p class="mb-3 text-xs uppercase tracking-wider text-slate-500">After</p>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <pre class="mermaid">
+flowchart LR
+  K[kit] --> F[first]
+  F --> B[build]
+  B --> L[land]
+  L --> C[check]
+  C --> F
+  X[fix] --> F
+  X --> B
+  X --> L
+  classDef deep fill:#172554,color:#fff,stroke:#172554,stroke-width:3px;
+  class F,B,L,C deep
+            </pre>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <p class="text-sm"><span class="font-semibold">Problem.</span> Transition rules live in prose across family skills and the rail contract, so an agent reconstructs the graph each session.</p>
+        <p class="text-sm"><span class="font-semibold">Solution.</span> Encode the settled family transitions once. Keep each family skill's doctrine behind its node. Do this after Burndown and Shot learning settle.</p>
+      </div>
+      <ul class="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
+        <li>locality: transition rules</li><li>leverage: every router</li><li>graph tests legal exits</li><li>wait until seams settle</li>
+      </ul>
+    </article>
+  </section>
+
+  <section id="top-recommendation" class="rounded-2xl bg-blue-950 p-8 text-white">
+    <p class="text-xs uppercase tracking-[0.22em] text-blue-200">Top recommendation</p>
+    <h2 class="mt-3 font-serif text-4xl"><a class="underline decoration-blue-400 underline-offset-8" href="#burndown">Deepen one Burndown module first</a></h2>
+    <p class="mt-4 max-w-3xl text-blue-100">It gives Genesis and repo context one answer to the same question. Once that state is trustworthy, Tokens QA can attach each Shot to one feature goal and measure tokens per accepted result without importing Aesthetic.</p>
+  </section>
+</main>
+</body>
+</html>

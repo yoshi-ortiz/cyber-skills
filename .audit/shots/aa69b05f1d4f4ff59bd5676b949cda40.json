@@ -1,0 +1,48 @@
+{
+  "compute": {
+    "duration_ms": null,
+    "harness": "unknown",
+    "model": "unknown",
+    "started_at": "2026-09-05T09:46:13.588124Z",
+    "tokens": {
+      "input": null,
+      "output": null,
+      "profile": "unknown"
+    }
+  },
+  "findings": [],
+  "gates": {
+    "l2": {
+      "name": "python3 tools/check.py",
+      "reason": "31/31 gates pass with localhost permission; final summary edit passed Repo Context tests",
+      "status": "pass"
+    }
+  },
+  "inputs": {
+    "corpus_refs": [],
+    "prompt_hash": "sha256:414d5a7ba33c677b00df43e0ee2537f4fd9aa75487a4cb79021655b2c7bdce45",
+    "request": "implement llm re-inforcement learning compass, SRI eat your own food - unslop doctrine, and quick wins north star (aways keeping the project context and build clean)\ncomplete my last prompt, also, review deterMDinistic spec.\n",
+    "target_skill": "genesis",
+    "tools": []
+  },
+  "item_id": "R-71",
+  "output": {
+    "adapter": "file",
+    "artifacts": [
+      {
+        "bytes": 864,
+        "mime": "text/markdown",
+        "path": "/Users/bebote-pro/Development/cyber-skills/.audit/proofs/r71-verification.md",
+        "role": "proof",
+        "sha256": "sha256:da597c23486705c36ef2a1c1d0d7ab63f73a2547fcbe0da711fbf94faae3170a"
+      }
+    ]
+  },
+  "provenance": "inference",
+  "scope": "Implement bounded feature compass and review deterministic spec",
+  "shot_id": "aa69b05f1d4f4ff59bd5676b949cda40",
+  "user_feedback": {
+    "status": "pending"
+  },
+  "version": 2
+}

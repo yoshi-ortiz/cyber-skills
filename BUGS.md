@@ -12,6 +12,32 @@ Fog. Lives on `dev`, never published to `main`.
 
 ---
 
+## B-000 · Critical context contamination and scope derail since repository creation · open
+
+**Severity.** Critical.
+
+**Since.** Initial repository commit, 2026-08-14.
+
+**Symptom.** The user reports repeated context derailment: broad doctrine,
+stale initiatives and aesthetic work consume attention and tokens instead of
+advancing the selected feature, producing poor results and avoidable spend.
+
+**Root cause.** The repository entered work through accumulated narrative and
+weakly connected roadmaps rather than one enforced, bounded feature selection
+with observable feedback and proof, so unrelated context could displace the
+current task.
+
+**Current evidence.** The reported impact predates the current compass work.
+The new selector, item-linked Shots and closure gate are a mitigation under
+review, not proof that the historical incident is fixed.
+
+**Exit evidence.** Repeated real feature sessions show the selected item stays
+bounded, corrections return to the same item, unrelated context is rejected,
+and users explicitly accept results without increased token cost per accepted
+result.
+
+---
+
 ## B-001 · Slideshow reads as cluttered · fixed
 
 **Symptom.** Reported across several sessions. The lightbox looked cramped and
@@ -859,3 +885,69 @@ worked either, since the walk stops before finding anything to list.
 `collection.toml`'s cyber-skills entry is `[]` now that it actually resolves.
 
 **Guard.** `test_full_depth_is_always_passed` in `harness-core/test_harness.py`.
+
+---
+
+## B-030 · Genesis has no Project Management domain knowledge · open
+
+**Symptom.** Genesis asks who uses the product and records every user persona in
+`docs/GLOSSARY.md`, but it creates no project-owned record of whose outcome takes
+priority. It also has no deterministic rule for acceptance ownership, feature
+budget ownership, or the relationship between an epic, a short work interval,
+and one Burndown item. A project can satisfy the Genesis topology while treating
+every stakeholder request as equal and leaving the end user's goal behind
+internal requests.
+
+**Root cause.** The Genesis contract models requirements, specifications,
+architecture decisions, terms, knowledge, incidents, releases, and Burndown
+state. It never models stakeholders. The interview asks one flat question,
+"Who uses this?", then the glossary stores personas as peers. Project Management
+knowledge exists only inside Aesthetic's deferred epic workflow, where it cannot
+guide a universal project bootstrap.
+
+**Impact.** Genesis cannot deterministically rank competing requests or explain
+why a secondary stakeholder's feature moved below an end-user need. Repo context
+can list active work, but it lacks the stakeholder fact needed to recommend the
+next feature. Small models must infer this ordering from conversation history.
+
+**Fix.** R-69. Add `docs/STAKEHOLDERS.md` to the target-project Genesis
+topology. The file names the end-user persona as the protagonist, records the
+outcome they seek, and lists secondary stakeholders with lower default priority.
+Each exception must name the safety, legal, operational, or contractual reason
+that overrides the protagonist. Burndown items cite the stakeholder and outcome
+they advance.
+
+**Evidence.** The architecture scan that exposed the missing domain and its
+adjacent seams is saved at
+[`bugs/architecture-review-20260905-030336.html`](bugs/architecture-review-20260905-030336.html).
+
+---
+
+## B-031 · Genesis has no vertical-slice architecture contract · open
+
+**Symptom.** Genesis tells software projects to separate concerns and choose
+Domain-Driven Design or Feature-Sliced Design. It does not explain how to keep
+one user-visible feature together across its input, domain rules, persistence,
+output, and tests. A small model can satisfy the current wording by creating
+technical directories such as `controllers/`, `models/`, and `utils/`, then
+spread one feature across all of them.
+
+**Root cause.** `first/genesis/references/architecture.md` classifies package
+types and warns against cross-domain contamination, but it never defines a
+vertical slice, its ownership rule, or the mechanical test for misplaced code.
+`genesis_flow.py` checks whether project records exist. It does not inspect the
+folder tree or verify that a feature has one owner from entry to proof.
+
+**Impact.** Genesis promises a clean folder tree without a deterministic rule
+that distinguishes feature locality from tidy technical buckets. Agents must
+invent the architecture from general training knowledge, which is exactly where
+small models produce scattered modules and catch-all utility folders.
+
+**Fix.** R-70. Add vertical-slice doctrine to Genesis and make its deterministic
+inspection report features split across technical folders, shared modules with
+one caller, and tests separated from the feature they prove. The rule applies to
+software projects only. Editorial, media, and other package types keep their own
+structures.
+
+**Evidence.** The architecture scan is saved at
+[`bugs/architecture-review-20260905-030336.html`](bugs/architecture-review-20260905-030336.html).

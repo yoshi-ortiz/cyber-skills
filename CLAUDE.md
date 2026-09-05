@@ -1,5 +1,9 @@
 # cyber-skills
 
+Burndown first. Before package changes, after user corrections, and when
+resuming work, read [Feature burndown](CONTEXT.md#feature-burndown) and follow
+its selection, scope, evidence, and completion rules.
+
 This repository packages independent agent skills into one release. The skills
 sit on a six-family rail so an agent can tell what kind of work it is doing and
 which command owns it. Source work happens on `dev`. `tools/publish.py` builds
@@ -29,22 +33,7 @@ prototype backlog in `GOAL.md` until the answer is settled.
 | `BUGS.md` | Incidents and their root causes |
 | `CHANGELOG.md` | Shipped changes |
 
-<!-- vocabulary: Item -->
-Query the relevant roadmap item before changing package code. The Markdown
-files remain authoritative; the query returns only the bounded slice needed to
-enter the work:
-
-```bash
-python3 tools/repo_context.py summary
-python3 tools/repo_context.py state IN-PROGRESS
-python3 tools/repo_context.py item R-43
-python3 tools/repo_context.py bug --latest
-python3 tools/repo_context.py module genesis
-```
-
-Use `--json` before the subcommand for an adapter-stable result. Update an
-item's state when the work changes state, not at the end of a session.
-<!-- /vocabulary -->
+For query syntax, run `python3 tools/repo_context.py --help`.
 
 ## Core modules
 
@@ -107,12 +96,10 @@ Load only the reference needed for the current branch. Do not read the
 Aesthetic glossary during Repo-Dev work or the Repo-Dev glossary during a
 design round.
 
-## Before editing
+## Verification and publication
 
-1. Decide whether the task is Repo-Dev or Design-Inference.
-2. Read the target directory's `CONTEXT.md`.
-3. Query the item and follow the owner returned by its roadmap or catalog map.
-4. Run `python3 tools/check.py` for the repository gate set.
+Run checks appropriate to the changed files. Run `python3 tools/check.py` when
+verifying the whole repository or preparing publication; report failed checks.
 
 Generated publication trees are outputs. Change source on `dev`, then rebuild
 them with `tools/publish.py`.

@@ -58,6 +58,7 @@ FOG_DIRS = (
     # what a user would see; shipping it would install a test harness the user
     # never runs, and it stays on `dev` for the same reason `tools/` does.
     "cook",
+    "bugs",
 )
 
 # Basename patterns, matched anywhere in the tree.
@@ -167,6 +168,7 @@ def reasons() -> dict[str, str]:
         "design": "rendered comps from a design project run here; work product, "
                   "not skill payload",
         "shots": "screenshots from a design project run here",
+        "bugs": "architecture reports and bug evidence for contributors",
         "cook": "the Food Product loop: it runs the skills against a throwaway "
                 "project to check what a user would see, and shipping it would "
                 "install a harness the user never runs",

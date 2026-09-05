@@ -6,6 +6,15 @@ work in [CHANGELOG.md](CHANGELOG.md).
 
 States: ⚪ `TODO` · 🟡 `IN-PROGRESS` · 🔴 `BLOCKED` · ✅ `DONE`
 
+## Current feature
+
+Rows with a Workstream participate in the executable compass. Older rows retain
+their recorded state; migrate them deliberately when selecting their work.
+
+| ID | State | Item | Workstream | Depends on | Priority | Scope | Proof | Shot |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| R-71 | `IN-PROGRESS` | Connect feature selection, Shot feedback, and completion proof | default | | 0 | first/genesis/, check/tokens-qa/, tools/, cook/, docs/, CLAUDE.md, CONTEXT.md, GOAL.md, ROADMAP.md, QA.md, bugs/ | Public command tests exercise selection, correction, rejection, and verified acceptance in a scratch project | |
+
 ## 🧱 codebase / development enviroment
 
 The architecture backlog is visible before delivery work so the rail is built
@@ -54,11 +63,14 @@ it routes. Each family owns sequence, aliases, and handoff only.
 |  |  |  | **🧭 `first`** |  |  |
 | R-35 | [`genesis/SKILL.md`](first/genesis/SKILL.md) | ✅ `DONE` | Route `brainstorming`, `ask-matt`, `prototype`, and `grilling` | — | [`first/`](first/) |
 | R-41 | [`genesis/SKILL.md`](first/genesis/SKILL.md) | 🟡 `IN-PROGRESS` | Make `first-work-style` write the project-owned domain rail *(contract shipped; field evidence remains)* | — | [`first/`](first/) + `harness-core` |
+| R-69 | [`genesis/SKILL.md`](first/genesis/SKILL.md) · [`genesis_flow.py`](first/genesis/scripts/genesis_flow.py) | ⚪ `TODO` | Add a project-owned `docs/STAKEHOLDERS.md`: end-user protagonist first, secondary stakeholders lower by default | [B-030](BUGS.md) | [`first/genesis/`](first/genesis/) |
+| R-70 | [`architecture.md`](first/genesis/references/architecture.md) · [`genesis_flow.py`](first/genesis/scripts/genesis_flow.py) | ⚪ `TODO` | Add a vertical-slice contract and deterministic folder-tree inspection for software projects | [B-031](BUGS.md) | [`first/genesis/`](first/genesis/) |
 | R-38 | [`manifest_gate.py`](tools/manifest_gate.py) | ✅ `DONE` | Declare the First workflow phase | — | [`first/genesis/`](first/genesis/) |
 | R-46 | [ADR contract](first/genesis/references/architecture-decisions.md) | ✅ `DONE` | Hand accepted decisions from First to Build | — | [`first/genesis/`](first/genesis/) |
 
-Five of nine are done. R-37's legacy exposure cleanup and language mode,
-R-41's field evidence, R-43's origin gate, and R-67's MCP adapters remain:
+Five of eleven are done. R-37's legacy exposure cleanup and language mode,
+R-41's field evidence, R-43's origin gate, R-67's MCP adapters, and R-69's
+stakeholder record remain. R-70's vertical-slice contract remains too:
 
 1. **R-43 needs verified selectors, then code.** pstack's source is now known
    as `cursor/plugins`, but its CLI advertises `Poteto Mode` and no `zoom-out`;
@@ -66,6 +78,16 @@ R-41's field evidence, R-43's origin gate, and R-67's MCP adapters remain:
    advertises only its bundle, not separate `review` or `land-and-deploy`
    leaves. Resolve those
    declared origins before making the manifest gate enforce them.
+2. **R-69 keeps the user in front.** `docs/STAKEHOLDERS.md` belongs to the target
+   project. It records one end-user protagonist and their desired outcome.
+   Secondary stakeholders rank below that outcome unless a named safety, legal,
+   operational, or contractual constraint overrides it. Burndown items cite the
+   stakeholder and outcome they advance.
+3. **R-70 keeps a feature together.** Software projects organize code by
+   user-visible feature before technical role. Genesis must flag a feature
+   scattered across technical folders, a shared module with one caller, and a
+   test stored away from the feature it proves. Other package types retain the
+   structures selected by the package interview.
 
 ### 🏗️ Sprint 2 — build + land
 

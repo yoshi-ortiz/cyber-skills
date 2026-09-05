@@ -57,6 +57,7 @@ def test_gates(py: str) -> list[tuple[str, list[str]]]:
                if "TestCase" not in path.read_text(encoding="utf-8")]
     directories = sorted({path.parent for path in files if path not in scripts})
     return [
+        ("feature compass", [py, "tools/repo_context.py", "check"]),
         *((f"tests {directory.relative_to(ROOT)}",
            [py, "-m", "unittest", "discover", "-s",
             str(directory.relative_to(ROOT)), "-p", "test_*.py"])

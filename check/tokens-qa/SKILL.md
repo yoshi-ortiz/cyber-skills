@@ -12,13 +12,29 @@ counts, and what the user actually said. Never hidden reasoning, and never a
 repository scan standing in for evidence: context you cannot see is
 `not_observed`, not a guess.
 
+## Feature feedback loop
+
+`record --item-id ID --project-root PATH` links an attempt to a roadmap item.
+`history --item-id ID --project-root PATH --json` returns its latest feedback and
+costs grouped by tokenizer profile. `gate SHOT --project-root PATH` requires
+acceptance, no veto, passing L2 and hash-verified proof artifacts. Record observed
+L1/L2 results with `--gates gates.json`; it never executes the declared check.
+Keep acceptance pending until the user supplies a verdict.
+
+Item-linked costs default to unknown. Supply observed `--tokens-input`,
+`--tokens-output`, `--token-profile` and `--duration-ms` when available.
+`--admitted-context` names reads; `--changed` names writes, not admitted context.
+Use failures to improve one instruction or regression test and rerun the same
+acceptance path. This does not train model weights. Preserve corrections,
+privacy, scope and test rigor over lower cost.
+
 ## Two phases, inferred
 
 `OBSERVE` for evaluate, score, tokens, contamination, derail, what went wrong.
 `FIX` for fix, repair, improve, rewrite, next version. Both match, or neither
 matches, choose `OBSERVE` — it writes nothing, so a wrong guess costs a read.
 
-## Six verbs
+## Commands
 
 ```bash
 python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt \

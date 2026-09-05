@@ -1,0 +1,2 @@
+implement llm re-inforcement learning compass, SRI eat your own food - unslop doctrine, and quick wins north star (aways keeping the project context and build clean)
+complete my last prompt, also, review deterMDinistic spec.
