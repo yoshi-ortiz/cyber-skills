@@ -1,4 +1,4 @@
-"""Tests for directory context contracts.
+"""Tests for package directory context contracts.
 
 A contract is a CONTEXT.md a directory carries, declaring what it is for, what
 belongs in it, and what it costs. The checker is what makes skill development

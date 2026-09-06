@@ -10,6 +10,8 @@ import hashlib
 import json
 import os
 import tempfile
+import fcntl
+from contextlib import contextmanager
 from pathlib import Path
 
 from shot_contract import Invalid, require_string, validate
@@ -48,9 +50,28 @@ def dump(record: dict) -> str:
 
 
 def create_shot(path: Path, record: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "x", encoding="utf-8") as handle:
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w", encoding="utf-8") as handle:
         handle.write(dump(record))
+
+
+@contextmanager
+def locked(path: Path):
+    """Serialize local evidence writers; atomic replacement keeps readers intact."""
+    # ponytail: one local lock per evidence directory; split only after measured contention.
+    if path.name == 'shots' and path.parent.name == '.audit':
+        path = path.parent
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with os.fdopen(os.open(path / '.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600), 'r+') as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def revision(record: dict) -> str:
+    return sha256_text(dump(record))
 
 
 def replace_shot(path: Path, record: dict) -> None:
@@ -87,10 +108,29 @@ def shot_paths(root: Path):
     return [contained(root, path) for path in sorted(directory.glob("*.json"))]
 
 
+def deleted_shots(root: Path, item_id: str) -> list[dict]:
+    directory = contained(root, '.audit/deleted')
+    return [record for path in sorted(directory.glob('*.json'))
+            if (record := load(contained(root, path))).get('item_id') == item_id]
+
+
+def delete_shots(root: Path, paths: list[Path]):
+    for path in paths:
+        record = read_shot(path)
+        tombstone = {'shot_id': record['shot_id'], 'item_id': record.get('item_id'), 'status': 'deleted'}
+        target = contained(root, '.audit/deleted/' + hashlib.sha256(record['shot_id'].encode()).hexdigest() + '.json')
+        if not target.exists():
+            create_shot(target, tombstone)
+        path.unlink()
+
+
 def verify_artifacts(record: dict, root: Path) -> list[str]:
     failures = []
     for index, artifact in enumerate(record["output"].get("artifacts", [])):
         source = contained(root, artifact["path"], f"$.output.artifacts[{index}].path")
+        if not source.is_file():
+            failures.append(f'artifact[{index}]: missing proof or output')
+            continue
         digest = sha256_file(source)
         if artifact.get("sha256") != digest:
             failures.append(f"artifact[{index}]: hash mismatch or absent")

@@ -12,8 +12,9 @@ Food Product development. `cook` runs a skill the way a user runs it and checks 
 exit code, and an exit code is what the companion bug hid behind: `open`
 returned a URL, returned zero, and served an empty page.
 
-`feedback` is the one command pointed at the real project. It reads the agent
-transcript and git, and writes nothing. It deliberately does not read any
+`feedback` is the one command pointed at the real project. It reads Claude
+transcripts through `claude.py` and reads git; it writes nothing. Other hosts
+supply normalized turns. It deliberately does not read any
 skill's state files: a loop that understands `decisions.json` has stopped being
 universal and joined one project's shot, which is this directory's own
 contamination rule turned inward.
@@ -42,3 +43,8 @@ document.
 
 So `cook` refuses the repository root as a project root. There is no flag for
 it. A Food Product round runs in a scratch tree or it does not run.
+
+`prove.py` is the portable code/document adapter. The caller supplies request,
+manifest, Item/invocation identities, proof destination, observed usage when
+available, and an explicit check. Cook runs it once and records the result
+through Tokens QA. Stored evidence never supplies a command.

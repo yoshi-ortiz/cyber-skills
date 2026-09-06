@@ -7,9 +7,12 @@ max_file_bytes: 30000
 
 # Scripts
 
-The verbs are `record`, `observe`, `feedback`, `assess-feedback`, and `compare`.
+The verbs are `record`, `observe`, `compare`, `feedback`, `history`, `gate`,
+`retention`, `correction`, `assess-feedback`, and `shot-audit`.
 They compose by file path rather than by import.
 
 `shot_contract.py` is the only schema. `shot_io.py` owns every filesystem and
 hashing concern, so nothing else opens a Shot. `feedback.py` suggests and never
 decides, which is why it is pure and imports nothing from this package.
+Feedback events remain inside their Shot. `shot_io.py` serializes local writers
+and creates private evidence; history reduces events across Item Shots.

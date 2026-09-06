@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """A runner that quietly skips a gate is worse than no runner."""
 import sys
+import tempfile
 import unittest.mock
 from pathlib import Path
 
@@ -50,5 +51,13 @@ with unittest.mock.patch.object(check, "run", return_value=False):
     assert check.main(["index gate"]) == 1, "a failing gate must fail the run"
 
 assert check.main(["no-such-gate"]) == 2, "an unmatched filter must not report success"
+
+with tempfile.TemporaryDirectory() as tmp:
+    root = Path(tmp)
+    (root / "tools").mkdir()
+    (root / "tools" / "test_new_gate.py").write_text("def test(): assert True\n")
+    minimal = check.gates(root / "out", root)
+    assert "harness self-test" not in {name for name, _ in minimal}
+    assert any("test_new_gate.py" in name for name, _ in minimal)
 
 print(f"OK: {len(names)} gates, all named, filtered, and reporting their own failure.")

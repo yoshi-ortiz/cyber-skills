@@ -20,7 +20,8 @@ python3 tools/check.py
 ```
 
 `check.py` runs every gate this repository has: the publication and index gates
-here, and the contract, unit-test, and self-test gates in `aesthetic/AGENTS.md`.
+here, the generic directory contract in `contracts.py`, and the unit-test and
+self-test gates in `aesthetic/AGENTS.md` when that skill is present.
 Those two lists never referenced each other, so running either one in full still
 missed half the board. Run a subset by name: `python3 tools/check.py publish`.
 

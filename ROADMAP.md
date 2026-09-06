@@ -17,6 +17,13 @@ their recorded state; migrate them deliberately when selecting their work.
 
 ## 🧱 codebase / development enviroment
 
+R-71 Sprints 1–5 are technically verified; [NEXT.md](NEXT.md) tracks upgrade
+progress and proof. Actual acceptance remains pending, so R-71 stays IN-PROGRESS.
+Sprint 4 also advances R-50's first bounded invocation; it does not complete the
+whole-catalog compiler or learner outcomes.
+Sprint 6 field Shot `ac2251a3eef94c5a95571bbfd3cb7fab` passed its integrated
+technical proof and is awaiting an actual user verdict.
+
 The architecture backlog is visible before delivery work so the rail is built
 against deliberate seams. The first five rows harden the development
 environment; the two Aesthetic rows remain post-MVP.

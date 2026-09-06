@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -44,6 +45,21 @@ def _decisions(root: Path, elements: list[dict]) -> None:
     path.write_text(json.dumps({"elements": elements}), encoding="utf-8")
 
 
+def _intent(root: Path, reviewed: bool = True) -> None:
+    constraints = [{"id": "done", "text": "One readable 16:9 moodboard.",
+                    "priority": "criterion", "sourceRef": "brief-events:7"}]
+    digest = hashlib.sha256(json.dumps(
+        constraints, ensure_ascii=False, sort_keys=True,
+        separators=(",", ":")).encode()).hexdigest()
+    path = root / dc.STORE / dc.REVIEWED_INTENT_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"version": 1, "reviewed": reviewed,
+        "invocation": dc.MOODBOARD_INVOCATION,
+        "source": {"kind": "user", "ref": "brief-events:7", "digest": digest},
+        "review": {"source": "user", "at": "2026-09-05T12:00:00Z"},
+        "constraints": constraints}), encoding="utf-8")
+
+
 REJECTED_LONG_SHOT = {
     "element": "landing.hero.flow", "source": "user", "scored": True, "stars": 1,
     "sentiment": "dislike", "state": "discarded",
@@ -64,6 +80,32 @@ class TokenCostTest(unittest.TestCase):
 
 
 class CompilePassTest(unittest.TestCase):
+    def test_runtime_compilation_requires_reviewed_intent_with_stable_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _project(tmp)
+            with self.assertRaisesRegex(dc.DirectionContextError, "unresolved input"):
+                dc.compile_pass(root, "generation", proof=("golden-rules",),
+                                require_reviewed=True)
+            _intent(root)
+            first = dc.compile_pass(root, "generation", proof=("golden-rules",),
+                                    require_reviewed=True)
+            second = dc.compile_pass(root, "generation", proof=("golden-rules",),
+                                     require_reviewed=True)
+            self.assertEqual(first["identity"], second["identity"])
+            self.assertIn("One readable 16:9 moodboard.", first["bundle"])
+
+    def test_mandatory_overflow_is_machine_readable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _project(tmp)
+            _intent(root)
+            with self.assertRaises(dc.DirectionContextError) as caught:
+                dc.compile_pass(root, "generation", budget=1,
+                                proof=("golden-rules",), require_reviewed=True)
+            self.assertEqual(caught.exception.code, "required-context-overflow")
+            self.assertGreater(caught.exception.details["required"],
+                               caught.exception.details["available"])
+            self.assertEqual(caught.exception.details["sourceRef"], "brief-events:7")
+
     def test_the_same_project_compiles_to_the_same_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = _project(tmp)

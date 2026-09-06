@@ -7,6 +7,7 @@ only checked the happy path would not notice them being dropped again.
 import contextlib
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -15,6 +16,43 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import deliver
+
+
+class ShotObservation(unittest.TestCase):
+    def test_binary_output_is_recorded_in_the_target_project_with_unknown_usage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            image = root / 'screen.png'
+            image.write_bytes(b'\x89PNG\r\n\x1a\n\xff\x00')
+            result = deliver.record_shot({'images': {'images': [{'image_path': str(image)}]}},
+                'round', 'Review the picture', 'aesthetic@2026-09-05T00:00:00Z', project_root=root)
+            self.assertTrue(Path(result['path']).is_relative_to(root.resolve()))
+            observed = subprocess.run([sys.executable, str(deliver.TOKENS_QA), 'observe', result['path']],
+                                      capture_output=True, text=True)
+            self.assertEqual(observed.returncode, 0)
+            self.assertIn('unavailable', observed.stdout)
+
+    def test_graphic_output_uses_the_same_item_proof_gate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            image, proof = root / 'screen.png', root / 'review.txt'
+            image.write_bytes(b'\x89PNG\r\n\x1a\n')
+            proof.write_text('reviewed')
+            gates = root / 'gates.json'
+            gates.write_text(json.dumps({'l2': {'status': 'pass', 'name': 'visual review',
+                'observer': 'fixture', 'observed_at': '2026-09-05T00:00:00Z',
+                'artifacts': ['review.txt']}}))
+            result = deliver.record_shot({'images': {'images': [{'image_path': str(image)}]}},
+                'round', 'Review', project_root=root, item_id='A-1', gates=str(gates),
+                proof=[str(proof)])
+            feedback = subprocess.run([sys.executable, str(deliver.TOKENS_QA), 'feedback', result['path'],
+                '--status', 'accepted', '--source-kind', 'user', '--source-ref', 'fixture:turn',
+                '--source-text', 'Accepted', '--observed-at', '2026-09-05T00:00:00Z', '--json'],
+                capture_output=True, text=True)
+            self.assertEqual(feedback.returncode, 0, feedback.stdout + feedback.stderr)
+            gate = subprocess.run([sys.executable, str(deliver.TOKENS_QA), 'gate', result['path'],
+                '--project-root', str(root), '--json'], capture_output=True, text=True)
+            self.assertEqual(gate.returncode, 0, gate.stdout + gate.stderr)
 
 
 class Order(unittest.TestCase):
@@ -119,7 +157,9 @@ class ShotRecord(unittest.TestCase):
              unittest.mock.patch.object(deliver, "record_shot") as recorded, \
              contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(deliver.main(ARGV + ["--invocation", run_id]), 0)
-        recorded.assert_called_once_with(PAYLOAD, "hero", "How strong?", run_id)
+        recorded.assert_called_once_with(PAYLOAD, "hero", "How strong?", run_id,
+                                         project_root=Path('/tmp/p').resolve(),
+                                         item_id='', gates='', proof=[])
 
 
 class HandAuthoredSvgIsRefused(unittest.TestCase):

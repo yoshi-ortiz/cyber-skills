@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 # Exact paths, relative to the repository root.
 FOG_FILES = (
+    "NEXT.md",
     "CLAUDE.md",
     "GOAL.md",
     "SPEC.md",
@@ -44,6 +45,7 @@ FOG_FILES = (
 FOG_DIRS = (
     "docs",
     ".audit",
+    ".scratch",
     "tools",
     "first/aesthetic/docs",
     # A design project run inside this repository. Its state, its references,
@@ -74,7 +76,6 @@ SKIP_DIRS = {".git", "__pycache__"}
 
 # Development tooling: it verifies the skill, it is not part of it.
 FOG_FILES_EXTRA = (
-    "first/aesthetic/scripts/contracts.py",
     "first/aesthetic/scripts/verify_references.py",
 )
 
@@ -133,6 +134,7 @@ def is_fog(relative: str, channel: str = "main",
 def reasons() -> dict[str, str]:
     """Why each rule exists, for the error message a check prints."""
     return {
+        "NEXT.md": "development upgrade progress, never installed skill policy",
         "CLAUDE.md": "routes a Repo-Dev session between the burndown and the rail "
                      "audit; a consuming agent is in neither mode",
         "GOAL.md": "why this package's shape is the shape; a rail document that "
@@ -155,6 +157,7 @@ def reasons() -> dict[str, str]:
         "kit/spanish/CONTEXT.md": "Spanish skill grouping; Repo-Dev routing, not skill payload",
         "docs": "requirements and distilled knowledge; development state",
         ".audit": "session decision log; development state",
+        ".scratch": "local plans and working notes; development state",
         "tools": "publication tooling; it builds main, it does not ship on it",
         "first/aesthetic/docs": "ADRs explaining why durable boundaries were drawn; needed "
                           "to change the skill, not to run it",
@@ -182,7 +185,6 @@ def reasons() -> dict[str, str]:
         "context-tags-inbox.jsonl": "one maintainer's reviewed judgements about "
                                     "context, which is training data and never "
                                     "an instruction a skill carries",
-        "first/aesthetic/scripts/contracts.py": "development tooling",
         "first/aesthetic/scripts/verify_references.py": "development tooling",
         "tokens-qa": "black-box Shot QA; alpha until the fix half has run "
                      "against a real round",

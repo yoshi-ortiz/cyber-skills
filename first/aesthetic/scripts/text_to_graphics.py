@@ -538,10 +538,13 @@ def refresh_corpus(project_root: Path) -> dict[str, Any]:
     return {"items": len(corpus.get("items", [])), "root": corpus.get("root")}
 
 
-def run_moodboard(project_root: Path, *, dry_run: bool = False) -> dict[str, Any]:
+def run_moodboard(project_root: Path, *, dry_run: bool = False,
+                  proof: Path | None = None, exception: Path | None = None,
+                  profile: str = "bytes/4", budget: int | None = None) -> dict[str, Any]:
     from graphics_generation import run_moodboard as _run
 
-    return _run(project_root, dry_run=dry_run)
+    return _run(project_root, dry_run=dry_run, proof=proof, exception=exception,
+                profile=profile, budget=budget)
 
 
 def run_clear_shot(project_root: Path, *, dry_run: bool = False) -> dict[str, Any]:
@@ -582,6 +585,10 @@ def main(argv: list[str] | None = None) -> int:
     init = sub.add_parser("init", help="observe, seed-tags, measure, compile, export-avge")
     mood = sub.add_parser("moodboard", help="run agy moodboard inference (not deliverable)")
     mood.add_argument("--dry-run", action="store_true", help="record command without calling agy")
+    mood.add_argument("--proof-record", type=Path)
+    mood.add_argument("--exception-record", type=Path)
+    mood.add_argument("--profile", default="bytes/4")
+    mood.add_argument("--budget", type=int)
     clear = sub.add_parser("clear-shot", help="edit the approved clear shot through agy")
     clear.add_argument("--dry-run", action="store_true",
                        help="compile and record the handoff without calling agy")
@@ -674,7 +681,9 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write("\n")
             return 0 if result["passed"] else 1
         elif args.command == "moodboard":
-            result = run_moodboard(root, dry_run=args.dry_run)
+            result = run_moodboard(root, dry_run=args.dry_run,
+                                   proof=args.proof_record, exception=args.exception_record,
+                                   profile=args.profile, budget=args.budget)
             json.dump(result, sys.stdout, indent=2, sort_keys=True)
             sys.stdout.write("\n")
         elif args.command == "clear-shot":

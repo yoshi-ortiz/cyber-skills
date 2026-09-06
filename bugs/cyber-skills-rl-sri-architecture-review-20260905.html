@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RL compass and SRI architecture review</title>
+  <style>
+    :root { --ink:#172033; --muted:#64748b; --paper:#f4f1ea; --card:#fffdf8; --line:#cbd5e1; --navy:#172554; --blue:#e0e7ff; --red:#991b1b; --redbg:#fee2e2; --amber:#92400e; --amberbg:#fef3c7; --green:#166534; --greenbg:#dcfce7; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font:16px/1.55 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(1160px,calc(100% - 36px)); margin:0 auto; padding:48px 0 80px; }
+    h1,h2,h3 { font-family:Georgia,"Times New Roman",serif; line-height:1.12; }
+    h1 { margin:.15rem 0 1rem; font-size:clamp(2.5rem,7vw,5rem); letter-spacing:-.045em; }
+    h2 { margin:0 0 1rem; font-size:2rem; }
+    h3 { margin:0 0 .55rem; font-size:1.28rem; }
+    p { margin:.55rem 0; }
+    a { color:#3730a3; text-decoration-thickness:1px; text-underline-offset:2px; }
+    code { font: .9em ui-monospace,SFMono-Regular,Menlo,monospace; background:#eef2ff; padding:.08em .28em; border-radius:.25rem; }
+    .eyebrow { color:#4338ca; font-size:.76rem; font-weight:800; letter-spacing:.18em; text-transform:uppercase; }
+    .lede { max-width:850px; font-size:1.24rem; color:#334155; }
+    .meta { color:var(--muted); font: .82rem ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .grid { display:grid; gap:16px; }
+    .two { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .card { border:1px solid var(--line); border-radius:16px; background:var(--card); padding:22px; box-shadow:0 8px 24px rgba(15,23,42,.04); }
+    .deep { color:white; background:var(--navy); border:4px solid #0f172a; }
+    .badge { display:inline-block; margin-left:.45rem; padding:.18rem .55rem; border-radius:999px; font:700 .72rem ui-sans-serif,system-ui; vertical-align:middle; }
+    .strong { color:var(--green); background:var(--greenbg); }
+    .medium { color:var(--amber); background:var(--amberbg); }
+    .caution { color:var(--red); background:var(--redbg); }
+    .callout { border-left:5px solid #4f46e5; background:#eef2ff; padding:16px 18px; border-radius:0 10px 10px 0; }
+    .risk { border-left-color:#b91c1c; background:#fff1f2; }
+    section { margin-top:46px; }
+    table { width:100%; border-collapse:collapse; font-size:.92rem; }
+    th,td { padding:10px 11px; border-bottom:1px solid #dbe2ea; text-align:left; vertical-align:top; }
+    th { color:#475569; font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; }
+    ul,ol { padding-left:1.25rem; }
+    li { margin:.3rem 0; }
+    .diagram { overflow:auto; padding:18px; border:1px solid var(--line); border-radius:14px; background:#f8fafc; }
+    .diagram svg { min-width:670px; width:100%; height:auto; }
+    .finding { display:grid; grid-template-columns:140px 1fr; gap:18px; }
+    .finding + .finding { margin-top:18px; padding-top:18px; border-top:1px solid var(--line); }
+    .score { font-weight:800; font-size:.86rem; }
+    .sources { font-size:.84rem; color:#475569; }
+    .top { padding:26px; border:3px solid #172554; border-radius:18px; background:#eef2ff; }
+    @media (max-width:760px) { .two,.three { grid-template-columns:1fr; } .finding { grid-template-columns:1fr; gap:5px; } }
+    @media print { body { background:white; } main { width:100%; padding:24px; } .card { box-shadow:none; break-inside:avoid; } a { color:inherit; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Read-only architecture review</p>
+    <h1>Compass, evidence loop, and safe self-improvement</h1>
+    <p class="lede">The current feature compass is a credible bounded-control workflow, not reinforcement learning. Its strongest property is an explicit authority chain from Item to Shot to human verdict. Its weakest property is that roadmap selection, observation, proof, context admission, and future learning are presented as one story even though they have different owners and trust levels.</p>
+    <p class="meta">cyber-skills · 2026-09-05 · worktree reviewed in place · no repository changes</p>
+  </header>
+
+  <section class="grid three">
+    <div class="card"><p class="eyebrow">Architecture verdict</p><h3>Promising seam, incomplete depth</h3><p><code>repo_context.py next</code> is a useful facade, but callers still need to understand roadmap fields, Shot lifecycle, token profiles, proof gates, and feedback states.</p></div>
+    <div class="card"><p class="eyebrow">Language verdict</p><h3>Evidence loop, not RL</h3><p>No online policy update, reward model, credit assignment, or automatic parameter change exists. The implemented loop is deterministic control plus recorded human feedback.</p></div>
+    <div class="card"><p class="eyebrow">Safety verdict</p><h3>Good guards, two open risks</h3><p>Acceptance authority and negative outcomes are protected. Privacy retention policy and deterministic extraction of corrections remain underspecified.</p></div>
+  </section>
+
+  <section>
+    <h2>System map</h2>
+    <p>The map uses the repository glossary. Repo-Dev Context owns Items and the Burndown. Tokens QA owns Shots. Design-Inference Context is only proposed as compiler input. The optional learner remains development-only.</p>
+    <div class="diagram">
+      <svg viewBox="0 0 1040 500" role="img" aria-label="Current module and caller map">
+        <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#64748b"/></marker><marker id="redarrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#b91c1c"/></marker></defs>
+        <rect x="20" y="25" width="290" height="175" rx="15" fill="#fff" stroke="#94a3b8"/><text x="42" y="55" font-weight="700">Genesis module</text><text x="42" y="82">compass.py</text><text x="42" y="108">ROADMAP parser and checks</text><text x="42" y="134">Item selection</text><text x="42" y="160">scope, proof, token cap</text>
+        <rect x="375" y="25" width="290" height="175" rx="15" fill="#172554" stroke="#0f172a" stroke-width="4"/><text x="398" y="55" fill="white" font-weight="700">Repo Context facade</text><text x="398" y="82" fill="#dbeafe">repo_context.py next/check</text><text x="398" y="108" fill="#dbeafe">joins selected Item to Shot history</text><text x="398" y="134" fill="#dbeafe">computes next_action</text><text x="398" y="160" fill="#dbeafe">enforces DONE closure</text>
+        <rect x="730" y="25" width="290" height="175" rx="15" fill="#fff" stroke="#94a3b8"/><text x="752" y="55" font-weight="700">Tokens QA module</text><text x="752" y="82">tokens_qa.py and Shot schema</text><text x="752" y="108">observation, costs, proof hashes</text><text x="752" y="134">feedback authority and vetoes</text><text x="752" y="160">correction bundle</text>
+        <line x1="310" y1="112" x2="375" y2="112" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/><line x1="665" y1="112" x2="730" y2="112" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+        <rect x="20" y="265" width="290" height="175" rx="15" fill="#fff7ed" stroke="#f59e0b"/><text x="42" y="295" font-weight="700">Compiler contract, R-50</text><text x="42" y="322">context declarations and bundles</text><text x="42" y="348">tokenizer profiles and pass budgets</text><text x="42" y="374">trace and proof gates</text><text x="42" y="400">not yet the compass implementation</text>
+        <rect x="375" y="265" width="290" height="175" rx="15" fill="#fff1f2" stroke="#b91c1c"/><text x="398" y="295" font-weight="700">Agent prompt layer</text><text x="398" y="322">CONTEXT.md Feature burndown</text><text x="398" y="348">Genesis SKILL.md Compass</text><text x="398" y="374">must interpret user intent, scope, proof</text><text x="398" y="400">and choose when to record feedback</text>
+        <rect x="730" y="265" width="290" height="175" rx="15" fill="#f0fdf4" stroke="#16a34a"/><text x="752" y="295" font-weight="700">Offline learner proposal</text><text x="752" y="322">reviewed attempt pairs</text><text x="752" y="348">learning-to-rank recommendations</text><text x="752" y="374">human review before declarations</text><text x="752" y="400">no live or publication authority</text>
+        <line x1="520" y1="200" x2="520" y2="265" stroke="#b91c1c" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#redarrow)"/><text x="535" y="238" fill="#991b1b" font-size="13">judgment leaks to caller</text>
+        <line x1="310" y1="352" x2="375" y2="352" stroke="#b91c1c" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#redarrow)"/><line x1="665" y1="352" x2="730" y2="352" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+      </svg>
+    </div>
+  </section>
+
+  <section>
+    <h2>Findings</h2>
+    <div class="card">
+      <div class="finding"><div class="score">Strong<br><span class="badge strong">keep</span></div><div><h3>1. The Item to Shot authority chain is the right seam</h3><p>Genesis parses and selects managed Items. Tokens QA records immutable Shot attempts and accepts feedback only through an explicit write command. Repo Context joins these two interfaces and refuses DONE when the latest item-linked Shot is not accepted, has a veto, lacks L2 proof, or has changed proof artifacts. This is real locality and leverage.</p><p class="sources">Evidence: <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/first/genesis/scripts/compass.py">first/genesis/scripts/compass.py</a>, <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/check/tokens-qa/scripts/tokens_qa.py">check/tokens-qa/scripts/tokens_qa.py</a>, <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/tools/repo_context.py">tools/repo_context.py</a>.</p></div></div>
+      <div class="finding"><div class="score">Strong<br><span class="badge caution">narrow</span></div><div><h3>2. “Reinforcement learning” overstates what exists</h3><p>The implemented system has no learned policy and performs no training. It records outcomes, computes deterministic next actions, and permits a human to revise an instruction or test. Call this the <strong>feature evidence loop</strong> or <strong>attempt feedback loop</strong>. Reserve <strong>offline learning-to-rank experiment</strong> for the development-only learner in R-50. Reserve <strong>safe self-improvement</strong> for the governed review procedure, not a runtime capability.</p><p class="sources">Evidence: <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/docs/SPEC/FEATURE_COMPASS.md">docs/SPEC/FEATURE_COMPASS.md</a> lines 27 to 30; <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/docs/SPEC/INFERENCE_CONTEXT_COMPILER.md">docs/SPEC/INFERENCE_CONTEXT_COMPILER.md</a> lines 111 to 123 and 146 to 151.</p></div></div>
+      <div class="finding"><div class="score">Strong<br><span class="badge strong">safe</span></div><div><h3>3. Acceptance cannot be fabricated through the public interface</h3><p>New Shots begin pending. Feedback fields are independent. Advisory text classification writes nothing. Silence remains pending. “Good but fix X” fails. Closure requires explicit accepted status and proof. Synthetic flow tests demonstrate these mechanics without touching project state. This is evidence of control behavior, not evidence of user satisfaction or lower token cost.</p><p class="sources">Evidence: <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/check/tokens-qa/SKILL.md">check/tokens-qa/SKILL.md</a> lines 15 to 29 and 69 to 110; <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/tools/test_compass_flow.py">tools/test_compass_flow.py</a>.</p></div></div>
+      <div class="finding"><div class="score">High<br><span class="badge caution">open risk</span></div><div><h3>4. Local and dev-only is not yet a privacy contract</h3><p>Shot records can contain the complete request, user corrections, paths, model metadata, and artifact hashes. The specs say records remain local and dev-only, but they do not define consent, redaction, retention, deletion, export, filesystem permissions, or secret scanning. “Privacy-safe local records” is therefore an aspiration. A safe contract should minimize stored text, allow caller-supplied redaction, define retention, and keep records out of publication and version control.</p><p class="sources">Evidence: <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/docs/SPEC/SHOT_OBSERVATION.md">docs/SPEC/SHOT_OBSERVATION.md</a>; <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/check/tokens-qa/scripts/tokens_qa.py">check/tokens-qa/scripts/tokens_qa.py</a> lines 118 to 160; compiler outcome record lines 99 to 110.</p></div></div>
+      <div class="finding"><div class="score">High<br><span class="badge caution">replace judgment</span></div><div><h3>5. The small-model entrypoint still asks the model to join too much</h3><p><code>repo_context.py --json next</code> returns one Item and latest observations, which is the correct shape. Yet the agent must still interpret free-text Scope and Proof, decide whether the user has corrected or accepted, decide which files form admitted context, and reconcile duplicate prose in root CONTEXT, Genesis, Feature Compass, Tokens QA, and the compiler contract. The compiler spec makes “parse the latest user request” part of a deterministic program without defining a deterministic grammar. That step cannot be reproducible as written.</p><p class="sources">Contamination paths: root <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/CONTEXT.md">CONTEXT.md</a> Feature burndown; <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/first/genesis/SKILL.md">first/genesis/SKILL.md</a> Compass; <a href="file:///Users/bebote-pro/.codex/worktrees/4a88/cyber-skills/check/tokens-qa/SKILL.md">check/tokens-qa/SKILL.md</a>; R-50 contract lines 55 to 80. Repo-Dev records such as BUGS, GOAL, SPEC, QA, CHANGELOG, and .audit are hazardous when loaded during Design-Inference.</p></div></div>
+      <div class="finding"><div class="score">Medium<br><span class="badge medium">deletion test</span></div><div><h3>6. Several contracts describe the same policy</h3><p>The same rules about explicit acceptance, preserved corrections, token honesty, and no automatic prompt mutation appear in at least four documents. Deleting any one of these paragraphs would not remove behavior because the executables and tests carry the real rule. That prose is a cache and invites drift. One normative Feature Evidence Loop contract should own the state machine. Genesis should point to selection behavior. Tokens QA should own the Shot format and verdict. The compiler should consume outcome records without redefining acceptance.</p><p class="sources">Evidence: root CONTEXT lines 151 to 194; Genesis lines 12 to 43; Feature Compass lines 7 to 30; compiler lines 99 to 123.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Before and after</h2>
+    <div class="grid two">
+      <div class="card"><p class="eyebrow">Before</p><h3>Policy spread across owners</h3><ol><li>Prompt prose selects and bounds an Item.</li><li>Genesis parses ROADMAP and returns partial facts.</li><li>Repo Context invokes Tokens QA as a subprocess.</li><li>Tokens QA stores request, artifacts, costs, verdict, and context claims.</li><li>The compiler separately defines request parsing, admission, proof gating, metrics, and learning.</li><li>An agent correlates the documents and decides which authority wins.</li></ol><div class="callout risk"><strong>Failure mode.</strong> The strongest safety rules exist, but a small model must remember them across several files. Duplicate policy increases context load and makes omission look like judgment.</div></div>
+      <div class="card deep"><p class="eyebrow" style="color:#bfdbfe">After</p><h3>One deep Attempt Ledger interface</h3><ol><li><code>next(task_ref)</code> returns one bounded Item, typed requirements, proof status, budget status, and the latest authoritative correction.</li><li><code>record_attempt(observation)</code> writes a minimized, local Shot with explicit provenance.</li><li><code>record_verdict(authority)</code> records user feedback and never infers it.</li><li><code>close(item)</code> deterministically checks latest accepted Shot, vetoes, and proof integrity.</li><li>The context compiler consumes this interface and emits an inspectable bundle and trace.</li><li>An offline learner may recommend declaration changes from reviewed pairs. A human approves each change.</li></ol><p style="color:#dbeafe"><strong>Depth.</strong> Roadmap syntax, Shot ordering, cost compatibility, vetoes, proof integrity, retention rules, and next-action computation stay behind one small interface.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Responsibility changes</h2>
+    <table><thead><tr><th>Owner</th><th>Own</th><th>Stop owning</th></tr></thead><tbody>
+      <tr><td>Genesis</td><td>ROADMAP parsing, managed Item validation, deterministic eligibility and priority</td><td>General SRI policy, acceptance semantics, Shot closure</td></tr>
+      <tr><td>Tokens QA</td><td>Shot schema, immutable attempt creation, independent feedback fields, vetoes, comparable observed costs</td><td>Roadmap selection, instruction mutation, inferred acceptance</td></tr>
+      <tr><td>Attempt Ledger facade</td><td>Item to Shot join, latest-attempt ordering, next action, closure, privacy and retention policy</td><td>Prompt wording and neural recommendations</td></tr>
+      <tr><td>Context compiler</td><td>Deterministic admission from structured constraints, tiered packing, exact or labeled-estimate costs, trace</td><td>Natural-language interpretation presented as deterministic, acceptance policy, model training</td></tr>
+      <tr><td>Offline learner</td><td>Optional recommendations from reviewed comparable attempt pairs</td><td>Live inference control, prompt mutation, project writes, publication decisions</td></tr>
+      <tr><td>Human authority</td><td>Acceptance, correction meaning, approval of instruction or test changes</td><td>Nothing. This authority must remain explicit.</td></tr>
+    </tbody></table>
+  </section>
+
+  <section>
+    <h2>Smallest honest vertical slice</h2>
+    <div class="card">
+      <p>Use one managed Item and one real user-facing acceptance path. Run a baseline attempt and, only after a real correction, one candidate attempt. Record observed input and output tokens under the same tokenizer profile, the same acceptance criteria, the correction verbatim, proof artifacts, and the final user verdict. The candidate may change one reviewed instruction or one regression fixture.</p>
+      <p>The slice succeeds if both attempts are replayable, the candidate retains every required constraint, no veto fires, proof passes, and the user explicitly accepts it. Report the observed pair as <code>baseline tokens / candidate tokens</code> and <code>baseline attempts / candidate attempts</code>. Do not call this an improvement metric from one pair. The repository may say only that it has demonstrated the measurement path. A claim about lower median tokens per accepted result needs multiple comparable accepted Items and a predeclared analysis.</p>
+      <p class="sources">Current synthetic tests prove the state path only. The Feature Compass contract already states this limit at lines 39 to 41.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Delete, combine, or narrow</h2>
+    <table><thead><tr><th>Action</th><th>Target</th><th>Reason</th><th>Evidence status</th></tr></thead><tbody>
+      <tr><td>Combine</td><td>Feature burndown and Feature Compass policy</td><td>One normative state machine. Root context keeps only a pointer and short entry procedure.</td><td>Supported by duplicated rules</td></tr>
+      <tr><td>Narrow</td><td>Genesis Compass section</td><td>Describe how to invoke Item selection and interpret typed outcomes. Link to the authority contract.</td><td>Supported by current executable split</td></tr>
+      <tr><td>Narrow</td><td>R-50 deterministic step 1</td><td>Accept structured corrections and criteria as input. Move natural-language extraction to an explicit, reviewable adapter.</td><td>Required for reproducibility claim</td></tr>
+      <tr><td>Delete from acceptance</td><td>“Every indexed skill” and held-out learner improvement as one R-50 completion gate</td><td>They couple deterministic compiler viability to repository-wide migration and an optional learner.</td><td>Prior review identified this; current contract still contains it</td></tr>
+      <tr><td>Keep but label</td><td><code>tools/test_compass_flow.py</code></td><td>It is valuable contract evidence. It is not cost or satisfaction evidence.</td><td>Verified by test source and spec disclaimer</td></tr>
+      <tr><td>Delete or quarantine</td><td>Legacy <code>genesis_flow.py</code> as a closure signal</td><td>The contract already calls it a legacy topology audit. Two closure paths would recreate policy drift.</td><td>Explicit in Feature Compass</td></tr>
+      <tr><td>Add before claiming safe privacy</td><td>Shot retention and redaction contract</td><td>Local storage alone does not define safe handling of requests and feedback.</td><td>Aspiration, not implemented evidence</td></tr>
+    </tbody></table>
+  </section>
+
+  <section>
+    <h2>Unverified assumptions</h2>
+    <ul>
+      <li>No external process writes Shot feedback or mutates prompts outside the reviewed repository.</li>
+      <li>The CLI caller authenticates the person supplying <code>feedback --status accepted</code>. The local schema records authority but does not authenticate identity.</li>
+      <li><code>.audit/</code> is excluded from commits and publication in every relevant environment. Publication fog rules were inspected by reference, not exercised in this read-only review.</li>
+      <li>Token values described as observed come from trustworthy host telemetry. The repository validates shape and profile compatibility, not source authenticity.</li>
+      <li>No production learner exists elsewhere. This review covers the files listed in the handoff and their direct callers.</li>
+    </ul>
+  </section>
+
+  <section class="top">
+    <p class="eyebrow">Top recommendation · strong</p>
+    <h2>Make the deterministic Attempt Ledger the product, and demote “reinforcement learning” to an optional offline experiment.</h2>
+    <p>Define one small interface that returns the next bounded Item, records a minimized Shot, accepts only explicit human verdicts, and closes work through deterministic proof checks. Feed its structured outcome record into the context compiler. Keep natural-language extraction and learning recommendations behind reviewable adapters with no write authority.</p>
+    <h3 style="margin-top:20px">Short non-implementation roadmap</h3>
+    <ol><li>Ratify names and owners: Feature Evidence Loop, Attempt Ledger, Context Compiler, Offline Recommender.</li><li>Write one authority table for Item state, Shot state, user verdict, proof, privacy, and mutation rights.</li><li>Specify the four-operation Attempt Ledger interface and error states without changing code.</li><li>Split R-50 acceptance into deterministic compiler acceptance, repository migration, and optional learner evaluation.</li><li>Predeclare one real two-attempt measurement slice, then collect evidence before making an improvement claim.</li></ol>
+  </section>
+
+  <footer style="margin-top:36px;color:#64748b;font-size:.84rem">Prepared from the handoff and repository state on 2026-09-05. The repository was intentionally dirty. This review did not edit, commit, run broad refactors, or alter project state.</footer>
+</main>
+</body>
+</html>

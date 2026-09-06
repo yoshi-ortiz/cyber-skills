@@ -29,6 +29,50 @@ Item-linked costs default to unknown, never request/output file-size estimates.
 Corrections remain evidence. Safe self-improvement changes reviewed instructions
 or regression tests; it does not train model weights or infer user acceptance.
 
+## Reviewed Item contract (Sprint 1)
+
+An optional `Contract` column references project-owned JSON by plain relative
+path. The roadmap remains the selection index. Contract version 1 contains:
+
+```json
+{
+  "version": 1,
+  "item_id": "F-1",
+  "review_ref": "user:decision-01",
+  "acceptance_criteria": ["The public acceptance check passes"],
+  "exclusions": [],
+  "read_paths": ["src/"],
+  "write_paths": ["src/"],
+  "proof_requirements": ["proof.txt"],
+  "budget_tokens": 1000
+}
+```
+
+Criteria and proof arrays must be nonempty. Exclusions and read/write arrays
+are explicit and may be empty. Paths stay inside the project, including after
+symlink resolution. Budget is a nonnegative integer or explicit null (uncapped).
+Review references record the caller's assertion of review, not authentication.
+Missing requirements or a missing contract file return `bound-task` with reasons.
+Invalid JSON, versions, types, identities and escaping paths fail the command.
+
+`next` returns version 1, the original selector fields, explicit reviewed fields,
+contract reference/digest when present, latest Shot and effective feedback,
+budget status, next action and reasons. Legacy unknown fields are null rather
+than inferred from prose. An unresolved contract has unknown budget status.
+Legacy rows retain Scope/Proof fallback until deliberately migrated.
+
+Precedence: invalid roadmap/references fail; missing requirements bind; pending
+feedback waits; accepted feedback checks proof and returns `verify-proof` or
+`close-item`; failed feedback returns to correction. Execution and correction
+are subject to cumulative budget: unknown/incompatible usage resolves the
+budget, usage at the cap exhausts it. Feedback/proof actions take precedence
+over budget. No eligible row returns `no-ready-item`, never project completion.
+Explicit Item selection uses the same eligibility rules and never falls back.
+
+Sprint 2 owns feedback event history, unresolved corrections across attempts,
+provenance enforcement and revision-aware closure. Sprint 1's effective feedback
+is the latest recorded verdict; it does not claim those later guarantees.
+
 ## Compatibility and limits
 
 Legacy rows remain readable and are not retroactively declared accepted. Opt them

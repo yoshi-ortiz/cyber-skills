@@ -54,6 +54,13 @@ python3 scripts/direction_context.py --project-root . --pass generation \
 | `--force` | Runs a gated pass anyway, when the user asked for it directly |
 | `--trace` | Writes the trace as JSON. The same project and profile write the same bytes. |
 
+The live `moodboard` runner is stricter than this compiler preview. It loads
+`spec/design-harness/reviewed-intent.json`, binds the `generation` bundle to its
+stable digest, and stops before `agy` unless `--proof-record` names a matching
+observed, artifact-hashed `golden-rules` proof or `--exception-record` names a
+user exception scoped to the same invocation and compiler identity.
+Stored command text is never executed.
+
 Admission order is fixed: user corrections, then acceptance criteria, then
 evidence, then instructions, then doctrine. Doctrine is dropped first when the
 budget fills. A correction that does not fit raises rather than being dropped,

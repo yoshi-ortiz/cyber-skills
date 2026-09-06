@@ -22,6 +22,7 @@ import json
 import math
 import sys
 import uuid
+from types import SimpleNamespace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -117,6 +118,10 @@ def cmd_record(args):
                       "payload, or --output-manifest <manifest.json> for artifacts "
                       "on disk.")
     request = Path(args.request).read_text(encoding="utf-8")
+    if args.redacted_request:
+        if not args.request_ref:
+            raise Refused('redacted request requires request-ref')
+        request = '[redacted]'
     digests: list[dict] = []
     if args.output_manifest:
         output, size, digests = shot_io.manifest_output(
@@ -130,6 +135,8 @@ def cmd_record(args):
                         if p.strip())
     inputs = {"request": request, "target_skill": args.skill,
               "corpus_refs": [], "prompt_hash": sha256(request), "tools": []}
+    if args.request_ref:
+        inputs['request_ref'] = args.request_ref
     if changed:
         inputs["changed_paths"] = changed
     if args.admitted_context is not None:
@@ -156,7 +163,8 @@ def cmd_record(args):
     })
     target = shot_io.contained(Path(args.project_root or Path.cwd()),
                                f".audit/shots/{shot_id}.json")
-    shot_io.create_shot(target, record)
+    with shot_io.locked(target.parent):
+        shot_io.create_shot(target, record)
     # The table, not the path. `record` used to print where it wrote, so
     # reading the numbers it had just computed took a second command and
     # nobody ran it.
@@ -175,9 +183,29 @@ def read_pair(base_path: str, cand_path: str | None):
 
 
 def cmd_gate(args):
+    with shot_io.locked(shot_io.contained(Path(args.project_root), '.audit/shots')):
+        return gate_result(args)
+
+
+def gate_result(args):
     shot_io.contained(Path(args.project_root), args.shot)
     record = shot_io.read_shot(args.shot)
+    _, history, _ = cmd_history(SimpleNamespace(project_root=args.project_root,
+                                               item_id=record.get('item_id')))
     failures = shot_io.verify_artifacts(record, Path(args.project_root))
+    latest = history.get('latest') or {}
+    if latest.get('shot_id') != record['shot_id']:
+        failures.append('latest Shot required')
+    if args.expected_revision and args.expected_revision != history['revision']:
+        failures.append('stale Item revision')
+    if history['unresolved_corrections']:
+        failures.append('unresolved corrections')
+    if history['deleted_shots']:
+        failures.append('deleted evidence makes closure unverifiable')
+    acceptance = next((e for e in reversed(record.get('feedback_events', []))
+                       if 'status' in e['fields']), None)
+    if not acceptance or acceptance['fields']['status'] != 'accepted' or acceptance['source_kind'] != 'user':
+        failures.append('user acceptance provenance required')
     if not record.get("item_id"):
         failures.append("item_id required")
     if verdict(record) != "accepted":
@@ -186,11 +214,20 @@ def cmd_gate(args):
     failures.extend(hard)
     if record.get("gates", {}).get("l2", {}).get("status") != "pass":
         failures.append("l2 pass required")
+    l2 = record.get('gates', {}).get('l2', {})
+    if not all(l2.get(field) for field in ('name', 'observer', 'observed_at', 'artifacts')):
+        failures.append('observed L2 provenance required')
+    proofs = {str(shot_io.contained(Path(args.project_root), a['path']))
+              for a in record['output'].get('artifacts', []) if a['role'] == 'proof'}
+    required = set(args.proof or []) | set(l2.get('artifacts', []))
+    for proof in required:
+        if str(shot_io.contained(Path(args.project_root), proof)) not in proofs:
+            failures.append(f'proof coverage missing: {proof}')
     if not any(a["role"] == "proof" for a in record["output"].get("artifacts", [])):
         failures.append("proof artifact required")
     result = {"item_id": record.get("item_id"), "shot_id": record["shot_id"],
               "verdict": verdict(record), "ready": not failures,
-              "hard_vetoes": hard, "reasons": failures}
+              "hard_vetoes": hard, "reasons": failures, 'revision': history['revision']}
     return int(bool(failures)), result, json.dumps(result, separators=(",", ":"))
 
 
@@ -218,15 +255,62 @@ def cmd_history(args):
             if bucket["unknown_" + key]:
                 bucket[key] = None
     last = records[-1] if records else None
+    unresolved = {}
+    resolved = set()
+    event_count = 0
+    for record in records:
+        baseline = record.get('feedback_baseline', record['user_feedback'])
+        if baseline.get('correction'):
+            identity = record['shot_id'] + ':legacy'
+            unresolved[identity] = {'event_id': identity, 'shot_id': record['shot_id'],
+                                    'correction': baseline['correction']}
+        for event in record.get('feedback_events', []):
+            event_count += 1
+            for identity in event['resolves']:
+                resolved.add(identity)
+            if event['fields'].get('correction'):
+                unresolved[event['event_id']] = {'event_id': event['event_id'],
+                    'shot_id': record['shot_id'], 'correction': event['fields']['correction']}
+    deleted = shot_io.deleted_shots(Path(args.project_root), args.item_id)
     result = {"item_id": args.item_id, "shots": len(records), "latest": {
         "shot_id": last["shot_id"], "verdict": verdict(last),
         "path": locations[last["shot_id"]],
         "correction": last["user_feedback"].get("correction")
-    } if last else None, "totals_by_profile": profiles}
+        , "revision": shot_io.revision(last)
+    } if last else None, "totals_by_profile": profiles,
+        'feedback_events': event_count, 'unresolved_corrections': [value for key, value in unresolved.items() if key not in resolved],
+        'deleted_shots': len(deleted),
+        'revision': sha256(''.join(shot_io.revision(record) for record in records + deleted))}
     return 0, result, json.dumps(result, separators=(",", ":"))
 
 
+def cmd_retention(args):
+    root = Path(args.project_root)
+    if args.delete:
+        with shot_io.locked(shot_io.contained(root, '.audit/shots')):
+            return retain(args, root)
+    return retain(args, root)
+
+
+def retain(args, root):
+    paths = [p for p in shot_io.shot_paths(root) if shot_io.read_shot(p).get('item_id') == args.item_id]
+    revision = sha256(''.join(str(p) + shot_io.revision(shot_io.read_shot(p)) for p in paths))
+    result = {'paths': [str(p) for p in paths], 'revision': revision, 'deleted': False}
+    if args.delete:
+        if not args.expected_revision or args.expected_revision != revision:
+            raise Refused('preview revision required; records changed or preview absent', 4)
+        shot_io.delete_shots(root, paths)
+        result['deleted'] = True
+    return 0, result, json.dumps(result)
+
+
 def cmd_observe(args):
+    if args.events:
+        record = shot_io.read_shot(args.shot)
+        result = {'events': record.get('feedback_events', []),
+                  'legacy_feedback': record.get('feedback_baseline', record['user_feedback']),
+                  'revision': shot_io.revision(record)}
+        return 0, result, json.dumps(result)
     return read_pair(args.shot, args.candidate)
 
 
@@ -236,22 +320,64 @@ def cmd_compare(args):
 
 def cmd_feedback(args):
     path = Path(args.shot)
+    with shot_io.locked(path.resolve().parent):
+        return write_feedback(args, path)
+
+
+def write_feedback(args, path):
     record = shot_io.read_shot(path)
     given = {"status": args.status, "correction": args.correction,
              "sentiment": args.sentiment, "rank": args.rank}
     given = {k: v for k, v in given.items() if v is not None}
-    if not given:
+    if not given and not args.resolve:
         raise Refused("feedback: give at least one of --status, --correction,"
                       " --sentiment, --rank")
     # A v1 file is history. Writing it would migrate it and rewrite the past.
     if shot_io.on_disk_version(path) == 1:
         raise Refused(f"{path}: version 1 is read-only, record a new shot")
+    operation = args.operation_id or uuid.uuid4().hex
+    event = {'version': 1, 'event_id': record['shot_id'] + ':' + operation,
+             'operation_id': operation, 'fields': given, 'source_kind': args.source_kind,
+             'observed_at': args.observed_at or now(), 'resolves': args.resolve or []}
+    for key in ('source_ref', 'source_text', 'redacted_ref'):
+        if getattr(args, key):
+            event[key] = getattr(args, key)
+    for previous in record.get('feedback_events', []):
+        if previous['operation_id'] == operation:
+            compare = dict(event)
+            if not args.observed_at:
+                compare['observed_at'] = previous['observed_at']
+            if compare != previous:
+                raise Refused('operation ID reused with different feedback', 4)
+            return 0, {'event_id': previous['event_id'], 'revision': shot_io.revision(record),
+                       'verdict': verdict(record), 'user_feedback': record['user_feedback']}, verdict(record)
+    if args.expected_revision and args.expected_revision != shot_io.revision(record):
+        raise Refused('stale feedback revision', 4)
+    if args.source_kind in ('user', 'fixture') and not args.observed_at:
+        raise Refused('observed-at required for sourced feedback')
+    record.setdefault('feedback_baseline', dict(record['user_feedback']))
+    if args.resolve:
+        if args.source_kind != 'user':
+            raise Refused('only user-sourced feedback may resolve corrections')
+        if path.parent.name != 'shots' or path.parent.parent.name != '.audit' or not record.get('item_id'):
+            raise Refused('correction resolution requires an Item-linked project Shot')
+        _, history, _ = cmd_history(SimpleNamespace(project_root=path.resolve().parents[2],
+                                                   item_id=record['item_id']))
+        known = {e['event_id'] for e in history['unresolved_corrections']}
+        if set(args.resolve) - known:
+            raise Refused('unknown or already resolved correction reference')
+    record.setdefault('feedback_events', []).append(event)
     fields = dict(record["user_feedback"])
+    latest_correction = next((e['event_id'] for e in reversed(record.get('feedback_events', []))
+                              if e['fields'].get('correction')), record['shot_id'] + ':legacy')
+    if latest_correction in (args.resolve or []):
+        fields.pop('correction', None)
     fields.update(given)
     record["user_feedback"] = fields
     record = validate(record)
     shot_io.replace_shot(path, record)
-    return 0, {"verdict": verdict(record), "user_feedback": fields}, verdict(record)
+    return 0, {"verdict": verdict(record), "user_feedback": fields,
+               'event_id': event['event_id'], 'revision': shot_io.revision(record)}, verdict(record)
 
 
 def turns_of(evidence: str) -> list[str]:
@@ -295,6 +421,8 @@ def parse(argv):
     rec = sub.add_parser("record", parents=[common], help="write a Shot record")
     rec.add_argument("skill")
     rec.add_argument("--request", required=True)
+    rec.add_argument('--request-ref')
+    rec.add_argument('--redacted-request', action='store_true')
     out = rec.add_mutually_exclusive_group(required=True)
     out.add_argument("--output-manifest")
     out.add_argument("--inline")
@@ -331,6 +459,7 @@ def parse(argv):
     obs = sub.add_parser("observe", parents=[common], help="read one Shot")
     obs.add_argument("shot")
     obs.add_argument("candidate", nargs="?")
+    obs.add_argument('--events', action='store_true')
     obs.set_defaults(run=cmd_observe)
 
     cmp_ = sub.add_parser("compare", parents=[common], help="baseline against candidate")
@@ -344,6 +473,14 @@ def parse(argv):
     fb.add_argument("--correction")
     fb.add_argument("--sentiment", choices=("positive", "neutral", "negative"))
     fb.add_argument("--rank", type=float)
+    fb.add_argument('--operation-id')
+    fb.add_argument('--expected-revision')
+    fb.add_argument('--source-kind', choices=('caller', 'user', 'fixture'), default='caller')
+    fb.add_argument('--source-ref')
+    fb.add_argument('--source-text')
+    fb.add_argument('--redacted-ref')
+    fb.add_argument('--observed-at')
+    fb.add_argument('--resolve', action='append')
     fb.set_defaults(run=cmd_feedback)
 
     ass = sub.add_parser("assess-feedback", parents=[common], help="advisory candidates")
@@ -364,11 +501,19 @@ def parse(argv):
     gate = sub.add_parser("gate", parents=[common], help="check Item completion evidence")
     gate.add_argument("shot")
     gate.add_argument("--project-root", required=True)
+    gate.add_argument('--expected-revision')
+    gate.add_argument('--proof', action='append')
     gate.set_defaults(run=cmd_gate)
     history = sub.add_parser("history", parents=[common], help="summarize Item attempts")
     history.add_argument("--project-root", required=True)
     history.add_argument("--item-id", required=True)
     history.set_defaults(run=cmd_history)
+    retention = sub.add_parser('retention', parents=[common], help='preview exact Shot deletion; retains artifacts')
+    retention.add_argument('--project-root', required=True)
+    retention.add_argument('--item-id', required=True)
+    retention.add_argument('--delete', action='store_true')
+    retention.add_argument('--expected-revision')
+    retention.set_defaults(run=cmd_retention)
     return parser.parse_args(argv)
 
 

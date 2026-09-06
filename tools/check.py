@@ -36,7 +36,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_gates(py: str) -> list[tuple[str, list[str]]]:
+def test_gates(py: str, root: Path = ROOT) -> list[tuple[str, list[str]]]:
     """Every `test_*.py` in the repository, run the way its own shape says.
 
     B-023: the gate list named each test file by hand, so a file could be
@@ -50,38 +50,42 @@ def test_gates(py: str) -> list[tuple[str, list[str]]]:
     never calls, so it is run as the script it is. Sniffing the file is what
     keeps the third case -- listed nowhere -- from existing again.
     """
-    files = [path for path in sorted(ROOT.rglob("test_*.py"))
+    files = [path for path in sorted(root.rglob("test_*.py"))
              if not any(part.startswith(".") or part == "__pycache__"
-                        for part in path.relative_to(ROOT).parts)]
+                        for part in path.relative_to(root).parts)]
     scripts = [path for path in files
                if "TestCase" not in path.read_text(encoding="utf-8")]
     directories = sorted({path.parent for path in files if path not in scripts})
     return [
         ("feature compass", [py, "tools/repo_context.py", "check"]),
-        *((f"tests {directory.relative_to(ROOT)}",
+        *((f"tests {directory.relative_to(root)}",
            [py, "-m", "unittest", "discover", "-s",
-            str(directory.relative_to(ROOT)), "-p", "test_*.py"])
+            str(directory.relative_to(root)), "-p", "test_*.py"])
           for directory in directories),
-        *((f"tests {path.relative_to(ROOT)}", [py, str(path.relative_to(ROOT))])
+        *((f"tests {path.relative_to(root)}", [py, str(path.relative_to(root))])
           for path in scripts),
     ]
 
 
-def gates(tree: Path) -> list[tuple[str, list[str]]]:
+def gates(tree: Path, root: Path = ROOT) -> list[tuple[str, list[str]]]:
     """Name each gate by the question it answers, not the file it runs."""
     py, node = sys.executable, shutil.which("node")
+    aesthetic = root / "first" / "aesthetic" / "scripts" / "bootstrap_harness.py"
+    skill_gates = ([
+        ("harness self-test", [py, "first/aesthetic/scripts/bootstrap_harness.py", "self-test"]),
+    ] if aesthetic.is_file() else [])
     return [
         # Split on purpose. `contracts-declared` must be green: a directory that
         # never declared itself is one commit from fixed. `contracts-budget` is
         # the standing R-15 debt. One permanent red hid the other for long
         # enough that two new undeclared directories shipped unnoticed.
-        ("contracts-declared", [py, "first/aesthetic/scripts/contracts.py",
+        ("contracts-declared", [py, "tools/contracts.py",
                                 "--root", ".", "--only", "declared"]),
-        ("contracts-budget", [py, "first/aesthetic/scripts/contracts.py",
+        ("contracts-budget", [py, "tools/contracts.py",
                               "--root", ".", "--only", "budget"]),
-        ("harness self-test", [py, "first/aesthetic/scripts/bootstrap_harness.py", "self-test"]),
+        *skill_gates,
         # Found, not listed. The list this replaces is B-023's root cause.
-        *test_gates(py),
+        *test_gates(py, root),
         ("index gate", [py, "tools/index_gate.py"]),
         ("loanwords", [py, "tools/loanwords.py"]),
         ("publish main",[py, "tools/publish.py", "--out", str(tree / "main"), "--check"]),
@@ -92,8 +96,8 @@ def gates(tree: Path) -> list[tuple[str, list[str]]]:
         # exit code. `--project-root` is the runner's tempdir because cook
         # refuses one inside the repository, and it is outside by construction.
         ("Cook Food Product round", [py, "cook/cook.py", "run", "--project-root", str(tree / "cook")]),
-        *((f"{path.parent.name}/{path.name} parses", [node, "--check", str(path.relative_to(ROOT))])
-          for path in sorted(ROOT.glob("first/aesthetic/*/*.js")) if node),
+        *((f"{path.parent.name}/{path.name} parses", [node, "--check", str(path.relative_to(root))])
+          for path in sorted(root.glob("first/aesthetic/*/*.js")) if node),
     ]
 
 

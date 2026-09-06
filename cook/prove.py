@@ -13,6 +13,7 @@ confuse one diagnosis with another.
 from __future__ import annotations
 
 import json
+import argparse
 import subprocess
 import sys
 import tempfile
@@ -49,7 +50,8 @@ def record(project_root: Path, run_id: str, screen: str, asked: str) -> dict:
         done = tokens_qa(project_root, "record", SKILL,
                          "--request", str(request),
                          "--output-manifest", str(manifest),
-                         "--invocation", run_id, "--harness", "cook", "--json")
+                         "--invocation", run_id, "--harness", "cook", '--project-root', str(project_root),
+                         '--token-profile', 'unknown', "--json")
     if done.returncode != 0:
         raise CookError(
             f"tokens-qa record exited {done.returncode}: "
@@ -83,3 +85,53 @@ def prove(project_root: Path, round_runner) -> dict:
             # The round's own verdict still decides. Recording a Shot for a
             # broken round is evidence, not a pass.
             "passed": result.get("passed", False)}
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description='Record one code/document proof through Tokens QA.')
+    parser.add_argument('--project-root', type=Path, required=True)
+    parser.add_argument('--item-id', required=True)
+    parser.add_argument('--invocation', required=True)
+    parser.add_argument('--request', required=True)
+    parser.add_argument('--manifest', required=True)
+    parser.add_argument('--proof', required=True)
+    parser.add_argument('--token-profile', default='unknown')
+    parser.add_argument('--tokens-input', type=int)
+    parser.add_argument('--tokens-output', type=int)
+    parser.add_argument('--check', nargs=argparse.REMAINDER, required=True)
+    args = parser.parse_args(argv)
+    try:
+        root = args.project_root.resolve(strict=True)
+        proof = (root / args.proof).resolve()
+        if not proof.is_relative_to(root) or proof.exists() or not args.check:
+            raise CookError('proof must be a new project-contained file; check argv required')
+        # The command is explicit caller input, never read from stored Shot evidence.
+        check = subprocess.run(args.check, cwd=root, capture_output=True, text=True, timeout=60)
+        with proof.open('x', encoding='utf-8') as output:
+            output.write(check.stdout + check.stderr)
+        with tempfile.TemporaryDirectory() as temporary:
+            gates = Path(temporary) / 'gates.json'
+            gates.write_text(json.dumps({'l2': {'status': 'pass' if check.returncode == 0 else 'fail',
+                'name': json.dumps(args.check), 'observer': 'cook/prove.py',
+                'observed_at': datetime.now(timezone.utc).isoformat(), 'artifacts': [str(proof)]}}))
+            command = ['record', 'code/document', '--project-root', str(root),
+                       '--item-id', args.item_id, '--invocation', args.invocation,
+                       '--request', args.request, '--output-manifest', args.manifest,
+                       '--gates', str(gates), '--harness', 'cook/prove.py',
+                       '--token-profile', args.token_profile, '--json']
+            for name in ('tokens_input', 'tokens_output'):
+                if getattr(args, name) is not None:
+                    command += ['--' + name.replace('_', '-'), str(getattr(args, name))]
+            done = tokens_qa(root, *command)
+        if done.returncode:
+            raise CookError(done.stderr or done.stdout)
+        result = json.loads(done.stdout)['result']
+        print(json.dumps({**result, 'check_passed': check.returncode == 0}))
+        return int(check.returncode != 0)
+    except (CookError, OSError, subprocess.SubprocessError) as error:
+        print(json.dumps({'error': str(error)}))
+        return 2
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

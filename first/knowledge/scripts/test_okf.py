@@ -122,10 +122,6 @@ class Check(unittest.TestCase):
         self.assertEqual(okf.main(["check", "--root", str(self.root)]), 0)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class Ignore(unittest.TestCase):
     """A bundle that shares its directory with something else it does not own."""
 
@@ -147,3 +143,40 @@ class Ignore(unittest.TestCase):
                                             encoding="utf-8")
         self.assertEqual(okf.main(
             ["check", "--root", str(self.root), "--ignore", "CONTEXT.md"]), 0)
+
+
+class CheckLinks(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+
+    def test_percent_encoded_index_link_resolves(self):
+        (self.root / "My Doc.md").write_text("---\ntype: Reference\n---\n",
+                                             encoding="utf-8")
+        (self.root / "index.md").write_text("- [Doc](My%20Doc.md)\n",
+                                            encoding="utf-8")
+        self.assertEqual(okf.main(["check", "--root", str(self.root)]), 0)
+
+    def test_fragment_index_link_counts_as_listed(self):
+        (self.root / "a.md").write_text("---\ntype: Reference\n---\n",
+                                        encoding="utf-8")
+        (self.root / "index.md").write_text("- [A](a.md#section)\n",
+                                            encoding="utf-8")
+        self.assertEqual(okf.main(["check", "--root", str(self.root)]), 0)
+
+    def test_nested_index_owns_its_concepts(self):
+        (self.root / "index.md").write_text(
+            "- [Child](child/)\n- [Top](top.md)\n", encoding="utf-8")
+        (self.root / "top.md").write_text("---\ntype: Reference\n---\n",
+                                          encoding="utf-8")
+        child = self.root / "child"
+        child.mkdir()
+        (child / "index.md").write_text("- [Nested](nested.md)\n",
+                                        encoding="utf-8")
+        (child / "nested.md").write_text("---\ntype: Reference\n---\n",
+                                         encoding="utf-8")
+        self.assertEqual(okf.main(["check", "--root", str(self.root)]), 0)
+        self.assertEqual(okf.main(["check", "--root", str(child)]), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

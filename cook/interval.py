@@ -20,18 +20,7 @@ from typing import NamedTuple
 SKILL_MARKER = re.compile(r"Base directory for this skill: (\S+)")
 
 
-def text_of(entry: dict) -> tuple[str, list]:
-    """One transcript row's prose, and its blocks. The Claude Code shape.
-
-    The only place this package knows what an agent app's rows look like. A
-    second app is a second reader here, not a second reader in every caller.
-    """
-    content = entry.get("message", {}).get("content")
-    blocks = content if isinstance(content, list) else []
-    if isinstance(content, str):
-        return content, blocks
-    return " ".join(b.get("text", "") for b in blocks
-                    if isinstance(b, dict) and b.get("type") == "text"), blocks
+from claude import text_of
 
 
 class Invocation(NamedTuple):

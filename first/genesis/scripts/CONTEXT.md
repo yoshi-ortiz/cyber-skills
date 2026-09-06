@@ -10,9 +10,10 @@ max_file_bytes: 30000
 Standard library only, `--help` on every entry point, a `test_*.py` beside each
 module that runs under `python3 -m unittest`.
 
-`genesis_flow.py` inspects project topology on disk and computes the single
-next action. It makes no decisions about scope or design, leaving those to
-human judgement and skill doctrine.
+`compass.py` owns roadmap parsing, structural validation and Item selection.
+Its standalone result is shared with Repo Context, which adds Shot observations
+and verified closure. `genesis_flow.py` retains the legacy topology audit;
+its next action is a topology recommendation, not Item closure authority.
 
 `SKILL.md` is canonical. The state-machine table there names the files a
 project keeps state in, and this module reads that table rather than listing

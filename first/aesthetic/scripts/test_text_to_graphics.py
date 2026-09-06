@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import contextlib
+import hashlib
 import json
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from graphics_flow import next_action, read_state
@@ -68,6 +70,20 @@ def _project(**overrides: dict):
         for name, payload in overrides.items():
             (store / f"{name}.json").write_text(json.dumps(payload), encoding="utf-8")
         yield project
+
+
+def _reviewed_intent(project: Path) -> None:
+    constraints = [{"id": "done", "text": "One readable 16:9 moodboard.",
+                    "priority": "criterion", "sourceRef": "brief-events:7"}]
+    digest = hashlib.sha256(json.dumps(
+        constraints, ensure_ascii=False, sort_keys=True,
+        separators=(",", ":")).encode()).hexdigest()
+    (project / STORE / "reviewed-intent.json").write_text(json.dumps({
+        "version": 1, "reviewed": True,
+        "invocation": "aesthetic/moodboard-generation",
+        "source": {"kind": "user", "ref": "brief-events:7", "digest": digest},
+        "review": {"source": "user", "at": "2026-09-05T12:00:00Z"},
+        "constraints": constraints}), encoding="utf-8")
 
 
 FOREIGN_SCENE = {
@@ -213,6 +229,40 @@ class CorpusDrivenPromptTests(unittest.TestCase):
         with _project() as project:
             style = compile_slices(project)["slices"]["style"]
             self.assertNotIn("How this corpus builds a figure", style)
+
+class MoodboardRuntimeGateTests(unittest.TestCase):
+    def test_missing_proof_stops_the_expensive_runner(self) -> None:
+        with _project() as project:
+            _reviewed_intent(project)
+            with unittest.mock.patch("graphics_generation.subprocess.run") as invoked:
+                with self.assertRaisesRegex(ValueError, "generation blocked"):
+                    run_moodboard(project)
+            invoked.assert_not_called()
+
+    def test_matching_observed_proof_permits_exactly_one_runner_call(self) -> None:
+        import direction_context as dc
+
+        with _project() as project:
+            _reviewed_intent(project)
+            trace = dc.compile_pass(project, "generation", proof=("golden-rules",),
+                                    require_reviewed=True)
+            artifact = project / "proof.txt"
+            artifact.write_text("golden rules passed", encoding="utf-8")
+            proof = project / "proof.json"
+            proof.write_text(json.dumps({"version": 1, "check": "golden-rules",
+                "status": "passed", "invocation": "aesthetic/moodboard-generation",
+                "intentDigest": trace["identity"], "observedAt": "2026-09-05T12:01:00Z",
+                "artifact": "proof.txt",
+                "artifactSha256": hashlib.sha256(artifact.read_bytes()).hexdigest()}),
+                encoding="utf-8")
+            completed = unittest.mock.Mock(returncode=0, stdout="ok", stderr="")
+            with unittest.mock.patch("graphics_generation.subprocess.run",
+                                     return_value=completed) as invoked:
+                result = run_moodboard(project, proof=proof)
+            invoked.assert_called_once()
+            self.assertEqual(result["proofGate"]["state"], "passed")
+            self.assertEqual(result["contextIdentity"], trace["identity"])
+
 
 class EmptySpaceGateTests(unittest.TestCase):
     """An empty room is one of the recorded failures. The gate owns it now."""

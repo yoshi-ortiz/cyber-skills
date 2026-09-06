@@ -15,32 +15,17 @@ alone in any folder; package tools and deterministic Markdown chunks are optiona
 
 ## Compass
 
-1. Inspect before creating files. Preserve existing work and conventions. Assume
-   no technical knowledge; explain consequential choices plainly.
-2. State the end user's outcome, acceptance test, exclusions and session budget.
-   Keep the end-user persona primary; other stakeholders impose constraints.
-3. Resume one active item per workstream, otherwise select the smallest ready
-   vertical slice: one observable user outcome across its necessary layers.
-   Fix core instability before creative backlog. Split epics by outcomes, not layers.
-4. In ROADMAP.md use ID, State, Item, Workstream, Depends on, Priority, Scope,
-   Proof and Shot columns. Lower numeric priority wins; document order breaks ties.
-   Dependencies must be DONE. Defer optional ideas explicitly. Bound work before
-   building; missing scope or proof means clarify the contract, not expand it.
-5. Build, run the acceptance path and record evidence against the same ID.
-   Corrected/rejected feedback returns to that item; silence stays pending.
-   DONE requires explicit acceptance, passing verification and unchanged proof.
-6. Summarize the result, evidence, remaining budget and next action. Never
-   manufacture feedback or optimize token cost by dropping user constraints.
-
-When installed, `scripts/compass.py --project-root PATH next` selects from
-managed rows (nonempty Workstream). Its `check` validates structure, not proof.
-This repository's `tools/repo_context.py --json next` additionally joins Shot
-feedback; its `check` enforces closure. Neither command authorizes scope expansion.
-
-Safe self-improvement means use the product, preserve failures, change one
-instruction or regression test from evidence, then rerun the same acceptance
-test. No automatic prompt mutation, hidden reasoning capture, or model-training
-claim. Keep negative feedback; never rewrite it as success.
+1. Inspect existing work and state the end user's outcome, criteria, exclusions
+   and session budget. Selection ends with one bounded Item.
+2. Run `scripts/compass.py --project-root PATH next` to resume active work or
+   select ready work. Its `check` validates roadmap structure. The standalone
+   selector requires only Python and the target project's ROADMAP.md.
+3. Build the selected outcome, run its public acceptance path and retain the
+   user's actual feedback and proof. Completion requires explicit acceptance.
+4. In this repository, use `tools/repo_context.py --json next` to join selection
+   with Shot observations. For reviewed fields, budget or closure, read
+   [Feature compass](../../docs/SPEC/FEATURE_COMPASS.md). For compliance, read
+   [QA.md](../../QA.md). Installed Genesis remains usable without Tools.
 
 ## Work style (`work-style`)
 

@@ -17,7 +17,8 @@ repository scan standing in for evidence: context you cannot see is
 `record --item-id ID --project-root PATH` links an attempt to a roadmap item.
 `history --item-id ID --project-root PATH --json` returns its latest feedback and
 costs grouped by tokenizer profile. `gate SHOT --project-root PATH` requires
-acceptance, no veto, passing L2 and hash-verified proof artifacts. Record observed
+sourced user acceptance, no unresolved correction or veto, passing L2 provenance
+and hash-verified proof artifacts. Record observed
 L1/L2 results with `--gates gates.json`; it never executes the declared check.
 Keep acceptance pending until the user supplies a verdict.
 
@@ -43,10 +44,13 @@ python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt \
   --output-manifest manifest.json
 python3 <skill>/scripts/tokens_qa.py observe .audit/shots/<id>.json
 python3 <skill>/scripts/tokens_qa.py compare <baseline>.json <candidate>.json
-python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json --status accepted
+python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json --status accepted \
+  --source-kind user --source-ref <turn> --source-text "<words>" --observed-at <time>
 python3 <skill>/scripts/tokens_qa.py assess-feedback --evidence turns.json --json
 python3 <skill>/scripts/tokens_qa.py shot-audit --evidence turns.json --json
 python3 <skill>/scripts/tokens_qa.py correction .audit/shots/<id>.json
+python3 <skill>/scripts/tokens_qa.py history --project-root . --item-id <id> --json
+python3 <skill>/scripts/tokens_qa.py retention --project-root . --item-id <id>
 ```
 
 `record` writes one canonical Shot record under `.audit/shots/` at version 2,
@@ -66,11 +70,18 @@ feedback join by one identity instead of by whichever was most recent.
 against a candidate. `compare` is the same table with both records required.
 Neither writes anything.
 
-`feedback` is authority, not inference. `--status`, `--correction`,
+`feedback` appends a versioned event and updates the effective compatibility
+view. `--operation-id` makes replay idempotent; `--expected-revision` detects a
+stale writer. `--resolve <event-id>` clears only named corrections. `--status`, `--correction`,
 `--sentiment` and `--rank` are independent, at least one is required, and none
 is ever derived from another. A correction is not a status. Existing `evidence`
 and `observed_at` survive. A record stored at version 1 is frozen history and
-refuses every write; record a new shot instead.
+refuses every write; record a new shot instead. Closure accepts only a `user`
+event carrying source reference, observed time, and supplied or redacted words.
+
+`retention` previews exact Item records and a revision. Re-run with `--delete`
+and that revision for explicit deletion. It retains hashed identity/status only;
+artifacts remain caller-owned. Deleted evidence makes closure unverifiable.
 
 `assess-feedback` reads an evidence bundle whose `turns` is a list of strings
 and names the fields a human might want to set. It is advisory, and it writes

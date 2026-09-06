@@ -52,6 +52,12 @@ count is exact or estimated. An available target tokenizer supplies exact token
 ids, offsets, and cost. A byte-based fallback must identify itself as an
 estimate; one tokenizer must never stand in for every LLM.
 
+The first deployed invocation is `aesthetic/moodboard-generation`. Its reviewed
+intent is a versioned record scoped to that invocation, with user review evidence,
+source reference and digest, and explicit prioritized constraints. The initial
+runtime profile is `bytes/4`, labeled estimated; its declared generation budget is
+12,000 tokens.
+
 ## Deterministic program
 
 For the same repository revision, task, declarations, tokenizer profile, and
@@ -75,6 +81,10 @@ budget, compilation must produce byte-for-byte equivalent output.
    candidate was selected, omitted, or truncated.
 8. Stop before an expensive pass until its cheapest representative proof has
    passed, unless the user explicitly requested the expensive pass directly.
+
+For the first invocation, the stop is immediately before the `agy` subprocess.
+An exception must itself be a timestamped, user-sourced record scoped to that
+invocation; an unrecorded force flag cannot authorize runtime execution.
 
 No learned score may override exclusion, priority, budget, proof, or
 publication rules.

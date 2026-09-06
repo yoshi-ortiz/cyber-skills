@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Directory context contracts.
+"""Package directory context contracts.
 
 Every directory carries a CONTEXT.md declaring what it is for, what belongs in
 it, what does not, and what it costs. This checker validates one directory

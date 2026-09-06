@@ -34,6 +34,8 @@ prototype backlog in `GOAL.md` until the answer is settled.
 | `CHANGELOG.md` | Shipped changes |
 
 For query syntax, run `python3 tools/repo_context.py --help`.
+For NEXT upgrade work, brief [NEXT.md](NEXT.md) at entry and update its progress
+and verification evidence before the final briefing.
 
 ## Core modules
 

@@ -16,7 +16,7 @@ argument and has no repository-wide form for the runner to call.
 
 | Step | Answers |
 | --- | --- |
-| `contracts` | does every directory honour its contract and budget? |
+| `tools/contracts` | does every directory honour its contract and budget? |
 | `unittest` | does the behaviour claimed actually hold? |
 | `self-test` | are ledger invariants intact? |
 | `golden_rules` | what fraction of decisions are rule-pinned vs improvised? |

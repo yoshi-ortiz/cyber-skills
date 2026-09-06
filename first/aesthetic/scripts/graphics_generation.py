@@ -3,13 +3,66 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 
-def run_moodboard(project_root: Path, *, dry_run: bool = False) -> dict[str, Any]:
+INVOCATION = "aesthetic/moodboard-generation"
+
+
+def _record(root: Path, path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    target = path if path.is_absolute() else root / path
+    target = target.resolve()
+    if not target.is_relative_to(root.resolve()) or not target.is_file():
+        raise ValueError("proof/exception record must be a project-contained file")
+    value = json.loads(target.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("proof/exception record must be an object")
+    return value
+
+
+def _authorize(root: Path, identity: str, proof: Path | None,
+               exception: Path | None) -> dict[str, Any]:
+    def timestamp(value: Any) -> bool:
+        try:
+            datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            return True
+        except ValueError:
+            return False
+
+    observed = _record(root, proof)
+    if observed is not None:
+        artifact = root / str(observed.get("artifact") or "")
+        if (observed.get("version") == 1 and observed.get("check") == "golden-rules"
+                and observed.get("status") == "passed"
+                and observed.get("invocation") == INVOCATION
+                and observed.get("intentDigest") == identity
+                and timestamp(observed.get("observedAt"))
+                and artifact.resolve().is_relative_to(root.resolve())
+                and artifact.is_file()
+                and observed.get("artifactSha256")
+                == hashlib.sha256(artifact.read_bytes()).hexdigest()):
+            return {"state": "passed", "record": str(proof), "artifact": str(artifact)}
+        raise ValueError("golden-rules proof is missing, stale, or scoped elsewhere")
+    waived = _record(root, exception)
+    if (waived is not None and waived.get("version") == 1
+            and waived.get("invocation") == INVOCATION
+            and waived.get("intentDigest") == identity
+            and waived.get("sourceKind") == "user" and waived.get("sourceRef")
+            and timestamp(waived.get("observedAt")) and waived.get("reason")):
+        return {"state": "excepted", "record": str(exception),
+                "sourceRef": str(waived["sourceRef"])}
+    raise ValueError("generation blocked: pass an observed proof or scoped user exception")
+
+
+def run_moodboard(project_root: Path, *, dry_run: bool = False,
+                  proof: Path | None = None, exception: Path | None = None,
+                  profile: str = "bytes/4", budget: int | None = None) -> dict[str, Any]:
     from graphics_corpus import refine_references
     from text_to_graphics import (GraphicsError, _read_json, _sha256_bytes,
                                   append_attempt, compile_slices, load_manifest)
@@ -20,6 +73,11 @@ def run_moodboard(project_root: Path, *, dry_run: bool = False) -> dict[str, Any
         raise GraphicsError(
             "refine-tagged attempts are pending; edit or reuse them before spending "
             "a fresh moodboard shot: " + ", ".join(path for path, _ in pending))
+    from direction_context import compile_pass
+
+    context = compile_pass(project_root, "generation", profile, budget,
+                           proof=("golden-rules",), require_reviewed=True,
+                           invocation=INVOCATION)
     compile_slices(project_root)
     agy = ((manifest.get("adapters") or {}).get("agy") or {})
     model = agy.get("imageModel", "gemini-3.1-flash-image-preview")
@@ -35,6 +93,8 @@ def run_moodboard(project_root: Path, *, dry_run: bool = False) -> dict[str, Any
         "promptHash": _sha256_bytes(prompt.encode("utf-8")),
         "promptBytes": len(prompt.encode("utf-8")),
         "outcome": "pending", "note": "moodboard only; not deliverable",
+        "contextIdentity": context["identity"],
+        "contextProfile": context["profile"], "contextBudget": context["budget"],
     }
     if dry_run:
         record["command"] = (
@@ -44,10 +104,14 @@ def run_moodboard(project_root: Path, *, dry_run: bool = False) -> dict[str, Any
         append_attempt(project_root, record)
         return record
 
+    authorization = _authorize(project_root, context["identity"], proof, exception)
+    record["proofGate"] = authorization
+
     instruction = (
         "Call generate_image exactly once with AspectRatio 16:9, "
-        f"ImageName moodboard_{stamp}, and the Prompt below. "
+        f"ImageName moodboard_{stamp}, and use the reviewed context and Prompt below. "
         f"Save PNG under {attempts_dir}/. Print path or error.\n\n{prompt}")
+    instruction += "\n\nREVIEWED CONTEXT\n" + context["bundle"]
     cmd = ["agy", "--dangerously-skip-permissions", "--print-timeout", "15m",
            "-p", instruction]
     completed = subprocess.run(cmd, cwd=project_root, capture_output=True, text=True)
