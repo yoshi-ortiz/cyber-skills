@@ -11,9 +11,22 @@ max_file_bytes: 12000
 `publish.py`, carrying the skills and nothing else.
 
 `skill_catalog.py` owns each local skill's identity, family, publication
-channel, second names, repository origin, path, doctrine body, and UTF-8 body
-size. `skill_discovery.py` retains compatibility projections, while index,
+channel, second names, repository origin, path, doctrine body, UTF-8 body size,
+and the legal exits declared by operational Family routers. `manifest_gate.py`
+validates exits without loading another router's body. `skill_discovery.py`
+retains compatibility projections, while index,
 publication, and dev install consume catalog records.
+
+`context_learner.py` is a development-only, read-only evaluator over explicitly
+reviewed baseline/candidate attempt records. It counts every attempt, holds
+model/harness/profile/budget controls fixed, and recommends a candidate only when
+training pairs favor it and every held-out task improves token cost without losing
+required-context recall. Incomplete records are refused; reports mutate nothing.
+
+`repo_context.py` owns the Compass/Shot join and its CLI. Its bounded repository
+lookups live in `repo_queries.py`; reviewed Item-contract parsing and validation
+live in `item_contract.py`. The split keeps the public behavior in one place while
+each module remains small enough to audit under this directory's budget.
 
 ```bash
 python3 tools/check.py

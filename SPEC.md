@@ -85,6 +85,13 @@ Every one of the six, before it is done:
 | A row in the README index and every translation it offers | `tools/index_gate.py` refuses otherwise |
 | Its second names present in its own `description` | The gate refuses a name the assistant has never heard of |
 
+The operational routers `build`, `land`, `check`, and `fix` declare their legal
+Family exits in flat `exits:` frontmatter. `tools/skill_catalog.py` is the
+executable projection and `manifest_gate.py` rejects missing, duplicate, unknown,
+or self exits. The declaration owns connectivity only; conditions and reasons
+remain in the source router. `owner` means Fix returns to the Family that owned
+the interrupted work. It is not permission to choose an arbitrary Family.
+
 ## A CLI script costs no context
 
 A skill's doctrine is loaded into a session. A script it names is not. `kit`

@@ -65,8 +65,10 @@ def build(root: Path, readme: str, translation: str | None,
     for name in grouped():
         path = skill_dir(root, name)
         path.mkdir(parents=True, exist_ok=True)
-        (path / "SKILL.md").write_text(with_phase(
-            manifest if name == "knowledge" else f"---\nname: {name}\n---\n", name))
+        router = ("exits: first\n" if name in {"build", "land", "check"}
+                  else "exits: owner\n" if name == "fix" else "")
+        text = manifest if name == "knowledge" else f"---\nname: {name}\n{router}---\n"
+        (path / "SKILL.md").write_text(with_phase(text, name))
     (root / "README.md").write_text(readme)
     if translation is not None:
         (root / "README.es.md").write_text(translation)
@@ -187,6 +189,20 @@ def test() -> None:
                 translation=HEADER + BODY,
                 manifest='---\nname: knowledge\n'
                          'description: "Distils sources: docs, specs, notes."\n---\n') == 0
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        build(root, HEADER + BODY, HEADER + BODY.replace("/knowledge", "/enciclopedia"))
+        entry = root / "build" / "SKILL.md"
+        entry.write_text(entry.read_text().replace("exits: first", "exits: build, nowhere"))
+        assert gate(root) == 1
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        build(root, HEADER + BODY, HEADER + BODY.replace("/knowledge", "/enciclopedia"))
+        entry = root / "land" / "SKILL.md"
+        entry.write_text(entry.read_text().replace("exits: first\n", ""))
+        assert gate(root) == 1
 
     print("OK")
 

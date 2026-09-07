@@ -951,3 +951,80 @@ structures.
 
 **Evidence.** The architecture scan is saved at
 [`bugs/architecture-review-20260905-030336.html`](bugs/architecture-review-20260905-030336.html).
+
+---
+
+## B-032 · Context learner understates retry cost and permits held-out task overlap · open
+
+**Symptom.** Read-only probes on 2026-09-07 UTC reproduced a baseline with
+900 rejected + 100 accepted tokens per task reporting a median of 100, and the
+same task in train and heldout returning `heldout_passed: true`.
+
+**Root cause.** `tools/context_learner.py` recomputes its report median from
+accepted rows instead of the cumulative task/arm aggregates used for ranking,
+and partitions splits without rejecting shared task IDs.
+
+**Impact.** Advisory reports understate the cost of reaching acceptance and can
+present reused tasks as held-out evidence. The three existing learner tests pass
+without detecting either case. No real user improvement is established.
+
+**Fix.** Not implemented. Candidate: reuse cumulative aggregates for reporting
+and validate disjoint experiment membership in the existing evaluator.
+
+**Guard.** Pending: retry-inclusive report cost and train/heldout overlap cases
+through the existing evaluator interface.
+
+**Evidence.** [Compass and SRI architecture review](bugs/compass-sri-architecture-review-20260907.html)
+records the probes, relevant callers, and three scoped deepening opportunities.
+
+---
+
+## B-033 · Aesthetic entry context duplicated and contradicted its communication contract · fixed
+
+**Symptom.** The Aesthetic entry skill prescribed a raw three-line URL handoff
+while `references/user-communication.md` required a labelled Markdown link and
+table. That reference later said “full URL” despite its own rule to mask the raw
+URL. `references/loop.md` also claimed the entry held six one-line steps after
+the entry had evolved into routed sections.
+
+**Root cause.** Reference contracts evolved while copied examples and descriptions
+remained in the always-loaded entry. The same meaning had multiple sources of
+truth, so relevance and co-location drifted.
+
+**Fix.** The entry now points to the communication contract without copying its
+format. The communication contract consistently asks for a linked review URL,
+and the Loop reference accurately describes its relation to the entry. Aesthetic's
+model-invoked description retains distinct start, continue and critique branches;
+conditional doctrine stays disclosed under `references/`.
+
+**Relation to open bugs.** B-013 remains the executable retry-cap gap behind the
+entry's prose-only “fix a rejected spec” instruction. B-025 remains a responsive
+runtime failure despite the Done gate requiring responsive layout. B-026 remains
+the legacy hero's SVG/provenance failure while the entry and delivery guard reject
+new violations. B-027 remains the installed-copy risk to this repository's single
+source of truth. B-024 belongs to the separate vector dashboard and did not justify
+more Aesthetic context.
+
+**Guard.** Aesthetic stays inside its entry/reference byte contracts and the
+offline reference verifier resolves all context pointers. The final context review
+found no further duplicate completion rule to promote into `SKILL.md`.
+
+---
+
+## B-034 · Closed Compass Items broke when an accepted file evolved · fixed
+
+**Symptom.** R-71 remained accepted with its named latest Shot and unchanged proof,
+but the Compass gate failed after `tools/repo_context.py` was split to satisfy its
+file budget. The recorded accepted digest still existed in Git history.
+
+**Root cause.** The live close operation and the audit of an already-closed Item
+used the same artifact check. A live close must match the working tree; a historical
+audit must establish that the exact accepted bytes remain retained evidence.
+
+**Fix.** The normal Shot gate remains strict. The DONE-Item audit alone may resolve
+a mismatched or removed artifact to the exact recorded SHA-256 in Git history. It
+does not accept a similar file or a digest that was never committed.
+
+**Guard.** A focused test commits accepted bytes, changes the working file, proves
+the normal gate still fails, and proves historical closure recognizes only the
+committed digest.

@@ -2,6 +2,7 @@
 name: fix
 description: Something is broken. Restore it, then return to the family that owns it. Routes diagnosing-bugs and systematic-debugging for a defect in the code, and poteto-mode when the session itself has derailed. Use when the user says fix, rail, unstick, or fix-context-derail, reports a crash, a regression, or a failing test, or says the agent has lost the plot and is working on the wrong thing.
 disable-model-invocation: true
+exits: kit, owner
 anchors:
   fix-context-derail: Fix the rail
 aliases:

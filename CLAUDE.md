@@ -3,6 +3,8 @@
 Burndown first. Before package changes, after user corrections, and when
 resuming work, read [Feature burndown](CONTEXT.md#feature-burndown) and follow
 its selection, scope, evidence, and completion rules.
+Read [the project work style](docs/WORK_STYLE.md) for the declared domain and
+always-on constraints.
 
 This repository packages independent agent skills into one release. The skills
 sit on a six-family rail so an agent can tell what kind of work it is doing and

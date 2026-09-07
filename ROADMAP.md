@@ -11,18 +11,29 @@ States: ⚪ `TODO` · 🟡 `IN-PROGRESS` · 🔴 `BLOCKED` · ✅ `DONE`
 Rows with a Workstream participate in the executable compass. Older rows retain
 their recorded state; migrate them deliberately when selecting their work.
 
+<!-- vocabulary: Item -->
 | ID | State | Item | Workstream | Depends on | Priority | Scope | Proof | Shot |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| R-71 | `IN-PROGRESS` | Connect feature selection, Shot feedback, and completion proof | default | | 0 | first/genesis/, check/tokens-qa/, tools/, cook/, docs/, CLAUDE.md, CONTEXT.md, GOAL.md, ROADMAP.md, QA.md, bugs/ | Public command tests exercise selection, correction, rejection, and verified acceptance in a scratch project | |
+| R-71 | `DONE` | Connect feature selection, Shot feedback, and completion proof | default | | 0 | first/genesis/, check/tokens-qa/, tools/, cook/, docs/, CLAUDE.md, CONTEXT.md, GOAL.md, ROADMAP.md, QA.md, bugs/ | Public command tests exercise selection, correction, rejection, and verified acceptance in a scratch project | .audit/shots/ac2251a3eef94c5a95571bbfd3cb7fab.json |
+| R-72 | `IN-PROGRESS` | Guard developer-tooling test discovery against B-023 | default | R-71 | 0 | tools/, docs/WORK_STYLE.md, AGENTS.md, CLAUDE.md, NEXT.md, ROADMAP.md, BUGS.md | `python3 -B tools/test_check.py` schedules script-style and unittest fixtures without a hand-edited list | .audit/shots/6fcd72a83c764de1aaabac96a0b1b1d2.json |
+| R-73 | `TODO` | Build reviewed first-attempt Compass-SRI calibration | default | R-72 | 1 | roadmap/sri-compass.md, tools/context_learner.py, tools/test_context_learner.py, tools/repo_context.py, tools/test_compass_flow.py, check/tokens-qa/, docs/SPEC/, BUGS.md, ROADMAP.md, NEXT.md | `roadmap/sri-compass.md` acceptance cases prove cumulative attempt cost, isolated held-out tasks, sourced positive acceptance with zero corrections, and next/check/close parity | |
+<!-- /vocabulary -->
 
 ## 🧱 codebase / development enviroment
 
 R-71 Sprints 1–5 are technically verified; [NEXT.md](NEXT.md) tracks upgrade
-progress and proof. Actual acceptance remains pending, so R-71 stays IN-PROGRESS.
+progress and proof. The user accepted Sprint 6 and deterministic closure passed,
+so R-71 is DONE.
 Sprint 4 also advances R-50's first bounded invocation; it does not complete the
 whole-catalog compiler or learner outcomes.
 Sprint 6 field Shot `ac2251a3eef94c5a95571bbfd3cb7fab` passed its integrated
-technical proof and is awaiting an actual user verdict.
+technical proof and received an explicit user verdict. R-72 records the selected
+developer-tooling domain guard and awaits its result verdict.
+Stage 8 rail declarations and the Stage 9 reviewed pairwise evaluator are
+technically verified. R-50 remains IN-PROGRESS until a real held-out evaluation
+and the broader invocation outcomes satisfy its promoted contract.
+R-73 is the explicit TODO for the Compass-SRI repairs and field-calibration plan;
+it does not claim that the current evaluator meets that plan.
 
 The architecture backlog is visible before delivery work so the rail is built
 against deliberate seams. The first five rows harden the development

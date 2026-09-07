@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
 import tempfile
 import fcntl
 from contextlib import contextmanager
@@ -124,15 +125,37 @@ def delete_shots(root: Path, paths: list[Path]):
         path.unlink()
 
 
-def verify_artifacts(record: dict, root: Path) -> list[str]:
+def _committed_digest(root: Path, source: Path, wanted: str) -> bool:
+    """Whether Git retains this exact historical artifact version."""
+    relative = source.relative_to(root.resolve()).as_posix()
+    commits = subprocess.run(
+        ["git", "-C", str(root), "log", "--all", "--format=%H", "--", relative],
+        capture_output=True, text=True, check=False,
+    )
+    if commits.returncode:
+        return False
+    for commit in commits.stdout.splitlines():
+        blob = subprocess.run(
+            ["git", "-C", str(root), "show", f"{commit}:{relative}"],
+            capture_output=True, check=False,
+        )
+        if blob.returncode == 0 and "sha256:" + hashlib.sha256(blob.stdout).hexdigest() == wanted:
+            return True
+    return False
+
+
+def verify_artifacts(record: dict, root: Path, allow_historical: bool = False) -> list[str]:
     failures = []
     for index, artifact in enumerate(record["output"].get("artifacts", [])):
         source = contained(root, artifact["path"], f"$.output.artifacts[{index}].path")
+        wanted = artifact.get("sha256")
         if not source.is_file():
+            if allow_historical and _committed_digest(root, source, wanted):
+                continue
             failures.append(f'artifact[{index}]: missing proof or output')
             continue
         digest = sha256_file(source)
-        if artifact.get("sha256") != digest:
+        if wanted != digest and not (allow_historical and _committed_digest(root, source, wanted)):
             failures.append(f"artifact[{index}]: hash mismatch or absent")
     return failures
 

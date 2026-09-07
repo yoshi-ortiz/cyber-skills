@@ -112,7 +112,7 @@ session stalled.
 
 ## Final review handoff
 
-Lead with the full URL, access key, and one project-language review request.
+Lead with the linked review URL, access key, and one project-language review request.
 Then attach every `image_path` emitted by `scripts/review_delivery.py`. These
 paths are absolute and already checked. Do not attach a relative path, a source
 HTML path, an evidence card, or an image that is absent from that JSON.

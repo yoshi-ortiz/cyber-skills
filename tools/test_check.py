@@ -60,4 +60,15 @@ with tempfile.TemporaryDirectory() as tmp:
     assert "harness self-test" not in {name for name, _ in minimal}
     assert any("test_new_gate.py" in name for name, _ in minimal)
 
+    # Stage 7 / B-023: both supported shapes enter the plan without a hand-edited list.
+    orphan = root / "tools" / "test_orphan.py"
+    orphan.write_text("def test(): assert True\n")
+    unit = root / "feature" / "test_unit.py"
+    unit.parent.mkdir()
+    unit.write_text("import unittest\nclass Case(unittest.TestCase): pass\n")
+    planned = check.test_gates(sys.executable, root)
+    assert any(command[-1] == "tools/test_orphan.py" for _name, command in planned)
+    assert any("discover" in command and command[command.index("-s") + 1] == "feature"
+               for _name, command in planned)
+
 print(f"OK: {len(names)} gates, all named, filtered, and reporting their own failure.")

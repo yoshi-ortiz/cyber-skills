@@ -45,11 +45,15 @@ class TheSkillKeepsTheUserInformed(unittest.TestCase):
         self.assertIn("cannot act on", deliver)
 
     def test_first_reply_gives_the_page_and_key_before_any_status(self):
-        skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")
+        root = Path(__file__).resolve().parent.parent
+        skill = (root / "SKILL.md").read_text(encoding="utf-8")
+        contract = (root / "references" / "user-communication.md").read_text(encoding="utf-8")
         section = skill.split("## Start", 1)[1].split("## Read the user", 1)[0]
-        self.assertLess(section.index("🔗 <full URL>"), section.index("👀 <user-language"))
-        self.assertLess(section.index("🔑 <value after ?key=>"), section.index("👀 <user-language"))
-        self.assertIn("no preamble", section)
+        first = contract.split("## First reply", 1)[1].split("## Progress messages", 1)[0]
+        self.assertIn("user-communication.md", section)
+        self.assertLess(first.index("🔗 [Open your designs]"), first.index("👀 While"))
+        self.assertLess(first.index("🔑 abc"), first.index("👀 While"))
+        self.assertIn("no-preamble", section)
 
     def test_live_status_spans_the_real_run(self):
         skill = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(encoding="utf-8")

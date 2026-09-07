@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 # Exact paths, relative to the repository root.
 FOG_FILES = (
+    "AGENTS.md",
     "NEXT.md",
     "CLAUDE.md",
     "GOAL.md",
@@ -44,6 +45,9 @@ FOG_FILES = (
 # Whole directories, relative to the repository root.
 FOG_DIRS = (
     "docs",
+    "knowledge",
+    "roadmap",
+    "kit/domains",
     ".audit",
     ".scratch",
     "tools",
@@ -134,6 +138,7 @@ def is_fog(relative: str, channel: str = "main",
 def reasons() -> dict[str, str]:
     """Why each rule exists, for the error message a check prints."""
     return {
+        "AGENTS.md": "Repo-Dev work style entry; a consuming agent is not changing this package",
         "NEXT.md": "development upgrade progress, never installed skill policy",
         "CLAUDE.md": "routes a Repo-Dev session between the burndown and the rail "
                      "audit; a consuming agent is in neither mode",
@@ -156,6 +161,9 @@ def reasons() -> dict[str, str]:
         "fix/CONTEXT.md": "workflow family container; Repo-Dev routing, not skill payload",
         "kit/spanish/CONTEXT.md": "Spanish skill grouping; Repo-Dev routing, not skill payload",
         "docs": "requirements and distilled knowledge; development state",
+        "knowledge": "project research captured outside the package's installed skills",
+        "roadmap": "implementation plans and acceptance evidence for contributors",
+        "kit/domains": "domain research used to develop skills, not runtime instructions",
         ".audit": "session decision log; development state",
         ".scratch": "local plans and working notes; development state",
         "tools": "publication tooling; it builds main, it does not ship on it",

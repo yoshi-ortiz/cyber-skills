@@ -9,6 +9,7 @@ import contextlib
 import io
 import json
 import copy
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -78,6 +79,23 @@ class Validation(unittest.TestCase):
                 with self.assertRaises(qa.Invalid) as raised:
                     qa.validate(record)
                 self.assertIn(fixture["path"], str(raised.exception))
+
+    def test_historical_closure_accepts_only_the_exact_committed_artifact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = root / "output.txt"
+            artifact.write_text("accepted\n")
+            record = {"output": {"artifacts": [{
+                "path": str(artifact), "sha256": qa.shot_io.sha256_file(artifact)
+            }]}}
+            subprocess.run(["git", "-C", str(root), "init", "-q"], check=True)
+            subprocess.run(["git", "-C", str(root), "add", "output.txt"], check=True)
+            subprocess.run(["git", "-C", str(root), "-c", "user.name=test",
+                            "-c", "user.email=test@example.invalid", "commit", "-qm", "accepted"],
+                           check=True)
+            artifact.write_text("later revision\n")
+            self.assertTrue(qa.shot_io.verify_artifacts(record, root))
+            self.assertEqual(qa.shot_io.verify_artifacts(record, root, allow_historical=True), [])
 
 
 class Verdict(unittest.TestCase):

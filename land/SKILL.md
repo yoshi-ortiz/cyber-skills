@@ -2,6 +2,7 @@
 name: land
 description: Release and deploy work that build has already proven. Routes finishing-a-development-branch to close the branch and land-and-deploy, reached through the gstack bundle, to ship it. Use when the user says land, do, ship, burndown, land-asap-burndown, or land-deployed-release, or asks to close a branch, cut a release, or make a deployment observable.
 disable-model-invocation: true
+exits: build, check, fix
 arguments:
   land-asap-burndown: asap
   land-deployed-release: deploy

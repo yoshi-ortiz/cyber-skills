@@ -2,6 +2,7 @@
 name: build
 description: Code, build, and test against an accepted contract. Routes ponytail for the smallest change that works, tdd and test-driven-development for the red-green loop, code-review before a branch closes, verification-before-completion to prove the thing ran, and semgrep for the security pass. Use when the user says build, to, make, build-clean-code, build-qa-tests, or build-pre-release, or asks to implement, refactor, or test work that first already framed.
 disable-model-invocation: true
+exits: first, land, fix
 anchors:
   build-clean-code: Clean code
   build-qa-tests: QA tests

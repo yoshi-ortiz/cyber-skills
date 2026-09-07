@@ -192,7 +192,7 @@ def gate_result(args):
     record = shot_io.read_shot(args.shot)
     _, history, _ = cmd_history(SimpleNamespace(project_root=args.project_root,
                                                item_id=record.get('item_id')))
-    failures = shot_io.verify_artifacts(record, Path(args.project_root))
+    failures = shot_io.verify_artifacts(record, Path(args.project_root), args.allow_historical)
     latest = history.get('latest') or {}
     if latest.get('shot_id') != record['shot_id']:
         failures.append('latest Shot required')
@@ -503,6 +503,8 @@ def parse(argv):
     gate.add_argument("--project-root", required=True)
     gate.add_argument('--expected-revision')
     gate.add_argument('--proof', action='append')
+    gate.add_argument('--allow-historical', action='store_true',
+                      help='accept an exact recorded artifact retained in Git history')
     gate.set_defaults(run=cmd_gate)
     history = sub.add_parser("history", parents=[common], help="summarize Item attempts")
     history.add_argument("--project-root", required=True)

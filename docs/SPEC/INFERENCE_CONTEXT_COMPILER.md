@@ -132,6 +132,15 @@ reports, and model execution stay in development tooling. Recommendations are
 reviewed before they become deterministic declarations, budgets, or regression
 fixtures.
 
+The first evaluator is `python3 tools/context_learner.py <reviewed.jsonl>`.
+Each version 1 row carries review state, task and repository identity,
+baseline/candidate arm, train/heldout split, model/harness/profile/budget controls,
+bundle and trace hashes, outcome, observed input/output tokens, required-context
+recall, and verdict source. Both arms are required per task. Changed controls,
+legacy rows, incomplete pairs, or an empty split are errors. Success means the
+candidate wins the training majority and every held-out pair improves cumulative
+attempt cost without recall loss. Its JSON remains advisory.
+
 ## Publication boundary
 
 Published skills may contain compact declarations, standard-library selectors,

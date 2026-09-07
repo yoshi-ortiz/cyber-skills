@@ -76,6 +76,14 @@ also:
             "genesis",
         )
 
+    def test_family_exits_form_one_catalog_graph(self) -> None:
+        self.skill("build", "name: build\nexits: first, land, fix")
+        records = skill_discovery.catalog(self.root)
+        self.assertEqual(skill_discovery.rail_graph(records),
+                         {"build": ("first", "land", "fix")})
+        self.assertTrue(skill_discovery.allows_exit(records, "build", "land"))
+        self.assertFalse(skill_discovery.allows_exit(records, "build", "check"))
+
 
 if __name__ == "__main__":
     unittest.main()

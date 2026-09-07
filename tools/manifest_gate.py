@@ -30,6 +30,7 @@ NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
 def check(root: Path, present: list[str]) -> list[str]:
     """Every frontmatter problem across the repo's skills, aliases included."""
     from skill_discovery import catalog
+    from skill_catalog import RAIL_ROUTERS, RAIL_TARGETS
 
     problems: list[str] = []
     claimed: dict[str, str] = {}
@@ -39,6 +40,16 @@ def check(root: Path, present: list[str]) -> list[str]:
         entry = skill_dir / "SKILL.md"
         fields, translations, aliases, also, stubs = frontmatter(entry)
         description = fields.get("description", "")
+
+        if name in RAIL_ROUTERS and not record.exits:
+            problems.append(f"{name}/SKILL.md declares no rail exits")
+        if len(set(record.exits)) != len(record.exits):
+            problems.append(f"{name}/SKILL.md declares duplicate rail exits")
+        for target in record.exits:
+            if target not in RAIL_TARGETS:
+                problems.append(f"{name}/SKILL.md declares unknown rail exit {target!r}")
+            elif target == name:
+                problems.append(f"{name}/SKILL.md declares a self rail exit")
 
         for key, value in fields.items():
             if ": " in value and not value.startswith(('"', "'")):

@@ -10,45 +10,57 @@ arguments:
 # Genesis
 
 First commandment: advance verified, user-accepted features with fewer corrective
-attempts and tokens. Keep the project context and build clean. This prompt works
-alone in any folder; package tools and deterministic Markdown chunks are optional.
+attempts and tokens. This prompt works alone in any folder; every package tool
+it names is optional.
+
+Compass selects one Item. Sections 1 to 8 build it.
 
 ## Compass
 
+0. **No `ROADMAP.md` is a cold start.** Compass has nothing to select: run
+   sections 1 to 8, which write the state it needs. Compass owns every session
+   after that one.
 1. Inspect existing work and state the end user's outcome, criteria, exclusions
    and session budget. Selection ends with one bounded Item.
-2. Run `scripts/compass.py --project-root PATH next` to resume active work or
-   select ready work. Its `check` validates roadmap structure. The standalone
-   selector requires only Python and the target project's ROADMAP.md.
+2. Run `python3 scripts/compass.py --project-root PATH next` from this skill's
+   directory to resume or select work; `check` validates the roadmap. It needs
+   only Python and a `ROADMAP.md` whose table carries `ID` and `State` headers
+   and a nonempty `Workstream` on every selectable row. Without the script,
+   apply those rules by reading the table. `no-ready-item` authorizes no work
+   and never means done: report it and stop.
 3. Build the selected outcome, run its public acceptance path and retain the
    user's actual feedback and proof. Completion requires explicit acceptance.
 4. In this repository, use `tools/repo_context.py --json next` to join selection
-   with Shot observations. For reviewed fields, budget or closure, read
+   with Shot observations; where that script is absent, step 2 is the whole
+   selection. For reviewed fields, budget or closure, read
    [Feature compass](../../docs/SPEC/FEATURE_COMPASS.md). For compliance, read
-   [QA.md](../../QA.md). Installed Genesis remains usable without Tools.
+   [QA.md](../../QA.md).
 
 ## Work style (`work-style`)
 
 `first-work-style` makes domain context a project fact instead of a catalog the
-agent must rediscover in every session. It does not install the whole
-collection and it does not route to Aesthetic.
+agent must rediscover in every session. It installs nothing and it does not
+route to Aesthetic.
 
-1. Read the project's requirements and the available domains from
-   `collection.toml`; choose only the domains this project actually uses.
-2. Run `/kit <domain...>` to make that machine selection explicit. Never infer
-   `all`, and never turn a repository name into a domain by guesswork.
-3. Write `docs/WORK_STYLE.md` with four short sections: **Domains**, **Required
+1. Name the domains this project actually works in, from its own requirements.
+   Never infer `all`, and never turn a repository name into a domain.
+2. Write `docs/WORK_STYLE.md` with four short sections: **Domains**, **Required
    tools**, **Always-on constraints**, and **Excluded scope**. Link to canonical
-   project documents; do not paste skill bodies or the collection catalog.
-4. Add one short instruction in the project's `AGENTS.md` to read
+   project documents; do not paste skill bodies or a catalog.
+3. Add one short instruction in the project's `AGENTS.md` to read
    `docs/WORK_STYLE.md`. If the project carries `CLAUDE.md`, import the same file
    there. Do not duplicate the rail into each agent-specific file.
+
+Those three steps need nothing installed. Arming a machine with a managed skill
+collection is an optional extension, never a precondition: when someone asks for
+it, read [Extending Genesis with the cyber-yoshi workflow](cyber-skills.md).
 
 ## 1. Interview before you architect
 
 Use existing requirements. Ask only for missing choices that materially change
-scope or acceptance; do not re-interview authorized work. Architecture guidance:
-[references/architecture.md](references/architecture.md).
+scope or acceptance; do not re-interview authorized work. For the questions that
+precede a boundary, and for the paradigm a software, editorial, or media package
+each implies, read [Scope interviewing and modular architecture](references/architecture.md).
 
 Raw answers land in `docs/REQUIREMENTS.md` verbatim, including the parts you
 disagree with. Refining in place destroys the record of what was asked for.
@@ -65,8 +77,9 @@ forbidden in code, schema, and docs when referring to that thing.
 ## 3. Record accepted boundary decisions
 
 Record accepted hard-to-reverse choices and their reasons in `docs/adr/`.
-Ordinary implementation choices need no ADR.
-[references/architecture-decisions.md](references/architecture-decisions.md).
+Ordinary implementation choices need no ADR. For which boundaries earn one, the
+minimum shape of the record, and who may accept it, read
+[Architecture decision records](references/architecture-decisions.md).
 
 ## 4. Fetch what you do not know
 
@@ -78,8 +91,11 @@ counting, state, validation and reproducibility; do not ask an LLM to guess them
 
 Do not implement an unfamiliar or fast-moving dependency from recall. Pull the
 current official documentation and distil it into `docs/knowledge/` with
-**/knowledge**, which owns that format. Check the version you distilled against
-the dependency manifest before writing a line against it.
+**/knowledge**. Where that skill is not installed, fetch the Open Knowledge
+Format specification and follow it directly:
+`https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md`.
+Check the version you distilled against the dependency manifest before writing a
+line against it.
 
 ## 5. Source before you write
 
@@ -96,7 +112,12 @@ inside the selected scope; a quick win must leave a clean build and context.
 
 Run the real acceptance path, not only lint or mocked logic. Record its command,
 result and artifacts. Never infer user acceptance from green tests.
-[references/verification.md](references/verification.md).
+
+A feature that misses the benchmark `ROADMAP.md` set for it is incomplete rather
+than merely slow: record the measured number and leave the Item `IN-PROGRESS`.
+For the benchmark kinds, the false positives a green check produces, and the
+root-cause test a bug closes on, read
+[KPI benchmarks and false-positive mitigation](references/verification.md).
 
 ## 8. Update the state, immediately
 

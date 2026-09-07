@@ -28,6 +28,8 @@ GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 ALPHA_SKILLS = ("genesis", "tokens-qa", "knowledge", "silly",
                 "build", "land", "check", "fix")
+RAIL_ROUTERS = frozenset({"build", "land", "check", "fix"})
+RAIL_TARGETS = WORKFLOW | {"owner"}
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,7 @@ class SkillRecord:
     aliases: tuple[str, ...]
     also: tuple[Also, ...]
     stubs: tuple[Stub, ...]
+    exits: tuple[str, ...]
     body: str
     body_bytes: int
 
@@ -126,6 +129,8 @@ def catalog(root: Path, origin: str = ORIGIN) -> list[SkillRecord]:
             aliases=tuple(aliases),
             also=tuple(also),
             stubs=tuple(stubs),
+            exits=tuple(part.strip() for part in fields.get("exits", "").split(",")
+                        if part.strip()),
             body=body,
             body_bytes=len(body.encode("utf-8")),
         )
@@ -141,3 +146,13 @@ def owner_of(relative: Path, records: list[SkillRecord]) -> SkillRecord | None:
 
 def grouped_names() -> list[str]:
     return [name for _family_name, members in GROUPS for name in members]
+
+
+def rail_graph(records: list[SkillRecord]) -> dict[str, tuple[str, ...]]:
+    """Declared Family exits. Conditions remain in each source router."""
+    return {record.name: record.exits for record in records
+            if record.name in RAIL_ROUTERS}
+
+
+def allows_exit(records: list[SkillRecord], source: str, target: str) -> bool:
+    return target in rail_graph(records).get(source, ())

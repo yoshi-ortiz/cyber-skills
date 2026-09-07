@@ -2,6 +2,7 @@
 name: check
 description: Read progress and release evidence back into planning, and change nothing while doing it. Routes zoom-out for the map above the code, review for a read of the diff, and graphify when the question is about a whole codebase. Use when the user says check, check-progress-goals, or check-release-ontology, or asks where a project stands, whether the shipped names still match the contract, or what a subsystem actually does.
 disable-model-invocation: true
+exits: first, build, fix
 anchors:
   check-progress-goals: Progress
   check-release-ontology: Ontology

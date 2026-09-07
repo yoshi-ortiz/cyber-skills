@@ -47,13 +47,8 @@ python3 <skill>/scripts/bootstrap_harness.py open --project-root . \
   --status "<emoji + user-language description of the first real design task>"
 ```
 
-Follow `user-communication.md` for the URL-first reply with no preamble:
-
-```text
-🔗 <full URL>
-🔑 <value after ?key=>
-👀 <user-language review action in the publishing-copy register>
-```
+Follow `user-communication.md`; it owns the exact URL-first reply and
+no-preamble rule.
 
 Update status when visible activity changes.
 
