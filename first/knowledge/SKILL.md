@@ -3,6 +3,7 @@ name: knowledge
 description: Distil external documentation into a local, cited OKF 0.2 knowledge bundle the agent reads instead of re-scraping. Use when researching a dependency, SDK, API, framework, standard, or a competitor's product, and when the user asks to save, cache, capture, or index a reference or a source. Also use before implementing against an unfamiliar or fast-moving library, so the facts in context are fetched and attributed rather than recalled. In Spanish the same skill answers to enciclopedia.
 translations:
   es: enciclopedia
+phase: first
 ---
 
 # Knowledge

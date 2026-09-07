@@ -1,6 +1,7 @@
 ---
 name: aesthetic
 description: Design and art direction that reads as intentional, not templated. Use to start, continue, or critique visual work. Grounds direction in design fundamentals, and folds in a multimodal corpus and user sentiment when they exist, producing ranked decisions and an editorial burndown.
+phase: first
 ---
 
 # Aesthetic ranking
@@ -46,13 +47,8 @@ python3 <skill>/scripts/bootstrap_harness.py open --project-root . \
   --status "<emoji + user-language description of the first real design task>"
 ```
 
-Follow `user-communication.md` for the URL-first reply with no preamble:
-
-```text
-🔗 <full URL>
-🔑 <value after ?key=>
-👀 <user-language review action in the publishing-copy register>
-```
+Follow `user-communication.md`; it owns the exact URL-first reply and
+no-preamble rule.
 
 Update status when visible activity changes.
 

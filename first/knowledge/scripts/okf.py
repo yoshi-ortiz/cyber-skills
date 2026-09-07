@@ -23,6 +23,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import unquote
 
 # OKF reserves these; they carry no frontmatter requirement.
 RESERVED = ("index.md", "log.md")
@@ -149,6 +150,35 @@ def concepts(root: Path, ignore: tuple[str, ...] = ()) -> list[Path]:
                   and not any(p.match(pattern) for pattern in ignore))
 
 
+def owning_index_dir(path: Path, stop: Path) -> Path | None:
+    """Nearest ancestor (including the file's directory) that has index.md.
+
+    Stops at `stop` without looking above it. Nested indexes own their
+    subtree, so a parent `check --root` does not demand those children in
+    the parent's index.
+    """
+    for directory in (path.parent, *path.parents):
+        if (directory / "index.md").is_file():
+            return directory
+        if directory == stop:
+            return None
+    return None
+
+
+def index_markdown_links(body: str) -> set[str]:
+    """Relative .md destinations in an index, fragments stripped, URLs decoded."""
+    found: set[str] = set()
+    for raw in re.findall(r"\]\(([^)]+)\)", body):
+        target = raw.strip()
+        if target.startswith(("http://", "https://", "#", "mailto:")):
+            continue
+        path_part = target.split("#", 1)[0]
+        if not path_part.endswith(".md"):
+            continue
+        found.add(unquote(path_part))
+    return found
+
+
 def cmd_check(args: argparse.Namespace) -> int:
     root = args.root
     if not root.is_dir():
@@ -156,7 +186,10 @@ def cmd_check(args: argparse.Namespace) -> int:
         return 1
     problems: list[str] = []
     ignore = tuple(args.ignore)
-    files = concepts(root, ignore)
+    files = [
+        path for path in concepts(root, ignore)
+        if owning_index_dir(path, root) == root
+    ]
 
     for path in files:
         fields = frontmatter(path.read_text(encoding="utf-8"))
@@ -173,7 +206,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         problems.append("index.md is missing; a bundle with no door is a pile")
     else:
         body = index.read_text(encoding="utf-8")
-        linked = set(re.findall(r"\]\(([^)#]+\.md)\)", body))
+        linked = index_markdown_links(body)
         for path in files:
             if str(path.relative_to(root)) not in linked:
                 problems.append(f"{path.relative_to(root)}: not listed in index.md")

@@ -79,14 +79,22 @@ TUNABLE = {
 
 
 @dataclass(frozen=True)
+class CorpusSkill:
+    """One installed skill's doctrine and its exact UTF-8 size."""
+
+    name: str
+    body: str
+    body_bytes: int
+
+
+@dataclass(frozen=True)
 class PreparedCorpus:
     """Expensive, parameter-independent work shared by every tuning run."""
 
     root: Path
     model: str
     k: int
-    names: list[str]
-    texts: list[str]
+    records: list[CorpusSkill]
     vectors: np.ndarray
     coords: np.ndarray
     similarity: np.ndarray
@@ -97,17 +105,17 @@ def body(text: str) -> str:
     return re.sub(r"^---\n.*?\n---\n", "", text, count=1, flags=re.S).strip()
 
 
-def load(root: Path) -> tuple[list[str], list[str]]:
-    names, texts = [], []
+def load(root: Path) -> list[CorpusSkill]:
+    records = []
     for path in sorted(root.glob("*/SKILL.md")):
         try:
             text = body(path.read_text(encoding="utf-8", errors="replace"))
         except OSError:
             continue
         if text:
-            names.append(path.parent.name)
-            texts.append(text)
-    return names, texts
+            records.append(CorpusSkill(path.parent.name, text,
+                                       len(text.encode("utf-8"))))
+    return records
 
 
 def embed(texts: list[str], model_name: str) -> np.ndarray:
@@ -143,20 +151,21 @@ def layers(model: EVoC, fallback: np.ndarray) -> list[list[int]]:
 
 
 def prepare(root: Path, model_name: str, k: int) -> PreparedCorpus:
-    names, texts = load(root)
-    if not names:
+    records = load(root)
+    if not records:
         raise SystemExit(f"no SKILL.md under {root}")
+    texts = [record.body for record in records]
     vectors = embed(texts, model_name)
     coords = project(vectors)
     similarity = vectors @ vectors.T
     np.fill_diagonal(similarity, -1.0)
-    return PreparedCorpus(root, model_name, k, names, texts, vectors, coords,
+    return PreparedCorpus(root, model_name, k, records, vectors, coords,
                           similarity)
 
 
 def analyze(corpus: PreparedCorpus, params: dict) -> dict:
     """Fit only the tunable layer against one cached corpus."""
-    names, texts = corpus.names, corpus.texts
+    names = [record.name for record in corpus.records]
     model = EVoC(random_state=SEED, **params).fit(corpus.vectors)
 
     strength = np.asarray(getattr(model, "membership_strengths_",
@@ -174,7 +183,7 @@ def analyze(corpus: PreparedCorpus, params: dict) -> dict:
             "strength": round(float(strength[i]), 3),
             "x": round(float(corpus.coords[i][0]), 4),
             "y": round(float(corpus.coords[i][1]), 4),
-            "bytes": len(texts[i]),
+            "bytes": corpus.records[i].body_bytes,
             "peers": [{"name": names[j],
                        "sim": round(float(corpus.similarity[i][j]), 3),
                        "local": names[j] in LOCAL} for j in order],

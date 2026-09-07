@@ -68,11 +68,11 @@ avanzan el trabajo, y `check` y `fix` son arcos de regreso. La columna
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Muestra a qué otros skills se parece el tuyo, y cuál no se parece a nada</td><td><code>build</code> · <strong>Medir</strong></td></tr>
   <tr><td nowrap>🧾 <a href="#-tokens-qa"><strong>/tokens-qa</strong></a></td><td>Observa un shot, mide lo que costó y dice qué rompió</td><td><code>check</code> · <strong>Medir</strong></td></tr>
-  <tr><td colspan="3" align="center"><h3>🛤️ Resto del riel<br><small>Familias planeadas. Todavía no hay comando instalado que responda a estos nombres.</small></h3></td></tr>
-  <tr><td nowrap>🔨 <code>build-*</code></td><td>Implementa y verifica el contrato aprobado</td><td><code>build</code> · <strong>Código · Build · Pruebas</strong></td></tr>
-  <tr><td nowrap>🚢 <code>land-*</code></td><td>Publica salidas y vuelve observable el despliegue</td><td><code>land</code> · <strong>Lanzar · Desplegar</strong></td></tr>
-  <tr><td nowrap>🔍 <code>check-*</code></td><td>Lee el progreso y la evidencia de producción y los devuelve a planeación</td><td><code>check</code> · <strong>Monitorear</strong> → Planear</td></tr>
-  <tr><td nowrap>🩹 <code>fix</code></td><td>Restaura la operación y vuelve a la familia afectada</td><td><code>fix</code> · <strong>Operar</strong>, respuesta a incidentes</td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-check">🛤️ Resto del riel</a><br><small>Los cuatro enrutadores de familia. Enrutan las skills públicas; no las reemplazan.</small></h3></td></tr>
+  <tr><td nowrap>🔍 <a href="#-check"><strong>/check</strong></a></td><td>Lee el progreso y la evidencia de producción, los devuelve a planeación y no escribe nada</td><td><code>check</code> · <strong>Monitorear</strong> → Planear</td></tr>
+  <tr><td nowrap>🔨 <a href="#-build"><strong>/build</strong></a></td><td>Implementa y verifica el contrato aprobado</td><td><code>build</code> · <strong>Código · Build · Pruebas</strong></td></tr>
+  <tr><td nowrap>🚢 <a href="#-land"><strong>/land</strong></a></td><td>Cierra la rama y luego la publica</td><td><code>land</code> · <strong>Lanzar · Desplegar</strong></td></tr>
+  <tr><td nowrap>🩹 <a href="#-fix"><strong>/fix</strong></a></td><td>Restaura la operación y vuelve a la familia afectada</td><td><code>fix</code> · <strong>Operar</strong>, respuesta a incidentes</td></tr>
 </table>
 
 Las versiones estables están en [SKILL PROMPTS](#-skill-prompts). El resto
@@ -540,6 +540,180 @@ propios archivos.
 | Opcional | Nada llega a la carpeta sin haberse pedido por idioma o con `--fun` |
 | Reversibilidad | `unlink` deja la carpeta exactamente como la encontró |
 | Localidad | El manifiesto se queda en la skill que se renombra. Esto nunca se vuelve un registro. |
+
+</details>
+
+## 🔨 /build
+
+La parada donde existe el código. Llega con un contrato que `first` ya aceptó y
+sale con evidencia de que el contrato se sostiene. Enruta las skills públicas
+que hacen el trabajo y no reimplementa ninguna: `ponytail` para el cambio más
+pequeño que funciona, `tdd` y `test-driven-development` para el ciclo rojo
+verde, `code-review` sobre el diff, `verification-before-completion` antes de
+declarar algo terminado, y `semgrep` para la pasada de seguridad.
+
+| | |
+| --- | --- |
+| **Paquete** | [build/](build/) · entrada [build/SKILL.md](build/SKILL.md) |
+| **Invocación** | Solo tú. Di `build`, `to` o `make`. |
+| **Necesita** | Las skills que enruta, instaladas. `/kit coding` las trae. |
+| **Corre sobre** | **Tu** proyecto, nunca este repo |
+| **Canal** | `alpha` |
+
+<details>
+<summary><b>Spec completa: tres secciones y las dos cosas que rechaza</b></summary>
+
+| Di | Corre |
+| --- | --- |
+| `build`, `to`, `make` | Las tres, en orden |
+| `build-clean-code` | Solo Clean code |
+| `build-qa-tests` | Solo QA tests |
+| `build-pre-release` | Solo Pre-release |
+
+Usa `ponytail` antes de escribir, no después. Es barato como restricción sobre
+el diseño y carísimo como reescritura de trabajo terminado.
+
+Una prueba escrita después del código pasa por la razón equivocada: codifica lo
+que el código hace, no lo que decía el contrato. Escribe primero la prueba que
+falla y mírala fallar, porque una prueba que nunca estuvo en rojo nunca
+demostró probar nada.
+
+Dos rechazos. Abstracciones con un solo llamador, agregadas porque se imagina un
+segundo. Capas de compatibilidad para un estado por el que la migración pasa y
+al que nunca vuelve.
+
+"Compila" no es evidencia. Una decisión aceptada en `first` es una entrada, no
+una sugerencia; si está mal, vuelve allá y cámbiala.
+
+</details>
+
+## 🚢 /land
+
+La parada irreversible. Todo lo anterior se puede rehacer editando un archivo, y
+esta llega a otras personas. Cierra la rama y luego la publica, enrutando
+`finishing-a-development-branch` para decidir cómo se integra el trabajo y
+`land-and-deploy`, que llega a través del paquete `gstack`, para lanzar.
+
+| | |
+| --- | --- |
+| **Paquete** | [land/](land/) · entrada [land/SKILL.md](land/SKILL.md) |
+| **Invocación** | Solo tú. Di `land`, `do`, `ship` o `burndown`. |
+| **Necesita** | Las skills que enruta, instaladas. `/kit coding` las trae. |
+| **Corre sobre** | **Tu** proyecto, nunca este repo |
+| **Canal** | `alpha` |
+
+<details>
+<summary><b>Spec completa: los tres estados finales y lo que land no hace</b></summary>
+
+Land no verifica. Eso le toca a la sección Pre-release de `build`, y una rama
+que llega sin esa evidencia vuelve atrás en lugar de avanzar. Verde no es lo
+mismo que verificado, y un stack declarado verde por su propio autor no es
+ninguna de las dos.
+
+Cada pendiente abierto termina el cierre en exactamente uno de tres estados.
+
+| Estado | Lleva |
+| --- | --- |
+| Hecho | La evidencia |
+| Cortado | La razón |
+| Cargado | El pendiente al que ahora pertenece |
+
+El que no queda en ninguno es el que aparece después del lanzamiento.
+
+Los pasos reversibles siguen solos. Lo que no se puede deshacer se confirma
+antes, siempre, por rutinaria que se sintiera la corrida: un force push a una
+rama compartida, un despliegue, un borrado de datos, un mensaje a un cliente.
+
+Publicar **este** paquete es trabajo de Repo-Dev y le toca a `tools/`, no aquí.
+Copiar ese comando dentro de una skill es justo como se separan los dos.
+
+</details>
+
+## 🔍 /check
+
+El arco de regreso, y la única familia que no escribe nada. Lee dónde está el
+trabajo de verdad contra lo prometido, y le entrega el hallazgo a quien le
+corresponde. Enruta `zoom-out` para el mapa sobre un subsistema que no conoces,
+`graphify` para un código completo, y `review`, vía el paquete `gstack`, para un
+diff.
+
+| | |
+| --- | --- |
+| **Paquete** | [check/](check/) · entrada [check/SKILL.md](check/SKILL.md) |
+| **Invocación** | Solo tú. Di `check`. |
+| **Necesita** | Las skills que enruta, instaladas. `/kit research` y `/kit coding` las traen. |
+| **Corre sobre** | **Tu** proyecto, solo lectura |
+| **Canal** | `alpha` |
+
+<details>
+<summary><b>Spec completa: dos secciones, y por qué un hallazgo no es un arreglo</b></summary>
+
+| Di | Corre |
+| --- | --- |
+| `check` | Progreso, luego Ontología |
+| `check-progress-goals` | Solo Progreso |
+| `check-release-ontology` | Solo Ontología |
+
+Progreso lee primero el registro del propio proyecto y después el repositorio,
+porque un roadmap sale más barato que recorrer el código. Reporta la **brecha**
+entre el registro y el código. Un pendiente marcado como hecho cuya evidencia
+nadie puede producir es el hallazgo.
+
+Ontología pregunta si cada nombre público sigue resolviendo a exactamente una
+skill, y si cada skill responde a los nombres que dice su propia descripción. Un
+nombre declarado en un archivo y ausente de toda descripción es una palabra a la
+que nada responde. Eso lo deciden las compuertas; la sección dice cuál correr y
+cómo leer lo que regresa.
+
+Seguro a media sesión, porque no cambia nada. Una ruta de código rota va a
+`fix`, el trabajo sin terminar va a `first`, una verificación que falla vuelve a
+`build`. Un nombre con dos dueños va a `first` para resolverse en la spec, nunca
+se parcha en `check`.
+
+Las dos skills de medición de esta familia,
+[/build-context-token-vectors](#-build-context-token-vectors) y
+[/tokens-qa](#-tokens-qa), llevan su propia doctrina.
+
+</details>
+
+## 🩹 /fix
+
+Una entrada directa, desde fuera de la secuencia, en el momento en que algo deja
+de funcionar. Dos roturas, un mismo reflejo: el código está mal, o el trabajo lo
+está. Enruta `diagnosing-bugs` y `systematic-debugging` para un defecto, y
+`poteto-mode` cuando la sesión misma se descarriló.
+
+| | |
+| --- | --- |
+| **Paquete** | [fix/](fix/) · entrada [fix/SKILL.md](fix/SKILL.md) |
+| **Invocación** | Solo tú. Di `fix`, `rail` o `unstick`. |
+| **Necesita** | Las skills que enruta, instaladas. `/kit coding` las trae. |
+| **Corre sobre** | **Tu** proyecto, nunca este repo |
+| **Canal** | `alpha` |
+
+<details>
+<summary><b>Spec completa: las dos roturas, y la que no es esta skill</b></summary>
+
+**Arreglar el código.** Reproduce antes de teorizar, porque un arreglo escrito
+contra un síntoma que no viste fallar es una adivinanza que quedó commiteada.
+Sigue preguntando por qué hasta que la respuesta deje de ser una reformulación
+del síntoma: un parche en el punto del error, cuando el error venía tres marcos
+más arriba, mueve el bug en vez de quitarlo. El arreglo termina con el caso que
+falla convertido en prueba.
+
+**Arreglar el riel.** El código corre y la sesión se desvió. Primero detente.
+Más salida sobre una sesión descarrilada no compra nada, y un tramo largo de
+trabajo en la dirección equivocada cuesta más desarmarlo que abandonarlo.
+Después relee el registro, no la conversación: la spec aceptada, el pendiente
+del roadmap y el estado tal como está escrito valen más que lo que cualquiera de
+las dos partes recuerde.
+
+Un problema de instalación o de la colección **no** es esta skill. Una skill que
+llegó mal, un dominio que nunca se sincronizó, dos skills que chocan: eso es
+[/kit](#-kit), que responde a `doctor`, `repair`, `troubleshoot` y `conflict`.
+
+Fix restaura la ruta y devuelve el trabajo. No se queda con la propiedad del
+trabajo que viajaba sobre ella.
 
 </details>
 

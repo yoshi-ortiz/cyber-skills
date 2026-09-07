@@ -28,6 +28,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
 HERE = Path(__file__).resolve().parent
 KEY = re.compile(r"[?&]key=([0-9a-f]+)")
@@ -175,18 +176,48 @@ def deliver(project_root: Path, out: str, cohort: str, round_label: str, asks: s
     step([harness, "status", "--idle", "--text", idle_text], project_root)
 
     found = KEY.search(url)
+    payload = json.loads(images) if images else []
     return {"url": url, "key": found.group(1) if found else "",
-            "ask": asks, "images": json.loads(images) if images else []}
+            "ask": asks, "images": payload,
+            "corpusFit": corpus_fit(project_root, payload)}
+
+
+def corpus_fit(project_root: Path, images: Any) -> list[dict]:
+    """How much of each delivered comp's colour the corpus evidences.
+
+    Reported, not refused. A round may legitimately propose a palette the
+    corpus has never shown, and the user is the one who decides that. What must
+    not happen again is shipping a comp in invented colour with nothing saying
+    so, which is how every character round in this project drifted.
+    """
+    from graphics_corpus import palette_audit
+
+    declared = images.get("images", []) if isinstance(images, dict) else []
+    report = []
+    for item in declared:
+        source = (item or {}).get("source_html") if isinstance(item, dict) else None
+        if not source or not Path(source).is_file():
+            continue
+        try:
+            audit = palette_audit(project_root, Path(source))
+        except OSError:
+            continue
+        report.append({"element": item.get("element"), "fit": audit["fit"],
+                       "unevidenced": [entry["declared"]
+                                       for entry in audit["unevidenced"]]})
+    return report
 
 
 def record_shot(payload: dict, round_label: str, asks: str,
-                invocation: str = "") -> None:
+                invocation: str = "", *, project_root: Path = REPO_ROOT,
+                item_id: str = "", gates: str = "", proof: list[str] = ()) -> dict | None:
     """Write the delivered round to the Shot ledger, so QA has something to read."""
     images = payload.get("images") or {}
     declared = images.get("images", []) if isinstance(images, dict) else []
     artifacts = [{"path": item["image_path"], "role": "deliverable",
                   "mime": "image/png"}
                  for item in declared if isinstance(item, dict) and item.get("image_path")]
+    artifacts += [{"path": path, "role": "proof"} for path in proof]
     if not artifacts:
         return
     with tempfile.TemporaryDirectory(prefix="deliver-shot-") as staging:
@@ -199,14 +230,20 @@ def record_shot(payload: dict, round_label: str, asks: str,
                             encoding="utf-8")
         command = [sys.executable, str(TOKENS_QA), "record", "first/aesthetic",
                    "--request", str(request), "--output-manifest", str(manifest),
-                   "--scope", round_label]
+                   "--scope", round_label, '--project-root', str(project_root),
+                   '--token-profile', 'unknown', '--json']
         if invocation:
             command += ["--invocation", invocation]
+        if item_id:
+            command += ['--item-id', item_id]
+        if gates:
+            command += ['--gates', gates]
         done = subprocess.run(
             command,
-            cwd=str(REPO_ROOT), capture_output=True, text=True)
+            cwd=str(project_root), capture_output=True, text=True)
     if done.returncode != 0:
         raise DeliveryError((done.stderr or done.stdout).strip())
+    return json.loads(done.stdout)['result']
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -224,6 +261,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--agent-url", default="")
     parser.add_argument("--invocation", default="",
                         help="skill@timestamp id returned by assistant_app.py")
+    parser.add_argument('--item-id', default='')
+    parser.add_argument('--gates', default='')
+    parser.add_argument('--proof', action='append', default=[])
     args = parser.parse_args(argv)
     try:
         payload = deliver(args.project_root.resolve(), args.out, args.cohort,
@@ -240,7 +280,9 @@ def main(argv: list[str] | None = None) -> int:
     # nothing, because by this line the screen is live and the payload is
     # printed. An unrecorded round is a gap in QA, not a broken delivery.
     try:
-        record_shot(payload, args.round_label, args.asks, args.invocation)
+        record_shot(payload, args.round_label, args.asks, args.invocation,
+                    project_root=args.project_root.resolve(), item_id=args.item_id,
+                    gates=args.gates, proof=args.proof)
     except Exception as unrecorded:
         print(f"deliver: round delivered but not recorded: {unrecorded}",
               file=sys.stderr)

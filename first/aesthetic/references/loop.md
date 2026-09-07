@@ -10,9 +10,9 @@ generated:
 
 # The loop, in full
 
-`SKILL.md` carries the six steps in one line each. This is what each one means
-when it is done properly. Read it when starting a project, when the thesis feels
-thin, or when a screen came back scoring badly and you cannot say why.
+`SKILL.md` carries the route and completion gate. This reference expands the six
+creative steps. Read it when starting a project, when the thesis feels thin, or
+when a screen came back scoring badly and you cannot say why.
 
 ## 1 · Frame
 

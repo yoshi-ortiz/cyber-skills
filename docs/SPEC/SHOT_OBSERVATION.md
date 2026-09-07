@@ -71,6 +71,8 @@ JSON is canonical. The current schema is version 2. Example:
 | `output` | object | See below |
 | `provenance` | enum | `corpus`, `procedural`, `fetched`, `inference` |
 | `user_feedback` | object | See below |
+| `feedback_events` | array | Optional append-only sourced events |
+| `feedback_baseline` | object | Effective view before the first event |
 
 ## `inputs`
 
@@ -82,6 +84,7 @@ JSON is canonical. The current schema is version 2. Example:
 | `stack` | no | string[] |
 | `request` | no | string |
 | `target_skill` | no | string |
+| `request_ref` | no | string; source pointer when request text is redacted |
 
 A corpus descriptor is an object with a required `path`. Version 1 wrote bare
 strings. Each string becomes `{ "path": "<the string>" }` on migration.
@@ -126,13 +129,19 @@ filled in with null.
 
 **Primary verdict:** `status`, `sentiment`, and `correction` from user chat.
 Negative sentiment or any correction means the shot did not succeed at L3.
+`user_feedback` remains the effective compatibility view. A feedback write also
+appends a version 1 event containing event and operation IDs, supplied fields,
+source kind (`user`, `caller`, or `fixture`), observation time, source reference
+and supplied text or an explicit redacted reference. Resolution names prior
+event IDs. Operation replay has one effect; different content under the same ID
+conflicts. Legacy feedback remains readable without invented provenance.
 
 ## `gates` (optional)
 
 ```json
 {
   "l1": { "status": "pass|fail|skip", "name": "…", "reason": "…" },
-  "l2": { "status": "pass|fail|skip", "name": "…", "reason": "…" }
+  "l2": { "status": "pass|fail|skip", "name": "…", "observer": "…", "observed_at": "…", "artifacts": ["proof.txt"] }
 }
 ```
 
@@ -160,6 +169,14 @@ record already on disk still reads.
 ## File placement
 
 Convention: `<project-root>/.audit/shots/<shot_id>.json`.
+
+Evidence stays local until explicit deletion. POSIX implementations create the
+directory and files with private user modes. `retention` previews exact records
+and a revision; deletion requires that revision and keeps only hashed identity
+and status. Artifacts remain caller-owned, and deleted evidence makes closure
+unverifiable. Raw transcripts and hidden reasoning are excluded. Redacted
+requests store `[redacted]` plus `request_ref`; this is caller-supplied provenance,
+not automatic secret detection.
 
 Project fog in this repository; not skill payload. Other repos may relocate the
 directory; the schema stays the same.

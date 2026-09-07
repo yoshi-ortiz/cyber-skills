@@ -47,6 +47,26 @@ this file tells you what order to work in, because the order is computed.
 | `repair-output` | The gate rejected the drawing. Fix the cause the reason names, then redraw |
 | `done` | Every gate passes and no artifact is stale |
 
+## Repair an approved raster
+
+Use `clear-shot` when the user wants to keep an existing generated image and
+repair specific drawing errors:
+
+```bash
+python3 <skill>/scripts/text_to_graphics.py --project-root . clear-shot
+```
+
+The manifest must name the approved image in
+`adapters.agy.clearShotReference`. The command writes
+`prompts/clear-shot-prompt.txt`, tells `agy` to inspect the approved image and
+the pursued cartoon references, calls image generation once, and saves a new
+PNG under the attempts directory. The prompt contains exact scene facts and
+short rejection rules. It omits audit prose, source filenames from avoided
+references, and raw corrections aimed at other tools.
+
+`clear-shot` records a successful image as pending. Only the user's review can
+accept it.
+
 An output is stale when no recorded attempt drew it from the current scene hash.
 Prompt slices are stale when the scene, corpus, corpus roles, or tags change.
 An artifact with no attempt behind it has unknown provenance and is redrawn.
@@ -70,7 +90,8 @@ owning architecture part before a prompt can compile.
    2b. `iso_svg.py` in-repo renderer, when no adapter is authorized. It draws
    `isometric-x` layouts only and refuses anything else by name.
 3. **SVGMaker MCP** for vector styling or raster conversion.
-4. **agy CLI** moodboard raster. Never a deliverable.
+4. **agy CLI** raster proposal. `moodboard` explores composition. `clear-shot`
+   repairs an approved raster. Neither ships before user review.
 5. Omit and record the gap.
 
 ## Adapter verdicts

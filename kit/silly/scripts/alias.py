@@ -38,22 +38,31 @@ MARKER = "alias_of"
 # command-name charset restriction the way `aliases` does.
 Also = tuple[str, str]
 
+# One anchor or ghost-argument stub: the name, which kind it is, and the one
+# detail that kind carries -- a section title for an anchor, an argument for a
+# ghost. A whole alias needs no detail, which is why it is not in this list.
+Stub = tuple[str, str, str]
+# Frontmatter block -> the kind of stub its rows declare.
+STUB_BLOCKS = {"anchors": "anchor", "arguments": "ghost"}
 
-def frontmatter(path: Path) -> tuple[dict[str, str], dict[str, str], list[str], list[Also]]:
-    """(top-level fields, translations, aliases, also) from one SKILL.md.
 
-    Hand-parsed rather than YAML so this stays standard library only. Three
-    nested shapes matter and all are one level deep: a mapping under
-    `translations:`, a flat list under `aliases:`, and a `trigger :: note`
+def frontmatter(path: Path) -> tuple[dict[str, str], dict[str, str], list[str],
+                                     list[Also], list[Stub]]:
+    """(top-level fields, translations, aliases, also, stubs) from one SKILL.md.
+
+    Hand-parsed rather than YAML so this stays standard library only. Every
+    nested shape is one level deep: mappings under `translations:`, `anchors:`
+    and `arguments:`, a flat list under `aliases:`, and a `trigger :: note`
     list under `also:`.
     """
     match = re.match(r"\s*---\s*\n(.*?)\n---", path.read_text(encoding="utf-8"), re.S)
     if not match:
-        return {}, {}, [], []
+        return {}, {}, [], [], []
     fields: dict[str, str] = {}
     translations: dict[str, str] = {}
     aliases: list[str] = []
     also: list[Also] = []
+    stubs: list[Stub] = []
     block = ""
     for line in match.group(1).splitlines():
         if line.lstrip().startswith("#") or not line.strip():
@@ -65,30 +74,39 @@ def frontmatter(path: Path) -> tuple[dict[str, str], dict[str, str], list[str], 
         elif block == "translations" and ":" in line:
             code, _, name = line.partition(":")
             translations[code.strip()] = name.strip()
+        elif block in STUB_BLOCKS and ":" in line:
+            name, _, detail = line.partition(":")
+            stubs.append((name.strip(), STUB_BLOCKS[block], detail.strip()))
         elif block == "aliases" and line.lstrip().startswith("-"):
             aliases.append(line.lstrip()[1:].strip())
         elif block == "also" and line.lstrip().startswith("-"):
             trigger, _, note = line.lstrip()[1:].partition("::")
             also.append((trigger.strip(), note.strip()))
-    return fields, translations, aliases, also
+    return fields, translations, aliases, also, stubs
 
 
-def manifested(root: Path) -> list[tuple[str, str, str, str]]:
-    """Every declared second name, as (alias, canonical, kind, description)."""
-    found: list[tuple[str, str, str, str]] = []
+def manifested(root: Path) -> list[tuple[str, str, str, str, str]]:
+    """Every declared second name, as (alias, canonical, kind, description, detail).
+
+    `detail` is the section an anchor bookmarks or the argument a ghost bakes
+    in, and is empty for the kinds that carry neither.
+    """
+    found: list[tuple[str, str, str, str, str]] = []
     for skill in sorted(root.iterdir()):
         entry = skill / "SKILL.md"
         if not entry.is_file():
             continue
-        fields, translations, aliases, _also = frontmatter(entry)
+        fields, translations, aliases, _also, stubs = frontmatter(entry)
         name = fields.get("name") or skill.name
         if fields.get(MARKER):
             continue
         description = fields.get("description", "")
         for code, localized in sorted(translations.items()):
-            found.append((localized, name, code, description))
+            found.append((localized, name, code, description, ""))
         for playful in aliases:
-            found.append((playful, name, "fun", description))
+            found.append((playful, name, "fun", description, ""))
+        for alias_name, kind, detail in stubs:
+            found.append((alias_name, name, kind, description, detail))
     return found
 
 
@@ -102,22 +120,40 @@ def quoted(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def stub(alias: str, canonical: str, kind: str, description: str) -> str:
-    """The whole alias. A name, why it exists, and where the work lives."""
-    label = "another language" if kind != "fun" else "a name that is nicer to type"
+def stub(alias: str, canonical: str, kind: str, description: str,
+         detail: str = "") -> str:
+    """One alias file. A name, why it exists, and where the work lives.
+
+    Three kinds, and the only thing that varies is which part of the skill the
+    pointer aims at: the whole file, one section of it, or the file plus the
+    argument the name stands for.
+    """
+    if kind == "anchor":
+        summary = f"The {canonical} skill's {detail} step"
+        pointer = (f"**{canonical} § {detail}**, under a name of its own. Read "
+                   f"[{canonical}/SKILL.md](../{canonical}/SKILL.md) and follow "
+                   f"that section exactly.")
+    elif kind == "ghost":
+        summary = f"The {canonical} skill, run with {detail}"
+        pointer = (f"**{canonical}** with the argument already chosen. Read "
+                   f"[{canonical}/SKILL.md](../{canonical}/SKILL.md) and run it "
+                   f"with `{detail}`.")
+    else:
+        label = "another language" if kind != "fun" else "a name that is nicer to type"
+        summary = f"The {canonical} skill under {label}"
+        pointer = (f"Another name for **{canonical}**. Read [{canonical}/SKILL.md]"
+                   f"(../{canonical}/SKILL.md) and follow it exactly.")
     return "\n".join([
         "---",
         f"name: {alias}",
-        "description: " + quoted(f"The {canonical} skill under {label}. "
-                                 f"Say {alias} to run it. {description}"),
+        "description: " + quoted(f"{summary}. Say {alias} to run it. {description}"),
         f"{MARKER}: {canonical}",
         "disable-model-invocation: true",
         "---",
         "",
         f"# {alias}",
         "",
-        f"Another name for **{canonical}**. Read [{canonical}/SKILL.md]"
-        f"(../{canonical}/SKILL.md) and follow it exactly.",
+        pointer,
         "",
         "Nothing here changes what that skill does. This file exists so the name",
         "can be typed, and for no other reason.",
@@ -125,9 +161,17 @@ def stub(alias: str, canonical: str, kind: str, description: str) -> str:
     ])
 
 
-def wanted(root: Path, languages: list[str], fun: bool) -> list[tuple[str, str, str, str]]:
+# Anchors and ghosts name this package's own command surface rather than a
+# second language, but they install on the same terms as everything else: only
+# when asked for. Deciding which names a machine carries is kit's call.
+STRUCTURAL = frozenset(STUB_BLOCKS.values())
+
+
+def wanted(root: Path, languages: list[str], fun: bool,
+           stubs: bool = False) -> list[tuple[str, str, str, str, str]]:
     return [row for row in manifested(root)
-            if (row[2] in languages) or (fun and row[2] == "fun")]
+            if (row[2] in languages) or (fun and row[2] == "fun")
+            or (stubs and row[2] in STRUCTURAL)]
 
 
 def cmd_list(args: argparse.Namespace) -> int:
@@ -136,19 +180,19 @@ def cmd_list(args: argparse.Namespace) -> int:
         print(f"no skill under {args.root} manifests a second name")
         return 0
     width = max(len(alias) for alias, *_ in rows)
-    for alias, canonical, kind, _ in rows:
+    for alias, canonical, kind, _description, _detail in rows:
         live = "installed" if (args.root / alias / "SKILL.md").is_file() else "-"
         print(f"{alias:<{width}}  {kind:<4}  {canonical:<16}  {live}")
     return 0
 
 
 def cmd_link(args: argparse.Namespace) -> int:
-    rows = wanted(args.root, args.lang, args.fun)
+    rows = wanted(args.root, args.lang, args.fun, args.stubs)
     if not rows:
-        print("nothing to link: name a language with --lang, or pass --fun",
-              file=sys.stderr)
+        print("nothing to link: name a language with --lang, or pass --fun "
+              "or --stubs", file=sys.stderr)
         return 1
-    for alias, canonical, kind, description in rows:
+    for alias, canonical, kind, description, detail in rows:
         target = args.root / alias
         entry = target / "SKILL.md"
         # Overwrite only what this tool wrote. Anything else with that name is
@@ -162,7 +206,8 @@ def cmd_link(args: argparse.Namespace) -> int:
             print(f"would link {alias} -> {canonical}")
             continue
         target.mkdir(parents=True, exist_ok=True)
-        entry.write_text(stub(alias, canonical, kind, description), encoding="utf-8")
+        entry.write_text(stub(alias, canonical, kind, description, detail),
+                         encoding="utf-8")
         print(f"linked {alias} -> {canonical}")
     if not args.dry_run:
         print("\nStart a new chat. Assistants read their skills at session start.")
@@ -205,6 +250,9 @@ def main(argv: list[str] | None = None) -> int:
                                  help="language to install, repeatable (for example es)")
             command.add_argument("--fun", action="store_true",
                                  help="also install the playful aliases")
+            command.add_argument("--stubs", action="store_true",
+                                 help="also install the anchor and "
+                                      "ghost-argument stubs")
         command.set_defaults(handler=handler)
 
     args = parser.parse_args(argv)

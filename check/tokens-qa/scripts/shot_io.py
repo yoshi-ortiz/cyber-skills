@@ -9,7 +9,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
 import tempfile
+import fcntl
+from contextlib import contextmanager
 from pathlib import Path
 
 from shot_contract import Invalid, require_string, validate
@@ -48,9 +51,28 @@ def dump(record: dict) -> str:
 
 
 def create_shot(path: Path, record: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "x", encoding="utf-8") as handle:
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w", encoding="utf-8") as handle:
         handle.write(dump(record))
+
+
+@contextmanager
+def locked(path: Path):
+    """Serialize local evidence writers; atomic replacement keeps readers intact."""
+    # ponytail: one local lock per evidence directory; split only after measured contention.
+    if path.name == 'shots' and path.parent.name == '.audit':
+        path = path.parent
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with os.fdopen(os.open(path / '.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600), 'r+') as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def revision(record: dict) -> str:
+    return sha256_text(dump(record))
 
 
 def replace_shot(path: Path, record: dict) -> None:
@@ -72,7 +94,73 @@ def inline_output(text: str) -> tuple[dict, int]:
     return {"adapter": "text", "inline": {"text": text}}, size
 
 
-def manifest_output(path) -> tuple[dict, int, list[dict]]:
+def contained(root: Path, path, where: str = "$") -> Path:
+    root = root.resolve(strict=True)
+    target = (root / path).resolve()
+    if not target.is_relative_to(root):
+        raise Invalid(f"{where}: path escapes project root")
+    return target
+
+
+def shot_paths(root: Path):
+    directory = contained(root, ".audit/shots")
+    if not directory.exists():
+        return []
+    return [contained(root, path) for path in sorted(directory.glob("*.json"))]
+
+
+def deleted_shots(root: Path, item_id: str) -> list[dict]:
+    directory = contained(root, '.audit/deleted')
+    return [record for path in sorted(directory.glob('*.json'))
+            if (record := load(contained(root, path))).get('item_id') == item_id]
+
+
+def delete_shots(root: Path, paths: list[Path]):
+    for path in paths:
+        record = read_shot(path)
+        tombstone = {'shot_id': record['shot_id'], 'item_id': record.get('item_id'), 'status': 'deleted'}
+        target = contained(root, '.audit/deleted/' + hashlib.sha256(record['shot_id'].encode()).hexdigest() + '.json')
+        if not target.exists():
+            create_shot(target, tombstone)
+        path.unlink()
+
+
+def _committed_digest(root: Path, source: Path, wanted: str) -> bool:
+    """Whether Git retains this exact historical artifact version."""
+    relative = source.relative_to(root.resolve()).as_posix()
+    commits = subprocess.run(
+        ["git", "-C", str(root), "log", "--all", "--format=%H", "--", relative],
+        capture_output=True, text=True, check=False,
+    )
+    if commits.returncode:
+        return False
+    for commit in commits.stdout.splitlines():
+        blob = subprocess.run(
+            ["git", "-C", str(root), "show", f"{commit}:{relative}"],
+            capture_output=True, check=False,
+        )
+        if blob.returncode == 0 and "sha256:" + hashlib.sha256(blob.stdout).hexdigest() == wanted:
+            return True
+    return False
+
+
+def verify_artifacts(record: dict, root: Path, allow_historical: bool = False) -> list[str]:
+    failures = []
+    for index, artifact in enumerate(record["output"].get("artifacts", [])):
+        source = contained(root, artifact["path"], f"$.output.artifacts[{index}].path")
+        wanted = artifact.get("sha256")
+        if not source.is_file():
+            if allow_historical and _committed_digest(root, source, wanted):
+                continue
+            failures.append(f'artifact[{index}]: missing proof or output')
+            continue
+        digest = sha256_file(source)
+        if wanted != digest and not (allow_historical and _committed_digest(root, source, wanted)):
+            failures.append(f"artifact[{index}]: hash mismatch or absent")
+    return failures
+
+
+def manifest_output(path, root: Path | None = None) -> tuple[dict, int, list[dict]]:
     """`bytes` is the real file size and the digest is over the real bytes,
     streamed so a binary or oversized artifact is never decoded or held whole."""
     declared = load(path)
@@ -84,6 +172,8 @@ def manifest_output(path) -> tuple[dict, int, list[dict]]:
         if not isinstance(item, dict):
             raise Invalid(f"{at}: not a JSON object")
         source = Path(require_string(item.get("path"), f"{at}.path"))
+        if root is not None:
+            source = contained(root, source, f"{at}.path")
         entry = {"role": item.get("role") or "deliverable", "path": str(source),
                  "bytes": source.stat().st_size}
         if item.get("mime"):

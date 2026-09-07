@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import copy
+from datetime import datetime
 
 CURRENT_VERSION = 2
 REQUIRED = ("shot_id", "scope", "inputs", "compute", "output",
             "provenance", "user_feedback")
-TOP_LEVEL = REQUIRED + ("version", "gates", "findings")
+TOP_LEVEL = REQUIRED + ("version", "gates", "findings", "item_id", "feedback_events", "feedback_baseline")
 # `admitted_context` is the surfaces a shot actually touched. `shot_view` has
 # always read it; this tuple has always refused it, so a valid shot could not
 # carry one and `context.status` could only ever say not_observed.
@@ -14,7 +15,7 @@ TOP_LEVEL = REQUIRED + ("version", "gates", "findings")
 # optional: every record already on disk was written without one, and making it
 # required would rewrite history instead of migrating it.
 INPUTS = ("prompt_hash", "tools", "corpus_refs", "stack", "request",
-          "target_skill", "admitted_context", "invocation")
+          "target_skill", "admitted_context", "invocation", "changed_paths", 'request_ref')
 COMPUTE = ("model", "harness", "started_at", "duration_ms", "tokens", "passes")
 FEEDBACK = ("status", "sentiment", "correction", "rank", "evidence", "observed_at")
 PROVENANCE = ("corpus", "procedural", "fetched", "inference")
@@ -52,6 +53,15 @@ def require_count(value: object, where: str, *, nullable: bool = False) -> int |
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise Invalid(f"{where}: expected a non-negative integer"
                       + (" or null" if nullable else ""))
+    return value
+
+
+def require_time(value: object, where: str) -> str:
+    value = require_string(value, where)
+    try:
+        datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except ValueError as error:
+        raise Invalid(f'{where}: expected ISO-8601 timestamp') from error
     return value
 
 
@@ -93,12 +103,52 @@ def validate_v2(record: object, where: str = "$") -> dict:
         if key not in record:
             raise Invalid(f"{where}.{key}: required key is absent")
     only(record, where, *TOP_LEVEL)
+    events = record.get('feedback_events', [])
+    if not isinstance(events, list):
+        raise Invalid('feedback_events: expected array')
+    identities = set()
+    for event in events:
+        require_object(event, 'feedback event')
+        only(event, 'feedback event', 'version', 'event_id', 'operation_id', 'fields',
+             'source_kind', 'source_ref', 'observed_at', 'source_text', 'redacted_ref', 'resolves')
+        if type(event.get('version')) is not int or event['version'] != 1:
+            raise Invalid('feedback event: unsupported version')
+        for key in ('event_id', 'operation_id', 'source_kind'):
+            require_string(event.get(key), key)
+        require_time(event.get('observed_at'), 'observed_at')
+        if event['operation_id'] in identities:
+            raise Invalid('duplicate feedback operation')
+        identities.add(event['operation_id'])
+        if event['source_kind'] not in ('user', 'caller', 'fixture'):
+            raise Invalid('unsupported feedback source_kind')
+        require_string_list(event.get('resolves'), 'resolves')
+        fields = require_object(event.get('fields'), 'feedback fields')
+        only(fields, 'feedback fields', 'status', 'correction', 'sentiment', 'rank')
+        if event['source_kind'] in ('user', 'fixture'):
+            require_string(event.get('source_ref'), 'source_ref')
+            if bool(event.get('source_text')) == bool(event.get('redacted_ref')):
+                raise Invalid('supply source_text or redacted_ref')
+        for key in ('source_ref', 'source_text', 'redacted_ref'):
+            if key in event:
+                require_string(event[key], key)
+        # Validate event fields through the same feedback schema as the effective view.
+        candidate = {**record, 'user_feedback': {'status': 'pending', **fields}}
+        candidate.pop('feedback_events', None)
+        candidate.pop('feedback_baseline', None)
+        validate_v2(candidate, where)
+    if 'feedback_baseline' in record:
+        candidate = {**record, 'user_feedback': record['feedback_baseline']}
+        candidate.pop('feedback_events', None)
+        candidate.pop('feedback_baseline', None)
+        validate_v2(candidate, where)
     if record.get("version") != CURRENT_VERSION:
         raise Invalid(f"{where}.version: expected {CURRENT_VERSION}")
     if record.get("provenance") not in PROVENANCE:
         raise Invalid(f"{where}.provenance: not one of {'/'.join(PROVENANCE)}")
     require_string(record["shot_id"], f"{where}.shot_id")
     require_string(record["scope"], f"{where}.scope")
+    if "item_id" in record:
+        require_string(record["item_id"], f"{where}.item_id")
 
     inputs = require_object(record["inputs"], f"{where}.inputs")
     only(inputs, f"{where}.inputs", *INPUTS)
@@ -116,8 +166,12 @@ def validate_v2(record: object, where: str = "$") -> dict:
         require_string_list(inputs["stack"], f"{where}.inputs.stack")
     if "admitted_context" in inputs:
         require_string_list(inputs["admitted_context"], f"{where}.inputs.admitted_context")
+    if "changed_paths" in inputs:
+        require_string_list(inputs["changed_paths"], f"{where}.inputs.changed_paths")
     if "request" in inputs:
         require_string(inputs["request"], f"{where}.inputs.request")
+    if 'request_ref' in inputs:
+        require_string(inputs['request_ref'], f'{where}.inputs.request_ref')
     if "target_skill" in inputs:
         require_string(inputs["target_skill"], f"{where}.inputs.target_skill")
     if "invocation" in inputs:
@@ -128,9 +182,10 @@ def validate_v2(record: object, where: str = "$") -> dict:
     for key in ("model", "harness", "started_at", "duration_ms", "tokens"):
         if key not in compute:
             raise Invalid(f"{where}.compute.{key}: required key is absent")
-    for key in ("model", "harness", "started_at"):
+    for key in ("model", "harness"):
         require_string(compute[key], f"{where}.compute.{key}")
-    require_count(compute["duration_ms"], f"{where}.compute.duration_ms")
+    require_time(compute['started_at'], f'{where}.compute.started_at')
+    require_count(compute["duration_ms"], f"{where}.compute.duration_ms", nullable=True)
     tokens = require_object(compute["tokens"], f"{where}.compute.tokens")
     only(tokens, f"{where}.compute.tokens", "input", "output", "profile")
     for key in ("input", "output", "profile"):
@@ -185,12 +240,16 @@ def validate_v2(record: object, where: str = "$") -> dict:
     for key, gate in gates.items():
         at = f"{where}.gates.{key}"
         require_object(gate, at)
-        only(gate, at, "status", "name", "reason")
+        only(gate, at, "status", "name", "reason", 'observer', 'observed_at', 'artifacts')
+        if 'artifacts' in gate:
+            require_string_list(gate['artifacts'], at + '.artifacts')
         if gate.get("status") not in GATE_STATUS:
             raise Invalid(f"{at}.status: not one of {'/'.join(GATE_STATUS)}")
-        for field in ("name", "reason"):
+        for field in ("name", "reason", 'observer'):
             if field in gate:
                 require_string(gate[field], f"{at}.{field}")
+        if 'observed_at' in gate:
+            require_time(gate['observed_at'], f'{at}.observed_at')
 
     findings = record.get("findings", [])
     if not isinstance(findings, list):

@@ -67,11 +67,11 @@ which stop of that rail a prompt belongs to.
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Shows which other skills yours actually resemble, and which resemble nothing</td><td><code>build</code> · <strong>Measure</strong></td></tr>
   <tr><td nowrap>🧾 <a href="#-tokens-qa"><strong>/tokens-qa</strong></a></td><td>Observe one shot, measure what it cost, and say what it broke</td><td><code>check</code> · <strong>Measure</strong></td></tr>
-  <tr><td colspan="3" align="center"><h3>🛤️ Rest of the rail<br><small>Planned families. No installed command answers to these yet.</small></h3></td></tr>
-  <tr><td nowrap>🔨 <code>build-*</code></td><td>Implement and verify the approved contract</td><td><code>build</code> · <strong>Code · Build · Test</strong></td></tr>
-  <tr><td nowrap>🚢 <code>land-*</code></td><td>Ship selected outputs and make deployment observable</td><td><code>land</code> · <strong>Release · Deploy</strong></td></tr>
-  <tr><td nowrap>🔍 <code>check-*</code></td><td>Read progress and production evidence back into planning</td><td><code>check</code> · <strong>Monitor</strong> → Plan</td></tr>
-  <tr><td nowrap>🩹 <code>fix</code></td><td>Restore safe operation, then return to the affected family</td><td><code>fix</code> · <strong>Operate</strong>, incident response</td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-check">🛤️ Rest of the rail</a><br><small>The four family routers. They route the public skills; they do not replace them.</small></h3></td></tr>
+  <tr><td nowrap>🔍 <a href="#-check"><strong>/check</strong></a></td><td>Reads progress and production evidence back into planning, and writes nothing</td><td><code>check</code> · <strong>Monitor</strong> → Plan</td></tr>
+  <tr><td nowrap>🔨 <a href="#-build"><strong>/build</strong></a></td><td>Implements and verifies the approved contract</td><td><code>build</code> · <strong>Code · Build · Test</strong></td></tr>
+  <tr><td nowrap>🚢 <a href="#-land"><strong>/land</strong></a></td><td>Burns the branch down, then ships it</td><td><code>land</code> · <strong>Release · Deploy</strong></td></tr>
+  <tr><td nowrap>🩹 <a href="#-fix"><strong>/fix</strong></a></td><td>Restores safe operation, then returns to the affected family</td><td><code>fix</code> · <strong>Operate</strong>, incident response</td></tr>
 </table>
 
 Stable prompts sit under [SKILL PROMPTS](#-skill-prompts). The rest are
@@ -531,6 +531,177 @@ touching anything. It refuses to write over a directory it did not create, and
 | Opt-in | Nothing lands in a skills folder that was not asked for by language or by `--fun` |
 | Reversibility | `unlink` leaves the folder exactly as it was found |
 | Locality | The manifest stays on the skill being renamed. This never becomes a registry. |
+
+</details>
+
+## 🔨 /build
+
+The stop where code exists. It arrives with a contract `first` already accepted
+and leaves with evidence the contract holds. It routes the public skills that do
+the work and reimplements none of them: `ponytail` for the smallest change that
+works, `tdd` and `test-driven-development` for the red-green loop, `code-review`
+on the diff, `verification-before-completion` before anything is called done,
+and `semgrep` for the security pass.
+
+| | |
+| --- | --- |
+| **Package** | [build/](build/) · entry [build/SKILL.md](build/SKILL.md) |
+| **Invoke** | You only. Say `build`, `to`, or `make`. |
+| **Needs** | The skills it routes, installed. `/kit coding` fetches them. |
+| **Runs on** | **Your** project, never this repo |
+| **Channel** | `alpha` |
+
+<details>
+<summary><b>Full spec: three sections and the two things it refuses</b></summary>
+
+| Say | Runs |
+| --- | --- |
+| `build`, `to`, `make` | All three, in order |
+| `build-clean-code` | Clean code only |
+| `build-qa-tests` | QA tests only |
+| `build-pre-release` | Pre-release only |
+
+Reach for `ponytail` before you write, not after. It is cheapest as a constraint
+on the design and most expensive as a rewrite of finished work.
+
+A test written after the code passes for the wrong reason: it encodes what the
+code does rather than what the contract said. Write the failing test first and
+watch it fail, because a test that has never been red has never been shown to
+test anything.
+
+Two refusals. Abstractions with one caller, added because a second is imagined.
+Compatibility shims for a state the migration passes through and never returns
+to.
+
+"It compiles" is not evidence. An accepted decision from `first` is an input,
+not a suggestion; if it is wrong, go back and change it there.
+
+</details>
+
+## 🚢 /land
+
+The irreversible stop. Everything before it can be redone by editing a file, and
+this one reaches other people. It burns the branch down, then ships it, routing
+`finishing-a-development-branch` to decide how the work integrates and
+`land-and-deploy`, reached through the `gstack` bundle, to cut the release.
+
+| | |
+| --- | --- |
+| **Package** | [land/](land/) · entry [land/SKILL.md](land/SKILL.md) |
+| **Invoke** | You only. Say `land`, `do`, `ship`, or `burndown`. |
+| **Needs** | The skills it routes, installed. `/kit coding` fetches them. |
+| **Runs on** | **Your** project, never this repo |
+| **Channel** | `alpha` |
+
+<details>
+<summary><b>Full spec: the three end states, and what land refuses to do</b></summary>
+
+Land does not verify. `build`'s Pre-release section owns that, and a branch that
+arrives without it goes back rather than forward. Green is not the same as
+verified, and a stack reported green by its own author is neither.
+
+Every open item ends burndown in exactly one of three states.
+
+| State | Carries |
+| --- | --- |
+| Done | The evidence |
+| Cut | The reason |
+| Carried | The item it now belongs to |
+
+An item left in none of those is the one that turns up after the release.
+
+Reversible steps proceed. Anything that cannot be undone gets confirmed first,
+every time, however routine the run felt: a force push to a shared branch, a
+deploy, a data deletion, a message to a customer.
+
+Publishing **this** package is Repo-Dev work and belongs to `tools/`, not here.
+Copying that command into a skill is how the two drift.
+
+</details>
+
+## 🔍 /check
+
+The return arc, and the only family that writes nothing. It reads where the work
+actually stands against what was promised, then hands the finding to whoever owns
+it. Routes `zoom-out` for the map above a subsystem you do not know, `graphify`
+for a whole codebase, and `review`, through the `gstack` bundle, for a diff.
+
+| | |
+| --- | --- |
+| **Package** | [check/](check/) · entry [check/SKILL.md](check/SKILL.md) |
+| **Invoke** | You only. Say `check`. |
+| **Needs** | The skills it routes, installed. `/kit research` and `/kit coding` fetch them. |
+| **Runs on** | **Your** project, read only |
+| **Channel** | `alpha` |
+
+<details>
+<summary><b>Full spec: two sections, and why a finding is not a fix</b></summary>
+
+| Say | Runs |
+| --- | --- |
+| `check` | Progress, then Ontology |
+| `check-progress-goals` | Progress only |
+| `check-release-ontology` | Ontology only |
+
+Progress reads the project's own record before it walks the repository, because
+a roadmap is cheaper than a repository walk. It reports the **gap** between the
+record and the code. An item marked done whose evidence nobody can produce is
+the finding.
+
+Ontology asks whether every public name still resolves to exactly one skill, and
+whether every skill answers to the names its own description says. A name
+declared in one file and absent from every description is a word nothing answers
+to. The gates decide this; the section says which to run and how to read what
+comes back.
+
+Safe mid-session, because it changes nothing. A broken code path goes to `fix`,
+unfinished work goes to `first`, a failing verification goes back to `build`. A
+name with two owners goes to `first` to be settled in the spec, never patched
+in `check`.
+
+The two measurement skills in this family,
+[/build-context-token-vectors](#-build-context-token-vectors) and
+[/tokens-qa](#-tokens-qa), carry their own doctrine.
+
+</details>
+
+## 🩹 /fix
+
+A bare on-ramp, entered from outside the sequence at the moment something stops
+working. Two breakages, one reflex: the code is wrong, or the work is. It routes
+`diagnosing-bugs` and `systematic-debugging` for a defect, and `poteto-mode`
+when the session itself has derailed.
+
+| | |
+| --- | --- |
+| **Package** | [fix/](fix/) · entry [fix/SKILL.md](fix/SKILL.md) |
+| **Invoke** | You only. Say `fix`, `rail`, or `unstick`. |
+| **Needs** | The skills it routes, installed. `/kit coding` fetches them. |
+| **Runs on** | **Your** project, never this repo |
+| **Channel** | `alpha` |
+
+<details>
+<summary><b>Full spec: the two breakages, and the one that is not this skill</b></summary>
+
+**Fix the code.** Reproduce before you theorise, because a fix written against a
+symptom you have not seen fail is a guess that happens to be committed. Keep
+asking why until the answer stops being a restatement of the symptom: a patch at
+the point of the error, when the error came from three frames up, moves the bug
+rather than removing it. The fix ends with the failing case as a test.
+
+**Fix the rail.** The code runs and the session has drifted. Stop first. More
+output on a derailed session buys nothing, and a long stretch of work in the
+wrong direction costs more to unpick than to abandon. Then re-read the record
+rather than the conversation: the accepted spec, the roadmap item, and the state
+as written down outrank anything either side remembers about it.
+
+An installation or collection problem is **not** this skill. A skill that
+arrived wrong, a domain that never synced, two skills colliding: that is
+[/kit](#-kit), which answers to `doctor`, `repair`, `troubleshoot`, and
+`conflict`.
+
+Fix restores the path and hands the work back. It does not take ownership of the
+work that was travelling on it.
 
 </details>
 
