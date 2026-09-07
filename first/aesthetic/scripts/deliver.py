@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""Publish a round and hand back what the reply must lead with.
+
+The four calls that end every round -- `article`, `publish`, `review_delivery`,
+`status --idle` -- always run together, in that order, and the failure this
+prevents is dropping the last two. A screen that was written but not published
+is a URL showing "Waiting for the agent to push a screen...", and a publish
+with no review images is a link the user cannot act on. Both used to be one
+forgotten line of prose away, because the order lived only in `SKILL.md`.
+
+It lives here instead, so the order is a thing that runs rather than a thing an
+agent is asked to remember.
+
+    python3 deliver.py --project-root . --out design/aesthetic-ranking.html \
+        --cohort "hero.a,hero.b" --round-label "hero" \
+        --asks "How strong is this proposal?" \
+        --assessments /tmp/proposal-assessments.json \
+        --idle-text "Revisa los nuevos diseños"
+
+Prints one JSON object: url, key, ask, and every absolute review image path.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+HERE = Path(__file__).resolve().parent
+KEY = re.compile(r"[?&]key=([0-9a-f]+)")
+
+# Resolved from this file, never from the cwd: `deliver.py` is called with a
+# --project-root that is not necessarily the repo it lives in.
+REPO_ROOT = HERE.parents[2]
+TOKENS_QA = REPO_ROOT / "check" / "tokens-qa" / "scripts" / "tokens_qa.py"
+
+
+class DeliveryError(Exception):
+    """A step refused. The round is not delivered and the reply has no URL."""
+
+
+MIN_FRESH_COHORT = 3
+
+
+def scored_elements(project_root: Path) -> set[str]:
+    """Elements the user has already ranked. A round re-asking about one of
+    these is a continuation, not an exploration, so it may carry fewer than
+    `MIN_FRESH_COHORT`."""
+    ledger = Path(project_root) / "spec" / "design-harness" / "decisions.json"
+    if not ledger.is_file():
+        return set()
+    entries = json.loads(ledger.read_text(encoding="utf-8")).get("elements", [])
+    return {str(e.get("element")) for e in entries
+            if isinstance(e, dict) and e.get("scored") is True}
+
+
+def accepted_elements(project_root: Path) -> set[str]:
+    """Elements the user has already reacted to, by thumb or by star.
+
+    Read as "settled": whatever is wrong with the drawing, the user has seen it
+    and said something, so a gate does not get to withdraw it under them.
+    """
+    ledger = Path(project_root) / "spec" / "design-harness" / "decisions.json"
+    if not ledger.is_file():
+        return set()
+    entries = json.loads(ledger.read_text(encoding="utf-8")).get("elements", [])
+    return {str(entry.get("element")) for entry in entries
+            if isinstance(entry, dict)
+            and (entry.get("sentiment") in {"like", "dislike"}
+                 or entry.get("scored") is True)}
+
+
+def step(argv: list[str], project_root: Path) -> str:
+    done = subprocess.run([sys.executable, *argv, "--project-root", str(project_root)],
+                          capture_output=True, text=True)
+    if done.returncode != 0:
+        name = Path(argv[0]).stem
+        raise DeliveryError(f"{name} {argv[1] if len(argv) > 1 else ''}: "
+                            f"{(done.stderr or done.stdout).strip()}")
+    return done.stdout.strip()
+
+
+def deliver(project_root: Path, out: str, cohort: str, round_label: str, asks: str,
+            assessments: str | None, idle_text: str, agent: str = "",
+            agent_url: str = "") -> dict:
+    # Review images are the half a user can act on. No assessments means the
+    # caller has nothing to show, which is a refusal, not a quiet skip.
+    #
+    # Checked FIRST, before anything is written or served. It used to sit after
+    # `article` and `publish`, so the refusal arrived having already replaced
+    # the live screen -- the round was published, and only then declared
+    # undeliverable. A precondition that needs no subprocess belongs before the
+    # steps that mutate what the user is looking at.
+    if not assessments:
+        raise DeliveryError("no --assessments: a published round with no review "
+                            "images is a link the user cannot act on")
+
+    # Also before anything is written. `shoot` refuses a comp that draws its own
+    # <svg>, but delivery never routes through `shoot`, so a cohort of invented
+    # paths reached a user with the rule intact and unenforced. One guard here
+    # covers every element a round can carry, because they all pass through it.
+    #
+    # Only elements the user has never reacted to. A preview they have already
+    # thumbed or scored is theirs, and re-refusing it would brick delivery over
+    # a decision they already made; a fresh proposal has no such standing, and
+    # inventing SVG paths is precisely what it must not do.
+    # A lone proposal asks "do you like this?", which is not a question a rank
+    # answers. SKILL.md has always required a 3-6 element cohort; three rounds
+    # shipped one unscored element each and all three were rejected on sight,
+    # because nothing here read the rule. A continuation -- a round re-asking
+    # about something already ranked -- is exempt: that IS one bounded question.
+    names = [n.strip() for n in cohort.split(",") if n.strip()]
+    try:
+        settled = scored_elements(project_root)
+    except OSError:
+        settled = set()
+    if len(names) < MIN_FRESH_COHORT and not (set(names) & settled):
+        raise DeliveryError(
+            f"a cohort of {len(names)} unranked proposal(s) is not a round: "
+            f"SKILL.md asks for {MIN_FRESH_COHORT}-6 so the user ranks between "
+            "real alternatives instead of approving the only option. Add "
+            "proposals, or include an element they have already ranked.")
+
+    sys.path.insert(0, str(HERE))
+    from harness_preview import audit_recorded_svg
+    try:
+        drawn = {hit["element"] for hit in audit_recorded_svg(project_root)}
+        answered = accepted_elements(project_root)
+    except OSError:
+        drawn, answered = set(), set()  # no ledger means nothing to refuse
+    invented = [name.strip() for name in cohort.split(",")
+                if name.strip() and name.strip() in drawn - answered]
+    if invented:
+        raise DeliveryError(
+            "these cohort previews hand-author <svg>: " + ", ".join(invented)
+            + ". A comp is drawn in HTML/CSS, or references a sourced asset with "
+            "<img src=\"...\">. See asset-sourcing.md; run `bootstrap_harness.py "
+            "audit-svg` for the full list.")
+
+    harness = str(HERE / "bootstrap_harness.py")
+    article = [harness, "article", "--out", out, "--cohort", cohort,
+               "--round-label", round_label, "--asks", asks]
+    if agent:
+        article += ["--agent", agent]
+    if agent_url:
+        article += ["--agent-url", agent_url]
+    step(article, project_root)
+
+    step([harness, "publish", "--screen", out], project_root)
+
+    # The URL comes from `open`, not from `publish`.
+    #
+    # `publish` prints one line -- "Serving <name>. Any screen written after
+    # this steals the route" -- and has never printed a URL at all. Scanning
+    # its stdout for a line starting with "http" therefore found nothing on
+    # every run, and the guard below it turned that into a hard failure. So
+    # this script, whose entire reason to exist is that `article`, `publish`,
+    # `review_delivery` and `status --idle` must run TOGETHER, aborted after
+    # step two of four -- every time it was called. The round was published
+    # with no review images and no idle status, which is precisely the
+    # "a link the user cannot act on" failure the module docstring describes.
+    #
+    # `open` is the verb that owns the URL, and it is idempotent: it starts the
+    # companion only if it is not already up, and prints the URL either way.
+    url = step([harness, "open"], project_root).strip()
+    if not url.startswith("http"):
+        raise DeliveryError(f"open returned no URL: {url!r}")
+
+    images = step([str(HERE / "review_delivery.py"), "--cohort", cohort,
+                   "--assessments", assessments], project_root)
+
+    step([harness, "status", "--idle", "--text", idle_text], project_root)
+
+    found = KEY.search(url)
+    payload = json.loads(images) if images else []
+    return {"url": url, "key": found.group(1) if found else "",
+            "ask": asks, "images": payload,
+            "corpusFit": corpus_fit(project_root, payload)}
+
+
+def corpus_fit(project_root: Path, images: Any) -> list[dict]:
+    """How much of each delivered comp's colour the corpus evidences.
+
+    Reported, not refused. A round may legitimately propose a palette the
+    corpus has never shown, and the user is the one who decides that. What must
+    not happen again is shipping a comp in invented colour with nothing saying
+    so, which is how every character round in this project drifted.
+    """
+    from graphics_corpus import palette_audit
+
+    declared = images.get("images", []) if isinstance(images, dict) else []
+    report = []
+    for item in declared:
+        source = (item or {}).get("source_html") if isinstance(item, dict) else None
+        if not source or not Path(source).is_file():
+            continue
+        try:
+            audit = palette_audit(project_root, Path(source))
+        except OSError:
+            continue
+        report.append({"element": item.get("element"), "fit": audit["fit"],
+                       "unevidenced": [entry["declared"]
+                                       for entry in audit["unevidenced"]]})
+    return report
+
+
+def record_shot(payload: dict, round_label: str, asks: str,
+                invocation: str = "", *, project_root: Path = REPO_ROOT,
+                item_id: str = "", gates: str = "", proof: list[str] = ()) -> dict | None:
+    """Write the delivered round to the Shot ledger, so QA has something to read."""
+    images = payload.get("images") or {}
+    declared = images.get("images", []) if isinstance(images, dict) else []
+    artifacts = [{"path": item["image_path"], "role": "deliverable",
+                  "mime": "image/png"}
+                 for item in declared if isinstance(item, dict) and item.get("image_path")]
+    artifacts += [{"path": path, "role": "proof"} for path in proof]
+    if not artifacts:
+        return
+    with tempfile.TemporaryDirectory(prefix="deliver-shot-") as staging:
+        stage = Path(staging)
+        request = stage / "request.txt"
+        request.write_text(asks, encoding="utf-8")
+        manifest = stage / "manifest.json"
+        manifest.write_text(json.dumps({"adapter": "graphic",
+                                        "artifacts": artifacts}),
+                            encoding="utf-8")
+        command = [sys.executable, str(TOKENS_QA), "record", "first/aesthetic",
+                   "--request", str(request), "--output-manifest", str(manifest),
+                   "--scope", round_label, '--project-root', str(project_root),
+                   '--token-profile', 'unknown', '--json']
+        if invocation:
+            command += ["--invocation", invocation]
+        if item_id:
+            command += ['--item-id', item_id]
+        if gates:
+            command += ['--gates', gates]
+        done = subprocess.run(
+            command,
+            cwd=str(project_root), capture_output=True, text=True)
+    if done.returncode != 0:
+        raise DeliveryError((done.stderr or done.stdout).strip())
+    return json.loads(done.stdout)['result']
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--project-root", type=Path, required=True)
+    parser.add_argument("--out", required=True, help="screen to write, then publish")
+    parser.add_argument("--cohort", required=True)
+    parser.add_argument("--round-label", required=True)
+    parser.add_argument("--asks", required=True)
+    parser.add_argument("--assessments", help="proposal assessments JSON")
+    parser.add_argument("--idle-text", required=True,
+                        help="user-language review request for the idle status")
+    parser.add_argument("--agent", default="")
+    parser.add_argument("--agent-url", default="")
+    parser.add_argument("--invocation", default="",
+                        help="skill@timestamp id returned by assistant_app.py")
+    parser.add_argument('--item-id', default='')
+    parser.add_argument('--gates', default='')
+    parser.add_argument('--proof', action='append', default=[])
+    args = parser.parse_args(argv)
+    try:
+        payload = deliver(args.project_root.resolve(), args.out, args.cohort,
+                          args.round_label, args.asks, args.assessments,
+                          args.idle_text, args.agent, args.agent_url)
+    except DeliveryError as refused:
+        print(f"deliver: {refused}", file=sys.stderr)
+        return 1
+    json.dump(payload, sys.stdout, indent=2, sort_keys=True)
+    sys.stdout.write("\n")
+    # Recording happens HERE, not inside `deliver`, and it cannot fail the
+    # round. `deliver` already shells four subprocesses that each get to
+    # refuse; a fifth that could turn a delivered round into a failed one buys
+    # nothing, because by this line the screen is live and the payload is
+    # printed. An unrecorded round is a gap in QA, not a broken delivery.
+    try:
+        record_shot(payload, args.round_label, args.asks, args.invocation,
+                    project_root=args.project_root.resolve(), item_id=args.item_id,
+                    gates=args.gates, proof=args.proof)
+    except Exception as unrecorded:
+        print(f"deliver: round delivered but not recorded: {unrecorded}",
+              file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

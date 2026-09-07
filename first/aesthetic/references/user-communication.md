@@ -112,7 +112,7 @@ session stalled.
 
 ## Final review handoff
 
-Lead with the full URL, access key, and one project-language review request.
+Lead with the linked review URL, access key, and one project-language review request.
 Then attach every `image_path` emitted by `scripts/review_delivery.py`. These
 paths are absolute and already checked. Do not attach a relative path, a source
 HTML path, an evidence card, or an image that is absent from that JSON.
@@ -129,3 +129,19 @@ Name the result, not setup commands.
 python3 <skill>/scripts/bootstrap_harness.py status --project-root . \
   --text "<emoji + visible work + why it matters>"
 ```
+
+## Name the weakest proposal before asking
+
+Hand over a cohort with your own read of it: which element is strongest, which
+is weakest, and the visible reason. Cite what is in the render — a shape that
+reads as the wrong object, a mark that disappears at delivery size — never a
+preference.
+
+Presenting three proposals as equals when one is visibly worse hides the
+judgement the user is paying for, and it is the same failure as reporting a run
+green because the exit code was zero. A round the agent cannot criticise is a
+round the agent did not look at.
+
+Never record a verdict the user did not give. `pending` is the honest state
+until they speak; an agent-written `accepted` is the one value in the ledger
+that cannot be earned.

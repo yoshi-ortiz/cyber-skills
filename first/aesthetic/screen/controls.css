@@ -27,7 +27,7 @@
    took its full max-content width and squeezed the text to about 80px, where
    `overflow-wrap:anywhere` broke every word mid-syllable -- "cover.sp / ine.righ
    / t" -- and the strip became unreadable while every control still worked. */
-.dh-fb.dh-fb{display:grid;grid-template-columns:var(--dh-shot-w,96px) minmax(26ch,1fr) auto;
+.dh-fb.dh-fb{display:grid;grid-template-columns:var(--dh-shot-w,clamp(96px,18vw,240px)) minmax(26ch,1fr) auto;
  gap:16px;
  /* `start`, not `center`. Centring the graphic, the text and the controls
     independently gave each a different top -- 14/25/59 on one row, 14/66/59
@@ -51,7 +51,7 @@
    matters is "does the text still have a measure?" -- 96px of thumbnail plus
    360px of controls plus gaps leaves under 30ch of text until about here. */
 @container dh-row (max-width: 980px){
- .dh-fb.dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
+ .dh-fb.dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,clamp(96px,18vw,240px)) minmax(0,1fr)}
  .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-end;flex-wrap:wrap}
 }
 @container dh-row (max-width: 380px){
@@ -81,8 +81,7 @@
    tiring to read. Hierarchy now: the id leads, the description is the line you
    actually read, provenance is demoted to a labelled aside, and the state sits
    beside the id instead of adding a fifth line. */
-.dh-fb .dh-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0;
- padding-inline-end:96px}
+.dh-fb .dh-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0}
 /* The id, demoted to a tag. It is the ledger's key and the designer's noise. */
 /* Two grey pills of the same size said two unrelated things: one is a STATUS,
    one is a machine key. The key stops being a badge -- it is the string you
@@ -96,9 +95,22 @@
  overflow-wrap:anywhere;color:var(--dh-ink,#111)}
 /* The status keeps the pill and earns a colour, so lifecycle is readable at a
    glance instead of being one more grey rectangle to parse. */
-/* The status is about the card, so it sits on the card -- corner, not inline
-   after the title where it competed with the name for the reading line. */
-.dh-fb .dh-state{position:absolute;inset-block-start:8px;inset-inline-end:10px;z-index:2;
+/* The status is about the card, so it sits at the END of the title line --
+   out of the reading line, but still inside the text column.
+
+   It used to be `position:absolute` against `.dh-fb`, pinned to the card's
+   top-right, with `padding-inline-end:96px` on `.dh-head` reserving room for
+   it. That reserve was on the wrong element: `.dh-head` is in grid column 2
+   and the absolute badge resolves against the CARD, so it landed in column 3
+   -- on top of the stars and the thumbs. Measured on the default three-column
+   layout at a 1002px row: the badge overlapped the controls strip by 171x13px.
+   Not an edge case, the normal desktop rendering, and it overprinted the very
+   buttons the round asks the user to click.
+
+   `margin-inline-start:auto` inside the flex head puts it hard right of the
+   title and no further, so it cannot reach the controls at any width. The
+   corner it used to claim now belongs to `.dh-saved` alone. */
+.dh-fb .dh-state{margin-inline-start:auto;flex:none;
  font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
  padding:2px 7px;border-radius:999px;white-space:nowrap;font-weight:700;
  background:color-mix(in srgb, var(--dh-ink,#111) 8%, transparent);
@@ -126,10 +138,13 @@
 /* Out of flow, top-right. In the flex line it pushed the controls sideways
    every time a score landed. */
 .dh-fb{position:relative}
-/* Opaque, and it owns the corner while it is up: it shared the spot with the
-   status chip and the two translucent pills overprinted into noise. */
-.dh-fb:has(.dh-saved[data-on]) .dh-state{opacity:0}
-.dh-fb .dh-saved{position:absolute;inset-block-start:8px;inset-inline-end:10px;z-index:3;
+/* Bottom-right, not top-right. The status chip has moved into the title line,
+   so the two no longer overprint each other and the hide-the-status rule that
+   used to paper over that is gone. The top-right corner is still the controls
+   strip's own space, though, and a toast landing on the stars the moment a
+   score registers covers the control the user just used. Below them is the one
+   corner of this card nothing else occupies. */
+.dh-fb .dh-saved{position:absolute;inset-block-end:8px;inset-inline-end:10px;z-index:3;
  font-size:10px;font-weight:700;letter-spacing:.12em;
  text-transform:uppercase;white-space:nowrap;padding:3px 8px;border-radius:999px;
  opacity:0;transform:translateY(2px);pointer-events:none;
@@ -259,14 +274,29 @@
    readable -- dimming them made incumbent/proposal pairs look randomly broken. */
 .dh-zone[data-zone="antipattern"] .dh-fb[data-group="rejected"]{opacity:.62}
 .dh-zone[data-zone="antipattern"] .dh-fb[data-group="rejected"]:hover{opacity:1}
-.dh-shot{display:block;inline-size:var(--dh-shot-w,96px);aspect-ratio:8.5/11;overflow:hidden;
+/* The graphic the whole round is asking about, so it gets to be big enough to
+   read. 96px was the FIXED value, not a floor: an 850px comp inlined into it
+   is scaled to 0.11, which put the landing hero's billboard labels at 1.3px
+   and its headline at 6px. At that size a comp is a coloured smudge and a
+   score against it is a score of nothing -- the same failure
+   `check_preview_legible` exists to stop, arriving through the card instead of
+   through the render.
+
+   `clamp` keeps 96px as the floor for a narrow companion pane and lets a wide
+   article spend real width on the drawing. It stays the var's FALLBACK rather
+   than a value set on the row, so `embed --shot-width` still overrides it.
+   Every reader of this variable -- this frame, the grid track, and the
+   `scale(calc(var(--dh-shot-w) / 850))` the row bakes inline -- carries the
+   same fallback, so the drawing scales with its box instead of tearing out
+   of it. */
+.dh-shot{display:block;inline-size:var(--dh-shot-w,clamp(96px,18vw,240px));aspect-ratio:8.5/11;overflow:hidden;
  position:relative;border:1px solid rgba(0,0,0,.25);border-radius:4px;background:#fff;isolation:isolate}
 .dh-shot svg{inline-size:100%;block-size:100%;display:block}
 .dh-shot img{inline-size:100%;block-size:100%;object-fit:contain;display:block}
 .dh-shot-missing{display:grid;place-items:center;text-align:center;padding:6px;
  font-size:9px;opacity:.6;block-size:100%}
 @container (max-width: 780px){
- .dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,96px) minmax(0,1fr)}
+ .dh-fb.dh-fb{grid-template-columns:var(--dh-shot-w,clamp(96px,18vw,240px)) minmax(0,1fr)}
  .dh-fb .dh-signals{grid-column:1 / -1;justify-content:flex-end}
 }
 @media (prefers-reduced-motion:reduce){.dh-fb *{transition:none!important}}

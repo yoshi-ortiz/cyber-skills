@@ -15,6 +15,9 @@ refuses: runtime skill doctrine -- every skill's conventions live inside that sk
 
 # Cyber skills
 
+Burndown first. Before package changes, after a correction, and when resuming
+work, follow [Feature burndown](#feature-burndown).
+
 Several skills ship together. They share a release, a publication pipeline, and
 nothing else. Each carries its own contract, and no skill's doctrine applies to
 another.
@@ -24,7 +27,7 @@ another.
 | [kit/](kit/) | [kit](kit/SKILL.md), [starter-pack](kit/starter-pack/), [silly](kit/silly/), [ora](kit/spanish/ora/) | Day 0 on-ramp |
 | [first/](first/) | [genesis](first/genesis/), [knowledge](first/knowledge/), [aesthetic](first/aesthetic/) | Plan |
 | [check/](check/) | [build-context-token-vectors](check/build-context-token-vectors/) | Monitor |
-| [build/](build/), [land/](land/), [fix/](fix/) | *(routers planned, R-36)* | Build · Ship · Operate |
+| [build/](build/), [land/](land/), [fix/](fix/) | *(routers planned, R-36, R-64, and R-63)* | Build · Ship · Operate |
 | [tools/](tools/) | Publication pipeline | Repo-Dev fog |
 | [assets/](assets/) | README imagery | neither |
 
@@ -87,11 +90,12 @@ answer to.
 The README's three H1 sections are fixed: `INSTALL`, `SKILL PROMPTS`,
 `EXPERIMENTS`. Translations rename them, so the gate compares by position.
 Promotion out of `EXPERIMENTS` is the same edit as publication: remove the
-skill from `ALPHA_SKILLS`, move its section, and the gate agrees again.
+skill from the catalog's `ALPHA_SKILLS`, move its section, and the gate agrees
+again.
 
 ### Groups
 
-`GROUPS` in `tools/skill_discovery.py` orders the index by rail family: `kit`,
+`GROUPS` in `tools/skill_catalog.py` orders the index by rail family: `kit`,
 `first`, and `check` today. Every skill belongs to exactly one group, and the
 table lists them in that order in every language.
 
@@ -139,11 +143,35 @@ English command is a promise nobody can keep.
 [silly/](silly/) installs them, into an assistant's own skills folder and only
 when asked. Nothing about a second name reaches a published tree.
 
+## Feature burndown
+
+1. Query `python3 tools/repo_context.py --json next` (add `--item ID` for
+   explicit work). Selection ends with one Item and next action.
+2. Read that owner's context and bind the deliverable, allowed paths, proof and
+   session budget. For missing requirements, budget decisions or closure, read
+   [Feature compass](docs/SPEC/FEATURE_COMPASS.md), the authoritative contract.
+3. Implement the bounded action, run its public proof and record actual evidence
+   through Tokens QA. Read [QA.md](QA.md) for compliance and
+   [Shot observation](docs/SPEC/SHOT_OBSERVATION.md) for serialized observations.
+4. Re-query before closure; record technical verification and actual user
+   acceptance separately. Update [NEXT.md](NEXT.md) when working the upgrade.
+
 ## Two contexts, and why the split is load-bearing
 
 **Design-Inference Context** is an agent running a skill to produce creative
 decisions. **Repo-Dev Context** is an agent changing a skill's own code,
 contracts, or tests.
+
+Repo-Dev has two modes. Pick one query surface; do not mix Design-Inference
+into either. `tools/repo_context.py` reads the authoritative stores and returns
+only the matching item, state, bug, or catalog module.
+
+| Mode | Query entry | Authoritative stores | Glossary |
+| --- | --- | --- | --- |
+| **A — burndown** | `python3 tools/repo_context.py summary`; `state`, `item`, `bug`, or `module` | `ROADMAP.md`, `BUGS.md`, `CHANGELOG.md` | `UBIQUITOUS_LANGUAGE.md` |
+| **B — audit** | Open the exact unsettled question or contract named by the item | `GOAL.md`, `SPEC.md`, `QA.md` | `UBIQUITOUS_LANGUAGE.md` |
+
+An unsettled question goes to `GOAL.md`'s prototype backlog, never to `SPEC.md`.
 
 They use vocabulary that looks alike and means different things. A root cause is
 an engineering finding; a Direction is a creative thesis. A budget is a byte
@@ -157,12 +185,19 @@ never Golden Rule Evidence, whatever their rows look like. `.audit/` in
 particular is an append-only ledger shaped much like a skill's own scope events
 and is not one.
 
-The root rail documents (`GOAL.md`, `SPEC.md`, and
-`UBIQUITOUS_LANGUAGE.md`) are Repo-Dev Context too: they design this package's
-command surface and never become a third runtime context.
+The root rail documents (`GOAL.md`, `SPEC.md`, `UBIQUITOUS_LANGUAGE.md`, and
+`QA.md`) are Repo-Dev Context too: they design this package's command surface
+and shot-evaluation contract. `QA.md` is universal and repo-agnostic; compiled
+sections only reach Design-Inference runs. None of these become a third runtime
+context whole-cloth.
 
-None of them reach a published tree — see `tools/fog.py`, which is the list, and
-`tools/CONTEXT.md`, which explains why generating `main` beats curating it.
+`GOAL.md`, `SPEC.md`, and `UBIQUITOUS_LANGUAGE.md` reach no published tree.
+`QA.md` and `docs/SPEC/SHOT_OBSERVATION.md` do, by name, because the shot
+contract is repo-agnostic and a skills repository that installs the skills
+without the rubric cannot judge a Shot. See `tools/fog.py` — `FOG_DIRS` is the
+fog list and `KEEP_ALWAYS` is the exception list, and that file is the truth
+here, not this paragraph — and `tools/CONTEXT.md`, which explains why
+generating `main` beats curating it.
 
 ## Channels
 

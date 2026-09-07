@@ -1,6 +1,7 @@
 ---
 name: aesthetic
 description: Design and art direction that reads as intentional, not templated. Use to start, continue, or critique visual work. Grounds direction in design fundamentals, and folds in a multimodal corpus and user sentiment when they exist, producing ranked decisions and an editorial burndown.
+phase: first
 ---
 
 # Aesthetic ranking
@@ -11,10 +12,15 @@ requested diagram, scene, or illustration routes to
 
 ## Route before designing
 
-Read [user-communication.md](references/user-communication.md) before any
-user-visible update. Inspect `spec/design-harness/` before opening or
-initializing the generic ranking workflow. If `scene-spec.json` or
-`graphics-manifest.json` exists, run:
+Read [user-communication.md](references/user-communication.md). Run before every Loop step after opening the companion:
+
+```bash
+python3 <skill>/scripts/assistant_app.py --project-root . \
+  --companion-ledger .superpowers/brainstorm/decisions.jsonl \
+  --invocation <skill@timestamp> --turn "<latest turn>"
+```
+
+With `scene-spec.json` or `graphics-manifest.json`, run:
 
 ```bash
 python3 <skill>/scripts/text_to_graphics.py --project-root . status
@@ -24,8 +30,11 @@ Do exactly the returned action. This route outranks generic art-direction
 inference. Do not replace a passing graphic; reuse it from `shots/` first.
 
 Choose chat language from the user's latest words and mirror their dialect in
-project-authored publishing copy. `project.json.language` only translates
-companion controls.
+project-authored publishing copy. `project.json.language` translates companion
+controls; when it is set, every string you author into the screen -- round
+question, element titles, descriptions, status -- is written in that same
+language. One language per screen. An English `--asks` inside a Spanish
+companion is the mixing this rule exists to stop.
 
 Keep the established article: hero, graph, TOC, four sections, progress chart. Never replace it with a kanban or second site.
 
@@ -38,13 +47,8 @@ python3 <skill>/scripts/bootstrap_harness.py open --project-root . \
   --status "<emoji + user-language description of the first real design task>"
 ```
 
-Follow `user-communication.md` for the URL-first reply with no preamble:
-
-```text
-🔗 <full URL>
-🔑 <value after ?key=>
-👀 <user-language review action in the publishing-copy register>
-```
+Follow `user-communication.md`; it owns the exact URL-first reply and
+no-preamble rule.
 
 Update status when visible activity changes.
 
@@ -65,12 +69,10 @@ python3 <skill>/scripts/editorial_workflow.py seed --project-root . \
 
 ## Read the user first
 
-Adopt feedback. Record chat constraints in the brief before inference; user
-words outrank references and doctrine.
+Record chat constraints in the brief before inference; user words outrank
+references and doctrine.
 
 ```bash
-python3 <skill>/scripts/bootstrap_harness.py adopt --project-root . \
-  --companion-ledger .superpowers/brainstorm/decisions.jsonl
 python3 <skill>/scripts/brief_workflow.py answer --project-root . \
   --event-id <stable-id> --at <ISO-8601> --id <brief-field> --answer "<user words>"
 python3 <skill>/scripts/direction_context.py --project-root . \
@@ -129,6 +131,7 @@ python3 <skill>/scripts/golden_rules.py --design spec/design-harness/candidate.j
 ```
 
 Never invent SVG paths. Follow [asset-sourcing.md](references/asset-sourcing.md).
+Figures: settle construction, then character. [interpret-art.md](references/interpret-art.md).
 
 Generated graphics are proposals, not silent assets: record the scene element
 with its preview as an unscored decision and include it in the article cohort so
@@ -140,20 +143,19 @@ Require 4.5:1 text and 3:1 control contrast. Companion chrome follows
 ## Publish the established article
 
 ```bash
-python3 <skill>/scripts/bootstrap_harness.py article --project-root . \
+python3 <skill>/scripts/deliver.py --project-root . \
   --out design/aesthetic-ranking.html --cohort "<element ids>" \
   --round-label "<object>" --asks "<one plain design question>" \
-  --agent "<App | Model>" --agent-url "<task deep link>"
-python3 <skill>/scripts/bootstrap_harness.py publish --project-root . \
-  --screen design/aesthetic-ranking.html
-python3 <skill>/scripts/review_delivery.py --project-root . \
-  --cohort "<element ids>" --assessments /tmp/proposal-assessments.json
-python3 <skill>/scripts/bootstrap_harness.py status --project-root . --idle \
-  --text "<user-language request to review the new designs>"
+  --assessments /tmp/proposal-assessments.json \
+  --idle-text "<user-language request to review the new designs>" \
+  --agent "<App | Model>" --agent-url "<task deep link>" \
+  --invocation <skill@timestamp>
 ```
 
-Delivery accepts only subject-specific rankable proposals. Lead with the
-URL, key, user-language request, and every absolute `image_path` emitted.
+One call, because dropping either of its last two steps is how a user gets a
+link to nothing. It prints `url`, `key`, `ask`, and every absolute review image
+path; lead the reply with exactly those. Delivery accepts only subject-specific
+rankable proposals.
 
 ## Continue and critique
 

@@ -16,8 +16,8 @@ LOBE_X = 700.0
 LOBE_Y = 440.0
 ROAD_SAMPLES = 96
 
-ROOM = {"hw": 250.0, "hd": 95.0, "h": 40.0}
-KIOSK = {"hw": 95.0, "hd": 48.0, "h": 30.0}
+ROOM = {"hw": 250.0, "hd": 95.0, "h": 22.0}
+KIOSK = {"hw": 95.0, "hd": 48.0, "h": 16.0}
 
 BACKGROUND = "#faf5ee"
 ROAD_STROKE = "#f4c430"
@@ -45,6 +45,12 @@ ROOM_PHASE = {
 }
 KIOSK_OFFSET = {"left-center": -0.5, "right-center": 0.5}
 
+# Past this RGB distance, the nearest measured colour is not the requested hue
+# in a different shade. It is a different colour, and saying so beats shipping
+# a green where the scene asked for cyan and letting the render imply the
+# corpus agreed.
+HUE_GAP = 90
+
 
 class GeometryError(ValueError):
     pass
@@ -68,10 +74,51 @@ def road_polyline(samples: int = ROAD_SAMPLES) -> list[tuple[float, float]]:
     return points
 
 
-def _fill(palette: Any) -> str:
+def _rgb(hex_color: str) -> tuple[int, int, int]:
+    value = hex_color.lstrip("#")
+    return tuple(int(value[index:index + 2], 16) for index in (0, 2, 4))
+
+
+def _rgb_distance(one: str, two: str) -> float:
+    return sum((a - b) ** 2 for a, b in zip(_rgb(one), _rgb(two))) ** 0.5
+
+
+def snap_palette(requested: Sequence[str], evidence: Sequence[str]) -> dict[str, str]:
+    """Bind each requested hue to the nearest colour a reference contains.
+
+    `PALETTE_FILL` says which hue a space wants. The corpus says which hue this
+    project actually uses. Without this the second opinion never arrived and
+    every render shipped in Material defaults nothing in `moodboards/` contains.
+
+    `requested` is in priority order and earlier hues pick first, because the
+    alternative -- closest pair globally -- let a near-white kiosk take the pale
+    cyan and left the cyan room green. One measured colour serves one requested
+    hue so two spaces do not collapse into one fill, and hues repeat only once
+    the evidence runs out.
+    """
+    wanted = list(dict.fromkeys(str(hue) for hue in requested))
+    if not evidence or not wanted:
+        return {}
+    resolved: dict[str, str] = {}
+    used: set[str] = set()
+    for want in wanted:
+        free = [have for have in evidence if have not in used] or list(evidence)
+        pick = min(free, key=lambda have: (_rgb_distance(want, have), have))
+        resolved[want] = pick
+        used.add(pick)
+    return resolved
+
+
+def _requested(palette: Any) -> str:
+    """The hue a space asks for, before the corpus gets a say."""
     if isinstance(palette, list) and palette:
         palette = palette[0]
     return PALETTE_FILL.get(str(palette), "#cccccc")
+
+
+def _fill(palette: Any, resolved: Mapping[str, str] | None = None) -> str:
+    requested = _requested(palette)
+    return (resolved or {}).get(requested, requested)
 
 
 def _shade(hex_color: str, factor: float) -> str:
@@ -81,7 +128,9 @@ def _shade(hex_color: str, factor: float) -> str:
 
 
 def _place(entry: Mapping[str, Any], size: Mapping[str, float],
-           billboards: Mapping[str, Any]) -> dict[str, Any]:
+           billboards: Mapping[str, Any],
+           resolved: Mapping[str, str] | None = None,
+           ink: str = OUTLINE) -> dict[str, Any]:
     identifier = str(entry.get("id") or "")
     position = str(entry.get("position") or "")
     if position in ROOM_PHASE:
@@ -96,7 +145,8 @@ def _place(entry: Mapping[str, Any], size: Mapping[str, float],
         "slug": identifier.strip("/").replace("/", "_"),
         "cx": cx,
         "cy": cy,
-        "fill": _fill(entry.get("palette")),
+        "fill": _fill(entry.get("palette"), resolved),
+        "ink": ink,
         "text": str(billboards.get(identifier, "")),
         **size,
     }
@@ -110,18 +160,38 @@ def _overlaps(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
 DRAWS = {"isometric-x"}
 
 
-def layout(scene: Mapping[str, Any]) -> dict[str, Any]:
+def layout(scene: Mapping[str, Any],
+           evidence: Mapping[str, Any] | None = None,
+           cast: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Rung 2b. This renderer draws one family of scene, and says so when it cannot.
 
     Room centres come from the road curve rather than the scene's normalized
     positions, which is why it is a fixture renderer and AVGE is the general one.
+
+    `evidence` carries measured corpus colour: `palette`, `paper`, `ink`. Absent
+    it, the constants below still draw, and `paletteSource` in the plan says the
+    render is unevidenced rather than letting that pass unremarked.
     """
     if str(scene.get("layout")) not in DRAWS:
         raise GeometryError(
             f"iso_svg draws {sorted(DRAWS)}, not {scene.get('layout')!r}; use AVGE")
+    measured = list((evidence or {}).get("palette") or [])
+    # Priority order, and it is load-bearing. Main rooms carry the scene's
+    # colour argument, the road is next, and the ghost kiosks take what is left
+    # because a near-white is the one request any pale colour can satisfy.
+    resolved = snap_palette(
+        [_requested(room.get("palette")) for room in scene.get("mainRooms", [])]
+        + [ROAD_STROKE]
+        + [_requested(kiosk.get("palette")) for kiosk in scene.get("kiosks", [])],
+        measured)
+    paper = str((evidence or {}).get("paper") or BACKGROUND)
+    ink = str((evidence or {}).get("ink") or OUTLINE)
+    road_stroke = resolved.get(ROAD_STROKE, ROAD_STROKE)
     billboards = scene.get("billboards") or {}
-    boxes = [_place(room, ROOM, billboards) for room in scene.get("mainRooms", [])]
-    boxes += [_place(kiosk, KIOSK, billboards) for kiosk in scene.get("kiosks", [])]
+    boxes = [_place(room, ROOM, billboards, resolved, ink)
+             for room in scene.get("mainRooms", [])]
+    boxes += [_place(kiosk, KIOSK, billboards, resolved, ink)
+              for kiosk in scene.get("kiosks", [])]
     for index, box in enumerate(boxes):
         for other in boxes[index + 1:]:
             if _overlaps(box, other):
@@ -131,7 +201,32 @@ def layout(scene: Mapping[str, Any]) -> dict[str, Any]:
                 and 0 <= box["cy"] - box["hd"] - 110
                 and box["cy"] + box["hd"] + box["h"] <= height):
             raise GeometryError(f"{box['id']} falls outside the canvas")
-    return {"canvas": CANVAS, "road": road_polyline(), "boxes": boxes}
+    figures = (cast or {}).get("figures") or {}
+    for box in boxes:
+        box["figure"] = figures.get(box["id"])
+    return {"canvas": CANVAS, "road": road_polyline(), "boxes": boxes,
+            "paper": paper, "ink": ink, "roadStroke": road_stroke,
+            "paletteGaps": palette_gaps(resolved),
+            "paletteSource": "corpus" if measured else "unevidenced-constants"}
+
+
+def palette_gaps(resolved: Mapping[str, str]) -> list[dict[str, Any]]:
+    """Requested hues the corpus has no real answer for.
+
+    A gap is a finding, not an error. It says this project asked for a colour
+    its references never show, which is a conversation to have with the user
+    rather than something to quietly substitute around.
+    """
+    names = {}
+    for name, hue in PALETTE_FILL.items():
+        names.setdefault(hue, name)
+    gaps = []
+    for want, have in sorted(resolved.items()):
+        distance = _rgb_distance(want, have)
+        if distance > HUE_GAP:
+            gaps.append({"requested": want, "as": names.get(want, "road"),
+                         "nearest": have, "distance": round(distance, 1)})
+    return sorted(gaps, key=lambda gap: -gap["distance"])
 
 
 def self_intersections(points: Sequence[tuple[float, float]]) -> int:
@@ -176,18 +271,35 @@ def _diamond(box: Mapping[str, Any]) -> str:
 
 def _box_svg(box: Mapping[str, Any]) -> list[str]:
     cx, cy, hw, hd, h = box["cx"], box["cy"], box["hw"], box["hd"], box["h"]
-    fill = box["fill"]
+    fill, outline = box["fill"], box.get("ink", OUTLINE)
     left = f"{cx - hw:.1f},{cy:.1f} {cx:.1f},{cy + hd:.1f} " \
            f"{cx:.1f},{cy + hd + h:.1f} {cx - hw:.1f},{cy + h:.1f}"
     right = f"{cx:.1f},{cy + hd:.1f} {cx + hw:.1f},{cy:.1f} " \
             f"{cx + hw:.1f},{cy + h:.1f} {cx:.1f},{cy + hd + h:.1f}"
     return [
-        f'<g id="{box["slug"]}">',
-        f'<polygon points="{left}" fill="{_shade(fill, 0.62)}" stroke="{OUTLINE}" stroke-width="3"/>',
-        f'<polygon points="{right}" fill="{_shade(fill, 0.80)}" stroke="{OUTLINE}" stroke-width="3"/>',
-        f'<polygon points="{_diamond(box)}" fill="{fill}" stroke="{OUTLINE}" stroke-width="3"/>',
+        f'<g id="{box["slug"]}" stroke-linejoin="round" stroke-linecap="round">',
+        f'<polygon points="{left}" fill="{_shade(fill, 0.62)}" stroke="{outline}" stroke-width="4"/>',
+        f'<polygon points="{right}" fill="{_shade(fill, 0.80)}" stroke="{outline}" stroke-width="4"/>',
+        f'<polygon points="{_diamond(box)}" fill="{fill}" stroke="{outline}" stroke-width="4"/>',
         "</g>",
     ]
+
+
+def _figure_svg(box: Mapping[str, Any]) -> list[str]:
+    """The room boss, standing on the floor of its own space.
+
+    Drawn upright rather than skewed into the isometric planes, which is how
+    the corpus draws its characters and what keeps a face readable.
+    """
+    spec = box.get("figure")
+    if not spec:
+        return []
+    from iso_figure import figure
+
+    height = box["hd"] * 1.55
+    base = box["cy"] + box["hd"] * 0.34
+    return [f'<g id="{box["slug"]}_boss">',
+            *figure(spec, box["cx"], base, height), "</g>"]
 
 
 def _billboard_svg(box: Mapping[str, Any]) -> list[str]:
@@ -197,7 +309,7 @@ def _billboard_svg(box: Mapping[str, Any]) -> list[str]:
     room signs lean outward and never land on either.
     """
     cx, cy, hd = box["cx"], box["cy"], box["hd"]
-    text = box["text"]
+    text, outline = box["text"], box.get("ink", OUTLINE)
     panel_w = max(150.0, 15.0 * len(text))
     panel_h, pole_h = 46.0, 54.0
     sx = cx + (box["hw"] * 0.5 if cx > CENTER[0] else -box["hw"] * 0.5)
@@ -206,45 +318,52 @@ def _billboard_svg(box: Mapping[str, Any]) -> list[str]:
     for offset in (-panel_w / 3.0, panel_w / 3.0):
         parts.append(
             f'<rect x="{sx + offset - 4:.1f}" y="{cy - hd - pole_h:.1f}" '
-            f'width="8" height="{pole_h:.1f}" fill="{OUTLINE}"/>')
+            f'width="8" height="{pole_h:.1f}" fill="{outline}"/>')
     parts.append(
         f'<rect x="{sx - panel_w / 2:.1f}" y="{top:.1f}" width="{panel_w:.1f}" '
-        f'height="{panel_h:.1f}" rx="6" fill="#ffffff" stroke="{OUTLINE}" stroke-width="3"/>')
-    parts.append(_text_svg(sx, top + panel_h / 2 + 8, 24, text))
+        f'height="{panel_h:.1f}" rx="6" fill="#ffffff" stroke="{outline}" stroke-width="3"/>')
+    parts.append(_text_svg(sx, top + panel_h / 2 + 8, 24, text, outline))
     parts.append("</g>")
     return parts
 
 
 def _roof_label_svg(box: Mapping[str, Any]) -> list[str]:
-    """Kiosks wear their command on the roof. A pole here would hit a room."""
+    """Kiosks carry their command above the roof. A pole here would hit a room,
+    and the old position, the middle of the floor, is where the boss stands."""
     return [f'<g id="{box["slug"]}_billboard">',
-            _text_svg(box["cx"], box["cy"] + 7, 19, box["text"]),
+            _text_svg(box["cx"], box["cy"] - box["hd"] - 14, 19, box["text"],
+                      box.get("ink", OUTLINE)),
             "</g>"]
 
 
-def _text_svg(x: float, y: float, size: int, text: str) -> str:
+def _text_svg(x: float, y: float, size: int, text: str,
+              outline: str = OUTLINE) -> str:
     return (f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="middle" '
             f'font-family="Menlo, monospace" font-size="{size}" font-weight="700" '
-            f'fill="{OUTLINE}">{text}</text>')
+            f'fill="{outline}">{text}</text>')
 
 
 def render(plan: Mapping[str, Any]) -> str:
     width, height = plan["canvas"]
     road = " ".join(f"{x:.1f},{y:.1f}" for x, y in plan["road"])
     boxes = sorted(plan["boxes"], key=lambda box: box["cy"])
+    paper = plan.get("paper", BACKGROUND)
+    outline = plan.get("ink", OUTLINE)
+    stroke = plan.get("roadStroke", ROAD_STROKE)
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
         f'width="{width}" height="{height}">',
-        f'<rect width="{width}" height="{height}" fill="{BACKGROUND}"/>',
-        f'<polyline id="road" points="{road}" fill="none" stroke="{OUTLINE}" '
+        f'<rect width="{width}" height="{height}" fill="{paper}"/>',
+        f'<polyline id="road" points="{road}" fill="none" stroke="{outline}" '
         f'stroke-width="52" stroke-linejoin="round"/>',
-        f'<polyline points="{road}" fill="none" stroke="{ROAD_STROKE}" '
+        f'<polyline points="{road}" fill="none" stroke="{stroke}" '
         f'stroke-width="44" stroke-linejoin="round"/>',
-        f'<polyline points="{road}" fill="none" stroke="#ffffff" stroke-width="4" '
+        f'<polyline points="{road}" fill="none" stroke="{paper}" stroke-width="4" '
         f'stroke-dasharray="26 22" stroke-linejoin="round"/>',
     ]
     for box in boxes:
         parts += _box_svg(box)
+        parts += _figure_svg(box)
     for box in boxes:
         parts += (_roof_label_svg(box) if box["hw"] == KIOSK["hw"]
                   else _billboard_svg(box))
@@ -252,5 +371,7 @@ def render(plan: Mapping[str, Any]) -> str:
     return "\n".join(parts) + "\n"
 
 
-def build(scene: Mapping[str, Any]) -> str:
-    return render(layout(scene))
+def build(scene: Mapping[str, Any],
+          evidence: Mapping[str, Any] | None = None,
+          cast: Mapping[str, Any] | None = None) -> str:
+    return render(layout(scene, evidence, cast))

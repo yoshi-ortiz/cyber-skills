@@ -297,30 +297,41 @@ def thumbnail_name(item: Mapping[str, Any]) -> str:
     return f'corpus-{str(item.get("sha256"))[:20]}{suffix}'
 
 
+def image_groups(corpus: Mapping[str, Any]) -> list[str]:
+    """Every folder holding image evidence, in path order."""
+    return sorted({group_of(str(item.get("path") or ""))
+                   for item in (corpus.get("items") or [])
+                   if isinstance(item, Mapping) and item.get("kind") == "image"})
+
+
 def stage_corpus_thumbnails(project_root: Path, content_dir: Path) -> list[Path]:
-    """Copy verified representatives beside the served article, never the corpus."""
+    """Copy verified representatives beside the served article, never the corpus.
+
+    Every image folder, not just the one being asked about. Staging only the
+    pending group meant a project whose image folders were all tagged staged
+    nothing at all -- the served screen asked about a text-only folder and the
+    reference images the round argues from had no file to point an <img> at.
+    """
     try:
         corpus = load_corpus(project_root)
-        pending = untagged_groups(project_root)
     except (OSError, WorkflowError):
-        return []
-    if not pending:
         return []
     content_dir.mkdir(parents=True, exist_ok=True)
     staged = []
-    for item in representative_items(corpus, pending[0][0]):
-        source = Path(str(item["inspectPath"]))
-        try:
-            if not source.is_file():
+    for group in image_groups(corpus):
+        for item in representative_items(corpus, group):
+            source = Path(str(item["inspectPath"]))
+            try:
+                if not source.is_file():
+                    continue
+                digest = hashlib.sha256(source.read_bytes()).hexdigest()
+                if digest != str(item["sha256"]):
+                    continue
+                target = content_dir / thumbnail_name(item)
+                shutil.copy2(source, target)
+                staged.append(target)
+            except OSError:
                 continue
-            digest = hashlib.sha256(source.read_bytes()).hexdigest()
-            if digest != str(item["sha256"]):
-                continue
-            target = content_dir / thumbnail_name(item)
-            shutil.copy2(source, target)
-            staged.append(target)
-        except OSError:
-            continue
     return staged
 
 
@@ -407,6 +418,16 @@ def _chips(name: str, values: tuple[str, ...], legend: str,
             f"{boxes}</fieldset>")
 
 
+def _thumb_strip(corpus: Mapping[str, Any], group: str) -> str:
+    """One folder's representative images, or "" when it holds no image."""
+    thumbs = "".join(
+        f'<img class="dh-tags-thumb" src="/files/{html_escape(thumbnail_name(item))}" '
+        f'alt="{html_escape(Path(str(item.get("path") or "reference")).name)}" '
+        'loading="lazy" decoding="async">'
+        for item in representative_items(corpus, group))
+    return f'<div class="dh-tags-thumbs">{thumbs}</div>' if thumbs else ""
+
+
 def render_corpus_tags(project_root: Path, txt: Mapping[str, str] | None = None) -> str:
     """One untagged folder at a time, plus the digest built so far.
 
@@ -426,19 +447,21 @@ def render_corpus_tags(project_root: Path, txt: Mapping[str, str] | None = None)
     heading = words.get("tags-title", "Reference tags")
     counted = words.get("tags-count", "{left} folder(s) left").format(left=len(pending))
     body = []
+    corpus = load_corpus(project_root)
+    # The reference the round argues from, shown as the images it actually is.
+    # A digest of counts is not evidence a person can look at. The folder being
+    # asked about is skipped here because the question below already shows it.
+    asking = pending[0][0] if pending else None
+    for group in image_groups(corpus):
+        thumbs = _thumb_strip(corpus, group) if group != asking else ""
+        if thumbs:
+            body.append(f'<p class="dh-tags-folder">{html_escape(group)}</p>{thumbs}')
     if tagged_any:
         body.append('<pre class="dh-tags-digest">'
                     + html_escape(render_digest(rows)) + "</pre>")
     if pending:
         name, count = pending[0]
-        corpus = load_corpus(project_root)
-        thumbs = "".join(
-            f'<img class="dh-tags-thumb" src="/files/{html_escape(thumbnail_name(item))}" '
-            f'alt="{html_escape(Path(str(item.get("path") or "reference")).name)}" '
-            'loading="lazy" decoding="async">'
-            for item in representative_items(corpus, name)
-        )
-        strip = f'<div class="dh-tags-thumbs">{thumbs}</div>' if thumbs else ""
+        strip = _thumb_strip(corpus, name)
         body.append(
             f'<div class="dh-tags-asking" data-tags-group="{html_escape(name)}">'
             f'<p class="dh-tags-folder">{html_escape(name)}'

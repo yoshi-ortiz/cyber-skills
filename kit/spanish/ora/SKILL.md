@@ -1,6 +1,7 @@
 ---
 name: ora
 description: Rewrite a reply in the user's own Spanish. Summarizes the conclusions by default; `full` translates the whole reply, and `on`/`off` hold it for the session. Use when the user asks for an answer in Spanish or asks for it shorter and plainer — "ora", "en español", "resúmelo", "explícamelo simple", "tradúcelo", "más corto", "en cristiano". One reply only unless they said `on`. Do NOT use merely because the user happens to write in Spanish.
+phase: kit
 ---
 
 # Ora

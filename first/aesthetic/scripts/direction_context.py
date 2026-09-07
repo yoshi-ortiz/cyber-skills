@@ -16,8 +16,10 @@ correction that does not fit raises rather than being dropped quietly.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -64,11 +66,67 @@ DOCTRINE_ORDER = ("user-communication.md", "golden-rules.md", "loop.md",
                   "asset-sourcing.md", "verification.md")
 
 ATTEMPTS_FILE = "inference-attempts.jsonl"
+REVIEWED_INTENT_FILE = "reviewed-intent.json"
+MOODBOARD_INVOCATION = "aesthetic/moodboard-generation"
 OUTCOMES = ("accepted", "mixed", "rejected")
 
 
 class DirectionContextError(ValueError):
-    pass
+    def __init__(self, message: str, code: str = "invalid-context", **details: Any):
+        super().__init__(message)
+        self.code, self.details = code, details
+
+
+def _canonical(value: Any) -> bytes:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True,
+                      separators=(",", ":")).encode("utf-8")
+
+
+def reviewed_intent(project_root: Path, invocation: str = MOODBOARD_INVOCATION) -> dict[str, Any]:
+    """Load the one human-reviewed intent record; inferred state is never approval."""
+    path = Path(project_root) / STORE / REVIEWED_INTENT_FILE
+    if not path.exists():
+        raise DirectionContextError(
+            f"unresolved input: missing {path}", "unresolved-intent", path=str(path))
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, Mapping) or raw.get("version") != 1 or raw.get("reviewed") is not True:
+        raise DirectionContextError(
+            "unresolved input: intent must be version 1 and reviewed", "unresolved-intent")
+    if raw.get("invocation") != invocation:
+        raise DirectionContextError("reviewed intent is scoped to another invocation",
+                                    "intent-scope-mismatch")
+    source, review, constraints = raw.get("source"), raw.get("review"), raw.get("constraints")
+    if not isinstance(source, Mapping) or not source.get("ref") or not source.get("digest"):
+        raise DirectionContextError("reviewed intent requires source ref and digest")
+    if not isinstance(review, Mapping) or review.get("source") != "user" or not review.get("at"):
+        raise DirectionContextError("reviewed intent requires a user review source and time")
+    try:
+        datetime.fromisoformat(str(review["at"]).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise DirectionContextError("review.at must be an ISO timestamp") from exc
+    if not isinstance(constraints, list) or not constraints:
+        raise DirectionContextError("reviewed intent requires constraints", "unresolved-intent")
+    normalized = []
+    for index, item in enumerate(constraints):
+        if not isinstance(item, Mapping):
+            raise DirectionContextError(f"constraints[{index}] must be an object")
+        priority = str(item.get("priority") or "")
+        if priority not in ("correction", "criterion", "evidence"):
+            raise DirectionContextError(f"constraints[{index}].priority is invalid")
+        if not item.get("id") or not str(item.get("text") or "").strip():
+            raise DirectionContextError(f"constraints[{index}] requires id and text")
+        normalized.append({"id": str(item["id"]), "text": str(item["text"]).strip(),
+                           "priority": priority, "sourceRef": str(item.get("sourceRef")
+                                                                   or source["ref"])})
+    expected = hashlib.sha256(_canonical(normalized)).hexdigest()
+    if source["digest"] != expected:
+        raise DirectionContextError("reviewed intent source digest does not match constraints",
+                                    "intent-digest-mismatch")
+    return {"version": 1, "reviewed": True, "invocation": invocation,
+            "source": {"kind": str(source.get("kind") or "user"),
+                       "ref": str(source["ref"]), "digest": expected},
+            "review": {"source": "user", "at": str(review["at"])},
+            "constraints": normalized}
 
 
 def answered_brief(brief: Mapping[str, Any] | None) -> list[dict[str, str]]:
@@ -171,22 +229,39 @@ def _doctrine_rank(name: str) -> int:
     return DOCTRINE_ORDER.index(name) if name in DOCTRINE_ORDER else len(DOCTRINE_ORDER)
 
 
-def candidates(project_root: Path, skill_root: Path = SKILL_ROOT) -> list[dict[str, Any]]:
+def candidates(project_root: Path, skill_root: Path = SKILL_ROOT,
+               intent: Mapping[str, Any] | None = None) -> list[dict[str, Any]]:
     """Every piece of context eligible for this project, in admission order.
 
     The sources are enumerated, never discovered by walking the project. A
     Repo-Dev rail document sitting beside the design work has no route in,
     which is the contamination guard the skill states in prose.
     """
+    from graphics_flow import correction_bundles
+
     evidence = inference_context(project_root)
     rows: list[dict[str, Any]] = []
 
-    for item in evidence["briefConstraints"]:
+    for item in (intent or {}).get("constraints", []):
+        rows.append(_chunk(f"intent:{item['id']}", item["priority"], "evidence",
+                           item["text"], "dev-only") | {"sourceRef": item["sourceRef"]})
+
+    # A Shot the user sent back is the sharpest correction there is: they saw
+    # the delivered round and said what was wrong with it. It enters as a
+    # `correction`, which is what puts it ahead of every optional doctrine
+    # file -- taste guidance loses to the user's own words about this round.
+    # Only the bounded bundle crosses over; the Shot record itself stays out.
+    for bundle in correction_bundles(project_root) if intent is None else []:
+        rows.append(_chunk(f"correction:shot:{bundle['shotId']}", "correction",
+                           "evidence",
+                           f"{bundle['shotId']}: {bundle['correction']}", "dev-only"))
+
+    for item in evidence["briefConstraints"] if intent is None else []:
         rows.append(_chunk(f"brief:{item['id']}",
                            BRIEF_PRIORITY.get(item["id"], "evidence"), "evidence",
                            f"{item['id']}: {item['answer']}", "dev-only"))
 
-    for element in evidence["preferences"]["elements"]:
+    for element in evidence["preferences"]["elements"] if intent is None else []:
         note = str(element.get("evidence") or "").strip()
         if element.get("sentiment") == "dislike":
             rows.append(_chunk(f"correction:{element['element']}", "correction",
@@ -199,7 +274,7 @@ def candidates(project_root: Path, skill_root: Path = SKILL_ROOT) -> list[dict[s
                                f"{element['element']}: ranked {element['rank']}. {note}",
                                "dev-only"))
 
-    for row in evidence["referenceTags"]:
+    for row in evidence["referenceTags"] if intent is None else []:
         if row["aspect"] == "untagged":
             body = f"untagged references: {row.get('count', 0)}"
         else:
@@ -228,7 +303,8 @@ def candidates(project_root: Path, skill_root: Path = SKILL_ROOT) -> list[dict[s
 def compile_pass(project_root: Path, pass_name: str,
                  profile: str = DEFAULT_PROFILE, budget: int | None = None,
                  proof: tuple[str, ...] = (), force: bool = False,
-                 skill_root: Path = SKILL_ROOT) -> dict[str, Any]:
+                 skill_root: Path = SKILL_ROOT, require_reviewed: bool = False,
+                 invocation: str = MOODBOARD_INVOCATION) -> dict[str, Any]:
     """Pack one inference pass, and explain every decision that packed it."""
     if pass_name not in PASS_BUDGETS:
         raise DirectionContextError(
@@ -244,8 +320,9 @@ def compile_pass(project_root: Path, pass_name: str,
             f"--proof {required}, or --force to ask for the expensive pass directly")
 
     limit = PASS_BUDGETS[pass_name] if budget is None else int(budget)
+    intent = reviewed_intent(project_root, invocation) if require_reviewed else None
     used, admitted, trace = 0, [], []
-    for chunk in candidates(project_root, skill_root):
+    for chunk in candidates(project_root, skill_root, intent):
         tokens, exact = count(chunk["text"], profile)
         fits = used + tokens <= limit
         if fits:
@@ -255,14 +332,22 @@ def compile_pass(project_root: Path, pass_name: str,
             raise DirectionContextError(
                 f"{chunk['key']} is a {chunk['priority']} costing {tokens} tokens "
                 f"and does not fit the {limit} token {pass_name} budget. Raise the "
-                f"budget; a correction is never dropped to make room.")
+                f"budget; a correction is never dropped to make room.",
+                "required-context-overflow", required=used + tokens,
+                available=limit, sourceRef=chunk.get("sourceRef", chunk["key"]))
         trace.append({k: chunk[k] for k in
                       ("key", "priority", "role", "context", "tier", "channel")}
                      | {"tokens": tokens, "exact": exact, "admitted": fits,
                         "reason": "admitted in priority order" if fits else
                         f"omitted: optional {chunk['priority']}, {pass_name} budget full"})
 
-    return {"version": 1, "pass": pass_name,
+    declarations = {"priorities": PRIORITIES, "tiers": TIERS,
+                    "passBudgets": PASS_BUDGETS, "proofGates": PROOF_GATE,
+                    "doctrineOrder": DOCTRINE_ORDER}
+    identity_input = {"intent": intent, "pass": pass_name, "profile": profile,
+                      "budget": limit, "declarations": declarations}
+    return {"version": 1, "identity": hashlib.sha256(_canonical(identity_input)).hexdigest(),
+            "invocation": invocation, "intent": intent, "pass": pass_name,
             "profile": {"name": profile, "exact": profile.startswith(EXACT_PREFIX)},
             "budget": limit, "used": used,
             "proofGate": {"requires": required, "state": state},
