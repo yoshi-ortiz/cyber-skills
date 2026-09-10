@@ -65,8 +65,9 @@ which stop of that rail a prompt belongs to.
   <tr><td nowrap>📚 <a href="#-knowledge"><strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Token sessions</a><br><small>Where you spend a working session</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td><td><code>first</code> · <strong>Plan</strong></td></tr>
-  <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Shows which other skills yours actually resemble, and which resemble nothing</td><td><code>build</code> · <strong>Measure</strong></td></tr>
-  <tr><td nowrap>🧾 <a href="#-tokens-qa"><strong>/tokens-qa</strong></a></td><td>Observe one shot, measure what it cost, and say what it broke</td><td><code>check</code> · <strong>Measure</strong></td></tr>
+  <tr><td nowrap>📝 <a href="#-first"><strong>/first</strong></a></td><td>Capture intent, then sketch creative directions with f take note and f design</td><td><code>first</code> · <strong>Plan</strong></td></tr>
+  <tr><td nowrap>🔬 <a href="#-tokens-ontology"><strong>/tokens-ontology</strong></a></td><td>Retrieve project context with pgvector; explore its structure with EVoC</td><td><code>build</code> · <strong>Measure</strong></td></tr>
+  <tr><td nowrap>🧾 <a href="#-tokens-qa"><strong>/tokens-qa</strong></a></td><td>Compass any agent session with evidence, progress and next actions</td><td><code>check</code> · <strong>Measure</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-check">🛤️ Rest of the rail</a><br><small>The four family routers. They route the public skills; they do not replace them.</small></h3></td></tr>
   <tr><td nowrap>🔍 <a href="#-check"><strong>/check</strong></a></td><td>Reads progress and production evidence back into planning, and writes nothing</td><td><code>check</code> · <strong>Monitor</strong> → Plan</td></tr>
   <tr><td nowrap>🔨 <a href="#-build"><strong>/build</strong></a></td><td>Implements and verifies the approved contract</td><td><code>build</code> · <strong>Code · Build · Test</strong></td></tr>
@@ -139,48 +140,20 @@ To remove one later: `npx skills remove <name>`.
 
 Stable. Installed by path B, supported, safe to rely on.
 
-## 🔬 /build-context-token-vectors
+## 🔬 /tokens-ontology
 
-Answers one question: **which other skills is yours actually like?** It reads
-every skill installed on your machine, groups them by what they say, and shows
-you where yours land. Some land next to obvious neighbours. Some land nowhere,
-which is worth knowing before you decide yours is unique.
+Index repository context with pgvector and retrieve source slices for the active
+task. When structure remains unclear, build an EVoC exploration manifest. The
+CLI provides manifest, embed, index, search and explore commands.
 
 | | |
 | --- | --- |
-| **Package** | [check/build-context-token-vectors/](check/build-context-token-vectors/) · entry [check/build-context-token-vectors/SKILL.md](check/build-context-token-vectors/SKILL.md) |
-| **Invoke** | You only. Say `build-context-token-vectors`. |
-| **Needs** | Python, and three packages in a throwaway environment you create: `evoc`, `model2vec`, `matplotlib` |
-| **Runs on** | Your installed skills folder, read only |
+| **Package** | [check/tokens-ontology/](check/tokens-ontology/) |
+| **Invoke** | `tokens-ontology` |
+| **Needs** | Python; local model2vec model; PostgreSQL + pgvector and psycopg for retrieval; EVoC for exploration |
 | **Channel** | `main` |
 
-<details>
-<summary><b>Full spec: what it measures, and the one thing it refuses to say</b></summary>
 
-`tools/token_bench.py` compares a skill flow against a reference flow, and a
-human picks the reference. This derives it instead: every `SKILL.md` becomes a
-vector, the vectors are clustered, and the nearest neighbours are the skills a
-benchmark should actually run against.
-
-| Output | Means |
-| --- | --- |
-| Cosine similarity | How close two skills' doctrine sits. Above 0.80 a real peer, 0.65 to 0.80 a loose one, below 0.65 no peer at all. |
-| A cluster | The skill was placed, and that cluster's other members are its neighbourhood. |
-| `noise` | It was placed nowhere. |
-| The scatter plot | Two principal components, for orientation. Clustering ran in full dimensionality, so two adjacent looking points may not be. |
-
-**It never says whether a skill is good.** `noise` means the corpus holds no
-peer, and novelty and dilution look identical from here. The judgement stays
-yours.
-
-**The seed is part of the result.** The clustering algorithm is stochastic, so
-the script declares a fixed `random_state`. Without one, two runs over the same
-skills return different groups, and a comparison set that moves is not one.
-
-**Dependencies stay outside.** Nothing in this package imports them except this
-skill's own script, and it ships none of them.
-
-</details>
 
 
 ## 🧑‍🎨 /aesthetic
@@ -371,6 +344,19 @@ Token totals compare only within one profile. Missing counts read
 `unavailable`, never zero.
 
 </details>
+
+## 📝 /first
+
+`first` / `f` starts with owner intent, instincts and goals, then sketches creative
+directions. `f take note` aligns requirements to Genesis; `f design` explores
+mockup elements and records the prompter's direction. Aesthetic stays outside
+this route until it passes an unslop review and the owner re-enables it.
+
+| | |
+| --- | --- |
+| **Package** | [first/SKILL.md](first/SKILL.md) |
+| **Invoke** | `first`, `f`, `f take note`, `f design` |
+| **Channel** | `alpha` |
 
 ## 📁 /genesis
 
@@ -660,7 +646,7 @@ name with two owners goes to `first` to be settled in the spec, never patched
 in `check`.
 
 The two measurement skills in this family,
-[/build-context-token-vectors](#-build-context-token-vectors) and
+[/tokens-ontology](#-tokens-ontology) and
 [/tokens-qa](#-tokens-qa), carry their own doctrine.
 
 </details>
@@ -668,20 +654,20 @@ The two measurement skills in this family,
 ## 🩹 /fix
 
 A bare on-ramp, entered from outside the sequence at the moment something stops
-working. Two breakages, one reflex: the code is wrong, or the work is. It routes
-`diagnosing-bugs` and `systematic-debugging` for a defect, and `poteto-mode`
-when the session itself has derailed.
+working. It repairs code, decontaminates context and restores missing agent tools.
+Tokens QA's `shot-audit` rereads session corrections; its session compass guides
+the return to the active goal.
 
 | | |
 | --- | --- |
 | **Package** | [fix/](fix/) · entry [fix/SKILL.md](fix/SKILL.md) |
 | **Invoke** | You only. Say `fix`, `rail`, or `unstick`. |
-| **Needs** | The skills it routes, installed. `/kit coding` fetches them. |
+| **Needs** | Available session evidence; optional Tokens QA tooling and supported installers |
 | **Runs on** | **Your** project, never this repo |
 | **Channel** | `alpha` |
 
 <details>
-<summary><b>Full spec: the two breakages, and the one that is not this skill</b></summary>
+<summary><b>Full spec: code, context and tool recovery</b></summary>
 
 **Fix the code.** Reproduce before you theorise, because a fix written against a
 symptom you have not seen fail is a guess that happens to be committed. Keep
@@ -689,16 +675,13 @@ asking why until the answer stops being a restatement of the symptom: a patch at
 the point of the error, when the error came from three frames up, moves the bug
 rather than removing it. The fix ends with the failing case as a test.
 
-**Fix the rail.** The code runs and the session has drifted. Stop first. More
-output on a derailed session buys nothing, and a long stretch of work in the
-wrong direction costs more to unpick than to abandon. Then re-read the record
-rather than the conversation: the accepted spec, the roadmap item, and the state
-as written down outrank anything either side remembers about it.
+**Fix the rail.** Pause the derailed action, reread current instructions and
+actual feedback through Tokens QA, correct the context owner and retry with a
+focused continuation. Preserve correction history and verify the new output.
 
-An installation or collection problem is **not** this skill. A skill that
-arrived wrong, a domain that never synced, two skills colliding: that is
-[/kit](#-kit), which answers to `doctor`, `repair`, `troubleshoot`, and
-`conflict`.
+**Restore tools.** Set up the smallest missing capability through its supported
+path. Managed collection repairs use [/kit](#-kit); runtime and integration setup
+use their own installers. Verify the tool from the agent's execution environment.
 
 Fix restores the path and hands the work back. It does not take ownership of the
 work that was travelling on it.

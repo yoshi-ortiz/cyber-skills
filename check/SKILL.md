@@ -46,9 +46,9 @@ Report the gap between the record and the code, not the record alone. An item
 marked done whose evidence nobody can produce is the finding.
 
 Measurement skills in this family carry their own doctrine.
-[`build-context-token-vectors/`](build-context-token-vectors/) clusters the
-installed corpus, and [`tokens-qa/`](tokens-qa/) reads one shot and says what it
-cost.
+[`tokens-ontology/`](tokens-ontology/) retrieves bounded repository context and
+escalates to EVoC exploration; [`tokens-qa/`](tokens-qa/) guides any agent session
+with goal progress, evidence and next actions.
 
 ## Ontology
 

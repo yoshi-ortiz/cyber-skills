@@ -15,12 +15,12 @@ installable until its owner exists and the publication gates pass.
 | --- | --- | --- | --- | --- | --- | --- |
 | `kit` | `kit`; `starter-pack`; `install`, `setup`, `init`, `start`; `sync`, `update`, `refresh`, `upgrade`; `doctor`, `repair`, `troubleshoot`, `conflict` | `main` | [`kit/SKILL.md`](kit/SKILL.md) | Install, Sync, Fix | ✅ `SHIPPED` | `R-32` |
 | `kit` modes | `kit <domain...>` including `kit design`; `kit español` | `main` | [`kit/SKILL.md`](kit/SKILL.md) | Domain, Install, Sync, Fix | 🔵 `PARTIAL` | `R-37` |
-| `first` | `genesis`; `plan`; `first-plan-roadmap`; `first-take-note`; `first-idea-sketch`; `first-work-style`; post-MVP `first-aesthetic`, `aesthetic` | `alpha` | [`first/genesis/SKILL.md`](first/genesis/SKILL.md), [`first/aesthetic/SKILL.md`](first/aesthetic/SKILL.md) | Work style, Interview, Spec, Architecture decisions, Sources, State | 🔵 `PARTIAL` | `R-35`, `R-41`, `R-66` |
+| `first` | `first`; `f`; `f take note`; `f design`; Genesis alignment | `alpha` | [`first/SKILL.md`](first/SKILL.md) | Take note, Design | ✅ `SHIPPED` | `R-35` |
 | `first` graphics | `text-to-graphics` (loop reference, no separate command yet) | `alpha` | [`first/aesthetic/SKILL.md`](first/aesthetic/SKILL.md) | Source before you write | 🔵 `PARTIAL` | `R-66` |
 | `build` | `build-clean-code`; `build-qa-tests`; `build-pre-release`; `to`; `make` | `alpha` | [`build/SKILL.md`](build/SKILL.md) | Clean code, QA tests, Pre-release | ✅ `SHIPPED` | `R-36` |
 | `land` | `land-asap-burndown`; `land-deployed-release`; `do`; `ship`; `burndown` | `alpha` | [`land/SKILL.md`](land/SKILL.md) | Burndown, Release | ✅ `SHIPPED` | `R-64` |
 | `check` | `check-progress-goals`; `check-release-ontology`; `check` | `alpha` | [`check/SKILL.md`](check/SKILL.md) | Progress, Ontology | ✅ `SHIPPED` | `R-34` |
-| `fix` | `fix`; `fix-context-derail`; `rail`; `unstick` | `alpha` | [`fix/SKILL.md`](fix/SKILL.md) | Fix the code, Fix the rail | ✅ `SHIPPED` | `R-63` |
+| `fix` | `fix`; `fix-context-derail`; `rail`; `unstick` | `alpha` | [`fix/SKILL.md`](fix/SKILL.md) | Fix the code, Fix the rail, Restore missing agent tools, Resume and report | ✅ `SHIPPED` | `R-63` |
 
 ## Workflow order
 
@@ -47,3 +47,7 @@ The MVP section in [ROADMAP.md](ROADMAP.md) owns delivery order. Its deferred
 section owns Aesthetic and custom capabilities. A row marked `PLANNED` stays
 a roadmap promise until its family contract, `SKILL.md`, publication channel,
 and verification evidence exist.
+
+`tokens-ontology` is the context-index entry point. Tokens QA provides a session
+compass with or without repository tooling. Aesthetic remains standalone and
+excluded from the first router until it passes an unslop review.

@@ -1,6 +1,6 @@
 ---
 name: genesis
-description: Bootstrap any folder into a scoped, spec-driven project. Use for genesis, first-work-style, roadmap, burndown, project architecture, or auditing existing project state.
+description: Bootstrap projects and first-work-style, or advance scoped features with Compass, reproducible setup, and evidence-driven improvement.
 disable-model-invocation: true
 phase: first
 arguments:
@@ -9,135 +9,135 @@ arguments:
 
 # Genesis
 
-First commandment: advance verified, user-accepted features with fewer corrective
-attempts and tokens. This prompt works alone in any folder; every package tool
-it names is optional.
+Advance verified, user-accepted outcomes with fewer corrective attempts and
+less unnecessary context. Apply this workflow to the target project's actual
+domain: software, research, content, media, or a combination. Select tools and
+structure from its requirements and existing conventions.
 
-Compass selects one Item. Sections 1 to 8 build it.
+Use the tools available in the current model environment. Named skills and
+package scripts are optional helpers; their absence leaves the underlying work
+required. With no file or execution access, provide proposed artifacts and exact
+verification steps, and mark execution unverified. All generated project files
+belong in the target project; preserve existing work and canonical locations.
 
 ## Compass
 
-0. **No `ROADMAP.md` is a cold start.** Compass has nothing to select: run
-   sections 1 to 8, which write the state it needs. Compass owns every session
-   after that one.
-1. Inspect existing work and state the end user's outcome, criteria, exclusions
-   and session budget. Selection ends with one bounded Item.
-2. Run `python3 scripts/compass.py --project-root PATH next` from this skill's
-   directory to resume or select work; `check` validates the roadmap. It needs
-   only Python and a `ROADMAP.md` whose table carries `ID` and `State` headers
-   and a nonempty `Workstream` on every selectable row. Without the script,
-   apply those rules by reading the table. `no-ready-item` authorizes no work
-   and never means done: report it and stop.
-3. Build the selected outcome, run its public acceptance path and retain the
-   user's actual feedback and proof. Completion requires explicit acceptance.
-4. In this repository, use `tools/repo_context.py --json next` to join selection
-   with Shot observations; where that script is absent, step 2 is the whole
-   selection. For reviewed fields, budget or closure, read
-   [Feature compass](../../docs/SPEC/FEATURE_COMPASS.md). For compliance, read
-   [QA.md](../../QA.md).
+1. Bind one bounded Item: user outcome, acceptance criteria, scope, exclusions,
+   proof and any agreed budget. On a cold start, create its `ROADMAP.md` row
+   before implementation; then follow sections 1 to 8.
+2. When available, run `python3 scripts/compass.py --project-root PATH next`
+   from this skill's directory; `check` validates the roadmap. Otherwise read
+   the table: require unique `ID`, valid `State`, nonempty `Workstream`, resolved
+   acyclic dependencies and at most one active Item per workstream. Resume active
+   work; otherwise select ready, non-deferred work by numeric Priority then row
+   order. `no-ready-item` means report the selection blocker, not completion.
+3. Build, verify and retain actual feedback. Completion requires explicit user
+   acceptance. Preserve correction history and respect the agreed budget.
+4. In this repository, `python3 tools/repo_context.py --json next` joins Compass
+   with Shot observations. For reviewed fields, budget or closure, read
+   [Feature compass](../../docs/SPEC/FEATURE_COMPASS.md); for repository compliance,
+   read [QA.md](../../QA.md). Standalone projects use step 2 without these tools.
 
 ## Work style (`work-style`)
 
-`first-work-style` makes domain context a project fact instead of a catalog the
-agent must rediscover in every session. It installs nothing and it does not
-route to Aesthetic.
-
-1. Name the domains this project actually works in, from its own requirements.
-   Never infer `all`, and never turn a repository name into a domain.
-2. Write `docs/WORK_STYLE.md` with four short sections: **Domains**, **Required
-   tools**, **Always-on constraints**, and **Excluded scope**. Link to canonical
-   project documents; do not paste skill bodies or a catalog.
-3. Add one short instruction in the project's `AGENTS.md` to read
-   `docs/WORK_STYLE.md`. If the project carries `CLAUDE.md`, import the same file
-   there. Do not duplicate the rail into each agent-specific file.
-
-Those three steps need nothing installed. Arming a machine with a managed skill
-collection is an optional extension, never a precondition: when someone asks for
-it, read [Extending Genesis with the cyber-yoshi workflow](cyber-skills.md).
+For `first-work-style`, derive the project's domains from its requirements.
+Write `docs/WORK_STYLE.md` with **Domains**, **Required tools**, **Always-on
+constraints**, and **Excluded scope**. Link canonical sources. Add a pointer
+in `AGENTS.md` and, if present, `CLAUDE.md`, both reading that same file.
+Done when domains and constraints are explicit.
+For an explicitly requested managed skill collection, read
+[Extending Genesis with the cyber-yoshi workflow](cyber-skills.md).
 
 ## 1. Interview before you architect
 
-Use existing requirements. Ask only for missing choices that materially change
-scope or acceptance; do not re-interview authorized work. For the questions that
-precede a boundary, and for the paradigm a software, editorial, or media package
-each implies, read [Scope interviewing and modular architecture](references/architecture.md).
+Use existing requirements; ask only for missing choices that change scope or
+acceptance. For unresolved scope or package structure, read [Scope interviewing and modular architecture](references/architecture.md).
 
-Raw answers land in `docs/REQUIREMENTS.md` verbatim, including the parts you
-disagree with. Refining in place destroys the record of what was asked for.
+Done when the outcome, acceptance criteria, exclusions and blocking unknowns
+are explicit. Label assumptions separately from user statements.
+
+Append raw asks verbatim to `docs/REQUIREMENTS.md`; preserve their history.
 
 ## 2. Promote the requirement to a spec
 
-Promote acceptance criteria into `docs/SPEC/`. Revise contracts explicitly
-before changing their implementation.
+Promote acceptance criteria into `docs/SPEC/`. Revise contracts before implementation.
 
-Every domain term gets one canonical entry in `docs/GLOSSARY.md`.
-If the glossary says `Subscriber`, then `User`, `Customer`, and `Account` are
-forbidden in code, schema, and docs when referring to that thing.
+Define ambiguous domain concepts in `docs/GLOSSARY.md`; use their canonical
+names consistently. Done when the selected Item has a testable contract and
+each criterion names observable proof.
 
 ## 3. Record accepted boundary decisions
 
-Record accepted hard-to-reverse choices and their reasons in `docs/adr/`.
-Ordinary implementation choices need no ADR. For which boundaries earn one, the
-minimum shape of the record, and who may accept it, read
+For hard-to-reverse choices, read
 [Architecture decision records](references/architecture-decisions.md).
+Done when qualifying accepted decisions and reasons are recorded in `docs/adr/`,
+or the Item has no such decision.
 
-## 4. Fetch what you do not know
+## 4. Resolve implementation uncertainty
 
-Research the selected domain and comparable public products before claiming a
-benchmark. Record source URL, date/version, test input, metric, competitor and
-budget; unknown or inaccessible evidence stays unknown. Do not fetch unrelated
-domain catalogs. Use deterministic parsers, arithmetic, schemas and tests for
-counting, state, validation and reproducibility; do not ask an LLM to guess them.
+Fetch current official documentation for unfamiliar or changing dependencies;
+match it to the project's versions. Use **/knowledge** when available to distil
+sources into `docs/knowledge/`; otherwise record URL, version, retrieval date
+and applicable facts in a concise source note. Use deterministic tools for
+counting, parsing and validation.
 
-Do not implement an unfamiliar or fast-moving dependency from recall. Pull the
-current official documentation and distil it into `docs/knowledge/` with
-**/knowledge**. Where that skill is not installed, fetch the Open Knowledge
-Format specification and follow it directly:
-`https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md`.
-Check the version you distilled against the dependency manifest before writing a
-line against it.
+Research comparable products only when the Item needs a comparison. Record the
+source, date/version, input, metric and budget behind each benchmark claim.
+Done when implementation-critical facts have evidence and unknowns are explicit.
 
 ## 5. Source before you write
 
 Reuse maintained domain tools. Visual sourcing applies only to visual tasks.
-Approved vectors and the tooling sweep:
-[references/sourcing.md](references/sourcing.md).
+Read [references/sourcing.md](references/sourcing.md).
 
 ## 6. Build inside the boundary
 
-Keep business logic independent of views and isolate dependencies. Fix conflicts
-inside the selected scope; a quick win must leave a clean build and context.
+For software bootstrap or an incomplete development setup, read
+[Reproducible development environment](references/environment.md) and establish
+the applicable environment before building the first feature. For other domains,
+verify the equivalent authoring, validation and delivery path.
+
+Load the selected Item's contract, owning modules, direct dependencies and
+relevant checks. Expand context only to answer a named unresolved question.
+Implement one end-to-end slice; isolate external dependencies behind the owning
+module. Clean up code that obstructs this Item and record unrelated debt for
+separate selection. For cleanup or recurring delivery failures, read
+[Focused cleanup and improvement](references/improvement.md).
+
+Done when the scoped outcome is implemented, affected checks pass, and the
+changes contain no unexplained scope expansion.
 
 ## 7. Prove it, then say it
 
-Run the real acceptance path, not only lint or mocked logic. Record its command,
-result and artifacts. Never infer user acceptance from green tests.
-
-A feature that misses the benchmark `ROADMAP.md` set for it is incomplete rather
-than merely slow: record the measured number and leave the Item `IN-PROGRESS`.
-For the benchmark kinds, the false positives a green check produces, and the
-root-cause test a bug closes on, read
+Run the public acceptance path and record commands, results and artifacts.
+Tests establish technical verification; explicit user feedback establishes
+acceptance. A missed benchmark leaves the Item `IN-PROGRESS` with its measured
+result. For benchmark selection and bug regression proof, read
 [KPI benchmarks and false-positive mitigation](references/verification.md).
+Done when each acceptance criterion has passing evidence or a stated blocker.
 
 ## 8. Update the state, immediately
 
-These files are the project's state machine, not documentation about it. A
-`ROADMAP.md` updated at the end of the week is a roadmap nobody could have
-trusted on Wednesday.
+Update state when it changes. Reuse existing canonical documents; create the
+applicable records below as their contents become necessary. Record ADRs only
+for qualifying decisions and releases only when a release exists.
 
 | File | Holds | Rule |
 | --- | --- | --- |
-| `README.md` | Quickstart and the architectural overview | Written for someone with nothing installed |
-| `ROADMAP.md` | The burndown | `TODO`, `IN-PROGRESS`, `BLOCKED`, `DONE`. One state per item, updated the moment it changes. |
-| `BUGS.md` | Incidents | Every entry carries a one-sentence RCA before it closes |
-| `CHANGELOG.md` | Chronological releases | Semantic versioning, additions, changes, deprecations |
-| `docs/REQUIREMENTS.md` | Raw asks, unrefined | Append-only. Never edited to match what got built. |
-| `docs/SPEC/` | Promoted contracts | Canonical. Changed deliberately, never drifted into. |
-| `docs/adr/` | Accepted architecture decisions | Created for hard-to-reverse boundaries; immutable except for supersession links. |
-| `docs/GLOSSARY.md` | The ubiquitous language | One term per concept, and the code obeys it |
-| `docs/knowledge/` | Distilled external sources | Owned by **/knowledge**, in OKF 0.2 |
+| `README.md` | Quickstart and the architectural overview | Reproducible setup |
+| `ROADMAP.md` | The burndown | `TODO`, `IN-PROGRESS`, `BLOCKED`, `DONE`. Update immediately. |
+| `BUGS.md` | Incidents | Root cause before closure |
+| `CHANGELOG.md` | Chronological releases | Actual release changes |
+| `docs/REQUIREMENTS.md` | Raw asks, unrefined | Append-only |
+| `docs/SPEC/` | Promoted contracts | Canonical contracts |
+| `docs/adr/` | Accepted architecture decisions | Supersede accepted decisions explicitly |
+| `docs/GLOSSARY.md` | The ubiquitous language | Consistent names |
+| `docs/knowledge/` | External evidence | Source and version recorded |
 
-Close bugs with the root cause, fix and regression proof.
+Close bugs with the root cause, fix and regression proof. Done when state agrees
+with evidence. Report the outcome, checks actually run, unresolved blockers and
+next action. Pending user acceptance stays pending; continue independent
+authorized work when available.
 
 ## Auditing an existing project
 

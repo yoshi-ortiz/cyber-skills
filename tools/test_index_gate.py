@@ -16,10 +16,10 @@ INDEX = ("## Index\n\n| | |\n| --- | --- |\n"
          + "\n")
 BODY = (INDEX + "# 📦 INSTALL\n\n"
         "# ✨ SKILL PROMPTS\n\n## 🎒 /kit\n\n## 🇪🇸 /ora\n\n"
-        "## 🔬 /build-context-token-vectors\n\n## 🎨 /aesthetic\n\n"
+        "## 🔬 /tokens-ontology\n\n## 🎨 /aesthetic\n\n"
         "# 🧪 EXPERIMENTS\n\n## 🧬 /genesis\n\n## 📚 /knowledge\n\n"
         "## 🃏 /silly\n\n## 🧾 /tokens-qa\n\n## 🔍 /check\n\n## 🔨 /build\n\n"
-        "## 🚢 /land\n\n## 🩹 /fix\n")
+        "## 🚢 /land\n\n## 🩹 /fix\n\n## 📝 /first\n")
 
 MANIFEST = ("---\nname: knowledge\ndescription: Distils sources, and answers to "
             "enciclopedia.\ntranslations:\n  es: enciclopedia\n---\n")
@@ -33,10 +33,11 @@ SKILL_HOME: dict[str, tuple[str, ...]] = {
     "genesis": ("first",),
     "knowledge": ("first",),
     "aesthetic": ("first",),
-    "build-context-token-vectors": ("check",),
+    "tokens-ontology": ("check",),
     "tokens-qa": ("check",),
     # The four family routers sit at the root, so their name is their family
     # and `with_phase` leaves them alone.
+    "first": (),
     "check": (),
     "build": (),
     "land": (),
@@ -65,7 +66,8 @@ def build(root: Path, readme: str, translation: str | None,
     for name in grouped():
         path = skill_dir(root, name)
         path.mkdir(parents=True, exist_ok=True)
-        router = ("exits: first\n" if name in {"build", "land", "check"}
+        router = ("exits: build\n" if name == "first"
+                  else "exits: first\n" if name in {"build", "land", "check"}
                   else "exits: owner\n" if name == "fix" else "")
         text = manifest if name == "knowledge" else f"---\nname: {name}\n{router}---\n"
         (path / "SKILL.md").write_text(with_phase(text, name))

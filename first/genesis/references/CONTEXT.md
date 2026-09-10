@@ -11,8 +11,8 @@ max_file_bytes: 9000
 
 # Genesis references
 
-Three contracts, each named by exactly one step. A reference nothing points at
-is a reference nothing loads, so a fourth file needs a fourth step first.
+Each contract is reached by an explicit conditional pointer from SKILL.md.
+New references need a triggering branch in the entry point.
 
 These are doctrine, not distilled sources. They carry OKF frontmatter because
 the package writes reference bundles that way, and their trust boundary in

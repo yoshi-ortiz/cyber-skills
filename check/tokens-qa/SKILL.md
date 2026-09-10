@@ -1,6 +1,6 @@
 ---
 name: tokens-qa
-description: Observe one Shot, measure what it cost, and say what it broke. Black-box QA over the declared request, the observable output, the token counts and the user's own words.
+description: Compass any agent session, evaluate evidence, repair scoped contamination, and report goal progress, next actions and measured RSI gains.
 disable-model-invocation: true
 phase: check
 ---
@@ -25,93 +25,22 @@ Keep acceptance pending until the user supplies a verdict.
 Item-linked costs default to unknown. Supply observed `--tokens-input`,
 `--tokens-output`, `--token-profile` and `--duration-ms` when available.
 `--admitted-context` names reads; `--changed` names writes, not admitted context.
-Use failures to improve one instruction or regression test and rerun the same
-acceptance path. This does not train model weights. Preserve corrections,
-privacy, scope and test rigor over lower cost.
+Preserve correction history, privacy, scope and test rigor over lower cost.
 
 ## Two phases, inferred
 
 `OBSERVE` for evaluate, score, tokens, contamination, derail, what went wrong.
-`FIX` for fix, repair, improve, rewrite, next version. Both match, or neither
-matches, choose `OBSERVE` — it writes nothing, so a wrong guess costs a read.
+`FIX` when the user authorizes fix, repair, improve, rewrite, or a next version.
+Explicit repair selects `FIX` even alongside evaluation.
+Otherwise choose `OBSERVE`, which reports findings without writing project state.
+Evaluate the named target; editing this skill does not authorize running it over
+unrelated repository work.
 
-## Commands
+## Shot tooling
 
-```bash
-python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt \
-  --inline "<the output>" --scope "<one bounded task>"
-python3 <skill>/scripts/tokens_qa.py record <skill-dir> --request req.txt \
-  --output-manifest manifest.json
-python3 <skill>/scripts/tokens_qa.py observe .audit/shots/<id>.json
-python3 <skill>/scripts/tokens_qa.py compare <baseline>.json <candidate>.json
-python3 <skill>/scripts/tokens_qa.py feedback .audit/shots/<id>.json --status accepted \
-  --source-kind user --source-ref <turn> --source-text "<words>" --observed-at <time>
-python3 <skill>/scripts/tokens_qa.py assess-feedback --evidence turns.json --json
-python3 <skill>/scripts/tokens_qa.py shot-audit --evidence turns.json --json
-python3 <skill>/scripts/tokens_qa.py correction .audit/shots/<id>.json
-python3 <skill>/scripts/tokens_qa.py history --project-root . --item-id <id> --json
-python3 <skill>/scripts/tokens_qa.py retention --project-root . --item-id <id>
-```
-
-`record` writes one canonical Shot record under `.audit/shots/` at version 2,
-under a fresh UUID, created exclusively so a second writer never wins. Give it
-exactly one of `--inline` and `--output-manifest`. A manifest is
-`{"adapter": ..., "artifacts": [{"role", "path", "mime"}]}`; each artifact is
-sized and hashed as bytes, never decoded, so a PNG records like prose. An
-inline payload over 65536 bytes is refused.
-
-`--invocation <run-id>` records which run produced the Shot, in
-`inputs.invocation`. Optional, and it stays optional: every record already
-on disk was written without one, so requiring it would rewrite history
-rather than migrate it. With it, a session, its artifact, its table and its
-feedback join by one identity instead of by whichever was most recent.
-
-`observe` validates one record and prints the two-column table, optionally
-against a candidate. `compare` is the same table with both records required.
-Neither writes anything.
-
-`feedback` appends a versioned event and updates the effective compatibility
-view. `--operation-id` makes replay idempotent; `--expected-revision` detects a
-stale writer. `--resolve <event-id>` clears only named corrections. `--status`, `--correction`,
-`--sentiment` and `--rank` are independent, at least one is required, and none
-is ever derived from another. A correction is not a status. Existing `evidence`
-and `observed_at` survive. A record stored at version 1 is frozen history and
-refuses every write; record a new shot instead. Closure accepts only a `user`
-event carrying source reference, observed time, and supplied or redacted words.
-
-`retention` previews exact Item records and a revision. Re-run with `--delete`
-and that revision for explicit deletion. It retains hashed identity/status only;
-artifacts remain caller-owned. Deleted evidence makes closure unverifiable.
-
-`assess-feedback` reads an evidence bundle whose `turns` is a list of strings
-and names the fields a human might want to set. It is advisory, and it writes
-no record.
-
-`shot-audit` reads the same bundle and answers the harder question in one
-call: which turns are complaints, which are corrections, which corrections
-restate an earlier one, and the advisory candidates as well. An instruction
-restated is an instruction that did not land, and that is a fact about the
-turns rather than a judgement about the work. This lives here because it is
-universal: a loop that keeps its own copy of these patterns has forked the
-rules, which is exactly what cook was doing before this verb existed.
-
-`correction` emits the bounded bundle an adapter may act on. Six keys, and
-nothing else from the record travels. Handing an adapter the whole Shot is how
-one rejected round becomes a rewrite of the skill that produced it.
-
-Add `--json` to any verb for one envelope, `{ok, code, error, path, result}`,
-where `path` is the failing JSON path or null.
-
-## Exit codes
-
-| Code | Meaning |
-| --- | --- |
-| 0 | success |
-| 1 | a present hard veto |
-| 2 | schema or arguments |
-| 3 | I/O |
-| 4 | write conflict |
-| 5 | adapter or subprocess |
+When using installed Shot commands, read [Command reference](commands.md) for
+recording, comparison, feedback, retention and exit codes. Without those tools,
+continue the session compass using the available evidence.
 
 ## The user decides
 
@@ -120,13 +49,118 @@ same breath. "good but fix X" is `failed`, because an instruction restated is
 an instruction that did not land. Silence stays `pending` and never ripens into
 acceptance.
 
-## Fix
+## Compass any session
 
-Read the target `SKILL.md`, the baseline request, and the present findings.
-Write the complete rewrite to `<target>/SKILL.next.md`. Never touch `SKILL.md`,
-never overwrite an existing `SKILL.next.md`, and put no QA metadata in it —
-narrow only what a finding cites, and leave the rest alone. Then run it and
-`record` the result as the candidate.
+Use this loop for any agent, project or domain, including sessions without a
+repository, roadmap, Python or Shot tooling. At entry and after new evidence or
+user steering, bind the user's goal, acceptance criteria, exclusions, active
+Item and next action. Preserve the goal across turns unless the user changes it.
+
+1. Read the current request, existing plan and available observations. Prefer the
+   project's canonical tracker; otherwise keep a compact session index in the
+   conversation: Item ID, outcome, state, verified criteria/total, evidence,
+   acceptance and blocker. Create project files only when authorized. Unknown
+   evidence and unknown denominators stay `not_observed`.
+2. Resume active authorized work. Otherwise select an unblocked Item serving the
+   goal by agreed priority and dependency order. Bind scope and proof before
+   acting; request only a decision that blocks progress. If nothing is eligible,
+   state the blocker and its resolution rather than declaring the goal complete.
+3. Use available tools to execute the next bounded action when execution is
+   authorized. In `OBSERVE`, recommend it without mutation. Update the index as
+   evidence arrives; retain corrections and distinguish verified output from
+   accepted completion. A scope change updates the plan explicitly.
+4. Where installed, use `history` for Shot evidence and the project's Compass
+   integration for selection/closure. For this package's integration rules, read
+   [Feature compass](../../docs/SPEC/FEATURE_COMPASS.md). These are adapters to
+   this loop, not prerequisites for it. Without tools, cite conversation evidence
+   and label checks that could not run.
+
+Done when the current outcome, evidence, unresolved work and next action are
+traceable. Run the closing report below at each handoff; an unfinished goal keeps
+its next action. This skill guides the invoked session; it does not install
+background monitoring or observe other agents' sessions automatically.
+
+## Fix the observed cause
+
+Bind each repair to a cited finding, owning file, permitted write scope and a
+check that can establish the repair. Preserve unrelated user work. If the cause
+cannot be observed, state the missing evidence and continue independent repairs.
+
+- **Prompt repair:** read the target `SKILL.md`, baseline request and findings.
+  Write the complete candidate to `<target>/SKILL.next.md`; preserve the active
+  skill until promotion is authorized. If that candidate exists, use a fresh
+  revision filename. Keep QA metadata in the Shot record. Change only instructions
+  implicated by the finding. If the user explicitly requests editing the active
+  skill, apply the scoped edit directly and retain its diff for review.
+- **Repository repair:** inspect the cited paths, their owners and relevant
+  callers. Correct misplaced task artifacts, duplicated instructions, stale
+  context pointers or scope leaks at their source within authorized scope.
+  Establish ownership and references before moving or deleting content. Repository
+  inspection can prove a repository defect; it cannot prove what a past model
+  read. Keep that distinction in the finding and the report.
+- **Context repair:** change the owning context declaration or compiler input so
+  the next invocation admits the required sources. Keep project maintenance
+  records in their declared role. Verify the resulting admitted-context evidence;
+  moving a file alone does not establish that inference context is clean.
+
+Run the relevant acceptance and regression paths and record a candidate Shot
+when the recording tools are available. Compare with the baseline under the
+same criteria. With no execution access, deliver the proposed change and mark
+its verification pending. Done when each repair has evidence or an explicit
+blocker, and the authorized diff stays within its bound scope.
+
+In `FIX`, update the existing progress index with verified evidence and actual
+state transitions. Acceptance and closure follow the owning gate; green checks
+alone leave user acceptance pending. Record unrelated cleanup as separately
+scoped work rather than expanding the current Item.
+
+## Conclude with direction and RSI gains
+
+Every evaluation or repair response ends with the progress result, a concrete
+next action, and the ASCII table below. Name the next action's Item, owning path,
+required change or check, and completion condition. If waiting on the user, name
+exactly which verdict or decision is missing. If no eligible Item exists, report
+that blocker; if the declared goal is complete, cite its closure evidence.
+
+RSI means evidence-driven improvement of instructions or regression fixtures,
+called SRI in this repository. It does not train model weights. Promote a lesson
+only within authorized scope and the project's review process. One before/after
+pair is a local observation, not proof of general improvement across models.
+
+Identify baseline/candidate Shot IDs and the compared attempt range immediately
+before the table. Compare the same task, acceptance criteria, model, harness,
+budget and token profile, or mark the affected gain `not_comparable`. Include
+failed attempts and corrections in cumulative costs; label a single-Shot
+comparison as per-attempt. Preserve required-context coverage and quality alongside
+cost. Unknown counts and missing feedback stay `not_observed`, never zero.
+
+Render this as a fenced `text` block using ASCII borders. Replace placeholders
+with observed values, widen columns as needed, and retain unavailable rows.
+For numeric lower-is-better metrics, gain is baseline minus candidate; negative
+values show regression. For criteria coverage, gain is candidate minus baseline
+with the same denominator. Show status transitions for nonnumeric rows. Report
+percent savings only with a known, positive baseline and comparable measurements.
+
+```text
+RSI gains
++------------------------+--------------+--------------+----------------+
+| Metric                 | Baseline     | Candidate    | Gain / status  |
++------------------------+--------------+--------------+----------------+
+| Verified criteria      | <n/total>    | <n/total>    | <delta>        |
+| Acceptance             | <status>     | <status>     | <transition>   |
+| Corrections, all       | <count>      | <count>      | <delta>        |
+| Cumulative tokens      | <count>      | <count>      | <delta>        |
+| Duration, same scope   | <duration>   | <duration>   | <delta>        |
+| Contamination findings | <count>      | <count>      | <delta>        |
+| Required context       | <coverage>   | <coverage>   | <transition>   |
++------------------------+--------------+--------------+----------------+
+```
+
+Count contamination findings only over the same declared inspection surface and
+finding rules. Report repository repairs separately from observed inference
+contamination. With no comparable baseline, the table reports current evidence
+and unknown gains. This is the agent's closing summary; existing CLI output and
+the canonical Shot schema remain authoritative and unchanged.
 
 ## Hard vetoes
 
@@ -134,5 +168,3 @@ Exactly four, from [QA.md](../../QA.md): `scope_breach`,
 `missing_observation_log`, `context_derail`, `ungrounded_corpus_claim`. An
 undeclared source with no matching text in the output is `context_contamination`
 — real, reportable, and not a veto.
-
-Compare token totals only when both records share a profile.

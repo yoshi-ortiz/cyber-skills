@@ -14,7 +14,7 @@ also:
 | `kit`, `sync`, `update`, `refresh`, `upgrade`, `install`, `setup`, `init`, `start`, `starter`, `starter-pack`, **with no source named** | **Sync.** Re-arm the already-active domains at the latest version, cloning the harness first if it is missing. If this machine has no selection, stop at the harness's instruction to choose a domain. |
 | any of those **followed by a source**, such as `sync cyber-skills` | **One source.** `harness.py sync <source>`, matched as a substring. Named a source, meant that source. |
 | `sync dev`, `dev install`, or any attempt to run your own unpushed work | **Dev install.** Sync clones channels from GitHub, so it can never serve `dev`. `python3 tools/dev_install.py` symlinks this checkout over the installed copies instead, and your edits are live with no sync at all. Re-run it after any sync, which puts copies back. To reach your *other* machines there is no shortcut: publish first, `python3 tools/release.py --channel alpha --push`, then sync. |
-| `doctor`, `repair`, `troubleshoot`, `conflict` | **Fix.** Something installed wrong, or two things collided. Bare `fix` is the `fix` family's, which repairs code and derailed sessions, not the collection. |
+| `doctor`, `repair`, `troubleshoot`, `conflict` | **Fix.** Something installed wrong, or two things collided. Bare `fix` owns code, context and tool recovery; it uses Kit for managed collection setup and returns to verify recovery. |
 
 Never ask which. Sync is idempotent, so there is no separate Install mode to
 pick wrong: running it where the harness already exists syncs it instead of

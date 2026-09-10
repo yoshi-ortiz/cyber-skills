@@ -1,7 +1,7 @@
 ---
 purpose: the check family router for Monitor-phase reads, and the skills that measure
-admits: SKILL.md, and one skill directory per read-only measurement skill
-refuses: any write. A finding goes to the family that owns it, never fixed here
+admits: SKILL.md, and one skill directory per measurement or context-index skill
+refuses: unscoped product changes; the router remains read-only and child skills declare their writes
 max_file_bytes: 8000
 ---
 
@@ -16,5 +16,5 @@ their own doctrine.
 
 | Skill | Role |
 | --- | --- |
-| [build-context-token-vectors/](build-context-token-vectors/) | Peer embedding and EVoC clustering over the installed corpus |
-| [tokens-qa/](tokens-qa/) | Black-box QA over one Shot: what it cost, what it broke |
+| [tokens-ontology/](tokens-ontology/) | Repository retrieval with pgvector and EVoC exploration |
+| [tokens-qa/](tokens-qa/) | Session compass, scoped repairs and evidence-driven RSI reporting |

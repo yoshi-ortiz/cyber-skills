@@ -1,7 +1,7 @@
 ---
 purpose: workflow family container for Plan-phase skills
-admits: one skill directory per planning skill, each with its own contract
-refuses: family-level SKILL.md — doctrine lives in the skills inside, and in build/ when that family ships
+admits: the first router and one directory per planning skill, each with its own contract
+refuses: implementation and verification owned by later workflow phases
 ---
 
 # first
@@ -14,3 +14,6 @@ before code. Maps to the `first` family on the rail.
 | [genesis/](genesis/) | Burndown, spec promotion, interview |
 | [knowledge/](knowledge/) | External sources → cited OKF bundle |
 | [aesthetic/](aesthetic/) | Design-Inference loop |
+
+The first router owns intent capture and exploratory sketches. Aesthetic remains
+standalone and excluded until it passes an unslop review and is re-enabled.

@@ -18,7 +18,13 @@ def test() -> None:
         skill = fixture / "first" / "genesis"
         skill.mkdir(parents=True)
         (skill / "SKILL.md").write_text("---\nname: genesis\n---\n")
+        (fixture / "first" / "SKILL.md").write_text("---\nname: first\n---\n")
+        stable = fixture / "first" / "aesthetic"
+        stable.mkdir()
+        (stable / "SKILL.md").write_text("---\nname: aesthetic\n---\n")
         records = catalog(fixture)
+        assert is_fog("first/SKILL.md", records=records)
+        assert not is_fog("first/aesthetic/SKILL.md", records=records)
         assert is_fog("first/genesis/SKILL.md", records=records)
         assert not is_fog("assets/genesis/icon.svg", records=records)
         private = fixture / '.audit' / 'shots' / 'private.json'
@@ -46,6 +52,7 @@ def test() -> None:
     assert not is_fog("first/genesis/SKILL.md", "alpha")
     assert is_fog("first/aesthetic/AGENTS.md", "alpha")    # fog is still fog on alpha
     assert not is_fog("kit/spanish/ora/SKILL.md")          # stable skills unaffected
+    assert is_fog("first/SKILL.md")                      # alpha router
     assert not is_fog("first/aesthetic/SKILL.md")          # graduated off alpha, R-59
     assert not is_fog("README.md")
 

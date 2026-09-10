@@ -22,6 +22,6 @@ and the rest are files in the **target project**. This repository has its own
 `ROADMAP.md` and `BUGS.md`, and they are Repo-Dev Context for the skills
 themselves, not artifacts of this skill running.
 
-Step 3 delegates to [knowledge/](../knowledge/) rather than restating the
-format. Two skills that both described OKF would drift, and the one that
-drifted would be this one, since it is not the one with the gate.
+Step 4 uses the knowledge skill when available; standalone runs preserve source
+provenance in concise notes. Genesis references define workflow, while external
+facts belong in the target project's knowledge records.

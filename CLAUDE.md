@@ -65,7 +65,7 @@ Repo-Dev and Design-Inference work.
 | `first/` | `genesis/` | Interview, spec promotion, glossary, proof, and project state |
 | `first/` | `knowledge/` | Current sources compiled into cited OKF bundles |
 | `first/` | `aesthetic/` | Evidence-backed design decisions and user ranking |
-| `check/` | `build-context-token-vectors/` | Peer discovery over installed skill text |
+| `check/` | `tokens-ontology/` | Bounded repository retrieval and EVoC exploration |
 
 Inside a skill, read its `CONTEXT.md` before its implementation. Each nested
 directory declares what belongs there and what it refuses. Under `aesthetic`,

@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
-from skill_catalog import ALPHA_SKILLS, owner_of
+from skill_catalog import ALPHA_SKILLS, catalog, owner_of
 
 if TYPE_CHECKING:
     from skill_catalog import SkillRecord
@@ -111,11 +111,10 @@ def walk(root: Path) -> list[Path]:
 
 def is_alpha(relative: str, records: list["SkillRecord"] | None = None) -> bool:
     """True when this path belongs to a skill that has not reached `main`."""
-    if records is not None:
-        owner = owner_of(PurePosixPath(relative), records)
-        return owner is not None and owner.channel == "alpha"
-    return any(part in ALPHA_SKILLS
-               for part in PurePosixPath(relative).parts)
+    if records is None:
+        records = catalog(Path(__file__).resolve().parents[1])
+    owner = owner_of(PurePosixPath(relative), records)
+    return owner is not None and owner.channel == "alpha"
 
 
 def is_fog(relative: str, channel: str = "main",
@@ -196,6 +195,7 @@ def reasons() -> dict[str, str]:
         "first/aesthetic/scripts/verify_references.py": "development tooling",
         "tokens-qa": "black-box Shot QA; alpha until the fix half has run "
                      "against a real round",
+        "first": "intent and sketch router; alpha channel",
         "genesis": "alpha channel; not published to main",
         "knowledge": "alpha channel; not published to main",
         "silly": "alpha channel; not published to main",

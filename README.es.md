@@ -66,8 +66,9 @@ avanzan el trabajo, y `check` y `fix` son arcos de regreso. La columna
   <tr><td nowrap>📚 <a href="#-enciclopedia"><strong>/enciclopedia</strong></a></td><td>Lee la documentación real y guarda una nota corta con su fuente</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Sesiones de tokens</a><br><small>Donde se te va una sesión de trabajo</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td><td><code>first</code> · <strong>Planear</strong></td></tr>
-  <tr><td nowrap>🔬 <a href="#-build-context-token-vectors"><strong>/build-context-token-vectors</strong></a></td><td>Muestra a qué otros skills se parece el tuyo, y cuál no se parece a nada</td><td><code>build</code> · <strong>Medir</strong></td></tr>
-  <tr><td nowrap>🧾 <a href="#-tokens-qa"><strong>/tokens-qa</strong></a></td><td>Observa un shot, mide lo que costó y dice qué rompió</td><td><code>check</code> · <strong>Medir</strong></td></tr>
+  <tr><td nowrap>📝 <a href="#-first"><strong>/first</strong></a></td><td>Captura la intención y esboza direcciones creativas con f take note y f design</td><td><code>first</code> · <strong>Planear</strong></td></tr>
+  <tr><td nowrap>🔬 <a href="#-tokens-ontology"><strong>/tokens-ontology</strong></a></td><td>Recupera contexto con pgvector y explora su estructura con EVoC</td><td><code>build</code> · <strong>Medir</strong></td></tr>
+  <tr><td nowrap>🧾 <a href="#-tokens-qa"><strong>/tokens-qa</strong></a></td><td>Orienta cualquier sesión con evidencia, progreso y siguiente acción</td><td><code>check</code> · <strong>Medir</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-check">🛤️ Resto del riel</a><br><small>Los cuatro enrutadores de familia. Enrutan las skills públicas; no las reemplazan.</small></h3></td></tr>
   <tr><td nowrap>🔍 <a href="#-check"><strong>/check</strong></a></td><td>Lee el progreso y la evidencia de producción, los devuelve a planeación y no escribe nada</td><td><code>check</code> · <strong>Monitorear</strong> → Planear</td></tr>
   <tr><td nowrap>🔨 <a href="#-build"><strong>/build</strong></a></td><td>Implementa y verifica el contrato aprobado</td><td><code>build</code> · <strong>Código · Build · Pruebas</strong></td></tr>
@@ -139,48 +140,20 @@ Para quitar una después: `npx skills remove <nombre>`.
 
 Estables. Se instalan con la ruta B, tienen soporte y puedes confiar en ellas.
 
-## 🔬 /build-context-token-vectors
+## 🔬 /tokens-ontology
 
-Responde una pregunta: **¿a qué otros skills se parece el tuyo?** Lee cada
-skill instalado en tu máquina, los agrupa por lo que dicen, y te muestra dónde
-cae el tuyo. Algunos caen junto a vecinos evidentes. Otros no caen en ninguna
-parte, y eso conviene saberlo antes de dar por hecho que el tuyo es único.
+Indexa contexto del repositorio con pgvector y recupera los fragmentos relevantes
+para la tarea. Si quedan dudas sobre su estructura, crea un manifiesto EVoC para
+explorar agrupaciones. Incluye un CLI para manifest, embed, index, search y explore.
 
 | | |
 | --- | --- |
-| **Package** | [check/build-context-token-vectors/](check/build-context-token-vectors/) · entry [check/build-context-token-vectors/SKILL.md](check/build-context-token-vectors/SKILL.md) |
-| **Invocar** | Solo tú. Di `build-context-token-vectors`. |
-| **Necesita** | Python, y tres paquetes en un entorno desechable que creas tú: `evoc`, `model2vec`, `matplotlib` |
-| **Se ejecuta en** | Tu carpeta de skills instalados, solo lectura |
+| **Paquete** | [check/tokens-ontology/](check/tokens-ontology/) |
+| **Invocación** | `tokens-ontology` |
+| **Requiere** | Python; modelo model2vec local; PostgreSQL + pgvector y psycopg para recuperar; EVoC para explorar |
 | **Canal** | `main` |
 
-<details>
-<summary><b>Spec completa: qué mide, y lo único que se niega a decir</b></summary>
 
-`tools/token_bench.py` compares a skill flow against a reference flow, and a
-human picks the reference. This derives it instead: every `SKILL.md` becomes a
-vector, the vectors are clustered, and the nearest neighbours are the skills a
-benchmark should actually run against.
-
-| Output | Means |
-| --- | --- |
-| Cosine similarity | How close two skills' doctrine sits. Above 0.80 a real peer, 0.65 to 0.80 a loose one, below 0.65 no peer at all. |
-| A cluster | The skill was placed, and that cluster's other members are its neighbourhood. |
-| `noise` | It was placed nowhere. |
-| The scatter plot | Two principal components, for orientation. Clustering ran in full dimensionality, so two adjacent looking points may not be. |
-
-**It never says whether a skill is good.** `noise` means the corpus holds no
-peer, and novelty and dilution look identical from here. The judgement stays
-yours.
-
-**The seed is part of the result.** The clustering algorithm is stochastic, so
-the script declares a fixed `random_state`. Without one, two runs over the same
-skills return different groups, and a comparison set that moves is not one.
-
-**Dependencies stay outside.** Nothing in this package imports them except this
-skill's own script, and it ships none of them.
-
-</details>
 
 
 ## 🧑‍🎨 /aesthetic
@@ -375,6 +348,20 @@ Los totales de tokens solo se comparan dentro de un mismo perfil. Los conteos
 ausentes dicen `unavailable`, nunca cero.
 
 </details>
+
+## 📝 /first
+
+`first` / `f` empieza con la intención, el instinto y los objetivos del dueño,
+y después esboza direcciones creativas. `f take note` alinea los requisitos con
+Genesis; `f design` explora elementos del mockup y registra la dirección del
+prompter. Aesthetic queda fuera de esta ruta hasta que pase una revisión unslop
+y el dueño lo reactive.
+
+| | |
+| --- | --- |
+| **Paquete** | [first/SKILL.md](first/SKILL.md) |
+| **Invocación** | `first`, `f`, `f take note`, `f design` |
+| **Canal** | `alpha` |
 
 ## 📁 /genesis
 
@@ -671,7 +658,7 @@ Seguro a media sesión, porque no cambia nada. Una ruta de código rota va a
 se parcha en `check`.
 
 Las dos skills de medición de esta familia,
-[/build-context-token-vectors](#-build-context-token-vectors) y
+[/tokens-ontology](#-tokens-ontology) y
 [/tokens-qa](#-tokens-qa), llevan su propia doctrina.
 
 </details>
@@ -679,20 +666,20 @@ Las dos skills de medición de esta familia,
 ## 🩹 /fix
 
 Una entrada directa, desde fuera de la secuencia, en el momento en que algo deja
-de funcionar. Dos roturas, un mismo reflejo: el código está mal, o el trabajo lo
-está. Enruta `diagnosing-bugs` y `systematic-debugging` para un defecto, y
-`poteto-mode` cuando la sesión misma se descarriló.
+de funcionar. Repara código, descontamina contexto y configura herramientas
+faltantes. `shot-audit` de Tokens QA relee las correcciones de la sesión y su
+compass orienta el regreso al objetivo activo.
 
 | | |
 | --- | --- |
 | **Paquete** | [fix/](fix/) · entrada [fix/SKILL.md](fix/SKILL.md) |
 | **Invocación** | Solo tú. Di `fix`, `rail` o `unstick`. |
-| **Necesita** | Las skills que enruta, instaladas. `/kit coding` las trae. |
+| **Necesita** | Evidencia de la sesión; herramientas Tokens QA e instaladores compatibles cuando estén disponibles |
 | **Corre sobre** | **Tu** proyecto, nunca este repo |
 | **Canal** | `alpha` |
 
 <details>
-<summary><b>Spec completa: las dos roturas, y la que no es esta skill</b></summary>
+<summary><b>Spec completa: recuperar código, contexto y herramientas</b></summary>
 
 **Arreglar el código.** Reproduce antes de teorizar, porque un arreglo escrito
 contra un síntoma que no viste fallar es una adivinanza que quedó commiteada.
@@ -701,16 +688,13 @@ del síntoma: un parche en el punto del error, cuando el error venía tres marco
 más arriba, mueve el bug en vez de quitarlo. El arreglo termina con el caso que
 falla convertido en prueba.
 
-**Arreglar el riel.** El código corre y la sesión se desvió. Primero detente.
-Más salida sobre una sesión descarrilada no compra nada, y un tramo largo de
-trabajo en la dirección equivocada cuesta más desarmarlo que abandonarlo.
-Después relee el registro, no la conversación: la spec aceptada, el pendiente
-del roadmap y el estado tal como está escrito valen más que lo que cualquiera de
-las dos partes recuerde.
+**Arreglar el riel.** Pausa la acción desviada, relee las instrucciones y las
+correcciones con Tokens QA, corrige el origen del contexto y reintenta con una
+continuación enfocada. Conserva el historial y verifica el nuevo resultado.
 
-Un problema de instalación o de la colección **no** es esta skill. Una skill que
-llegó mal, un dominio que nunca se sincronizó, dos skills que chocan: eso es
-[/kit](#-kit), que responde a `doctor`, `repair`, `troubleshoot` y `conflict`.
+**Recuperar herramientas.** Configura la capacidad mínima necesaria por su ruta
+compatible. La colección usa [/kit](#-kit); los runtimes e integraciones usan sus
+propios instaladores. Verifica su uso desde el entorno real del agent.
 
 Fix restaura la ruta y devuelve el trabajo. No se queda con la propiedad del
 trabajo que viajaba sobre ella.

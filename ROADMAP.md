@@ -46,7 +46,7 @@ environment; the two Aesthetic rows remain post-MVP.
 | R-61 | [`genesis_flow.py`](first/genesis/scripts/genesis_flow.py) | ✅ `DONE` | Deepen deterministic Genesis | — | [`first/genesis/`](first/genesis/) | R-54 |
 | R-17 | [`check.py`](tools/check.py) · [`release.py`](tools/release.py) · [`cook.py`](cook/cook.py) | ✅ `DONE` | Deepen Release Verification | [B-023](BUGS.md) | [`tools/`](tools/), [`cook/`](cook/) | R-54, R-61 |
 | R-16 | [`loanwords.py`](tools/loanwords.py) | ✅ `DONE` | Enforce ubiquitous language | — | [`tools/`](tools/) | — |
-| R-56 | [`server.cjs`](first/aesthetic/companion/server.cjs) · [`trace_preview.py`](tools/trace_preview.py) · [`vectors.py`](check/build-context-token-vectors/scripts/vectors.py) | ⚪ `TODO` | Deepen the Companion Host *(post-MVP)* | [B-024](BUGS.md) | [`first/aesthetic/companion/`](first/aesthetic/companion/) | MVP release |
+| R-56 | [`server.cjs`](first/aesthetic/companion/server.cjs) · [`trace_preview.py`](tools/trace_preview.py) | ⚪ `TODO` | Deepen the Companion Host *(post-MVP)* | [B-024](BUGS.md) | [`first/aesthetic/companion/`](first/aesthetic/companion/) | MVP release |
 | R-66 | [`assistant_app.py`](first/aesthetic/scripts/assistant_app.py) · [`graphics_flow.py`](first/aesthetic/scripts/graphics_flow.py) · [`deliver.py`](first/aesthetic/scripts/deliver.py) | ⚪ `TODO` | Deepen the Aesthetic Run *(post-MVP)* | [B-013](BUGS.md), [B-026](BUGS.md) | [`first/aesthetic/`](first/aesthetic/) | R-56, MVP release |
 
 Build order:
@@ -144,7 +144,7 @@ has not verified.
 | R-60 | [`brief_workflow.py`](first/aesthetic/scripts/brief_workflow.py) | ⚪ `TODO` | Generalize durable form-state sync | — | [`first/aesthetic/`](first/aesthetic/) |
 | R-62 | [`graphics_flow.py`](first/aesthetic/scripts/graphics_flow.py) · [`text_to_graphics.py`](first/aesthetic/scripts/text_to_graphics.py) | 🟡 `IN-PROGRESS` | Ship this repository as an Aesthetic Food Product | [B-026](BUGS.md), [B-027](BUGS.md) | [`first/aesthetic/`](first/aesthetic/) |
 | R-52 | [`tokens_qa.py`](check/tokens-qa/scripts/tokens_qa.py) | ⚪ `TODO` | Gate agreed tokenization | — | [`check/tokens-qa/`](check/tokens-qa/) |
-| R-57 | [`vectors.py`](check/build-context-token-vectors/scripts/vectors.py) | ⚪ `TODO` | Narrow the vectors interface | [B-023](BUGS.md) | [`check/build-context-token-vectors/`](check/build-context-token-vectors/) |
+| R-57 | [`ontology.py`](check/tokens-ontology/scripts/ontology.py) | 🟡 `IN-PROGRESS` | Ship bounded pgvector retrieval and EVoC exploration | [B-023](BUGS.md) | [`check/tokens-ontology/`](check/tokens-ontology/) |
 | R-55 | [`token_bench.py`](tools/token_bench.py) | ⚪ `TODO` | Make benchmark inputs reproducible repo data | — | [`tools/`](tools/) |
 | R-40 | [`skill_discovery.py`](tools/skill_discovery.py) | ⚪ `TODO` | Measure the host's enabled collection | — | [`tools/`](tools/) |
 
