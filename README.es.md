@@ -61,8 +61,8 @@ avanzan el trabajo, y `check` y `fix` son arcos de regreso. La columna
   <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Deja que una skill responda a un segundo nombre, en tu idioma o solo uno más bonito</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
   <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Agrega comandos en español</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
   <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Reescribe las conclusiones de tu agent en español sencillo</td><td>Sin familia. Sirve en cualquier parada.</td></tr>
-  <tr><td colspan="3" align="center"><h3><a href="#-genesis">💼 Planear</a><br><small>Antes de empezar a construir</small></h3></td></tr>
-  <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Planea antes de construir, y comprueba que funcione</td><td><code>first</code> · <strong>Planear</strong></td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-big-bang">💼 Planear</a><br><small>Antes de empezar a construir</small></h3></td></tr>
+  <tr><td nowrap>📁 <a href="#-big-bang"><strong>/big-bang</strong></a></td><td>Planea antes de construir, y comprueba que funcione</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td nowrap>📚 <a href="#-enciclopedia"><strong>/enciclopedia</strong></a></td><td>Lee la documentación real y guarda una nota corta con su fuente</td><td><code>first</code> · <strong>Planear</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Sesiones de tokens</a><br><small>Donde se te va una sesión de trabajo</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Dibuja opciones de diseño, tú las ordenas y aprende qué te mueve</td><td><code>first</code> · <strong>Planear</strong></td></tr>
@@ -230,7 +230,7 @@ una.
 | | |
 | --- | --- |
 | **Paquete** | [kit/](kit/) · entrada [kit/SKILL.md](kit/SKILL.md) |
-| **Invocación** | Solo tú. Di `kit` para configurarlo, `kit sync` para actualizarlo y `kit fix` cuando algo se rompió. |
+| **Invocación** | Tú o First al inicializar el repositorio. Di `kit` para configurarlo, `kit sync` para actualizarlo y `kit fix` cuando algo se rompió. |
 | **También responde a** | `starter-pack`, su nombre original. Viene incluido, no hay que instalarlo. |
 | **Requiere** | Git y el checkout de [harness-core](https://github.com/yoshi-ortiz/harness-core) que obtiene |
 | **Canal** | `main` |
@@ -353,7 +353,7 @@ ausentes dicen `unavailable`, nunca cero.
 
 `first` / `f` empieza con la intención, el instinto y los objetivos del dueño,
 y después esboza direcciones creativas. `f take note` alinea los requisitos con
-Genesis; `f design` explora elementos del mockup y registra la dirección del
+Big Bang; `f design` explora elementos del mockup y registra la dirección del
 prompter. Aesthetic queda fuera de esta ruta hasta que pase una revisión unslop
 y el dueño lo reactive.
 
@@ -363,7 +363,7 @@ y el dueño lo reactive.
 | **Invocación** | `first`, `f`, `f take note`, `f design` |
 | **Canal** | `alpha` |
 
-## 📁 /genesis
+## 📁 /big-bang
 
 Construye como un ingeniero que anota las cosas. Pregunta qué quieres de verdad
 antes de tocar código, mantiene una lista viva de qué está listo y qué está
@@ -371,8 +371,8 @@ trabado, y **no da nada por terminado hasta verlo funcionar**.
 
 | | |
 | --- | --- |
-| **Paquete** | [first/genesis/](first/genesis/) · entrada [first/genesis/SKILL.md](first/genesis/SKILL.md) |
-| **Invocación** | Solo tú. Di `genesis`. |
+| **Paquete** | [first/big-bang/](first/big-bang/) · entrada [first/big-bang/SKILL.md](first/big-bang/SKILL.md) |
+| **Invocación** | Solo tú. Di `big-bang`. |
 | **Requiere** | Nada. Escribe Markdown normal dentro de tu proyecto. |
 | **Trabaja sobre** | **Tu** carpeta de proyecto, nunca este repositorio |
 | **Canal** | `alpha` |
@@ -400,7 +400,7 @@ promovidos, `docs/GLOSSARY.md` un término inmutable por concepto, y
 `docs/knowledge/` a cargo de [/enciclopedia](#-enciclopedia).
 
 **Doctrina**, se carga solo cuando un paso la nombra:
-[references/index.md](first/genesis/references/index.md) cubre la entrevista de
+[references/index.md](first/big-bang/references/index.md) cubre la entrevista de
 alcance y la arquitectura modular, el contrato de reutilización, y qué cuenta
 como evidencia.
 

@@ -14,7 +14,7 @@ their recorded state; migrate them deliberately when selecting their work.
 <!-- vocabulary: Item -->
 | ID | State | Item | Workstream | Depends on | Priority | Scope | Proof | Shot |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| R-71 | `DONE` | Connect feature selection, Shot feedback, and completion proof | default | | 0 | first/genesis/, check/tokens-qa/, tools/, cook/, docs/, CLAUDE.md, CONTEXT.md, GOAL.md, ROADMAP.md, QA.md, bugs/ | Public command tests exercise selection, correction, rejection, and verified acceptance in a scratch project | .audit/shots/ac2251a3eef94c5a95571bbfd3cb7fab.json |
+| R-71 | `DONE` | Connect feature selection, Shot feedback, and completion proof | default | | 0 | first/big-bang/, check/tokens-qa/, tools/, cook/, docs/, CLAUDE.md, CONTEXT.md, GOAL.md, ROADMAP.md, QA.md, bugs/ | Public command tests exercise selection, correction, rejection, and verified acceptance in a scratch project | .audit/shots/ac2251a3eef94c5a95571bbfd3cb7fab.json |
 | R-72 | `IN-PROGRESS` | Guard developer-tooling test discovery against B-023 | default | R-71 | 0 | tools/, docs/WORK_STYLE.md, AGENTS.md, CLAUDE.md, NEXT.md, ROADMAP.md, BUGS.md | `python3 -B tools/test_check.py` schedules script-style and unittest fixtures without a hand-edited list | .audit/shots/6fcd72a83c764de1aaabac96a0b1b1d2.json |
 | R-73 | `TODO` | Build reviewed first-attempt Compass-SRI calibration | default | R-72 | 1 | roadmap/sri-compass.md, tools/context_learner.py, tools/test_context_learner.py, tools/repo_context.py, tools/test_compass_flow.py, check/tokens-qa/, docs/SPEC/, BUGS.md, ROADMAP.md, NEXT.md | `roadmap/sri-compass.md` acceptance cases prove cumulative attempt cost, isolated held-out tasks, sourced positive acceptance with zero corrections, and next/check/close parity | |
 <!-- /vocabulary -->
@@ -43,7 +43,7 @@ environment; the two Aesthetic rows remain post-MVP.
 | --- | --- | --- | --- | --- | --- | --- |
 | R-54 | [`skill_discovery.py`](tools/skill_discovery.py) · [`fog.py`](tools/fog.py) · [`index_gate.py`](tools/index_gate.py) | ✅ `DONE` | Deepen the Skill Catalog | [B-021](BUGS.md), [B-027](BUGS.md) | [`tools/`](tools/), [`kit/silly/`](kit/silly/) | — |
 | R-58 | [`CLAUDE.md`](CLAUDE.md) · [`CONTEXT.md`](CONTEXT.md) | ✅ `DONE` | Make Repo-Dev context queryable | — | Repo-Dev context | R-54 |
-| R-61 | [`genesis_flow.py`](first/genesis/scripts/genesis_flow.py) | ✅ `DONE` | Deepen deterministic Genesis | — | [`first/genesis/`](first/genesis/) | R-54 |
+| R-61 | [`genesis_flow.py`](first/big-bang/scripts/genesis_flow.py) | ✅ `DONE` | Deepen deterministic Genesis | — | [`first/big-bang/`](first/big-bang/) | R-54 |
 | R-17 | [`check.py`](tools/check.py) · [`release.py`](tools/release.py) · [`cook.py`](cook/cook.py) | ✅ `DONE` | Deepen Release Verification | [B-023](BUGS.md) | [`tools/`](tools/), [`cook/`](cook/) | R-54, R-61 |
 | R-16 | [`loanwords.py`](tools/loanwords.py) | ✅ `DONE` | Enforce ubiquitous language | — | [`tools/`](tools/) | — |
 | R-56 | [`server.cjs`](first/aesthetic/companion/server.cjs) · [`trace_preview.py`](tools/trace_preview.py) | ⚪ `TODO` | Deepen the Companion Host *(post-MVP)* | [B-024](BUGS.md) | [`first/aesthetic/companion/`](first/aesthetic/companion/) | MVP release |
@@ -79,12 +79,12 @@ it routes. Each family owns sequence, aliases, and handoff only.
 |  |  |  | **🎭 `silly`** |  |  |
 | R-45 | [`alias.py`](kit/silly/scripts/alias.py) | ✅ `DONE` | Generate whole, anchor, and ghost aliases | — | [`kit/silly/`](kit/silly/) |
 |  |  |  | **🧭 `first`** |  |  |
-| R-35 | [`genesis/SKILL.md`](first/genesis/SKILL.md) | ✅ `DONE` | Route `brainstorming`, `ask-matt`, `prototype`, and `grilling` | — | [`first/`](first/) |
-| R-41 | [`genesis/SKILL.md`](first/genesis/SKILL.md) | 🟡 `IN-PROGRESS` | Make `first-work-style` write the project-owned domain rail *(contract shipped; field evidence remains)* | — | [`first/`](first/) + `harness-core` |
-| R-69 | [`genesis/SKILL.md`](first/genesis/SKILL.md) · [`genesis_flow.py`](first/genesis/scripts/genesis_flow.py) | ⚪ `TODO` | Add a project-owned `docs/STAKEHOLDERS.md`: end-user protagonist first, secondary stakeholders lower by default | [B-030](BUGS.md) | [`first/genesis/`](first/genesis/) |
-| R-70 | [`architecture.md`](first/genesis/references/architecture.md) · [`genesis_flow.py`](first/genesis/scripts/genesis_flow.py) | ⚪ `TODO` | Add a vertical-slice contract and deterministic folder-tree inspection for software projects | [B-031](BUGS.md) | [`first/genesis/`](first/genesis/) |
-| R-38 | [`manifest_gate.py`](tools/manifest_gate.py) | ✅ `DONE` | Declare the First workflow phase | — | [`first/genesis/`](first/genesis/) |
-| R-46 | [ADR contract](first/genesis/references/architecture-decisions.md) | ✅ `DONE` | Hand accepted decisions from First to Build | — | [`first/genesis/`](first/genesis/) |
+| R-35 | [`genesis/SKILL.md`](first/big-bang/SKILL.md) | ✅ `DONE` | Route `brainstorming`, `ask-matt`, `prototype`, and `grilling` | — | [`first/`](first/) |
+| R-41 | [`genesis/SKILL.md`](first/big-bang/SKILL.md) | 🟡 `IN-PROGRESS` | Make `first-work-style` write the project-owned domain rail *(contract shipped; field evidence remains)* | — | [`first/`](first/) + `harness-core` |
+| R-69 | [`genesis/SKILL.md`](first/big-bang/SKILL.md) · [`genesis_flow.py`](first/big-bang/scripts/genesis_flow.py) | ⚪ `TODO` | Add a project-owned `docs/STAKEHOLDERS.md`: end-user protagonist first, secondary stakeholders lower by default | [B-030](BUGS.md) | [`first/big-bang/`](first/big-bang/) |
+| R-70 | [`architecture.md`](first/big-bang/references/architecture.md) · [`genesis_flow.py`](first/big-bang/scripts/genesis_flow.py) | ⚪ `TODO` | Add a vertical-slice contract and deterministic folder-tree inspection for software projects | [B-031](BUGS.md) | [`first/big-bang/`](first/big-bang/) |
+| R-38 | [`manifest_gate.py`](tools/manifest_gate.py) | ✅ `DONE` | Declare the First workflow phase | — | [`first/big-bang/`](first/big-bang/) |
+| R-46 | [ADR contract](first/big-bang/references/architecture-decisions.md) | ✅ `DONE` | Hand accepted decisions from First to Build | — | [`first/big-bang/`](first/big-bang/) |
 
 Five of eleven are done. R-37's legacy exposure cleanup and language mode,
 R-41's field evidence, R-43's origin gate, R-67's MCP adapters, and R-69's

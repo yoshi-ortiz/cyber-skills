@@ -1,7 +1,7 @@
 ---
 type: Contract
 title: Architecture decision records
-description: When Genesis creates an ADR, what it contains, and which workflow boundary consumes it.
+description: When Big Bang creates an ADR, what it contains, and which workflow boundary consumes it.
 status: stable
 ---
 
@@ -42,7 +42,7 @@ decision creates a new ADR that supersedes the old one.
 
 ## Authority and workflow
 
-Genesis owns this doctrine, the file topology, and the lifecycle. The affected
+Big Bang owns this doctrine, the file topology, and the lifecycle. The affected
 boundary owner proposes the decision. The user or designated authority accepts
 it. First records the accepted decision.
 

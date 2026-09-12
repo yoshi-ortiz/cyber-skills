@@ -59,7 +59,7 @@ def check(root: Path, present: list[str]) -> list[str]:
                     f"stops existing. Wrap the value in double quotes.")
 
         # R-38. `phase` is the family a skill sits in, and it is load-bearing
-        # exactly where the two names differ -- `genesis` is phase `first`, so
+        # exactly where the two names differ -- `big-bang` is phase `first`, so
         # nothing about the skill's own name says which stretch of the rail it
         # occupies. Where they match, the name already answers the question.
         if record.family and record.family != name:

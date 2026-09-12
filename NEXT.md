@@ -144,7 +144,7 @@ Verification (2026-09-05):
 ```text
 python3 -B tools/test_compass_flow.py                                10 pass
 python3 -B -m unittest discover -s tools -p test_repo_context.py       5 pass
-python3 -B -m unittest discover -s first/genesis/scripts -p 'test_*.py' 21 pass
+python3 -B -m unittest discover -s first/big-bang/scripts -p 'test_*.py' 21 pass
 python3 -B tools/test_fog.py                                         OK
 python3 -B tools/repo_context.py check                               OK
 git diff --check                                                    clean

@@ -17,7 +17,7 @@ INDEX = ("## Index\n\n| | |\n| --- | --- |\n"
 BODY = (INDEX + "# 📦 INSTALL\n\n"
         "# ✨ SKILL PROMPTS\n\n## 🎒 /kit\n\n## 🇪🇸 /ora\n\n"
         "## 🔬 /tokens-ontology\n\n## 🎨 /aesthetic\n\n"
-        "# 🧪 EXPERIMENTS\n\n## 🧬 /genesis\n\n## 📚 /knowledge\n\n"
+        "# 🧪 EXPERIMENTS\n\n## 🧬 /big-bang\n\n## 📚 /knowledge\n\n"
         "## 🃏 /silly\n\n## 🧾 /tokens-qa\n\n## 🔍 /check\n\n## 🔨 /build\n\n"
         "## 🚢 /land\n\n## 🩹 /fix\n\n## 📝 /first\n")
 
@@ -30,7 +30,7 @@ SKILL_HOME: dict[str, tuple[str, ...]] = {
     "kit": (),
     "silly": ("kit",),
     "ora": ("kit", "spanish"),
-    "genesis": ("first",),
+    "big-bang": ("first",),
     "knowledge": ("first",),
     "aesthetic": ("first",),
     "tokens-ontology": ("check",),
@@ -91,7 +91,7 @@ def case(readme: str, translation: str | None = None,
 def test() -> None:
     assert case(HEADER + BODY) == 0
 
-    # genesis, knowledge, silly are alpha: an EXPERIMENTS section removed
+    # big-bang, knowledge, silly are alpha: an EXPERIMENTS section removed
     # leaves them with no home, which must fail
     assert case(HEADER + BODY.replace("\n# 🧪 EXPERIMENTS\n", "")) == 1
     # a skill missing from the index

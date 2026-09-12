@@ -1,6 +1,6 @@
 ---
 type: Directory Contract
-title: Genesis reference directory
+title: Big Bang reference directory
 description: Admission and size rules for the skill's on-demand contracts.
 status: stable
 purpose: on-demand payload, never auto-loaded
@@ -9,7 +9,7 @@ refuses: anything a step needs before it runs; distilled external sources, which
 max_file_bytes: 9000
 ---
 
-# Genesis references
+# Big Bang references
 
 Each contract is reached by an explicit conditional pointer from SKILL.md.
 New references need a triggering branch in the entry point.

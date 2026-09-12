@@ -196,7 +196,7 @@ repository.
 
 - **"Phase" is redundant with the family name in four cases out of six.**
   `kit` would declare `phase: kit`, `build` would declare `phase: build`. The
-  field is load-bearing exactly twice, for `genesis` (phase `first`) and
+  field is load-bearing exactly twice, for `big-bang` (phase `first`) and
   `aesthetic` (phase `first`), which are the two families whose skill name and
   phase name differ. **Recommendation: keep the field, and say in `SPEC.md`
   that it exists for the cases where name and phase diverge.** A field that is

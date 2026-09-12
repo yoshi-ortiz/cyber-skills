@@ -1,5 +1,5 @@
 ---
-name: genesis
+name: big-bang
 description: Bootstrap projects and first-work-style, or advance scoped features with Compass, reproducible setup, and evidence-driven improvement.
 disable-model-invocation: true
 phase: first
@@ -7,18 +7,12 @@ arguments:
   first-work-style: work-style
 ---
 
-# Genesis
+# Big Bang
 
-Advance verified, user-accepted outcomes with fewer corrective attempts and
-less unnecessary context. Apply this workflow to the target project's actual
-domain: software, research, content, media, or a combination. Select tools and
-structure from its requirements and existing conventions.
-
-Use the tools available in the current model environment. Named skills and
-package scripts are optional helpers; their absence leaves the underlying work
-required. With no file or execution access, provide proposed artifacts and exact
-verification steps, and mark execution unverified. All generated project files
-belong in the target project; preserve existing work and canonical locations.
+Bootstrap a tidy project or advance a bounded outcome in its domain.
+Use available tools; if execution is unavailable, deliver proposed artifacts and
+exact checks marked unverified. Write project artifacts in the target project,
+reusing its canonical locations and preserving existing work.
 
 ## Compass
 
@@ -46,7 +40,15 @@ constraints**, and **Excluded scope**. Link canonical sources. Add a pointer
 in `AGENTS.md` and, if present, `CLAUDE.md`, both reading that same file.
 Done when domains and constraints are explicit.
 For an explicitly requested managed skill collection, read
-[Extending Genesis with the cyber-yoshi workflow](cyber-skills.md).
+[Extending Big Bang with the cyber-yoshi workflow](cyber-skills.md).
+
+## Bootstrap contract
+
+On bootstrap, follow [First's Bootstrap and index](../SKILL.md#bootstrap-and-index)
+and [Manifest and agent contract](references/packaging.md). Finish manifest-first
+setup, the agent contract and tidy packaging in one invocation, including in a
+populated directory. The reference defines preservation and completion checks.
+A note-only request uses these rules as planning reference.
 
 ## 1. Interview before you architect
 
@@ -118,7 +120,7 @@ Done when each acceptance criterion has passing evidence or a stated blocker.
 
 ## 8. Update the state, immediately
 
-Update state when it changes. Reuse existing canonical documents; create the
+Update state when it changes. Reuse canonical documents; create the
 applicable records below as their contents become necessary. Record ADRs only
 for qualifying decisions and releases only when a release exists.
 

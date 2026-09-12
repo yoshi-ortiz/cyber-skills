@@ -5,11 +5,11 @@ refuses: doctrine and worked contracts, which belong in references/; any state a
 max_file_bytes: 7250
 ---
 
-# Genesis
+# Big Bang
 
 `SKILL.md` is loaded on every invocation and holds the steps only. Each step
 that has a contract behind it points into `references/` rather than growing.
-That includes the conditional ADR contract: Genesis owns its topology and
+That includes the conditional ADR contract: Big Bang owns its topology and
 lifecycle, while target projects own their accepted records under `docs/adr/`.
 
 User-invoked on purpose. The doctrine is expensive and applies to a decision
@@ -23,5 +23,5 @@ and the rest are files in the **target project**. This repository has its own
 themselves, not artifacts of this skill running.
 
 Step 4 uses the knowledge skill when available; standalone runs preserve source
-provenance in concise notes. Genesis references define workflow, while external
+provenance in concise notes. Big Bang references define workflow, while external
 facts belong in the target project's knowledge records.

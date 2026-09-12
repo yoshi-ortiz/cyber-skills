@@ -15,9 +15,9 @@ from skill_discovery import catalog
 def test() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         fixture = Path(tmp)
-        skill = fixture / "first" / "genesis"
+        skill = fixture / "first" / "big-bang"
         skill.mkdir(parents=True)
-        (skill / "SKILL.md").write_text("---\nname: genesis\n---\n")
+        (skill / "SKILL.md").write_text("---\nname: big-bang\n---\n")
         (fixture / "first" / "SKILL.md").write_text("---\nname: first\n---\n")
         stable = fixture / "first" / "aesthetic"
         stable.mkdir()
@@ -25,8 +25,8 @@ def test() -> None:
         records = catalog(fixture)
         assert is_fog("first/SKILL.md", records=records)
         assert not is_fog("first/aesthetic/SKILL.md", records=records)
-        assert is_fog("first/genesis/SKILL.md", records=records)
-        assert not is_fog("assets/genesis/icon.svg", records=records)
+        assert is_fog("first/big-bang/SKILL.md", records=records)
+        assert not is_fog("assets/big-bang/icon.svg", records=records)
         private = fixture / '.audit' / 'shots' / 'private.json'
         private.parent.mkdir(parents=True)
         private.write_text('{}')
@@ -47,9 +47,9 @@ def test() -> None:
             assert not (out / '.audit').exists()
             assert not (out / '.scratch').exists()
 
-    assert is_fog("first/genesis/SKILL.md")                # alpha skill on main
-    assert is_fog("first/genesis/references/architecture.md")
-    assert not is_fog("first/genesis/SKILL.md", "alpha")
+    assert is_fog("first/big-bang/SKILL.md")                # alpha skill on main
+    assert is_fog("first/big-bang/references/architecture.md")
+    assert not is_fog("first/big-bang/SKILL.md", "alpha")
     assert is_fog("first/aesthetic/AGENTS.md", "alpha")    # fog is still fog on alpha
     assert not is_fog("kit/spanish/ora/SKILL.md")          # stable skills unaffected
     assert is_fog("first/SKILL.md")                      # alpha router

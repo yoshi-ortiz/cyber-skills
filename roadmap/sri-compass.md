@@ -1,4 +1,4 @@
-# Compass and SRI: complete build specification and plan
+# Compass and RSI: complete build specification and plan
 
 Status: build plan; outcome rule confirmed by the user; field experiment pending.
 Owner map: [Build the complete Compass and SRI architecture report](../.scratch/compass-sri/map.md).
@@ -165,7 +165,7 @@ Do not introduce a separate testing convention.
 ```sh
 python3 -B tools/test_context_learner.py
 python3 -B -m unittest discover -s check/tokens-qa/scripts -p 'test_*.py'
-python3 -B -m unittest discover -s first/genesis/scripts -p 'test_*.py'
+python3 -B -m unittest discover -s first/big-bang/scripts -p 'test_*.py'
 python3 -B tools/test_compass_flow.py
 python3 -B -m unittest discover -s tools -p 'test_repo_context.py'
 python3 -B tools/test_fog.py

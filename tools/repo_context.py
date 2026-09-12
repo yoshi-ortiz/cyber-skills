@@ -15,7 +15,7 @@ from repo_queries import (bugs, exact_bug, exact_roadmap_item, item_context,
                           roadmap_state, summary)
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "first/genesis/scripts"))
+sys.path.insert(0, str(ROOT / "first/big-bang/scripts"))
 import compass
 
 QA = ROOT / "check/tokens-qa/scripts/tokens_qa.py"

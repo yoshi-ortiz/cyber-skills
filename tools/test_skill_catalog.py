@@ -27,8 +27,8 @@ class SkillCatalogTest(unittest.TestCase):
     def test_record_owns_identity_family_channel_names_origin_path_and_size(self) -> None:
         self.skill("kit", "name: kit\ndescription: Day zero.", "setup")
         genesis = self.skill(
-            "first/genesis",
-            """name: genesis
+            "first/big-bang",
+            """name: big-bang
 description: Plans work. In Spanish it answers to origen; also called plan.
 translations:
   es: origen
@@ -43,13 +43,13 @@ also:
 
         self.assertEqual(records["kit"].family, "kit")
         self.assertEqual(records["kit"].channel, "main")
-        record = records["genesis"]
+        record = records["big-bang"]
         self.assertEqual(record.family, "first")
         self.assertEqual(record.channel, "alpha")
         self.assertEqual(record.translations, (("es", "origen"),))
         self.assertEqual(record.aliases, ("plan",))
         self.assertEqual(record.also, (("first-plan-roadmap", "Update the state"),))
-        self.assertEqual(record.names, ("genesis", "origen", "plan"))
+        self.assertEqual(record.names, ("big-bang", "origen", "plan"))
         self.assertEqual(record.origin, "yoshi-ortiz/cyber-skills")
         self.assertEqual(record.path, genesis.relative_to(self.root))
         self.assertEqual(record.body, "señal")
@@ -68,12 +68,12 @@ also:
             skill_discovery.catalog(self.root)
 
     def test_path_owner_matches_the_skill_root_not_an_unrelated_component(self) -> None:
-        self.skill("first/genesis", "name: genesis")
+        self.skill("first/big-bang", "name: big-bang")
         records = skill_discovery.catalog(self.root)
-        self.assertIsNone(skill_discovery.owner_of(Path("assets/genesis/icon.svg"), records))
+        self.assertIsNone(skill_discovery.owner_of(Path("assets/big-bang/icon.svg"), records))
         self.assertEqual(
-            skill_discovery.owner_of(Path("first/genesis/references/a.md"), records).name,
-            "genesis",
+            skill_discovery.owner_of(Path("first/big-bang/references/a.md"), records).name,
+            "big-bang",
         )
 
     def test_family_exits_form_one_catalog_graph(self) -> None:

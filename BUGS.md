@@ -652,7 +652,7 @@ Those are the security properties of a server bound on loopback.
 **Fix.** R-17, and not the smallest change this entry proposed. Adding the file
 to `gates()` by hand would have closed this instance and left the mechanism
 that produced it, which was the list itself: three further files were in no
-gate at the time of the fix (`first/genesis/scripts/test_genesis_flow.py`,
+gate at the time of the fix (`first/big-bang/scripts/test_genesis_flow.py`,
 `first/knowledge/scripts/test_okf.py`, `kit/silly/scripts/test_alias.py`), and
 nothing had reported them. `check.py:test_gates()` now finds every `test_*.py`
 and reads it to choose how to run it: a `TestCase` is discovered with its
@@ -932,7 +932,7 @@ output, and tests. A small model can satisfy the current wording by creating
 technical directories such as `controllers/`, `models/`, and `utils/`, then
 spread one feature across all of them.
 
-**Root cause.** `first/genesis/references/architecture.md` classifies package
+**Root cause.** `first/big-bang/references/architecture.md` classifies package
 types and warns against cross-domain contamination, but it never defines a
 vertical slice, its ownership rule, or the mechanical test for misplaced code.
 `genesis_flow.py` checks whether project records exist. It does not inspect the

@@ -25,7 +25,7 @@ another.
 | Workflow | Skills | Context |
 | --- | --- | --- |
 | [kit/](kit/) | [kit](kit/SKILL.md), [starter-pack](kit/starter-pack/), [silly](kit/silly/), [ora](kit/spanish/ora/) | Day 0 on-ramp |
-| [first/](first/) | [genesis](first/genesis/), [knowledge](first/knowledge/), [aesthetic](first/aesthetic/) | Plan |
+| [first/](first/) | [big-bang](first/big-bang/), [knowledge](first/knowledge/), [aesthetic](first/aesthetic/) | Plan |
 | [check/](check/) | [tokens-ontology](check/tokens-ontology/) | Monitor |
 | [build/](build/), [land/](land/), [fix/](fix/) | *(routers planned, R-36, R-64, and R-63)* | Build · Ship · Operate |
 | [tools/](tools/) | Publication pipeline | Repo-Dev fog |

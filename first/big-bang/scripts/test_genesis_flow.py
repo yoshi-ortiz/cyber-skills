@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for Genesis flow state evaluation and action gating."""
+"""Tests for Big Bang flow state evaluation and action gating."""
 from __future__ import annotations
 
 import io
@@ -44,7 +44,7 @@ class DoctrineTests(unittest.TestCase):
         self.assertEqual(topology(SKILL_MD.parent / "no-such-file.md"), {})
 
 
-class GenesisFlowTests(unittest.TestCase):
+class BigBangFlowTests(unittest.TestCase):
     def test_missing_requirements_triggers_interview(self) -> None:
         action = next_action(state("docs/REQUIREMENTS.md"))
         self.assertEqual(action["action"], "interview")

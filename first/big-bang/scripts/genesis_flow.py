@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The one next action for Genesis, computed from disk state.
+"""The one next action for Big Bang, computed from disk state.
 
 `SKILL.md` is canonical: its state-machine table names every file a project
 keeps state in, and this module reads that table rather than restating it. A
@@ -117,7 +117,7 @@ def _present(root: Path, path: str) -> bool:
 
 
 def read_state(project_root: Path, skill_md: Path = SKILL_MD) -> dict[str, Any]:
-    """Read the Genesis topology on disk and return a state dictionary."""
+    """Read the Big Bang topology on disk and return a state dictionary."""
     root = Path(project_root).resolve()
     present = {path: _present(root, path) for path in topology(skill_md)}
     roadmap_file = root / "ROADMAP.md"
@@ -206,7 +206,7 @@ def next_action(state: Mapping[str, Any]) -> dict[str, str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Inspect project topology against Genesis discipline and return next action."
+        description="Inspect project topology against Big Bang discipline and return next action."
     )
     parser.add_argument(
         "--project-root",

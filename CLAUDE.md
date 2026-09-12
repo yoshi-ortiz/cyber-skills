@@ -62,7 +62,7 @@ Repo-Dev and Design-Inference work.
 | `kit/` | `starter-pack/` | Original-name alias for Kit |
 | `kit/` | `silly/` | Skill aliases and translated names |
 | `kit/` | `spanish/ora/` | Spanish response voice |
-| `first/` | `genesis/` | Interview, spec promotion, glossary, proof, and project state |
+| `first/` | `big-bang/` | Interview, spec promotion, glossary, proof, and project state |
 | `first/` | `knowledge/` | Current sources compiled into cited OKF bundles |
 | `first/` | `aesthetic/` | Evidence-backed design decisions and user ranking |
 | `check/` | `tokens-ontology/` | Bounded repository retrieval and EVoC exploration |
@@ -91,7 +91,7 @@ Read `spec/CONTEXT.md` before entering this project state. Repo-Dev records in
 | Need | Index |
 | --- | --- |
 | Settled cross-skill contracts | `docs/SPEC/CONTEXT.md` |
-| Genesis architecture and verification doctrine | `first/genesis/SKILL.md` |
+| Big Bang architecture and verification doctrine | `first/big-bang/SKILL.md` |
 | Aesthetic doctrine for a specific branch of work | `first/aesthetic/references/index.md` |
 | Design-Inference vocabulary | `first/aesthetic/UBIQUITOUS_LANGUAGE.md` |
 | Publication and repository checks | `tools/CONTEXT.md` |

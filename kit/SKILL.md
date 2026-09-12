@@ -1,7 +1,6 @@
 ---
 name: kit
-description: Operating guide for the harness-core skill loadout every AI app carries. Bare kit syncs the active domains; kit followed by a domain explicitly activates it. Also answers to install, setup, init, start, starter, sync, update, refresh, upgrade, doctor, repair, troubleshoot, conflict, and starter-pack. Use to fetch the harness, re-arm apps, add a skill, or diagnose the collection.
-disable-model-invocation: true
+description: Bootstrap repository domains when First requests setup. Operating guide for the harness-core skill loadout every AI app carries. Bare kit syncs the active domains; kit followed by a domain explicitly activates it. Also answers to install, setup, init, start, starter, sync, update, refresh, upgrade, doctor, repair, troubleshoot, conflict, and starter-pack. Use to fetch the harness, re-arm apps, add a skill, or diagnose the collection.
 also:
   - starter-pack :: Same skill, its original name
 ---

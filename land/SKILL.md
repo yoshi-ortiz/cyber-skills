@@ -27,9 +27,8 @@ This one reaches other people.
 with the argument already chosen, so nobody has to remember which word goes
 after `land`.
 
-Land does not verify. `build`'s Pre-release section owns that, and a branch that
-arrives here without it goes back rather than forward. Green is not the same as
-verified, and a stack reported green by its own author is neither.
+Build owns pre-release verification. Require its evidence before release; Land
+owns CI/CD execution, deployment health and release observability.
 
 ## Burndown
 
@@ -54,9 +53,22 @@ state changes when the work changes state, not at the end of a session.
 | --- | --- |
 | **land-and-deploy** | Cutting the release and making the deployment observable. Reached through the `gstack` bundle, which is what the collection installs |
 
-Pause before anything that cannot be undone: a force push to a shared branch, a
-deploy, a data deletion, a message to a customer. Reversible steps proceed.
-Irreversible ones get confirmed first, every time, however routine the run felt.
+Every deployment goes through the repository's CI/CD path. Inspect the existing
+workflow and stack manifest; create or repair the pipeline when delivery setup
+is in scope. Prefer versioned infrastructure as code for provisioned resources;
+reuse existing IaC and review its plan before applying changes. Document a
+concrete exception when the target cannot support IaC.
+
+Push the authorized release changes, trigger the deployment pipeline, and follow
+it to completion. Use manifest-defined build/package commands, environment-backed
+secrets, an identifiable artifact/revision, health checks and a rollback path.
+Reuse prior authorization; prepare the diff, workflow and infrastructure plan
+before requesting any missing release authorization. A provider or credential
+gap leaves deployment blocked with its exact next action.
+
+Done when the requested target has a successful CI/CD run and observed health
+for the shipped revision. Record the run URL, target, revision, health evidence
+and rollback reference. A push or queued job alone is not a deployed release.
 
 Publication in this repository is Repo-Dev work and belongs to `tools/`, not
 here. `python3 tools/release.py --channel alpha --push` is the command, and its

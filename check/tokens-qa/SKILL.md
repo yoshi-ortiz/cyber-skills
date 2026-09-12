@@ -42,6 +42,14 @@ When using installed Shot commands, read [Command reference](commands.md) for
 recording, comparison, feedback, retention and exit codes. Without those tools,
 continue the session compass using the available evidence.
 
+## Diagnostic modules
+
+After each observed user response, or for `tokens-qa curve`, read
+[Curve](curve.md) to show per-Shot feedback and a qualified Gaussian reference.
+For contamination, missing indexes or leading words, read
+[Needle-in-haystack](needle-in-haystack.md) to repair context and tool discovery.
+These are agent-run modules; installed CLI commands remain in the command reference.
+
 ## The user decides
 
 L3 is primary. `accepted` requires an explicit accept with no correction in the
@@ -161,6 +169,21 @@ finding rules. Report repository repairs separately from observed inference
 contamination. With no comparable baseline, the table reports current evidence
 and unknown gains. This is the agent's closing summary; existing CLI output and
 the canonical Shot schema remain authoritative and unchanged.
+
+## Context brief
+
+End every report with a compact context brief after the RSI table:
+
+- **Fixed:** cited contamination or indexing issues, owning paths and verification;
+  distinguish repository fixes from observed inference repairs.
+- **Leading words:** missing words in chat input, proposed terms and their source
+  mappings; preserve the user's original wording. Write `none observed` when so.
+- **Tools:** missing project capabilities, owning manifest, installation CLI
+  script path (or proposed script in OBSERVE), capability check and blockers.
+- **Pending:** unresolved evidence, acceptance and the next bounded action.
+
+Use `not_observed` for unavailable evidence. If the diagnostic branch was needed,
+its module supplies these fields; otherwise report only what this run observed.
 
 ## Hard vetoes
 

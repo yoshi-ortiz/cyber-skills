@@ -1,11 +1,11 @@
 ---
-purpose: the deterministic half of genesis -- state evaluation, topology checks, and action gating
+purpose: the deterministic half of big-bang -- state evaluation, topology checks, and action gating
 admits: executable modules and their unit tests, one concern per module
 refuses: doctrine and architectural philosophy, which stay in SKILL.md and references/
 max_file_bytes: 30000
 ---
 
-# Genesis scripts
+# Big Bang scripts
 
 Standard library only, `--help` on every entry point, a `test_*.py` beside each
 module that runs under `python3 -m unittest`.

@@ -15,9 +15,32 @@ owner explicitly re-enables it. Complete these steps using available tools.
 
 | Request | Sequence |
 | --- | --- |
-| `first`, `f` | Take note, then Design when creative direction is relevant |
-| `f take note` | Capture intent and align the bounded outcome to Genesis |
-| `f design` | Read existing intent, fill material gaps, then explore mockups |
+| `first` | Take note, then Design when creative direction is relevant |
+| `first take note` | Capture intent and align the bounded outcome to Big Bang |
+| `first design` | Read existing intent, fill material gaps, then explore mockups |
+
+## Bootstrap and index
+
+For repository bootstrap, call [Kit](../kit/SKILL.md) before implementation.
+Derive the repo domain from the owner's requirements and `docs/WORK_STYLE.md`;
+pass explicitly named catalog domains to Kit, or sync the existing selection.
+If no selection exists, resolve the domain with the owner. Record the selected
+domain and Kit's actual result; tool absence is an explicit setup gap.
+A note-only request records this setup requirement for the bootstrap handoff.
+
+Index domain concepts and software stack knowledge separately in the target's
+`docs/knowledge/index.md`, reusing canonical indexes when present. Each pointer
+names its leading word, loading condition, source and trust boundary. Use
+[Knowledge](knowledge/SKILL.md) for cited source notes; derive stack versions
+from the manifest rather than repeating them in the index.
+
+For an agent project, make the collection's
+[agent knowledge index](../knowledge/index.md) available through a conditional
+pointer in the target index. In this checkout it resolves to
+`/Users/bebote-pro/Development/cyber-skills/knowledge/index.md`. Resolve the
+installed collection location elsewhere; record a missing source as a setup gap
+instead of writing a broken absolute path. Load only the relevant subject.
+Done when both knowledge branches resolve and agent projects can reach that index.
 
 ## Take note
 
@@ -28,7 +51,7 @@ owner explicitly re-enables it. Complete these steps using available tools.
    Done when stated intent is traceable to its source and unknowns are explicit.
 2. Translate that record into one proposed outcome, testable acceptance criteria,
    exclusions and next decision. Use the conventions in
-   [Genesis](genesis/SKILL.md) to align the spec and roadmap; a note-only request
+   [Big Bang](big-bang/SKILL.md) to align the spec and roadmap; a note-only request
    ends with this alignment and does not start implementation. Ask only for
    missing decisions that materially affect scope. Done when the owner can see
    how the proposed Item follows from the original intent.

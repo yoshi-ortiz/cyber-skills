@@ -31,6 +31,16 @@ An accepted decision from `first` is an input, not a suggestion. Reopening it
 here is how a spec becomes a conversation. If it is wrong, go back to `first`
 and change it there.
 
+## Stack packaging
+
+Before implementation, read the owning manifests and the project agent contract.
+Apply [Manifest and agent contract](../first/big-bang/references/packaging.md)
+to the changed packages. Establish a missing manifest first; declare dependencies
+and tools there before using them. Keep files in the stack's canonical layout.
+Pre-release must run the applicable manifest-defined checks, build the delivery
+artifact and inspect its contents. Done when package entry points work, required
+files ship, local/generated clutter stays out, and the diff respects ownership.
+
 ## Clean code
 
 Write the smallest change that solves the stated problem.

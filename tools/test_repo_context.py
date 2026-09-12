@@ -36,10 +36,10 @@ Spend less context while preserving proof.
 
 **Root cause.** The installed path is a copy.
 """, encoding="utf-8")
-        skill = self.root / "first" / "genesis"
+        skill = self.root / "first" / "big-bang"
         skill.mkdir(parents=True)
         (skill / "SKILL.md").write_text(
-            "---\nname: genesis\ndescription: Plans work.\n---\n", encoding="utf-8")
+            "---\nname: big-bang\ndescription: Plans work.\n---\n", encoding="utf-8")
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -62,13 +62,13 @@ Spend less context while preserving proof.
         self.assertIn("The installed path is a copy.", bug["body"])
 
     def test_module_query_consumes_catalog_ownership(self) -> None:
-        by_name = repo_context.module_context(self.root, "genesis")
+        by_name = repo_context.module_context(self.root, "big-bang")
         by_path = repo_context.module_context(
-            self.root, "first/genesis/references/architecture.md")
+            self.root, "first/big-bang/references/architecture.md")
         self.assertEqual(by_name, by_path)
         self.assertEqual(by_name["family"], "first")
         self.assertEqual(by_name["channel"], "alpha")
-        self.assertEqual(by_name["path"], "first/genesis")
+        self.assertEqual(by_name["path"], "first/big-bang")
 
     def test_missing_exact_item_fails_clearly(self) -> None:
         with self.assertRaisesRegex(LookupError, "R-99"):

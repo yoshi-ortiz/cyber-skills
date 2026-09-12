@@ -9,7 +9,7 @@ from pathlib import Path
 from skill_discovery import catalog, owner_of
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "first/genesis/scripts"))
+sys.path.insert(0, str(ROOT / "first/big-bang/scripts"))
 import compass
 
 LINK = re.compile(r"\[([^]]+)]\([^)]+\)")

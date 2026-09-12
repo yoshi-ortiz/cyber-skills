@@ -196,7 +196,7 @@ def reasons() -> dict[str, str]:
         "tokens-qa": "black-box Shot QA; alpha until the fix half has run "
                      "against a real round",
         "first": "intent and sketch router; alpha channel",
-        "genesis": "alpha channel; not published to main",
+        "big-bang": "alpha channel; not published to main",
         "knowledge": "alpha channel; not published to main",
         "silly": "alpha channel; not published to main",
         "build": "family router; alpha until it has run a real branch",

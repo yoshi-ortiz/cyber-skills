@@ -18,7 +18,7 @@ SKIP = frozenset({
 })
 GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("kit", ("kit", "silly", "ora")),
-    ("first", ("genesis", "knowledge", "aesthetic", "first")),
+    ("first", ("big-bang", "knowledge", "aesthetic", "first")),
     # The family router sorts after the skills it routes, so shipping it does
     # not renumber rows the index already promised.
     ("check", ("tokens-ontology", "tokens-qa", "check")),
@@ -26,7 +26,7 @@ GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("land", ("land",)),
     ("fix", ("fix",)),
 )
-ALPHA_SKILLS = ("genesis", "tokens-qa", "knowledge", "silly",
+ALPHA_SKILLS = ("big-bang", "tokens-qa", "knowledge", "silly",
                 "build", "land", "check", "fix", "first")
 RAIL_ROUTERS = frozenset({"build", "land", "check", "fix", "first"})
 RAIL_TARGETS = WORKFLOW | {"owner"}

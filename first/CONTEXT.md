@@ -11,7 +11,7 @@ before code. Maps to the `first` family on the rail.
 
 | Skill | Role |
 | --- | --- |
-| [genesis/](genesis/) | Burndown, spec promotion, interview |
+| [big-bang/](big-bang/) | Burndown, spec promotion, interview |
 | [knowledge/](knowledge/) | External sources → cited OKF bundle |
 | [aesthetic/](aesthetic/) | Design-Inference loop |
 

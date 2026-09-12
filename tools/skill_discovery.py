@@ -3,7 +3,7 @@
 
 Skills sit at the repository root only for workflow family containers that are
 also skills (`kit/`). Every other skill lives under a family directory, at any
-depth (`first/genesis/`, `kit/spanish/ora/`). The harness still installs by
+depth (`first/big-bang/`, `kit/spanish/ora/`). The harness still installs by
 skill name, not by family path.
 """
 from __future__ import annotations

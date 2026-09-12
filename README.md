@@ -60,8 +60,8 @@ which stop of that rail a prompt belongs to.
   <tr><td nowrap>😆 <a href="#-silly"><strong>/silly</strong></a></td><td>Lets a skill answer to a second name, in your language or just a nicer one</td><td>No family. Works anywhere on the rail.</td></tr>
   <tr><td nowrap>🇪🇸 <a href="#-silly"><strong>/silly</strong></a> español</td><td>Add commands in Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
   <tr><td nowrap>🇪🇸 <a href="#-ora"><strong>/ora</strong></a></td><td>Rewrites your agent's conclusions in plain Spanish</td><td>No family. Works anywhere on the rail.</td></tr>
-  <tr><td colspan="3" align="center"><h3><a href="#-genesis">💼 Planning</a><br><small>Before you start building</small></h3></td></tr>
-  <tr><td nowrap>📁 <a href="#-genesis"><strong>/genesis</strong></a></td><td>Plans before it builds, and proves the thing runs</td><td><code>first</code> · <strong>Plan</strong></td></tr>
+  <tr><td colspan="3" align="center"><h3><a href="#-big-bang">💼 Planning</a><br><small>Before you start building</small></h3></td></tr>
+  <tr><td nowrap>📁 <a href="#-big-bang"><strong>/big-bang</strong></a></td><td>Plans before it builds, and proves the thing runs</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td nowrap>📚 <a href="#-knowledge"><strong>/knowledge</strong></a></td><td>Reads the real docs and keeps a short cited note</td><td><code>first</code> · <strong>Plan</strong></td></tr>
   <tr><td colspan="3" align="center"><h3><a href="#-aesthetic">🤖 Token sessions</a><br><small>Where you spend a working session</small></h3></td></tr>
   <tr><td nowrap>🧑‍🎨 <a href="#-aesthetic"><strong>/aesthetic</strong></a></td><td>Draws design options, you rank them, it learns what you like</td><td><code>first</code> · <strong>Plan</strong></td></tr>
@@ -229,7 +229,7 @@ equipped the same way, from one list instead of app by app.
 | | |
 | --- | --- |
 | **Package** | [kit/](kit/) · entry [kit/SKILL.md](kit/SKILL.md) |
-| **Invoke** | You only. Say `kit` to set it up, `kit sync` to update it, `kit fix` when something broke. |
+| **Invoke** | You or First during repository bootstrap. Say `kit` to set it up, `kit sync` to update it, `kit fix` when something broke. |
 | **Also answers to** | `starter-pack`, its original name. Ships as an alias, nothing to install. |
 | **Needs** | Git plus the [harness](https://github.com/yoshi-ortiz/harness-core) checkout it fetches |
 | **Channel** | `main` |
@@ -348,7 +348,7 @@ Token totals compare only within one profile. Missing counts read
 ## 📝 /first
 
 `first` / `f` starts with owner intent, instincts and goals, then sketches creative
-directions. `f take note` aligns requirements to Genesis; `f design` explores
+directions. `f take note` aligns requirements to Big Bang; `f design` explores
 mockup elements and records the prompter's direction. Aesthetic stays outside
 this route until it passes an unslop review and the owner re-enables it.
 
@@ -358,7 +358,7 @@ this route until it passes an unslop review and the owner re-enables it.
 | **Invoke** | `first`, `f`, `f take note`, `f design` |
 | **Channel** | `alpha` |
 
-## 📁 /genesis
+## 📁 /big-bang
 
 Builds like an engineer who writes things down. It asks what you actually want
 before it touches code, keeps a live list of what is done and what is stuck, and
@@ -366,8 +366,8 @@ before it touches code, keeps a live list of what is done and what is stuck, and
 
 | | |
 | --- | --- |
-| **Package** | [first/genesis/](first/genesis/) · entry [first/genesis/SKILL.md](first/genesis/SKILL.md) |
-| **Invoke** | You only. Say `genesis`. |
+| **Package** | [first/big-bang/](first/big-bang/) · entry [first/big-bang/SKILL.md](first/big-bang/SKILL.md) |
+| **Invoke** | You only. Say `big-bang`. |
 | **Needs** | Nothing. It writes plain Markdown into your project. |
 | **Runs on** | **Your** project folder, never this repo |
 | **Channel** | `alpha` |
@@ -394,7 +394,7 @@ append-only, `docs/SPEC/` the promoted contracts, `docs/GLOSSARY.md` one
 immutable term per concept, `docs/knowledge/` owned by [/knowledge](#-knowledge).
 
 **Doctrine**, loaded only when a step names it:
-[references/index.md](first/genesis/references/index.md) covers the scope interview
+[references/index.md](first/big-bang/references/index.md) covers the scope interview
 and modular architecture, the sourcing contract, and what counts as evidence.
 
 **Promotion gate.** The doctrine is written and untested.

@@ -117,7 +117,7 @@ class CompassFlow(CompassFlowCase):
         self.assertEqual(decision['reasons'], ['contract required: missing.json'])
 
     def test_explicit_selection_matches_standalone_and_never_falls_back(self):
-        selector = ROOT / 'first/genesis/scripts/compass.py'
+        selector = ROOT / 'first/big-bang/scripts/compass.py'
         (self.root / 'ROADMAP.md').write_text(
             '| ID | State | Workstream | Scope | Proof | Priority | Deferred | Depends on |\n'
             '| --- | --- | --- | --- | --- | --- | --- | --- |\n'
