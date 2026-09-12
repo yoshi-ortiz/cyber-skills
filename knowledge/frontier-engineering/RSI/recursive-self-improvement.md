@@ -5,7 +5,7 @@ description: Separate full recursive self-improvement from a bounded, reviewed i
 status: stable
 resource: https://www.anthropic.com/institute/recursive-self-improvement
 tags:
-  - sri
+  - rsi
   - evaluation
   - recursive-self-improvement
   - quality-assurance
@@ -28,7 +28,7 @@ designing and developing its successor. Its article says that state is neither
 present nor inevitable. Current ability to run code, delegate work, or execute
 bounded research therefore does not establish recursive self-improvement.
 
-## Purpose for SRI work
+## Purpose for RSI work
 
 A useful near-term purpose is a governed experiment:
 

@@ -26,7 +26,7 @@ class SkillCatalogTest(unittest.TestCase):
 
     def test_record_owns_identity_family_channel_names_origin_path_and_size(self) -> None:
         self.skill("kit", "name: kit\ndescription: Day zero.", "setup")
-        genesis = self.skill(
+        big_bang = self.skill(
             "first/big-bang",
             """name: big-bang
 description: Plans work. In Spanish it answers to origen; also called plan.
@@ -51,7 +51,7 @@ also:
         self.assertEqual(record.also, (("first-plan-roadmap", "Update the state"),))
         self.assertEqual(record.names, ("big-bang", "origen", "plan"))
         self.assertEqual(record.origin, "yoshi-ortiz/cyber-skills")
-        self.assertEqual(record.path, genesis.relative_to(self.root))
+        self.assertEqual(record.path, big_bang.relative_to(self.root))
         self.assertEqual(record.body, "señal")
         self.assertEqual(record.body_bytes, len("señal".encode("utf-8")))
 

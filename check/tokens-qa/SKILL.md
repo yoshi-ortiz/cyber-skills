@@ -130,8 +130,8 @@ required change or check, and completion condition. If waiting on the user, name
 exactly which verdict or decision is missing. If no eligible Item exists, report
 that blocker; if the declared goal is complete, cite its closure evidence.
 
-RSI means evidence-driven improvement of instructions or regression fixtures,
-called SRI in this repository. It does not train model weights. Promote a lesson
+RSI means evidence-driven improvement of instructions or regression fixtures.
+It does not train model weights. Promote a lesson
 only within authorized scope and the project's review process. One before/after
 pair is a local observation, not proof of general improvement across models.
 

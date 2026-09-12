@@ -46,7 +46,7 @@ For QA, the output is a proposed measurement and verification plan, not a
 verdict. Validate targets independently against observations, tests, or other
 fit-for-purpose evidence before accepting a result.
 
-## Relation to SRI
+## Relation to RSI
 
 This is a QA-only inference, not a claim made by the QFD sources: a governed
 self-recursive-improvement experiment could use a House of Quality artefact to

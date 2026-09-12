@@ -1,6 +1,6 @@
 # Feature compass
 
-R-71 implements the bounded execution loop. Genesis owns roadmap parsing and
+R-71 implements the bounded execution loop. Big Bang owns roadmap parsing and
 selection; Tokens QA owns validated observations, feedback and artifact checks;
 Repo Context joins their public interfaces. No Aesthetic dependency is added.
 

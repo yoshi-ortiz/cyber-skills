@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from genesis_flow import FLOW, SKILL_MD, main, next_action, read_state, topology
+from big_bang_flow import FLOW, SKILL_MD, main, next_action, read_state, topology
 
 
 def state(*absent: str) -> dict:
@@ -89,7 +89,7 @@ class BigBangFlowTests(unittest.TestCase):
         self.assertEqual(next_action(state("docs/adr/"))["action"], "done")
 
     def test_read_state_on_disk(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="genesis-flow-test-") as temp:
+        with tempfile.TemporaryDirectory(prefix="big-bang-flow-test-") as temp:
             root = Path(temp)
             st = read_state(root)
             self.assertFalse(st["present"]["docs/REQUIREMENTS.md"])
@@ -125,7 +125,7 @@ class BigBangFlowTests(unittest.TestCase):
             self.assertEqual(next_action(st)["action"], "done")
 
     def test_cli_json_and_check_flags(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="genesis-cli-test-") as temp:
+        with tempfile.TemporaryDirectory(prefix="big-bang-cli-test-") as temp:
             root = Path(temp)
             buf = io.StringIO()
             with redirect_stdout(buf):

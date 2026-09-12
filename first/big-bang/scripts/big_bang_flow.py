@@ -201,7 +201,7 @@ def next_action(state: Mapping[str, Any]) -> dict[str, str]:
     for action, _paths, condition, explanation in FLOW:
         if condition(state):
             return {"action": action, "reason": explanation(state)}
-    return {"action": "done", "reason": "all genesis gates pass; topology, specs, glossary, and burndown are consistent"}
+    return {"action": "done", "reason": "all Big Bang gates pass; topology, specs, glossary, and burndown are consistent"}
 
 
 def main(argv: list[str] | None = None) -> int:

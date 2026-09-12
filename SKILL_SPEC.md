@@ -15,7 +15,7 @@ installable until its owner exists and the publication gates pass.
 | --- | --- | --- | --- | --- | --- | --- |
 | `kit` | `kit`; `starter-pack`; `install`, `setup`, `init`, `start`; `sync`, `update`, `refresh`, `upgrade`; `doctor`, `repair`, `troubleshoot`, `conflict` | `main` | [`kit/SKILL.md`](kit/SKILL.md) | Install, Sync, Fix | ✅ `SHIPPED` | `R-32` |
 | `kit` modes | `kit <domain...>` including `kit design`; `kit español` | `main` | [`kit/SKILL.md`](kit/SKILL.md) | Domain, Install, Sync, Fix | 🔵 `PARTIAL` | `R-37` |
-| `first` | `first`; `f`; `f take note`; `f design`; Genesis alignment | `alpha` | [`first/SKILL.md`](first/SKILL.md) | Take note, Design | ✅ `SHIPPED` | `R-35` |
+| `first` | `first`; `f`; `f take note`; `f design`; `big-bang` alignment | `alpha` | [`first/SKILL.md`](first/SKILL.md) | Take note, Design | ✅ `SHIPPED` | `R-35` |
 | `first` graphics | `text-to-graphics` (loop reference, no separate command yet) | `alpha` | [`first/aesthetic/SKILL.md`](first/aesthetic/SKILL.md) | Source before you write | 🔵 `PARTIAL` | `R-66` |
 | `build` | `build-clean-code`; `build-qa-tests`; `build-pre-release`; `to`; `make` | `alpha` | [`build/SKILL.md`](build/SKILL.md) | Clean code, QA tests, Pre-release | ✅ `SHIPPED` | `R-36` |
 | `land` | `land-asap-burndown`; `land-deployed-release`; `do`; `ship`; `burndown` | `alpha` | [`land/SKILL.md`](land/SKILL.md) | Burndown, Release | ✅ `SHIPPED` | `R-64` |

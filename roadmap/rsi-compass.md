@@ -1,7 +1,7 @@
 # Compass and RSI: complete build specification and plan
 
 Status: build plan; outcome rule confirmed by the user; field experiment pending.
-Owner map: [Build the complete Compass and SRI architecture report](../.scratch/compass-sri/map.md).
+Owner map: [Build the complete Compass and RSI architecture report](../.scratch/compass-sri/map.md).
 Source: [full architecture report](../bugs/compass-sri-architecture-review-20260907.html).
 Incident: [B-032](../BUGS.md#b-032--context-learner-understates-retry-cost-and-permits-held-out-task-overlap--open).
 
@@ -12,7 +12,7 @@ and held-out claims honest; preserve first-attempt feedback evidence for reviewe
 calibration; concentrate repeated Item evidence preparation within Repo Context.
 
 The product target is the first delivered attempt receiving positive user
-feedback with zero corrections. SRI means an observed result informs one reviewed
+feedback with zero corrections. RSI means an observed result informs one reviewed
 instruction or regression-fixture change, then a comparable experiment checks
 whether that change helps. Runtime declarations change only through review.
 
@@ -27,7 +27,7 @@ Decision source: [Define positive feedback for first-attempt success](../.scratc
 
 | Module | Owns after the build | Existing interface and consumers |
 | --- | --- | --- |
-| Genesis Compass | Item eligibility, active-item resumption, priority/document order | Standalone `next`/`check`; Repo Context |
+| Big Bang Compass | Item eligibility, active-item resumption, priority/document order | Standalone `next`/`check`; Repo Context |
 | Tokens QA | Shot history, sourced feedback, corrections, proof and veto judgment | Existing Shot CLI; Cook and graphic output adapters; Repo Context |
 | Repo Context | Reviewed Item contract plus evidence join, action and budget precedence | Existing `next`/`check`/`close` commands |
 | Context Learner | Reviewed experiment validation, cumulative aggregates and advisory comparison | Existing JSONL evaluator and report |
@@ -129,7 +129,7 @@ not make their actions identical.
 
 Preserve existing revision checks across reads. Do not call separate observations
 a consistent snapshot without verifying revisions. Keep errors explicit and all
-query/closure commands read-only. Do not remove the standalone Genesis seam.
+query/closure commands read-only. Do not remove the standalone Big Bang seam.
 
 Acceptance: existing output and exit-code parity for deterministic fixtures;
 active work precedence; missing contract binds; pending feedback waits; acceptance
@@ -185,7 +185,7 @@ and proof requirements. Implementation may be technically complete while field
 calibration remains unevaluated; neither a fixture nor an absent verdict closes
 that evidence gap.
 
-## SRI evaluation and claims
+## RSI evaluation and claims
 
 The exact cohort and promotion rule belong to
 [Choose the field cohort and promotion rule](../.scratch/compass-sri/issues/02-field-experiment.md).

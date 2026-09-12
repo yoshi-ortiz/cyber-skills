@@ -9,7 +9,7 @@ status: stable
 
 Compass selects work. The improvement loop uses observed results to propose,
 verify and retain a better implementation or instruction. Here RSI means
-recursive self-improvement of the workflow, called SRI in this repository;
+recursive self-improvement of the workflow;
 it changes project artifacts and reviewed instructions, not model weights.
 
 1. **Observe.** Record the concrete failure, correction or maintenance obstacle,

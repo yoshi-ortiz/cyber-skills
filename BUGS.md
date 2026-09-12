@@ -888,29 +888,29 @@ worked either, since the walk stops before finding anything to list.
 
 ---
 
-## B-030 · Genesis has no Project Management domain knowledge · open
+## B-030 · Big Bang has no Project Management domain knowledge · open
 
-**Symptom.** Genesis asks who uses the product and records every user persona in
+**Symptom.** Big Bang asks who uses the product and records every user persona in
 `docs/GLOSSARY.md`, but it creates no project-owned record of whose outcome takes
 priority. It also has no deterministic rule for acceptance ownership, feature
 budget ownership, or the relationship between an epic, a short work interval,
-and one Burndown item. A project can satisfy the Genesis topology while treating
+and one Burndown item. A project can satisfy the Big Bang topology while treating
 every stakeholder request as equal and leaving the end user's goal behind
 internal requests.
 
-**Root cause.** The Genesis contract models requirements, specifications,
+**Root cause.** The Big Bang contract models requirements, specifications,
 architecture decisions, terms, knowledge, incidents, releases, and Burndown
 state. It never models stakeholders. The interview asks one flat question,
 "Who uses this?", then the glossary stores personas as peers. Project Management
 knowledge exists only inside Aesthetic's deferred epic workflow, where it cannot
 guide a universal project bootstrap.
 
-**Impact.** Genesis cannot deterministically rank competing requests or explain
+**Impact.** Big Bang cannot deterministically rank competing requests or explain
 why a secondary stakeholder's feature moved below an end-user need. Repo context
 can list active work, but it lacks the stakeholder fact needed to recommend the
 next feature. Small models must infer this ordering from conversation history.
 
-**Fix.** R-69. Add `docs/STAKEHOLDERS.md` to the target-project Genesis
+**Fix.** R-69. Add `docs/STAKEHOLDERS.md` to the target-project Big Bang
 topology. The file names the end-user persona as the protagonist, records the
 outcome they seek, and lists secondary stakeholders with lower default priority.
 Each exception must name the safety, legal, operational, or contractual reason
@@ -923,9 +923,9 @@ adjacent seams is saved at
 
 ---
 
-## B-031 · Genesis has no vertical-slice architecture contract · open
+## B-031 · Big Bang has no vertical-slice architecture contract · open
 
-**Symptom.** Genesis tells software projects to separate concerns and choose
+**Symptom.** Big Bang tells software projects to separate concerns and choose
 Domain-Driven Design or Feature-Sliced Design. It does not explain how to keep
 one user-visible feature together across its input, domain rules, persistence,
 output, and tests. A small model can satisfy the current wording by creating
@@ -938,12 +938,12 @@ vertical slice, its ownership rule, or the mechanical test for misplaced code.
 `genesis_flow.py` checks whether project records exist. It does not inspect the
 folder tree or verify that a feature has one owner from entry to proof.
 
-**Impact.** Genesis promises a clean folder tree without a deterministic rule
+**Impact.** Big Bang promises a clean folder tree without a deterministic rule
 that distinguishes feature locality from tidy technical buckets. Agents must
 invent the architecture from general training knowledge, which is exactly where
 small models produce scattered modules and catch-all utility folders.
 
-**Fix.** R-70. Add vertical-slice doctrine to Genesis and make its deterministic
+**Fix.** R-70. Add vertical-slice doctrine to Big Bang and make its deterministic
 inspection report features split across technical folders, shared modules with
 one caller, and tests separated from the feature they prove. The rule applies to
 software projects only. Editorial, media, and other package types keep their own
@@ -974,7 +974,7 @@ and validate disjoint experiment membership in the existing evaluator.
 **Guard.** Pending: retry-inclusive report cost and train/heldout overlap cases
 through the existing evaluator interface.
 
-**Evidence.** [Compass and SRI architecture review](bugs/compass-sri-architecture-review-20260907.html)
+**Evidence.** [Compass and RSI architecture review](bugs/compass-sri-architecture-review-20260907.html)
 records the probes, relevant callers, and three scoped deepening opportunities.
 
 ---

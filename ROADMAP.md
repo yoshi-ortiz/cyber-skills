@@ -16,7 +16,7 @@ their recorded state; migrate them deliberately when selecting their work.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | R-71 | `DONE` | Connect feature selection, Shot feedback, and completion proof | default | | 0 | first/big-bang/, check/tokens-qa/, tools/, cook/, docs/, CLAUDE.md, CONTEXT.md, GOAL.md, ROADMAP.md, QA.md, bugs/ | Public command tests exercise selection, correction, rejection, and verified acceptance in a scratch project | .audit/shots/ac2251a3eef94c5a95571bbfd3cb7fab.json |
 | R-72 | `IN-PROGRESS` | Guard developer-tooling test discovery against B-023 | default | R-71 | 0 | tools/, docs/WORK_STYLE.md, AGENTS.md, CLAUDE.md, NEXT.md, ROADMAP.md, BUGS.md | `python3 -B tools/test_check.py` schedules script-style and unittest fixtures without a hand-edited list | .audit/shots/6fcd72a83c764de1aaabac96a0b1b1d2.json |
-| R-73 | `TODO` | Build reviewed first-attempt Compass-SRI calibration | default | R-72 | 1 | roadmap/sri-compass.md, tools/context_learner.py, tools/test_context_learner.py, tools/repo_context.py, tools/test_compass_flow.py, check/tokens-qa/, docs/SPEC/, BUGS.md, ROADMAP.md, NEXT.md | `roadmap/sri-compass.md` acceptance cases prove cumulative attempt cost, isolated held-out tasks, sourced positive acceptance with zero corrections, and next/check/close parity | |
+| R-73 | `TODO` | Build reviewed first-attempt Compass-RSI calibration | default | R-72 | 1 | roadmap/rsi-compass.md, tools/context_learner.py, tools/test_context_learner.py, tools/repo_context.py, tools/test_compass_flow.py, check/tokens-qa/, docs/SPEC/, BUGS.md, ROADMAP.md, NEXT.md | `roadmap/rsi-compass.md` acceptance cases prove cumulative attempt cost, isolated held-out tasks, sourced positive acceptance with zero corrections, and next/check/close parity | |
 <!-- /vocabulary -->
 
 ## 🧱 codebase / development enviroment
@@ -32,7 +32,7 @@ developer-tooling domain guard and awaits its result verdict.
 Stage 8 rail declarations and the Stage 9 reviewed pairwise evaluator are
 technically verified. R-50 remains IN-PROGRESS until a real held-out evaluation
 and the broader invocation outcomes satisfy its promoted contract.
-R-73 is the explicit TODO for the Compass-SRI repairs and field-calibration plan;
+R-73 is the explicit TODO for the Compass-RSI repairs and field-calibration plan;
 it does not claim that the current evaluator meets that plan.
 
 The architecture backlog is visible before delivery work so the rail is built
@@ -43,7 +43,7 @@ environment; the two Aesthetic rows remain post-MVP.
 | --- | --- | --- | --- | --- | --- | --- |
 | R-54 | [`skill_discovery.py`](tools/skill_discovery.py) · [`fog.py`](tools/fog.py) · [`index_gate.py`](tools/index_gate.py) | ✅ `DONE` | Deepen the Skill Catalog | [B-021](BUGS.md), [B-027](BUGS.md) | [`tools/`](tools/), [`kit/silly/`](kit/silly/) | — |
 | R-58 | [`CLAUDE.md`](CLAUDE.md) · [`CONTEXT.md`](CONTEXT.md) | ✅ `DONE` | Make Repo-Dev context queryable | — | Repo-Dev context | R-54 |
-| R-61 | [`genesis_flow.py`](first/big-bang/scripts/genesis_flow.py) | ✅ `DONE` | Deepen deterministic Genesis | — | [`first/big-bang/`](first/big-bang/) | R-54 |
+| R-61 | [`big_bang_flow.py`](first/big-bang/scripts/big_bang_flow.py) | ✅ `DONE` | Deepen deterministic Big Bang | — | [`first/big-bang/`](first/big-bang/) | R-54 |
 | R-17 | [`check.py`](tools/check.py) · [`release.py`](tools/release.py) · [`cook.py`](cook/cook.py) | ✅ `DONE` | Deepen Release Verification | [B-023](BUGS.md) | [`tools/`](tools/), [`cook/`](cook/) | R-54, R-61 |
 | R-16 | [`loanwords.py`](tools/loanwords.py) | ✅ `DONE` | Enforce ubiquitous language | — | [`tools/`](tools/) | — |
 | R-56 | [`server.cjs`](first/aesthetic/companion/server.cjs) · [`trace_preview.py`](tools/trace_preview.py) | ⚪ `TODO` | Deepen the Companion Host *(post-MVP)* | [B-024](BUGS.md) | [`first/aesthetic/companion/`](first/aesthetic/companion/) | MVP release |
@@ -55,7 +55,7 @@ Build order:
    catalog fact consumed by index, publish, install, and roadmap adapters.
 2. R-58 gives cold Repo-Dev entry a goals → roadmap → module map instead of a
    whole-repository document walk.
-3. R-61 makes named Genesis doctrine the source; the Python flow becomes an
+3. R-61 makes named Big Bang doctrine the source; the Python flow becomes an
    adapter instead of a second lifecycle.
 4. R-17 makes one gate registry drive local checks, CI, Cook, and release;
    R-16 guards the vocabulary shared by those contracts.
@@ -79,10 +79,10 @@ it routes. Each family owns sequence, aliases, and handoff only.
 |  |  |  | **🎭 `silly`** |  |  |
 | R-45 | [`alias.py`](kit/silly/scripts/alias.py) | ✅ `DONE` | Generate whole, anchor, and ghost aliases | — | [`kit/silly/`](kit/silly/) |
 |  |  |  | **🧭 `first`** |  |  |
-| R-35 | [`genesis/SKILL.md`](first/big-bang/SKILL.md) | ✅ `DONE` | Route `brainstorming`, `ask-matt`, `prototype`, and `grilling` | — | [`first/`](first/) |
-| R-41 | [`genesis/SKILL.md`](first/big-bang/SKILL.md) | 🟡 `IN-PROGRESS` | Make `first-work-style` write the project-owned domain rail *(contract shipped; field evidence remains)* | — | [`first/`](first/) + `harness-core` |
-| R-69 | [`genesis/SKILL.md`](first/big-bang/SKILL.md) · [`genesis_flow.py`](first/big-bang/scripts/genesis_flow.py) | ⚪ `TODO` | Add a project-owned `docs/STAKEHOLDERS.md`: end-user protagonist first, secondary stakeholders lower by default | [B-030](BUGS.md) | [`first/big-bang/`](first/big-bang/) |
-| R-70 | [`architecture.md`](first/big-bang/references/architecture.md) · [`genesis_flow.py`](first/big-bang/scripts/genesis_flow.py) | ⚪ `TODO` | Add a vertical-slice contract and deterministic folder-tree inspection for software projects | [B-031](BUGS.md) | [`first/big-bang/`](first/big-bang/) |
+| R-35 | [`big-bang/SKILL.md`](first/big-bang/SKILL.md) | ✅ `DONE` | Route `brainstorming`, `ask-matt`, `prototype`, and `grilling` | — | [`first/`](first/) |
+| R-41 | [`big-bang/SKILL.md`](first/big-bang/SKILL.md) | 🟡 `IN-PROGRESS` | Make `first-work-style` write the project-owned domain rail *(contract shipped; field evidence remains)* | — | [`first/`](first/) + `harness-core` |
+| R-69 | [`big-bang/SKILL.md`](first/big-bang/SKILL.md) · [`big_bang_flow.py`](first/big-bang/scripts/big_bang_flow.py) | ⚪ `TODO` | Add a project-owned `docs/STAKEHOLDERS.md`: end-user protagonist first, secondary stakeholders lower by default | [B-030](BUGS.md) | [`first/big-bang/`](first/big-bang/) |
+| R-70 | [`architecture.md`](first/big-bang/references/architecture.md) · [`big_bang_flow.py`](first/big-bang/scripts/big_bang_flow.py) | ⚪ `TODO` | Add a vertical-slice contract and deterministic folder-tree inspection for software projects | [B-031](BUGS.md) | [`first/big-bang/`](first/big-bang/) |
 | R-38 | [`manifest_gate.py`](tools/manifest_gate.py) | ✅ `DONE` | Declare the First workflow phase | — | [`first/big-bang/`](first/big-bang/) |
 | R-46 | [ADR contract](first/big-bang/references/architecture-decisions.md) | ✅ `DONE` | Hand accepted decisions from First to Build | — | [`first/big-bang/`](first/big-bang/) |
 
@@ -102,7 +102,7 @@ stakeholder record remain. R-70's vertical-slice contract remains too:
    operational, or contractual constraint overrides it. Burndown items cite the
    stakeholder and outcome they advance.
 3. **R-70 keeps a feature together.** Software projects organize code by
-   user-visible feature before technical role. Genesis must flag a feature
+   user-visible feature before technical role. Big Bang must flag a feature
    scattered across technical folders, a shared module with one caller, and a
    test stored away from the feature it proves. Other package types retain the
    structures selected by the package interview.

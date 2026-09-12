@@ -111,13 +111,13 @@ class TheReadIsScopedToTheLatestSkillRun(unittest.TestCase):
     def test_a_session_that_ran_no_skill_is_skipped_for_an_older_one_that_did(self):
         with tempfile.TemporaryDirectory() as tmp:
             idle = written(tmp, said("just chatting"), name="idle.jsonl")
-            real = written(tmp, said("Base directory for this skill: /s/genesis"),
+            real = written(tmp, said("Base directory for this skill: /s/big-bang"),
                            name="real.jsonl")
             with unittest.mock.patch.object(qa, "session_transcripts",
                                             return_value=[idle, real]):
                 path = qa.resolve_transcript(Path(tmp), None)
             self.assertEqual(path, real)
-            self.assertEqual(qa.latest_run(qa.entries(path))[0], "genesis")
+            self.assertEqual(qa.latest_run(qa.entries(path))[0], "big-bang")
 
     def test_only_the_latest_runs_turns_are_evidence(self):
         """The FIRST marker reads a dead round's verdict onto the live one."""
