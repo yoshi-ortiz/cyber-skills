@@ -1,7 +1,6 @@
 ---
 name: kit
-description: Operating guide for the harness-core skill loadout every AI app carries. Bare kit syncs the active domains; kit followed by a domain explicitly activates it. Also answers to install, setup, init, start, starter, sync, update, refresh, upgrade, doctor, repair, troubleshoot, conflict, and starter-pack. Use to fetch the harness, re-arm apps, add a skill, or diagnose the collection.
-disable-model-invocation: true
+description: Install and sync the default skill loadout and MCP tools from GitHub through harness-core, the collection every AI app carries. Bare kit syncs the default rows; kit followed by a domain uncomments that domain on the owner's say-so. Also answers to install, setup, init, start, starter, sync, update, refresh, upgrade, doctor, repair, troubleshoot, conflict, and starter-pack. Use to fetch the harness, re-arm apps, add a skill, or diagnose the collection.
 also:
   - starter-pack :: Same skill, its original name
 ---
@@ -10,23 +9,25 @@ also:
 
 | Say | Do |
 | --- | --- |
-| `kit <domain>`, such as `kit design`; more than one may be named | **Domain.** `harness.py domain <domain...>` replaces the active domain selection and syncs only those catalog sections. Domain invocation is explicit; never infer `all`. |
-| `kit`, `sync`, `update`, `refresh`, `upgrade`, `install`, `setup`, `init`, `start`, `starter`, `starter-pack`, **with no source named** | **Sync.** Re-arm the already-active domains at the latest version, cloning the harness first if it is missing. If this machine has no selection, stop at the harness's instruction to choose a domain. |
+| `kit`, `sync`, `update`, `refresh`, `upgrade`, `install`, `setup`, `init`, `start`, `starter`, `starter-pack`, **with no source named** | **Sync.** `harness.py sync` installs the default loadout: every uncommented row in `collection.toml`, plus its `[mcp]` servers, cloning the harness first if it is missing. |
+| `kit <domain>`, such as `kit design`; more than one may be named | **Domain.** A domain is a `[skills.<domain>]` table. Show its commented rows, uncomment only the ones the owner names, then Sync. Never infer `all`, and never pass `--all`. |
 | any of those **followed by a source**, such as `sync cyber-skills` | **One source.** `harness.py sync <source>`, matched as a substring. Named a source, meant that source. |
 | `sync dev`, `dev install`, or any attempt to run your own unpushed work | **Dev install.** Sync clones channels from GitHub, so it can never serve `dev`. `python3 tools/dev_install.py` symlinks this checkout over the installed copies instead, and your edits are live with no sync at all. Re-run it after any sync, which puts copies back. To reach your *other* machines there is no shortcut: publish first, `python3 tools/release.py --channel alpha --push`, then sync. |
-| `doctor`, `repair`, `troubleshoot`, `conflict` | **Fix.** Something installed wrong, or two things collided. Bare `fix` is the `fix` family's, which repairs code and derailed sessions, not the collection. |
+| `doctor`, `repair`, `troubleshoot`, `conflict` | **Fix.** Something installed wrong, or two things collided. Bare `fix` owns code, context and tool recovery; it uses Kit for managed collection setup and returns to verify recovery. |
 
 Never ask which. Sync is idempotent, so there is no separate Install mode to
 pick wrong: running it where the harness already exists syncs it instead of
 breaking it. Releasing this package is Repo-Dev work and is not a mode here.
 
+For ambiguous domains, use [Jev](references/jev.md) when configured. Show its
+candidate; activate only the owner's explicit choice.
+
 Everything below the two modes is reference. Read one when the task names it.
 
-One collection, one harness. `collection.toml` is a git-tracked, read-only
-catalog: what the collection offers, not an instruction to install every row.
-`~/.harness-core.json` is this machine's answer to it -- agents found, domains
-on, sources added by hand -- which is what keeps
-`upgrade` a fast-forward pull. Kit fetches `harness-core` from GitHub and runs
+One collection, one harness. `collection.toml` is the install: an uncommented
+row is installed by default, a commented row is offered but not installed.
+`selected` names the categories sync walks, and `add` appends rows to the
+same file, so commit local rows in `~/.harness-core` before pulling. Kit fetches `harness-core` from GitHub and runs
 its local script; it does not install package managers, runtimes, or shell
 hooks. Source of truth for anything not here: [the harness README](https://github.com/yoshi-ortiz/harness-core).
 
@@ -57,9 +58,8 @@ git clone --depth 1 https://github.com/yoshi-ortiz/harness-core.git ~/.harness-c
 python3 ~/.harness-core/harness.py sync
 ```
 
-The checkout must already have `git` and Node/npm. `yq` is no longer needed:
-the manifest is TOML and `tomllib` is standard library. Kit does not install
-them or add a PATH shim. Use the same Git fetch from Git Bash or
+The checkout must already have `git` and Node/npm. Kit does not install them
+or add a PATH shim. Use the same Git fetch from Git Bash or
 PowerShell on Windows. Start a new agent session after syncing because skill
 lists are read at session start.
 
@@ -74,9 +74,10 @@ Sync is the idempotent re-fetch. Pulling the checkout first refreshes
 `collection.toml` and the harness code, so a source added upstream arrives with
 it. There is no separate installer upgrade path.
 
-It fans out over every source in the active domains. Naming a source after
-`sync` filters that active set by repository name. `kit design` is different:
-it replaces the active set with the manifest's `design` domain before syncing.
+It fans out over every uncommented source in the `selected` categories.
+Naming a source after `sync` filters by repository name. Sync never deletes:
+a skill whose row was commented stays installed until removed from
+`~/.agents/skills` and each app's skills dir.
 
 `python3 ~/.harness-core/harness.py status` prints what is selected, what was
 detected, and how many skills are installed. Read it before and after.
@@ -95,7 +96,8 @@ matter first, which agents were detected and which categories are on.
 | Symptom | Cause | Do |
 | --- | --- | --- |
 | A skill in the repo never arrives | Its manifest entry names a subset, so a skill added later is not in the list | Make the entry bare, or add the new name to the list |
-| A whole domain is absent | `~/.harness-core.json` omits it from `selected` | `harness.py domain <name>` or `harness.py onboard`. Deleting the state clears every domain; it never selects all |
+| A whole domain is absent | Its rows are commented, or `selected` omits it | Uncomment the rows the owner names, or `harness.py onboard`, then `harness.py sync` |
+| `git pull` refuses in `~/.harness-core` | `add` or a hand edit left `collection.toml` dirty | Commit the rows locally, then pull |
 | An app cannot see a new skill | Skill lists load at session start | Start a new chat |
 | A skill behaves like an older version | A stale directory survived a rename; nothing deletes it | Remove it from that app's skills dir, then `harness.py sync` |
 | A skill I just edited syncs without my edit | Sync clones the source from GitHub; an uncommitted or unpushed edit is not there yet | Commit and push, then sync. To test the edit itself, run it from the checkout |
@@ -108,8 +110,8 @@ sync undoes anything it does not know about.
 
 ## Add a skill
 
-`harness.py add owner/repo [skill]` records the source in
-`~/.harness-core.json` **and** installs it. `--no-save` installs without
+`harness.py add owner/repo [skill] --category <name>` appends the row to
+`collection.toml` **and** installs it. `--no-save` installs without
 recording. Sources belong in `collection.toml` once they are worth sharing;
 `add` is for this machine.
 

@@ -1,5 +1,5 @@
 ---
-purpose: a user-invoked guide to the harness that installs every other skill
+purpose: a bootstrap and user-invoked guide to the harness that installs every other skill
 admits: SKILL.md, child skill directories that carry their own contract, and any reference this skill alone needs
 refuses: aesthetic doctrine, design vocabulary, anything from another skill in this package
 max_file_bytes: 8000
@@ -19,9 +19,7 @@ Child skills in this family:
 | [silly/](silly/) | Second names and language aliases |
 | [spanish/ora/](spanish/ora/) | Spanish conclusion voice |
 
-User-invoked on purpose. It fires when someone types its name, so it costs no
-context on the turns nobody asked for it, which is the whole argument for a
-reference skill that is read a few times a month.
+Model-invoked so First can call domain bootstrap; explicit Kit commands remain available.
 
 It ships in the same package as [aesthetic/](../first/aesthetic/) and shares nothing
 with it.
