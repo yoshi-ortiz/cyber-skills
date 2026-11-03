@@ -95,7 +95,7 @@ matter first, which agents were detected and which categories are on.
 | A skill behaves like an older version | A stale directory survived a rename; nothing deletes it | Remove it from that app's skills dir, then `harness.py sync` |
 | A skill I just edited syncs without my edit | Sync clones the source from GitHub; an uncommitted or unpushed edit is not there yet | Commit and push, then sync. To test the edit itself, run it from the checkout |
 | agy or Cursor sees nothing while Claude Code is fine | Those dirs are populated by `sync-skills.sh`, not the `skills` CLI | `harness.py sync`, which runs it after every install |
-| A built-in such as `/resume` runs a skill | A skill folder named after a built-in shadows it ([B-036](../BUGS.md)) | Rename the folder and its `.skill-lock.json` key to the frontmatter name; `harness.py status` must exit 0 |
+| A built-in such as `/resume` runs a skill | A skill folder named after a built-in shadows it ([B-036](../BUGS.md)) | Follow [B-036](../BUGS.md); `harness.py status` must exit 0 |
 | An edit to `collection.toml` changed nothing | Editing installs nothing | `harness.py sync` |
 
 `--dry-run` before any run that fans out. Never fix by hand-editing an app's

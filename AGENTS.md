@@ -1,31 +1,22 @@
 # cyber-skills
 
-One root prompt for every agent. `CLAUDE.md` and `GEMINI.md` import this file
-and add nothing, so the three harnesses read the same rules.
-
-| Harness | Model | Entry file |
-| --- | --- | --- |
-| Claude Code | Claude Opus 5.5 | `CLAUDE.md` → `AGENTS.md` |
-| GPT desktop | Sol 6.1 | `AGENTS.md` |
-| Antigravity | Gemini 4 Argon | `GEMINI.md` → `AGENTS.md` |
-
-No rule here is model-specific. If a model needs a different instruction,
-the instruction is wrong for all of them; fix it here.
+The root prompt for every agent. Claude Code (Opus 5.5) and Antigravity
+(Gemini 4 Argon) reach it through `CLAUDE.md` and `GEMINI.md`; GPT desktop
+(Sol 6.1) reads it directly. No rule here is model-specific.
 
 ## Zero tolerance
 
-These are deal-breakers. Breaking one ends the task; report it, do not work
-around it. See [B-036](BUGS.md#b-036--installed-skills-took-over-built-in-commands-and-doctor-mass-disabled-skills--fixed).
+Deal-breakers: breaking one ends the task; report it. See B-036 in `BUGS.md`.
 
 - Never disable, overwrite, rename, or remove an installed skill, plugin, or
   built-in command without naming each one to the user and getting a yes.
   A bulk "turn off unused skills" pass is never implied consent.
-- Never install a skill whose folder name is a built-in command such as
+- Never install a skill whose folder or `name` is a built-in command such as
   `resume`, `status`, or `review`. After any sync, `python3
   ~/.harness-core/harness.py status` must exit 0.
-- Never treat this repo's own skills (`kit`, `first`, `aesthetic`,
-  `big-bang`, `knowledge`, `genesis`) as unused because one app's counters
-  are low. They are used from other harnesses too.
+- Never treat a skill this repo ships (`skill_discovery.names()` in `tools/`)
+  as unused because one app's counters are low; other harnesses use it too.
+  `harness.py status` fails while any of them is switched off.
 
 ## Entry
 
@@ -72,66 +63,10 @@ For query syntax, run `python3 tools/repo_context.py --help`.
 For NEXT upgrade work, brief [NEXT.md](NEXT.md) at entry and update its progress
 and verification evidence before the final briefing.
 
-## Core modules
+## Map
 
-| Module | Responsibility | Start here |
-| --- | --- | --- |
-| `kit/` | Day 0 setup and installation guidance | `kit/CONTEXT.md` |
-| `first/` | Planning skills that frame work before code | `first/CONTEXT.md` |
-| `check/` | Read-only measurement and the return path into planning | `check/CONTEXT.md` |
-| `build/` | Reserved owner for Code, Build, and Test | `build/CONTEXT.md` |
-| `land/` | Reserved owner for Release and Deploy | `land/CONTEXT.md` |
-| `fix/` | Reserved owner for incident response and rail repair | `fix/CONTEXT.md` |
-| `tools/` | Publication, repository gates, discovery, and package measurements | `tools/CONTEXT.md` |
-| `cook/` | Food Product runs against scratch projects | `cook/CONTEXT.md` |
-
-`CONTEXT.md` maps the families, release channels, and the boundary between
-Repo-Dev and Design-Inference work.
-
-## Submodules
-
-| Parent | Submodule | Responsibility |
-| --- | --- | --- |
-| `kit/` | `starter-pack/` | Original-name alias for Kit |
-| `kit/` | `silly/` | Skill aliases and translated names |
-| `kit/` | `spanish/ora/` | Spanish response voice |
-| `first/` | `big-bang/` | Interview, spec promotion, glossary, proof, and project state |
-| `first/` | `knowledge/` | Current sources compiled into cited OKF bundles |
-| `first/` | `aesthetic/` | Evidence-backed design decisions and user ranking |
-| `check/` | `tokens-ontology/` | Bounded repository retrieval and EVoC exploration |
-
-Inside a skill, read its `CONTEXT.md` before its implementation. Each nested
-directory declares what belongs there and what it refuses. Under `aesthetic`,
-`scripts/` holds executable checks and generators, `references/` holds
-on-demand doctrine, and `companion/` holds the local review server.
-
-## The in-repo design project
-
-These paths are one Design-Inference run, not reusable skill source.
-
-| Path | Contents |
-| --- | --- |
-| `moodboards/` | User-owned reference images |
-| `spec/design-harness/` | Recorded design decisions, evidence, and project state |
-| `design/` | Rendered HTML comps |
-| `shots/` | Generated SVG and screenshot output |
-
-Read `spec/CONTEXT.md` before entering this project state. Repo-Dev records in
-`ROADMAP.md`, `BUGS.md`, `CHANGELOG.md`, and `.audit/` are not design evidence.
-
-## Useful reference knowledge
-
-| Need | Index |
-| --- | --- |
-| Settled cross-skill contracts | `docs/SPEC/CONTEXT.md` |
-| Big Bang architecture and verification doctrine | `first/big-bang/SKILL.md` |
-| Aesthetic doctrine for a specific branch of work | `first/aesthetic/references/index.md` |
-| Design-Inference vocabulary | `first/aesthetic/UBIQUITOUS_LANGUAGE.md` |
-| Publication and repository checks | `tools/CONTEXT.md` |
-
-Load only the reference needed for the current branch. Do not read the
-Aesthetic glossary during Repo-Dev work or the Repo-Dev glossary during a
-design round.
+[Module map](CONTEXT.md#module-map) lists modules, submodules, the in-repo
+design project, and reference indexes. Read the row you are about to enter.
 
 ## Verification and publication
 

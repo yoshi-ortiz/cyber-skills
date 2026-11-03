@@ -1088,5 +1088,16 @@ built-in command. `harness.py sync` fails before fan-out and `harness.py
 status` exits 1 when any exist. Test:
 `test_a_folder_named_after_a_builtin_command_is_flagged`.
 
-**Still open.** `export`, `review`, `stats` and `status` already shadow
-built-ins and need the same rename.
+**Follow-up.** `export`, `stats`, `status` (mem0) and `review`
+(mattpocock/skills) also shadowed built-ins. Renamed to `mem0-export`,
+`mem0-stats`, `mem0-repo-status` and `pocock-review`; Claude Code's bundled
+`code-review` and Codex's `/import` were shadowed too (`pocock-code-review`,
+`mem0-import`). Renames re-key `skillOverrides`, or an `"off"` entry stops
+applying and the renamed skill turns back on.
+
+**Prevention.** harness-core keeps a `RESERVED` table per app (Claude Code,
+Codex, Cursor), lists each bare source with `npx skills add -l` before
+installing, and installs only the names that clash with none. `status` also
+fails while Claude Code switches off a skill from a `protected` source.
+`tools/kit_gate.py` fails when a skill this repo ships takes a reserved name.
+Antigravity's built-ins are not in the table yet.

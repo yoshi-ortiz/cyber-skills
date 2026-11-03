@@ -135,14 +135,17 @@ def is_fog(relative: str, channel: str = "main",
     return any(path.match(pattern) for pattern in FOG_GLOBS)
 
 
+ROOT_PROMPT_SHIM = "a one-line `@AGENTS.md` import; the Repo-Dev root prompt"
+
+
 def reasons() -> dict[str, str]:
     """Why each rule exists, for the error message a check prints."""
     return {
         "AGENTS.md": "the Repo-Dev root prompt every harness imports; a consuming "
                      "agent is not changing this package",
-        "GEMINI.md": "imports the Repo-Dev root prompt for Antigravity",
+        "GEMINI.md": ROOT_PROMPT_SHIM,
         "NEXT.md": "development upgrade progress, never installed skill policy",
-        "CLAUDE.md": "imports the Repo-Dev root prompt for Claude Code",
+        "CLAUDE.md": ROOT_PROMPT_SHIM,
         "GOAL.md": "why this package's shape is the shape; a rail document that "
                    "designs the command surface, never a runtime instruction",
         "SPEC.md": "the settled contract for the command surface; Repo-Dev state",

@@ -23,7 +23,7 @@ file, line, alias, and replacement. This lets `Skill` and `Command` remain
 distinct concepts even though each word is a misleading substitute for the
 other in the wrong context.
 
-The governed surface is `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, `SPEC.md`, `SKILL_SPEC.md`,
+The governed surface is `AGENTS.md`, `CONTEXT.md`, `SPEC.md`, `SKILL_SPEC.md`,
 and `ROADMAP.md`. The glossary itself, historical `BUGS.md` and `CHANGELOG.md`,
 translations, inline and fenced code, URLs, and the separate Design-Inference
 glossary are excluded deliberately.

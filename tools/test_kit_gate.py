@@ -33,6 +33,14 @@ class KitCitesTheRealHarness(unittest.TestCase):
         root, script = self.tree("ok", 'choices=("sync", "status")')
         self.assertIn("differ from the pin", kit_gate.check(root, script)[0])
 
+    def test_a_skill_named_after_a_builtin_fails(self):
+        root, script = self.tree("ok", 'choices=("sync", "status", "version", "add", '
+                                 '"upgrade", "onboard")\n'
+                                 'RESERVED = {\n    "codex": frozenset({"resume", "review"}),\n}\n')
+        problems = kit_gate.check(root, script, shipped=["kit", "review"])
+        self.assertEqual(len(problems), 1)
+        self.assertIn("`review`", problems[0])
+
     def test_the_repository_passes(self):
         self.assertEqual(kit_gate.check(), [])
 

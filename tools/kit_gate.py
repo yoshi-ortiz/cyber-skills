@@ -16,6 +16,8 @@ import re
 import sys
 from pathlib import Path
 
+from skill_discovery import names
+
 ROOT = Path(__file__).resolve().parent.parent
 HARNESS = Path.home() / ".harness-core" / "harness.py"
 
@@ -28,6 +30,9 @@ DOCS = ["kit/SKILL.md", "SPEC.md", "SKILL_SPEC.md", "first/big-bang/cyber-skills
 CITED = re.compile(r"harness\.py\s+([a-z][a-z-]*)")
 FICTION = re.compile(r"~/\.harness-core\.json")
 CHOICES = re.compile(r"choices=\(([^)]*)\)", re.S)
+RESERVED = re.compile(r"^RESERVED = \{(.*?)^\}", re.S | re.M)
+# A quoted name, not a dict key such as `"codex":`.
+NAME = re.compile(r'"([a-z-]+)"(?!\s*:)')
 
 
 def cited(text: str) -> set[str]:
@@ -40,7 +45,14 @@ def harness_commands(source: str) -> set[str] | None:
     return set(re.findall(r'"([a-z-]+)"', found.group(1))) if found else None
 
 
-def check(root: Path = ROOT, harness: Path = HARNESS) -> list[str]:
+def builtins(source: str) -> set[str]:
+    """The built-in names, across every app, the harness refuses to install over."""
+    found = RESERVED.search(source)
+    return set(NAME.findall(found.group(1))) if found else set()
+
+
+def check(root: Path = ROOT, harness: Path = HARNESS,
+          shipped: list[str] | None = None) -> list[str]:
     problems: list[str] = []
     for rel in DOCS:
         path = root / rel
@@ -53,10 +65,15 @@ def check(root: Path = ROOT, harness: Path = HARNESS) -> list[str]:
             problems.append(f"{rel} names ~/.harness-core.json; the harness keeps state in "
                             f"{', '.join(sorted(STATE))}")
     if harness.is_file():
-        actual = harness_commands(harness.read_text(encoding="utf-8"))
+        source = harness.read_text(encoding="utf-8")
+        actual = harness_commands(source)
         if actual is not None and actual != COMMANDS:
             problems.append(f"{harness} commands {sorted(actual)} differ from the pin "
                             f"{sorted(COMMANDS)}; update COMMANDS and Kit together")
+        if shipped is None:
+            shipped = names(root) if root == ROOT else []
+        for name in sorted(set(shipped) & builtins(source)):
+            problems.append(f"skill `{name}` would take over a built-in command (B-036)")
     return problems
 
 
