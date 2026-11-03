@@ -1101,3 +1101,34 @@ installing, and installs only the names that clash with none. `status` also
 fails while Claude Code switches off a skill from a `protected` source.
 `tools/kit_gate.py` fails when a skill this repo ships takes a reserved name.
 Antigravity's built-ins are not in the table yet.
+
+---
+
+## B-037 · Big Bang built a feature instead of planning it · fixed
+
+**Severity.** High. The user runs `/big-bang` to clear context and get burndown
+tickets; a run that writes code and tests spends tokens on the wrong job and
+puts unreviewed work in a project the user meant only to plan.
+
+**Since.** `6607461` (strengthen project bootstrap and QA), and worse with the
+uncommitted feature-branch contract.
+
+**Symptom.** On 2026-11-02 a `/big-bang` run in cool-brew captured
+requirements, then picked the Correo startup hang and began writing failing
+tests. The user stopped it and saved a memory: "i ran bigbang to decontaminate
+context first and have clear burndown tickets."
+
+**Root cause.** The skill's loop was plan-and-build with no stop. Compass step 1
+said "follow sections 1 to 8", step 3 said "Build, verify", section 6 said
+"Implement one end-to-end slice" and pointed at a branch-and-commit contract,
+and `big_bang_flow.py` answered the ready Item with "advance next task before
+building". Nothing in the skill said where planning ends, so the agent
+followed the next instruction.
+
+**Fix.** The skill now states "Big Bang plans; it does not build." The default
+run is sections 1 to 5 and 8. Section 6 opens with a gate: build only the Item
+the user named in this request, never one the run selected or a bug it found.
+The flow script's `advance-task` reason waits for the owner.
+
+**Guard.** `PlanOnlyTests` in `first/big-bang/scripts/test_big_bang_flow.py`
+pin the default scope, the stated rule and the section 6 gate.

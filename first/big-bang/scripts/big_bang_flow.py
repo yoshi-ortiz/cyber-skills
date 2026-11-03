@@ -185,7 +185,7 @@ FLOW: tuple[tuple[str, tuple[str, ...], Callable[[Mapping[str, Any]], bool],
         lambda st: st.get("totalTasks", 0) > 0
         and st.get("inProgressCount", 0) == 0
         and st.get("todoCount", 0) > 0,
-        lambda st: "tasks exist in ROADMAP.md, but none are marked IN-PROGRESS; advance next task before building",
+        lambda st: "tasks exist in ROADMAP.md, but none are marked IN-PROGRESS; report the ready task and wait for the owner to name one to build",
     ),
     (
         "verify-proof",

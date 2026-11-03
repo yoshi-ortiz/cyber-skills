@@ -44,6 +44,27 @@ class DoctrineTests(unittest.TestCase):
         self.assertEqual(topology(SKILL_MD.parent / "no-such-file.md"), {})
 
 
+class PlanOnlyTests(unittest.TestCase):
+    """B-037: a run once began writing tests for a bug it found. Building is
+    a mode the user names, never a step the skill walks into."""
+
+    skill = SKILL_MD.read_text(encoding="utf-8")
+
+    def test_the_default_run_excludes_the_build_sections(self) -> None:
+        self.assertIn("sections 1 to 5 and 8", self.skill)
+        self.assertNotIn("sections 1 to 8", self.skill)
+
+    def test_big_bang_says_it_does_not_build(self) -> None:
+        self.assertIn("Big Bang plans; it does not build.", self.skill)
+
+    def test_the_build_section_is_gated_on_a_named_item(self) -> None:
+        build = self.skill.split("## 6. Build inside the boundary")[1].split("## 7.")[0]
+        self.assertIn("unless the user named the Item to build", build)
+
+    def test_compass_only_builds_a_named_item(self) -> None:
+        self.assertIn("Only for an Item the user names", self.skill)
+
+
 class BigBangFlowTests(unittest.TestCase):
     def test_missing_requirements_triggers_interview(self) -> None:
         action = next_action(state("docs/REQUIREMENTS.md"))
