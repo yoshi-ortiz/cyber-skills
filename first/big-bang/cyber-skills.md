@@ -26,8 +26,9 @@ behind the published catalog.
 
 1. Install the harness by following its README. Big Bang does not install it, and
    an agent should not attempt the installation unprompted.
-2. `/kit <domain...>` records the domain selection for that machine, naming only
-   the domains `docs/WORK_STYLE.md` already declares. Never infer `all`.
+2. `/kit <domain...>` uncomments that domain's rows in the harness collection,
+   naming only the domains `docs/WORK_STYLE.md` already declares. Never infer
+   `all`.
 3. Leave `docs/WORK_STYLE.md` as the project's own record. The catalog says what
    a machine can install; the project file says what this project works in, and
    the second one survives the machine.

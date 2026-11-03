@@ -11,12 +11,19 @@ installed path and the source the same bytes.
     python3 tools/dev_install.py --undo      # back to whatever kit sync last put there
 
 Re-run after any `kit sync`, which replaces symlinks with copies again.
+
+A copy that matches a published channel byte for byte is what sync put there,
+not an edit, even though publication rewrites it away from `dev`. And a skill
+that sync never installed has no per-agent link, so the store link alone
+leaves it invisible; missing agent links are added the way `npx skills` does.
 """
 from __future__ import annotations
 
 import argparse
 import filecmp
+import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -25,6 +32,8 @@ from skill_discovery import catalog
 
 ROOT = Path(__file__).resolve().parent.parent
 STORE = Path.home() / ".agents" / "skills"
+AGENTS = [Path.home() / ".claude" / "skills"]
+CHANNELS = ("alpha", "main", "origin/alpha", "origin/main")
 
 # `cook` is fog and ships on no channel, so `discover` skips it. An owner
 # working in this checkout still wants to invoke it.
@@ -37,18 +46,45 @@ def targets(root: Path) -> dict[str, Path]:
     return dict(sorted(found.items()))
 
 
-def edited(copy: Path, source: Path) -> list[str]:
+def published(rel: str, root: Path = ROOT) -> list[bytes]:
+    """Every channel's bytes for one repo path; empty where a channel lacks it."""
+    out = []
+    for ref in CHANNELS:
+        shown = subprocess.run(["git", "-C", str(root), "show", f"{ref}:{rel}"],
+                               capture_output=True)
+        if shown.returncode == 0:
+            out.append(shown.stdout)
+    return out
+
+
+def edited(copy: Path, source: Path, released=lambda rel: []) -> list[str]:
     """Files present in both that differ, so a copy carrying real edits is not
-    deleted silently. Files only on one side are the fog split, not an edit."""
+    deleted silently. Files only on one side are the fog split, and a file
+    equal to a released version is what sync installed; neither is an edit."""
     out: list[str] = []
 
     def walk(cmp_: filecmp.dircmp, prefix: str) -> None:
-        out.extend(f"{prefix}{name}" for name in cmp_.diff_files)
+        out.extend(f"{prefix}{name}" for name in cmp_.diff_files
+                   if (copy / prefix / name).read_bytes() not in released(f"{prefix}{name}"))
         for name, sub in cmp_.subdirs.items():
             walk(sub, f"{prefix}{name}/")
 
     walk(filecmp.dircmp(copy, source), "")
     return out
+
+
+def link_agents(names, store: Path, agents: list[Path], dry_run: bool) -> None:
+    """Give each agent a relative link to the store entry it is missing."""
+    for agent in agents:
+        if not agent.is_dir():
+            continue
+        for name in names:
+            entry = agent / name
+            if entry.exists() or entry.is_symlink():
+                continue
+            print(f"  agent  {agent.parent.name}/{name}")
+            if not dry_run:
+                entry.symlink_to(os.path.relpath(store / name, agent))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -76,7 +112,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  ok     {name}")
             continue
         if installed.is_dir() and not installed.is_symlink():
-            changed = edited(installed, source)
+            rel = source.relative_to(ROOT.resolve()).as_posix()
+            changed = edited(installed, source,
+                             lambda path: published(f"{rel}/{path}"))
             if changed and not args.force:
                 risky.append(f"{name}: {', '.join(changed[:3])}")
                 continue
@@ -89,6 +127,8 @@ def main(argv: list[str] | None = None) -> int:
             shutil.rmtree(installed)
         installed.symlink_to(source)
 
+    if not args.undo:
+        link_agents(targets(ROOT), STORE, AGENTS, args.dry_run)
     if risky:
         print("\ndev-install: these installed copies differ from the checkout, so\n"
               "replacing them would discard edits made through the installed path:")

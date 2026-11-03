@@ -1028,3 +1028,29 @@ does not accept a similar file or a digest that was never committed.
 **Guard.** A focused test commits accepted bytes, changes the working file, proves
 the normal gate still fails, and proves historical closure recognizes only the
 committed digest.
+
+---
+
+## B-035 · Kit cited a harness that never shipped · fixed
+
+**Symptom.** `kit <domain>` failed and the package was missing from Claude
+Code. `harness.py domain` and `~/.harness-core.json` do not exist in
+harness-core `ac8cb31`, which is also `origin/main`. The installed `kit` was a
+published copy, and `first`, `big-bang`, and `tokens-ontology` had store links
+but no `~/.claude/skills` links.
+
+**Root cause.** B-028/R-51 rewrote Kit against a state-file harness that was
+never pushed. That entry asked for a gate tying every Kit command to a real
+harness checkout, and nobody built one. Separately, `dev_install.py` refused
+copies that matched a published channel byte for byte, because it compared
+them only to `dev`. It also linked the shared store but never the agents, so a
+skill that sync never installed stayed invisible.
+
+**Fix.** Kit now describes the real harness. Uncommented `collection.toml`
+rows are the default install, and a domain is a table whose rows the owner
+uncomments. `dev_install.py` treats a copy equal to any published channel as
+unedited, and it adds any missing agent links.
+
+**Guard.** `tools/kit_gate.py` pins the harness command set. It fails when
+Kit, SPEC, SKILL_SPEC, or Big Bang's adoption note cites another command or
+the invented state file, and when a local harness checkout drifts from the pin.

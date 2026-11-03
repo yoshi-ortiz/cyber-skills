@@ -37,6 +37,26 @@ class EditsInAnInstalledCopyAreNoticed(unittest.TestCase):
                                   "scripts/test_x.py": "dev only"})
         self.assertEqual(dev_install.edited(copy, source), [])
 
+    def test_a_copy_equal_to_a_released_version_is_not_an_edit(self):
+        copy, source = self.pair({"SKILL.md": "published"}, {"SKILL.md": "dev"})
+        released = lambda rel: [b"published"] if rel == "SKILL.md" else []
+        self.assertEqual(dev_install.edited(copy, source, released), [])
+
+    def test_a_copy_unlike_every_release_is_still_an_edit(self):
+        copy, source = self.pair({"SKILL.md": "hand edit"}, {"SKILL.md": "dev"})
+        self.assertEqual(dev_install.edited(copy, source, lambda rel: [b"published"]),
+                         ["SKILL.md"])
+
+    def test_a_skill_sync_never_installed_gets_an_agent_link(self):
+        base = Path(tempfile.mkdtemp())
+        store, agent = base / ".agents" / "skills", base / ".claude" / "skills"
+        (store / "first").mkdir(parents=True)
+        agent.mkdir(parents=True)
+        (agent / "kit").mkdir()
+        dev_install.link_agents(["first", "kit"], store, [agent], dry_run=False)
+        self.assertEqual((agent / "first").resolve(), (store / "first").resolve())
+        self.assertFalse((agent / "kit").is_symlink())
+
     def test_cook_is_installable_even_though_discover_skips_it(self):
         self.assertIn("cook", dev_install.targets(dev_install.ROOT))
 

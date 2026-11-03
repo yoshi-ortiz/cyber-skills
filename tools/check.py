@@ -87,6 +87,7 @@ def gates(tree: Path, root: Path = ROOT) -> list[tuple[str, list[str]]]:
         # Found, not listed. The list this replaces is B-023's root cause.
         *test_gates(py, root),
         ("index gate", [py, "tools/index_gate.py"]),
+        ("kit cites the real harness", [py, "tools/kit_gate.py"]),
         ("loanwords", [py, "tools/loanwords.py"]),
         ("publish main",[py, "tools/publish.py", "--out", str(tree / "main"), "--check"]),
         ("publish alpha", [py, "tools/publish.py", "--out", str(tree / "alpha"),
