@@ -342,8 +342,8 @@ As a **statusline** it is free, continuous, and impossible to forget. Same for
 `/DO-burndown`: a **hook** that updates the burndown on stop is the asynchronous,
 nonblocking version of a command that blocks and must be invoked.
 
-None of `hooks`, `statusLine`, or `CLAUDE.md` imports are configured on this
-machine today. Three free rungs, entirely unused.
+`CLAUDE.md` now imports `AGENTS.md`, the one root prompt every harness reads.
+`hooks` and `statusLine` remain unconfigured: two free rungs, unused.
 
 ### Gate: install many, load few
 

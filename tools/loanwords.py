@@ -36,7 +36,7 @@ LOANWORDS: dict[str, tuple[str, ...]] = {
 
 # Spanish pluralises with -s or -es, and `\b` is accent-aware on str patterns.
 _PLURAL = r"(?:e?s)?\b"
-GOVERNED = ("CLAUDE.md", "CONTEXT.md", "SPEC.md", "SKILL_SPEC.md", "ROADMAP.md")
+GOVERNED = ("AGENTS.md", "CLAUDE.md", "CONTEXT.md", "SPEC.md", "SKILL_SPEC.md", "ROADMAP.md")
 START = re.compile(r"<!--\s*vocabulary:\s*(.*?)\s*-->")
 END = re.compile(r"<!--\s*/vocabulary\s*-->")
 

@@ -1054,3 +1054,39 @@ unedited, and it adds any missing agent links.
 **Guard.** `tools/kit_gate.py` pins the harness command set. It fails when
 Kit, SPEC, SKILL_SPEC, or Big Bang's adoption note cites another command or
 the invented state file, and when a local harness checkout drifts from the pin.
+
+---
+
+## B-036 · Installed skills took over built-in commands, and /doctor mass-disabled skills · fixed
+
+**Severity.** Zero tolerance. Deal-breaking: the user lost a built-in command
+and their own skills without being asked. The rules it produced lead the root
+prompt, [AGENTS.md](AGENTS.md#zero-tolerance).
+
+**Since.** 2026-08-31 (mem0 install); disable sweep 2026-11-02.
+
+**Symptom.** `/resume` stopped resuming sessions and ran mem0's "resume
+memory capture" skill instead. Separately, `~/.claude/settings.json`
+`skillOverrides` grew from 32 to 286 `"off"` entries, which also turned off
+this repo's `aesthetic`, `first`, `genesis` and `knowledge`.
+
+**Root cause.** `npx skills add` names the install folder after the source
+repo's directory, not the skill's frontmatter `name`, and harness-core runs it
+with `--skill '*' -y`, so mem0's `skills/resume` (`name: mem0-resume`) landed
+as `~/.agents/skills/resume`. That folder shadows Claude Code's built-in `/resume`, and
+nothing checked for a clash. The 254 extra disables came from `/doctor` runs
+in another project on 2026-11-02, whose "turn off skills you don't use" step
+counted on usage data and so caught skills used through other apps or
+not used recently. Kit did not write any override.
+
+**Fix.** Restored `skillOverrides` from `settings.json.doctor-bak`. Renamed
+the folder to `mem0-resume` and re-keyed `~/.agents/.skill-lock.json` so
+`npx skills update` does not recreate `resume`.
+
+**Guard.** harness-core `shadowed()` lists installed folders named after a
+built-in command. `harness.py sync` fails before fan-out and `harness.py
+status` exits 1 when any exist. Test:
+`test_a_folder_named_after_a_builtin_command_is_flagged`.
+
+**Still open.** `export`, `review`, `stats` and `status` already shadow
+built-ins and need the same rename.

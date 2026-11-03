@@ -42,9 +42,9 @@ git -C ~/.harness-core pull --ff-only
 python3 ~/.harness-core/harness.py sync 2>&1 | tee /tmp/kit.log
 ```
 
-**Never pipe it through `tail` or `head`.** That discards the failures and
-replaces the harness exit code with the pager's, so a run that died a third of
-the way through reads as a clean success.
+**Never pipe it through `tail` or `head`.** It drops the failures and swaps
+the harness exit code for the pager's, so a run that died partway reads as a
+clean success.
 
 If it outruns your tool timeout, background it, say so in chat, and report
 progress rather than going quiet. The harness prints one line per repo and ends
@@ -58,17 +58,10 @@ git clone --depth 1 https://github.com/yoshi-ortiz/harness-core.git ~/.harness-c
 python3 ~/.harness-core/harness.py sync
 ```
 
-The checkout must already have `git` and Node/npm. Kit does not install them
-or add a PATH shim. Use the same Git fetch from Git Bash or
-PowerShell on Windows. Start a new agent session after syncing because skill
-lists are read at session start.
+The checkout needs `git` and Node/npm; Kit installs neither and adds no PATH
+shim. On Windows, run the same fetch from Git Bash or PowerShell.
 
 ## Sync
-
-```bash
-git -C ~/.harness-core pull --ff-only
-python3 ~/.harness-core/harness.py sync
-```
 
 Sync is the idempotent re-fetch. Pulling the checkout first refreshes
 `collection.toml` and the harness code, so a source added upstream arrives with
@@ -102,6 +95,7 @@ matter first, which agents were detected and which categories are on.
 | A skill behaves like an older version | A stale directory survived a rename; nothing deletes it | Remove it from that app's skills dir, then `harness.py sync` |
 | A skill I just edited syncs without my edit | Sync clones the source from GitHub; an uncommitted or unpushed edit is not there yet | Commit and push, then sync. To test the edit itself, run it from the checkout |
 | agy or Cursor sees nothing while Claude Code is fine | Those dirs are populated by `sync-skills.sh`, not the `skills` CLI | `harness.py sync`, which runs it after every install |
+| A built-in such as `/resume` runs a skill | A skill folder named after a built-in shadows it ([B-036](../BUGS.md)) | Rename the folder and its `.skill-lock.json` key to the frontmatter name; `harness.py status` must exit 0 |
 | An edit to `collection.toml` changed nothing | Editing installs nothing | `harness.py sync` |
 
 `--dry-run` before any run that fans out. Never fix by hand-editing an app's

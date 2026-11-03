@@ -26,6 +26,7 @@ FOG_FILES = (
     "AGENTS.md",
     "NEXT.md",
     "CLAUDE.md",
+    "GEMINI.md",
     "GOAL.md",
     "SPEC.md",
     "SKILL_SPEC.md",
@@ -137,10 +138,11 @@ def is_fog(relative: str, channel: str = "main",
 def reasons() -> dict[str, str]:
     """Why each rule exists, for the error message a check prints."""
     return {
-        "AGENTS.md": "Repo-Dev work style entry; a consuming agent is not changing this package",
+        "AGENTS.md": "the Repo-Dev root prompt every harness imports; a consuming "
+                     "agent is not changing this package",
+        "GEMINI.md": "imports the Repo-Dev root prompt for Antigravity",
         "NEXT.md": "development upgrade progress, never installed skill policy",
-        "CLAUDE.md": "routes a Repo-Dev session between the burndown and the rail "
-                     "audit; a consuming agent is in neither mode",
+        "CLAUDE.md": "imports the Repo-Dev root prompt for Claude Code",
         "GOAL.md": "why this package's shape is the shape; a rail document that "
                    "designs the command surface, never a runtime instruction",
         "SPEC.md": "the settled contract for the command surface; Repo-Dev state",
