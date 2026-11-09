@@ -73,6 +73,7 @@ def run(cmd, **kw):
 class Pack:
     def __init__(self, text):
         self.text, self.rows, self.domains, self.agents, problems = text, {}, {}, [], []
+        self.owned = set()
         section = domain = ""
         for n, line in enumerate(text.splitlines(), 1):
             if line.startswith("# "):
@@ -91,7 +92,7 @@ class Pack:
                 else:
                     names = [s for s in re.split(r"[,\s]+", m.group(2) or "") if s]
                     self.rows[m.group(1).lower()] = (m.group(1), names)
-            elif section in ("agents", "domains") and re.match(r"^\s*\d+\.", line):
+            elif section in ("agents", "agent-owned", "domains") and re.match(r"^\s*\d+\.", line):
                 m = ITEM.match(line)
                 if not m:
                     problems.append(f"PACK.md:{n} is an empty list item")
@@ -99,6 +100,8 @@ class Pack:
                     if m.group(1) == "*":
                         problems.append(f"PACK.md:{n} `*` links every agent, and some get copies. Name agents.")
                     self.agents.append(m.group(1))
+                elif section == "agent-owned":
+                    self.owned.add(m.group(1))
                 elif not domain:
                     problems.append(f"PACK.md:{n} is a list item outside a `## domain`")
                 else:
@@ -259,7 +262,7 @@ class Scope:
             return {}
 
     def folders(self):
-        found = [*self.root.glob(".*/skills"), *self.root.glob(".config/*/skills")]
+        found = [*self.root.glob(".*/skills"), *self.root.glob(".config/*/skills"), self.root / ".pi/agent/skills"]
         if not self.is_global:
             found += self.root.glob("*/skills")
         return [f for f in dict.fromkeys(found) if f.is_dir()]  # Python 3.14 globs match dot names with `*`
@@ -277,7 +280,7 @@ class Scope:
                 problems.append(f"{self.name}: {name} is in the lock but not in {self.store}")
         for folder in self.folders():
             for p in sorted(folder.iterdir()):
-                if p.name.startswith(".") or str(p.relative_to(self.root)) in self.tracked:
+                if p.name.startswith(".") or p.name in pack.owned or str(p.relative_to(self.root)) in self.tracked:
                     continue
                 if p.name not in lock:
                     problems.append(f"foreign entry: {p}")

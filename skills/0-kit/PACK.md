@@ -11,6 +11,25 @@ Antigravity, Cline, Amp and others). Other agents listed here get symlinks into 
 
 1. claude-code
 2. codex
+3. pi
+4. cursor
+5. zed
+6. antigravity
+
+# Agent-owned
+
+Entries the agents ship or manage themselves. Kit ignores these names in agent skill folders.
+
+1. check-work
+2. code-review
+3. create-skill
+4. docx
+5. help
+6. imagine
+7. pptx
+8. xlsx
+9. synced
+10. hatch-pet
 
 # Batteries included
 
