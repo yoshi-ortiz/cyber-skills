@@ -8,6 +8,8 @@
   packages.py add owner/repo [--skill a b]   add a catalog row; installs nothing
   packages.py remove <skill>... [-g]   uninstall from this project, or globally
   packages.py list [-g]                passed to `skills list`
+  packages.py stamp                    write publisher metadata and a `publisher:` description prefix into every installed SKILL.md
+  packages.py export <skill>... [-g]   zip skills for ChatGPT web upload, which has no scripted route
   --dry-run                            run every gate and print the installs; change nothing
 
 Every check is a hard gate: one problem stops the run with exit code 1.
@@ -23,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import time
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -44,6 +47,7 @@ ROW = re.compile(
     r"^\s*[*-]\s+(?:<img[^>]*>\s*)?\[[^\]]+\]\(https://github\.com/([\w.-]+/[\w.-]+?)/?\)\s*(?::\s*(.*))?$"
 )
 BULLET = re.compile(r"^\s*[*-]\s")
+NAME = re.compile(r"\[([^\]]+)\]\(https://github\.com/")
 ITEM = re.compile(r"^\s*\d+\.\s+(\S+)")
 REPO = re.compile(r"[\w.-]+/[\w.-]+")
 
@@ -73,7 +77,7 @@ def run(cmd, **kw):
 class Pack:
     def __init__(self, text):
         self.text, self.rows, self.domains, self.agents, problems = text, {}, {}, [], []
-        self.owned = set()
+        self.owned, self.publisher = set(), {}
         section = domain = ""
         for n, line in enumerate(text.splitlines(), 1):
             if line.startswith("# "):
@@ -92,6 +96,7 @@ class Pack:
                 else:
                     names = [s for s in re.split(r"[,\s]+", m.group(2) or "") if s]
                     self.rows[m.group(1).lower()] = (m.group(1), names)
+                    self.publisher[m.group(1).lower()] = NAME.search(line).group(1)
             elif section in ("agents", "agent-owned", "domains") and re.match(r"^\s*\d+\.", line):
                 m = ITEM.match(line)
                 if not m:
@@ -240,6 +245,62 @@ def resolve(pack, tokens):
 
 # Scopes ------------------------------------------------------------------
 
+def prefix_description(fm, tag):
+    """Prefix `description:` with `tag` in place: every agent lists it, and names cannot carry a colon."""
+    d = next((k for k, x in enumerate(fm) if x.startswith("description:")), None)
+    if d is None:
+        return False
+    val = fm[d][12:].strip()
+    if val[:1] in (">", "|"):  # block scalar: a colon is safe in its content
+        if d + 1 >= len(fm) or not fm[d + 1].strip():
+            return False
+        body = fm[d + 1].lstrip()
+        if not body.startswith(tag + " "):
+            fm[d + 1] = fm[d + 1][:len(fm[d + 1]) - len(body)] + tag + " " + body
+    elif not val:
+        return False  # plain multi-line scalar: a colon would break it
+    elif val[0] in "'\"":
+        if not val[1:].startswith(tag + " "):
+            fm[d] = f"description: {val[0]}{tag} {val[1:]}"
+    elif not val.startswith(tag + " "):
+        fm[d] = "description: " + json.dumps(f"{tag} {val}")
+    return True
+
+
+def stamp(skill, want, write):
+    """Put `want` in the SKILL.md frontmatter `metadata:` map (agentskills.io spec). ok, changed or cannot."""
+    lines = skill.read_text().split("\n")
+    try:
+        end = lines.index("---", 1)
+    except ValueError:
+        return "cannot"
+    fm = lines[1:end]
+    i = next((k for k, x in enumerate(fm) if x.startswith("metadata:")), None)
+    if i is None:
+        fm.append("metadata:")
+        i = len(fm) - 1
+    elif fm[i].strip() != "metadata:":
+        return "cannot"  # an inline map is not safely editable
+    j = i + 1
+    while j < len(fm) and fm[j][:1] in (" ", "\t"):
+        j += 1
+    block = fm[i + 1:j]
+    for k, v in want.items():
+        line = f"  {k}: {json.dumps(v)}"
+        old = [x for x in block if x.split(":", 1)[0].strip() == k]
+        if old != [line]:
+            block = [x for x in block if x not in old] + [line]
+    fm = fm[:i + 1] + block + fm[j:]
+    if not prefix_description(fm, re.sub(r"[^a-z0-9]+", "-", want["publisher"].lower()).strip("-") + ":"):
+        return "cannot"
+    new = lines[:1] + fm + lines[end:]
+    if new == lines:
+        return "ok"
+    if write:
+        skill.write_text("\n".join(new))
+    return "changed"
+
+
 class Scope:
     def __init__(self, is_global):
         self.is_global = is_global
@@ -270,6 +331,21 @@ class Scope:
     def listing(self, names):
         return sum(len((frontmatter(self.store / n / "SKILL.md")[1] or "").encode())
                    for n in names if (self.store / n / "SKILL.md").is_file())
+
+    def stamps(self, pack, write):
+        """Every installed skill carries its catalog publisher. Write fixes; otherwise report."""
+        bad = []
+        for name, entry in self.locked().items():
+            src, skill = entry.get("source", ""), self.store / name / "SKILL.md"
+            if src.lower() not in pack.publisher or not skill.is_file():
+                continue  # drift() reports these
+            want = {"publisher": pack.publisher[src.lower()], "source": src, "source-url": f"https://github.com/{src}"}
+            res = stamp(skill, want, write)
+            if res == "cannot":
+                bad.append(f"cannot stamp {skill}: inline `metadata:` or no frontmatter")
+            elif res == "changed" and not write:
+                bad.append(f"{self.name}: {name} has no publisher stamp. Run: python3 packages.py stamp")
+        return bad
 
     def drift(self, pack):
         lock, problems = self.locked(), []
@@ -351,6 +427,7 @@ def install(pack, tokens, is_global, dry):
         problems += [f"install created {scope.root / p} in the project root"
                      for p in sorted({p.name for p in scope.root.iterdir()} - before)
                      if not p.startswith(".") and p != "skills-lock.json"]
+    problems += scope.stamps(pack, True)
     problems += budget(pack)[0]
     gate(problems, "Installed, but not as declared. Lock backup is in ~/.cache/kit.")
     print(f"ok: {len(new)} installed into {scope.name}")
@@ -358,7 +435,7 @@ def install(pack, tokens, is_global, dry):
 
 
 def verify(pack):
-    problems = [p for s in scopes() for p in s.drift(pack)]
+    problems = [p for s in scopes() for p in s.drift(pack) + s.stamps(pack, False)]
     budget_problems, count, listing = budget(pack)
     gate(problems + budget_problems)
     print(f"ok: {count} skills per session, {listing} description bytes, all from the catalog")
@@ -402,6 +479,25 @@ def add_row(pack, rest):
     return 0
 
 
+def export(pack, names, is_global):
+    """Zip stamped skills for ChatGPT web, which only takes uploads. Modes are normalized to 644/755."""
+    scope = Scope(is_global)
+    gate([f"{n}: not installed in {scope.name}" for n in names if n not in scope.locked()] or
+         ([] if names else ["name the skills to export"]))
+    gate(scope.stamps(pack, False))
+    for n in names:
+        out = Path.cwd() / f"{n}.zip"
+        with zipfile.ZipFile(out, "w") as z:
+            for f in sorted((scope.store / n).rglob("*")):
+                if f.is_file() and not f.is_symlink():
+                    info = zipfile.ZipInfo(f"{n}/{f.relative_to(scope.store / n).as_posix()}", (2026, 1, 1, 0, 0, 0))
+                    info.compress_type = zipfile.ZIP_DEFLATED
+                    info.external_attr = (0o755 if os.access(f, os.X_OK) else 0o644) << 16
+                    z.writestr(info, f.read_bytes())
+        print(f"wrote {out}. Upload: ChatGPT > Skills > Create > Upload from your computer")
+    return 0
+
+
 def main(argv):
     dry, is_global = "--dry-run" in argv, "-g" in argv or "--global" in argv
     argv = [a for a in argv if a not in ("--dry-run", "-g", "--global")]
@@ -412,6 +508,12 @@ def main(argv):
     verb, rest = argv[0], argv[1:]
     if verb == "kit-starter-pack":
         return install(pack, ["core"], True, dry)
+    if verb == "stamp":
+        gate([p for s in scopes() for p in s.stamps(pack, True)])
+        print("ok: every installed skill carries its publisher")
+        return 0
+    if verb == "export":
+        return export(pack, rest, is_global)
     if verb == "add":
         return add_row(pack, rest)
     if verb in ("remove", "rm"):

@@ -14,6 +14,11 @@ Run from the project root. Install only what the user named or the project's dom
 
 5. `kit-starter-pack`: `python3 packages.py kit-starter-pack` installs the `core` domain globally. When `kit` prints `first run`, relay that advice to the user.
 
+6. `kit stamp`: `python3 packages.py stamp` writes `publisher`, `source` and `source-url` into each installed skill's `metadata:`. Install stamps automatically; `kit` fails on an unstamped skill.
+7. `kit export <skill>`: `python3 packages.py export <skill>` zips it for ChatGPT web, which only takes uploads.
+
+One install reaches every agent that reads `~/.agents/skills`: Codex, the ChatGPT desktop app, Cursor, Antigravity, Zed, Pi. The publisher is the catalog name in PACK.md.
+
 `packages.py` sits next to this file. Domains and sources are in [PACK.md](PACK.md).
 Every check fails closed. Read the `FAIL` lines, fix the cause, and run again.
 Never pipe the output: the exit code is the result. Never raise a budget to pass.

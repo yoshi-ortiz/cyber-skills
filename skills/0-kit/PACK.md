@@ -35,6 +35,7 @@ Entries the agents ship or manage themselves. Kit ignores these names in agent s
 
 The catalog. One bullet per source: `* <img/> [Name](github url): skills`.
 No `: skills` offers every skill in the repo; otherwise only the names listed.
+The bullet's name is the publisher stamped into each installed skill's `metadata:`.
 A bullet here that does not parse fails the run.
 
 * <img src="https://github.com/mattpocock.png" width="20"> [Matt Pocock](https://github.com/mattpocock/skills)
