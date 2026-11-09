@@ -73,6 +73,7 @@ A bullet here that does not parse fails the run.
 * <img src="https://github.com/tuist.png" width="20"> [Tuist](https://github.com/tuist/agent-skills)
 * <img src="https://github.com/anthropics.png" width="20"> [Anthropic](https://github.com/anthropics/skills)
 * <img src="https://github.com/upstash.png" width="20"> [Context7](https://github.com/upstash/context7)
+* <img src="https://github.com/hashicorp.png" width="20"> [HashiCorp](https://github.com/hashicorp/agent-skills)
 
 # Domains
 
@@ -105,6 +106,16 @@ when two sources offer it. `owner/repo` alone means every skill the catalog offe
 
 1. context7-mcp
 
+## cloud
+
+1. hashicorp/agent-skills:terraform-style-guide
+2. hashicorp/agent-skills:terraform-test
+3. hashicorp/agent-skills:terraform-stacks
+4. hashicorp/agent-skills:terraform-policy
+5. hashicorp/agent-skills:aws-ami-builder
+6. hashicorp/agent-skills:azure-image-builder
+7. hashicorp/agent-skills:azure-verified-modules
+
 ## ios
 
 1. using-tuist-generated-projects
@@ -117,6 +128,8 @@ Not installed. Read by hand.
 
 * `okf` skill helper from source scripts: [okf-wiki QUICKSTART](https://github.com/mchu1966/okf-wiki/blob/master/QUICKSTART.md)
 * `engineering:*` (system-design and others): installed locally as `engineering@inline`; no source repo known.
+* Cloudflare MCP guide (not a skill): [cloudflare/mcp AGENTS.md](https://github.com/cloudflare/mcp/blob/main/AGENTS.md)
+* HashiCorp Terraform MCP prompt (not a skill): [developer.hashicorp.com](https://developer.hashicorp.com/terraform/mcp-server/prompt)
 
 # Plugins (MCP drivers)
 
