@@ -8,5 +8,6 @@ description: First-run setup. Indexes every kit catalog skill so any of them can
 Run `python3 ~/.agents/skills/kit/packages.py kit-starter-pack`. It needs the `kit` skill.
 
 It clones and indexes every catalog source into `~/.cache/kit` and installs nothing.
-Afterwards, call any skill with `kit <skill>`. Run it again to refresh the index.
+It also writes a Claude Code `/command` for each skill that loads nothing until typed.
+Afterwards, call any skill with `/<skill>` in Claude Code, or `kit <skill>` in any agent. Run it again to refresh the index.
 Read any `FAIL` line, fix the cause, and run again. Never pipe the output.

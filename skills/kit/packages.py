@@ -35,6 +35,12 @@ CLI = ["npx", "--yes", f"skills@{CLI_VERSION}"]
 MAX_SKILLS = 40  # per session: global plus this project
 MAX_LISTING_BYTES = 12000  # sum of descriptions: what every session pays to list them
 TIMEOUT = 600  # seconds per command
+SLASH = Path.home() / ".claude/skills"
+# shortcut: hand-kept Claude Code built-in /commands; a stub with one of these names gets its publisher prefix
+BUILTINS = {"agents", "batch", "claude-api", "clear", "code-review", "compact", "config", "context", "cost", "debug",
+            "doctor", "fewer-permission-prompts", "help", "init", "keybindings-help", "login", "logout", "loop",
+            "mcp", "memory", "model", "plugin", "resume", "review", "run", "schedule", "security-review",
+            "simplify", "skills", "status", "update-config", "verify"}
 SELF = {"kit", "kit-starter-pack"}  # installed from this package's own repo, not from a catalog row
 
 HOME = Path.home()
@@ -147,6 +153,10 @@ def frontmatter(path):
 
 
 def discover(root):
+    return {n: len((frontmatter(f)[1] or "").encode()) for n, f in discover_paths(root).items()}
+
+
+def discover_paths(root):
     """Approximates the CLI's discovery rules; the post-install gates catch any disagreement."""
     if (root / "SKILL.md").is_file():
         files = [root / "SKILL.md"]
@@ -161,7 +171,7 @@ def discover(root):
             continue  # a shallower SKILL.md shadows this one
         name, desc, internal = frontmatter(f)
         if name and desc and not internal:
-            found.setdefault(name, len(desc.encode()))
+            found.setdefault(name, f)
     return found
 
 
@@ -358,7 +368,8 @@ class Scope:
                 problems.append(f"{self.name}: {name} is in the lock but not in {self.store}")
         for folder in self.folders():
             for p in sorted(folder.iterdir()):
-                if p.name.startswith(".") or p.name in pack.owned or str(p.relative_to(self.root)) in self.tracked:
+                if (p.name.startswith(".") or p.name in pack.owned or (p / ".kit-stub").is_file()
+                        or str(p.relative_to(self.root)) in self.tracked):
                     continue
                 if p.name not in lock:
                     problems.append(f"foreign entry: {p}")
@@ -496,13 +507,55 @@ def add_row(pack, rest):
     return 0
 
 
+def slash(pack, offered):
+    """Give each indexed skill a Claude Code /command. `disable-model-invocation: true` keeps its
+    description out of context until typed: https://code.claude.com/docs/en/skills#control-who-invokes-a-skill"""
+    taken = pack.owned | BUILTINS | {n for s in scopes() for n in s.locked()}
+    counts = {}
+    for skills in offered.values():
+        for n in skills:
+            counts[n] = counts.get(n, 0) + 1
+    want = {}
+    for repo, skills in offered.items():
+        slug = re.sub(r"[^a-z0-9]+", "-", pack.publisher[repo.lower()].lower()).strip("-")
+        paths = discover_paths(CACHE / repo.replace("/", "@"))
+        for n in skills:
+            stub = n if counts[n] == 1 and n not in taken else f"{slug}-{n}"
+            if stub not in taken and stub not in want and n in paths:
+                want[stub] = (repo, n, paths[n])
+    SLASH.mkdir(parents=True, exist_ok=True)
+    for p in SLASH.iterdir():
+        if (p / ".kit-stub").is_file() and not p.is_symlink():
+            shutil.rmtree(p)  # kit's own stubs only; rebuilt below, so skills gone upstream drop out
+    made = 0
+    for stub, (repo, n, src) in sorted(want.items()):
+        d = SLASH / stub
+        if d.exists() or d.is_symlink():
+            continue  # never overwrite what kit does not own
+        lines = src.read_text(errors="ignore").split("\n")
+        if "---" not in lines[1:]:
+            continue
+        end = lines.index("---", 1)
+        fm = [x for x in lines[1:end] if not x.startswith(("name:", "disable-model-invocation:"))]
+        d.mkdir()
+        for item in src.parent.iterdir():
+            if item.name != "SKILL.md":
+                (d / item.name).symlink_to(item)
+        skill = d / "SKILL.md"
+        skill.write_text("\n".join(["---", f"name: {stub}", "disable-model-invocation: true", *fm, *lines[end:]]))
+        stamp(skill, {"publisher": pack.publisher[repo.lower()], "source": repo,
+                      "source-url": f"https://github.com/{repo}"}, True)
+        (d / ".kit-stub").write_text(f"{repo}:{n}\n")
+        made += 1
+    return made
+
+
 def use(pack, tokens):
     """Print a catalog skill from the cache: it enters the context only now, when called."""
     gate([] if tokens else ["name a skill: packages.py use <skill>"])
     for name, (repo, _) in resolve(pack, tokens, offline=True).items():
         root = CACHE / repo.replace("/", "@")
-        skill = next((f for f in sorted(root.rglob("SKILL.md"), key=lambda f: len(f.parts))
-                      if frontmatter(f)[0] == name), None)
+        skill = discover_paths(root).get(name)
         gate([] if skill else [f"{name}: not in {root}. Run: python3 packages.py kit-starter-pack"])
         print(f'<skill name="{name}" publisher="{pack.publisher[repo.lower()]}" source="{repo}" dir="{skill.parent}">')
         print(skill.read_text().rstrip())
@@ -539,9 +592,10 @@ def main(argv):
     verb, rest = argv[0], argv[1:]
     if verb == "kit-starter-pack":
         repos = [r for r, _ in pack.rows.values()]
-        total = sum(len(v) for v in index(pack, repos).values())
-        print(f"ok: {total} skills from {len(repos)} sources indexed in {CACHE}. "
-              "Nothing loads into a session until called: python3 packages.py use <skill>")
+        offered = index(pack, repos)
+        made = slash(pack, offered)
+        print(f"ok: {sum(len(v) for v in offered.values())} skills from {len(repos)} sources indexed in {CACHE}; "
+              f"{made} are /commands in {SLASH} that load nothing until typed")
         return 0
     if verb == "use":
         return use(pack, rest)

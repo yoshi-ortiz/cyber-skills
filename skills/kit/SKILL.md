@@ -6,6 +6,7 @@ description: Call any skill from the kit catalog (Matt Pocock, pstack, ponytail,
 # Kit
 
 The catalog is indexed, not loaded. A skill enters the context only when called.
+In Claude Code every catalog skill is also `/<skill>`, or `/<publisher>-<skill>` when two sources share a name. Those load nothing until typed.
 Run every command with `python3 ~/.agents/skills/kit/packages.py`.
 
 1. `kit <skill>` or `kit use <skill>`: run `use <skill>`, then follow the printed skill as if it were installed. Its files are in the printed `dir`.
