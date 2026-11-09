@@ -1,5 +1,5 @@
 ---
-name: 0-kit
+name: kit
 description: Install only the skills a project needs from the PACK.md catalog, linked into Claude Code and Codex. Use for kit, kit-starter-pack, install skill, add skill, sync skills.
 ---
 

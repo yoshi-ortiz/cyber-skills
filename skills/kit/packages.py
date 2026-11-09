@@ -34,7 +34,7 @@ CLI = ["npx", "--yes", f"skills@{CLI_VERSION}"]
 MAX_SKILLS = 40  # per session: global plus this project
 MAX_LISTING_BYTES = 12000  # sum of descriptions: what every session pays to list them
 TIMEOUT = 600  # seconds per command
-SELF = "0-kit"  # installed from this package's own repo, not from a catalog row
+SELF = {"kit", "kit-starter-pack"}  # installed from this package's own repo, not from a catalog row
 
 HOME = Path.home()
 PACK = Path(__file__).with_name("PACK.md")
@@ -352,7 +352,7 @@ class Scope:
     def drift(self, pack):
         lock, problems = self.locked(), []
         for name, entry in lock.items():
-            if name != SELF and not pack.repo(entry.get("source", "")):
+            if name not in SELF and not pack.repo(entry.get("source", "")):
                 problems.append(f"{self.name}: {name} comes from {entry.get('source')}, not from the catalog")
             if not (self.store / name / "SKILL.md").is_file():
                 problems.append(f"{self.name}: {name} is in the lock but not in {self.store}")
@@ -456,7 +456,7 @@ def verify(pack):
     budget_problems, count, listing = budget(pack)
     gate(problems + budget_problems)
     print(f"ok: {count} skills per session, {listing} description bytes, all from the catalog")
-    if not [n for s in scopes() for n in s.locked() if n != SELF]:
+    if not [n for s in scopes() for n in s.locked() if n not in SELF]:
         print("first run: nothing is installed yet. Install the core skills everywhere: "
               "python3 packages.py kit-starter-pack")
     return 0
