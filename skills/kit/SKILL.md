@@ -1,20 +1,29 @@
 ---
 name: kit
-description: Call any skill from the kit catalog (Matt Pocock, pstack, ponytail, superpowers, Anthropic and more) without preloading it. Use for kit <skill>, kit use, install skill, kit-starter-pack.
+disable-model-invocation: true
+description: Call any skill from the kit catalog without preloading it, add a domain's MCP servers, or add a source. Use for kit, kit <skill>, kit <domain>, kit add, kit-starter-pack.
 ---
 
 # Kit
 
-The catalog is indexed, not loaded. A skill enters the context only when called.
-In Claude Code every catalog skill is also `/<skill>`, or `/<publisher>-<skill>` when two sources share a name. Those load nothing until typed.
-Run every command with `python3 ~/.agents/skills/kit/packages.py`.
+Do exactly what the table says. Do not guess other commands.
+`K` means `python3 ~/.agents/skills/kit/packages.py`.
 
-1. `kit <skill>` or `kit use <skill>`: run `use <skill>`, then follow the printed skill as if it were installed. Its files are in the printed `dir`.
-2. If `use` says a name is offered twice, run `use owner/repo:<skill>` with the source the user means.
-3. `kit`: no arguments verifies. On `first run`, run `kit-starter-pack` to index the catalog.
-4. `kit install <skill> [-g]`: run `<skill> [-g]` to install it for good. Only when the user asks: installed skills are listed in every session.
-5. `kit tools`: run `tools` to leave the PACK.md `# Tools` out of every Claude Code session. `kit` fails if one is loaded again.
-6. `kit add owner/repo`: run `add owner/repo` to add a catalog row. `kit remove <skill>`: run `remove <skill>`.
+| The user says | Run | Then |
+| --- | --- | --- |
+| `kit` | `K` | Report the `ok` or `FAIL` lines. On `first run`, run `K kit-starter-pack`. |
+| `kit-starter-pack` | `K kit-starter-pack` | Report the last line. |
+| `kit <skill>` or `/kit <skill>` | `K use <skill>` | Follow the printed skill. Its files are in the printed `dir`. |
+| `kit <domain>`, such as `kit cloud` | `K domain <domain>` | Run it from the project root. Report the MCP servers and the `/publisher:skill` lines. |
+| `kit add <github url or owner/repo>` | `K add <url>` | Then run `K kit-starter-pack`. |
+| `kit install <skill>` | `K <skill>` | Only when the user asks: it loads in every session. |
+| `kit remove <skill>` | `K remove <skill>` | |
+| `kit tools` | `K tools` | |
 
-Sources and domains are in [PACK.md](PACK.md). Every check fails closed: read the `FAIL` lines, fix the cause, and run again.
-Never pipe the output: the exit code is the result.
+Rules:
+
+1. `use` says a name is offered twice: run `K use owner/repo:<skill>` with the source the user means.
+2. A `FAIL` line names the cause and the fix. Do the fix, then run the same command again.
+3. Never pipe the output. The exit code is the result.
+4. A URL that is not a GitHub repo, or an MCP server, is not a source: add it to [PACK.md](PACK.md) `# MCP servers` as `1. name url-or-command`, and list it in a domain as `mcp:name`.
+5. Every catalog skill is already a command: `/publisher:skill` in Claude Code, `$publisher:skill` in Codex.

@@ -5,6 +5,7 @@
   packages.py kit-starter-pack         index every catalog skill into ~/.cache/kit; installs and loads nothing
   packages.py use <skill>...           print a catalog skill from the index, so it enters the context only when called
   packages.py tools                    deny PACK.md `# Tools` in ~/.claude/settings.json, so no session loads them
+  packages.py domain <domain>...       add the domain's MCP servers to this project and list its /publisher:skill commands
   packages.py <token>... [-g]          install into this project, or globally with -g.
                                        A token is a domain, a skill, owner/repo:skill, or owner/repo.
   packages.py add owner/repo [--skill a b]   add a catalog row; installs nothing
@@ -36,12 +37,9 @@ CLI = ["npx", "--yes", f"skills@{CLI_VERSION}"]
 MAX_SKILLS = 40  # per session: global plus this project
 MAX_LISTING_BYTES = 12000  # sum of descriptions: what every session pays to list them
 TIMEOUT = 600  # seconds per command
-SLASH = Path.home() / ".claude/skills"
-# shortcut: hand-kept Claude Code built-in /commands; a stub with one of these names gets its publisher prefix
-BUILTINS = {"agents", "batch", "claude-api", "clear", "code-review", "compact", "config", "context", "cost", "debug",
-            "doctor", "fewer-permission-prompts", "help", "init", "keybindings-help", "login", "logout", "loop",
-            "mcp", "memory", "model", "plugin", "resume", "review", "run", "schedule", "security-review",
-            "simplify", "skills", "status", "update-config", "verify"}
+SLASH = Path.home() / ".claude/skills"  # where the earlier layout wrote stubs
+MARKET = Path.home() / ".cache/kit/marketplace"
+MARKET_NAME = "kit"
 SELF = {"kit", "kit-starter-pack"}  # installed from this package's own repo, not from a catalog row
 SETTINGS = Path.home() / ".claude/settings.json"
 TOOLS_OWNED = Path.home() / ".cache/kit/tools.json"  # deny rules kit added, so it never removes yours
@@ -89,7 +87,7 @@ def run(cmd, **kw):
 class Pack:
     def __init__(self, text):
         self.text, self.rows, self.domains, self.agents, problems = text, {}, {}, [], []
-        self.owned, self.publisher, self.tools = set(), {}, []
+        self.owned, self.publisher, self.tools, self.mcp = set(), {}, [], {}
         section = domain = ""
         for n, line in enumerate(text.splitlines(), 1):
             if line.startswith("# "):
@@ -109,6 +107,12 @@ class Pack:
                     names = [s for s in re.split(r"[,\s]+", m.group(2) or "") if s]
                     self.rows[m.group(1).lower()] = (m.group(1), names)
                     self.publisher[m.group(1).lower()] = NAME.search(line).group(1)
+            elif section == "mcp servers" and re.match(r"^\s*\d+\.", line):
+                m = re.match(r"^\s*\d+\.\s+`?([\w-]+)`?\s+`?(.+?)`?\s*$", line)
+                if not m:
+                    problems.append(f"PACK.md:{n} is not `1. name https://url` or `1. name command args`")
+                else:
+                    self.mcp[m.group(1)] = m.group(2)
             elif section in ("agents", "agent-owned", "tools", "domains") and re.match(r"^\s*\d+\.", line):
                 m = ITEM.match(line)
                 if not m:
@@ -231,6 +235,7 @@ def resolve(pack, tokens, offline=False):
     items = []
     for t in tokens:
         items += pack.domains[t.lower()] if t.lower() in pack.domains else [t]
+    items = [i for i in items if not i.startswith("mcp:")]  # servers, not skills: see domain()
     needed = {pack.repo(i.split(":")[0]) for i in items if pack.repo(i.split(":")[0])}
     if any(not pack.repo(i.split(":")[0]) for i in items):
         needed = {repo for repo, _ in pack.rows.values()}  # a bare name: search the catalog
@@ -498,9 +503,12 @@ def remove(names, is_global, dry):
 
 
 def add_row(pack, rest):
-    if not rest or not REPO.fullmatch(rest[0]) or (rest[1:] and rest[1] not in ("-s", "--skill")):
-        sys.exit("usage: packages.py add owner/repo [--skill a b]")
-    repo, names = rest[0], rest[2:]
+    url = re.match(r"(?:https?://)?(?:www\.)?github\.com/([\w.-]+/[\w.-]+?)(?:\.git)?(?:[/#?].*)?$", rest[0]) if rest else None
+    repo = url.group(1) if url else (rest[0] if rest else "")
+    if not REPO.fullmatch(repo) or (rest[1:] and rest[1] not in ("-s", "--skill")):
+        sys.exit("usage: packages.py add <owner/repo or any github.com URL> [--skill a b]. "
+                 "Not on GitHub, or an MCP server? Add it to PACK.md # MCP servers as `1. name url-or-command`.")
+    names = rest[2:]
     gate([f"already in the catalog: {repo}"] if pack.repo(repo) else [])
     row = f"* [{repo}](https://github.com/{repo})" + (": " + ", ".join(names) if names else "")
     lines = pack.text.splitlines()
@@ -556,47 +564,127 @@ def tools(pack, dry):
     return 0
 
 
-def slash(pack, offered):
-    """Give each indexed skill a Claude Code /command. `disable-model-invocation: true` keeps its
-    description out of context until typed: https://code.claude.com/docs/en/skills#control-who-invokes-a-skill"""
-    taken = pack.owned | BUILTINS | {n for s in scopes() for n in s.locked()}
-    counts = {}
-    for skills in offered.values():
-        for n in skills:
-            counts[n] = counts.get(n, 0) + 1
-    want = {}
-    for repo, skills in offered.items():
-        slug = re.sub(r"[^a-z0-9]+", "-", pack.publisher[repo.lower()].lower()).strip("-")
-        paths = discover_paths(CACHE / repo.replace("/", "@"))
-        for n in skills:
-            stub = n if counts[n] == 1 and n not in taken else f"{slug}-{n}"
-            if stub not in taken and stub not in want and n in paths:
-                want[stub] = (repo, n, paths[n])
-    SLASH.mkdir(parents=True, exist_ok=True)
-    for p in SLASH.iterdir():
-        if (p / ".kit-stub").is_file() and not p.is_symlink():
-            shutil.rmtree(p)  # kit's own stubs only; rebuilt below, so skills gone upstream drop out
-    made = 0
-    for stub, (repo, n, src) in sorted(want.items()):
-        d = SLASH / stub
-        if d.exists() or d.is_symlink():
-            continue  # never overwrite what kit does not own
-        lines = src.read_text(errors="ignore").split("\n")
-        if "---" not in lines[1:]:
+def slug(text):
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def write_skill(d, src, publisher, repo):
+    """Copy one catalog skill into a plugin, so it runs only when typed and costs no context before.
+    Claude Code: `disable-model-invocation: true` (https://code.claude.com/docs/en/skills#control-who-invokes-a-skill).
+    Codex: agents/openai.yaml `policy.allow_implicit_invocation: false` (https://learn.chatgpt.com/docs/build-skills)."""
+    lines = src.read_text(errors="ignore").split("\n")
+    if "---" not in lines[1:]:
+        return False
+    end = lines.index("---", 1)
+    fm = [x for x in lines[1:end] if not x.startswith("disable-model-invocation:")]
+    d.mkdir(parents=True)
+    for item in src.parent.iterdir():
+        if item.name not in ("SKILL.md", "agents"):
+            (d / item.name).symlink_to(item)
+    agents = d / "agents"
+    agents.mkdir()
+    if (src.parent / "agents").is_dir():
+        for item in (src.parent / "agents").iterdir():
+            if item.name != "openai.yaml":
+                (agents / item.name).symlink_to(item)
+    (agents / "openai.yaml").write_text("policy:\n  allow_implicit_invocation: false\n")
+    skill = d / "SKILL.md"
+    skill.write_text("\n".join(["---", "disable-model-invocation: true", *fm, *lines[end:]]))
+    stamp(skill, {"publisher": publisher, "source": repo, "source-url": f"https://github.com/{repo}"}, True)
+    return True
+
+
+def build_market(pack, offered):
+    """One plugin per publisher, so every skill is /publisher:skill in Claude Code and $publisher:skill in Codex."""
+    if MARKET.exists():
+        shutil.rmtree(MARKET)
+    plugins = []
+    for repo, skills in sorted(offered.items()):
+        publisher = pack.publisher[repo.lower()]
+        name, paths = slug(publisher), discover_paths(CACHE / repo.replace("/", "@"))
+        base = MARKET / "plugins" / name
+        made = sum(write_skill(base / "skills" / n, paths[n], publisher, repo) for n in sorted(skills) if n in paths)
+        if not made:
             continue
-        end = lines.index("---", 1)
-        fm = [x for x in lines[1:end] if not x.startswith(("name:", "disable-model-invocation:"))]
-        d.mkdir()
-        for item in src.parent.iterdir():
-            if item.name != "SKILL.md":
-                (d / item.name).symlink_to(item)
-        skill = d / "SKILL.md"
-        skill.write_text("\n".join(["---", f"name: {stub}", "disable-model-invocation: true", *fm, *lines[end:]]))
-        stamp(skill, {"publisher": pack.publisher[repo.lower()], "source": repo,
-                      "source-url": f"https://github.com/{repo}"}, True)
-        (d / ".kit-stub").write_text(f"{repo}:{n}\n")
-        made += 1
-    return made
+        meta = {"name": name, "version": "1.0.0",
+                "description": f"{made} {publisher} skills from github.com/{repo}. Each loads only when typed.",
+                "author": {"name": publisher}, "repository": f"https://github.com/{repo}"}
+        (base / ".claude-plugin").mkdir(parents=True)
+        (base / ".claude-plugin/plugin.json").write_text(json.dumps(meta, indent=2))
+        (base / ".codex-plugin").mkdir()
+        (base / ".codex-plugin/plugin.json").write_text(json.dumps({**meta, "skills": "./skills"}, indent=2))
+        plugins.append({"name": name, "source": f"./plugins/{name}", "description": meta["description"], "_count": made})
+    (MARKET / ".claude-plugin").mkdir(parents=True, exist_ok=True)
+    (MARKET / ".claude-plugin/marketplace.json").write_text(json.dumps(
+        {"name": MARKET_NAME, "owner": {"name": "kit"}, "description": "The kit catalog, one plugin per publisher.",
+         "plugins": [{k: v for k, v in p.items() if k != "_count"} for p in plugins]}, indent=2))
+    return plugins
+
+
+def publish(pack, offered):
+    """Install the marketplace into every agent with a plugin CLI. A missing CLI is skipped, a failed command fails."""
+    for old in SLASH.glob("*/.kit-stub"):  # stubs from the earlier layout would list each skill twice
+        shutil.rmtree(old.parent)
+    plugins = build_market(pack, offered)
+    agents = [("claude", ["plugin", "marketplace", "remove", MARKET_NAME], ["plugin", "marketplace", "add", str(MARKET)],
+               ["plugin", "uninstall"], ["plugin", "install"]),
+              ("codex", ["plugin", "marketplace", "remove", MARKET_NAME], ["plugin", "marketplace", "add", str(MARKET)],
+               ["plugin", "remove"], ["plugin", "add"])]
+    done = []
+    for cli, remove_market, add_market, uninstall, install_cmd in agents:
+        if not shutil.which(cli):
+            print(f"skipped {cli}: not on PATH")
+            continue
+        for p in plugins:
+            run([cli, *uninstall, f"{p['name']}@{MARKET_NAME}"], capture_output=True)
+        run([cli, *remove_market], capture_output=True)
+        steps = [[cli, *add_market]] + [[cli, *install_cmd, f"{p['name']}@{MARKET_NAME}"] for p in plugins]
+        for step in steps:
+            res = run(step, capture_output=True, text=True)
+            if res.returncode:
+                gate([f"{shlex.join(step)} failed: {(res.stderr or res.stdout).strip().splitlines()[-1:]}"])
+        done.append(cli)
+    total = sum(p["_count"] for p in plugins)
+    print(f"plugins: {len(plugins)} publishers, {total} skills, installed into {', '.join(done) or 'no agent'}")
+    return plugins
+
+
+def domain(pack, names, dry):
+    """Add a domain's MCP servers to this project, for Claude Code (.mcp.json) and Codex (.codex/config.toml),
+    and list its skills. Servers load only in this project; skills stay as zero-context plugins."""
+    gate([f"{n}: not a domain. Domains: {', '.join(pack.domains)}" for n in names if n.lower() not in pack.domains]
+         or ([] if names else [f"name a domain: {', '.join(pack.domains)}"]))
+    items = [i for n in names for i in pack.domains[n.lower()]]
+    servers = [i[4:] for i in items if i.startswith("mcp:")]
+    gate([f"mcp:{s} is not under PACK.md # MCP servers" for s in servers if s not in pack.mcp])
+    scope = Scope(False)
+    toml = scope.root / ".codex/config.toml"
+    for s in servers:
+        spec = pack.mcp[s]
+        is_url = spec.startswith(("http://", "https://"))
+        claude = ["claude", "mcp", "add", "-s", "project", s] + (["--transport", "http", spec] if is_url else ["--", *shlex.split(spec)])
+        print("$ " + shlex.join(claude))
+        section = f"[mcp_servers.{s}]\n" + (f"url = {json.dumps(spec)}\n" if is_url else
+                  f"command = {json.dumps(shlex.split(spec)[0])}\nargs = {json.dumps(shlex.split(spec)[1:])}\n")
+        if dry:
+            continue
+        if shutil.which("claude"):
+            run(["claude", "mcp", "remove", "-s", "project", s], capture_output=True, cwd=scope.root)
+            res = run(claude, capture_output=True, text=True, cwd=scope.root)
+            gate([f"claude mcp add {s} failed: {(res.stderr or res.stdout).strip()[-200:]}"] if res.returncode else [])
+        old = toml.read_text() if toml.exists() else ""
+        if f"[mcp_servers.{s}]" not in old:
+            toml.parent.mkdir(exist_ok=True)
+            toml.write_text(old + ("\n" if old and not old.endswith("\n") else "") + section)
+    if not dry and servers:
+        mcp_json = json.loads((scope.root / ".mcp.json").read_text()) if (scope.root / ".mcp.json").exists() else {}
+        gate([f"{s}: not in {scope.root / '.mcp.json'} after install" for s in servers
+              if shutil.which("claude") and s not in mcp_json.get("mcpServers", {})] +
+             [f"{s}: not in {toml}" for s in servers if f"[mcp_servers.{s}]" not in toml.read_text()])
+        print(f"ok: {len(servers)} MCP server(s) for this project: {', '.join(servers)}")
+    for name, (repo, _) in resolve(pack, [i for i in items if not i.startswith("mcp:")], offline=True).items():
+        print(f"  /{slug(pack.publisher[repo.lower()])}:{name}")
+    return 0
 
 
 def use(pack, tokens):
@@ -642,11 +730,14 @@ def main(argv):
     if verb == "kit-starter-pack":
         repos = [r for r, _ in pack.rows.values()]
         offered = index(pack, repos)
-        made = slash(pack, offered)
+        plugins = publish(pack, offered)
         tools(pack, False)
-        print(f"ok: {sum(len(v) for v in offered.values())} skills from {len(repos)} sources indexed in {CACHE}; "
-              f"{made} are /commands in {SLASH} that load nothing until typed")
+        print(f"ok: {sum(len(v) for v in offered.values())} skills from {len(repos)} sources, nothing loaded until typed. "
+              f"Call one as /<publisher>:<skill> in Claude Code or $<publisher>:<skill> in Codex, "
+              f"for example /{plugins[0]['name']}:<skill>")
         return 0
+    if verb == "domain":
+        return domain(pack, rest, dry)
     if verb == "use":
         return use(pack, rest)
     if verb == "tools":

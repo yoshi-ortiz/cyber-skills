@@ -74,6 +74,7 @@ A bullet here that does not parse fails the run.
 * <img src="https://github.com/anthropics.png" width="20"> [Anthropic](https://github.com/anthropics/skills)
 * <img src="https://github.com/upstash.png" width="20"> [Context7](https://github.com/upstash/context7)
 * <img src="https://github.com/hashicorp.png" width="20"> [HashiCorp](https://github.com/hashicorp/agent-skills)
+* <img src="https://github.com/cloudflare.png" width="20"> [Cloudflare](https://github.com/cloudflare/skills)
 
 # Domains
 
@@ -115,6 +116,13 @@ when two sources offer it. `owner/repo` alone means every skill the catalog offe
 5. hashicorp/agent-skills:aws-ami-builder
 6. hashicorp/agent-skills:azure-image-builder
 7. hashicorp/agent-skills:azure-verified-modules
+8. cloudflare/skills:cloudflare
+9. cloudflare/skills:wrangler
+10. cloudflare/skills:workers-best-practices
+11. cloudflare/skills:durable-objects
+12. cloudflare/skills:agents-sdk
+13. mcp:terraform
+14. mcp:cloudflare
 
 ## ios
 
@@ -131,11 +139,13 @@ Not installed. Read by hand.
 * Cloudflare MCP guide (not a skill): [cloudflare/mcp AGENTS.md](https://github.com/cloudflare/mcp/blob/main/AGENTS.md)
 * HashiCorp Terraform MCP prompt (not a skill): [developer.hashicorp.com](https://developer.hashicorp.com/terraform/mcp-server/prompt)
 
-# Plugins (MCP drivers)
+# MCP servers
 
-Not installed. The `skills` CLI installs skills, not MCP servers.
+Added per project by `kit domain <domain>` when a domain lists `mcp:<name>`: Claude Code gets them in
+`.mcp.json`, Codex in `.codex/config.toml`. They load only in that project. Format: `1. name url` or `1. name command args`.
 
-* context7
-* [WebMCP](https://developer.chrome.com/docs/ai/webmcp?hl=es-419)
-* [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp)
-* playwright
+1. terraform docker run -i --rm hashicorp/terraform-mcp-server:1.4.1
+2. cloudflare https://mcp.cloudflare.com/mcp
+
+Not added yet, reference only: context7, [WebMCP](https://developer.chrome.com/docs/ai/webmcp?hl=es-419),
+[chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp), playwright.
