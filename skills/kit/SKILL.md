@@ -1,24 +1,18 @@
 ---
 name: kit
-description: Install only the skills a project needs from the PACK.md catalog, linked into Claude Code and Codex. Use for kit, kit-starter-pack, install skill, add skill, sync skills.
+description: Call any skill from the kit catalog (Matt Pocock, pstack, ponytail, superpowers, Anthropic and more) without preloading it. Use for kit <skill>, kit use, install skill, kit-starter-pack.
 ---
 
 # Kit
 
-Run from the project root. Install only what the user named or the project's domain needs.
+The catalog is indexed, not loaded. A skill enters the context only when called.
+Run every command with `python3 ~/.agents/skills/kit/packages.py`.
 
-1. `kit`: `python3 packages.py` verifies and installs nothing.
-2. `kit <domain|skill|owner/repo:skill>...`: `python3 packages.py <names>`. Add `-g` for global.
-3. `kit add owner/repo`: `python3 packages.py add owner/repo` adds a catalog row.
-4. `kit remove <skill>`: `python3 packages.py remove <skill>`.
+1. `kit <skill>` or `kit use <skill>`: run `use <skill>`, then follow the printed skill as if it were installed. Its files are in the printed `dir`.
+2. If `use` says a name is offered twice, run `use owner/repo:<skill>` with the source the user means.
+3. `kit`: no arguments verifies. On `first run`, run `kit-starter-pack` to index the catalog.
+4. `kit install <skill> [-g]`: run `<skill> [-g]` to install it for good. Only when the user asks: installed skills are listed in every session.
+5. `kit add owner/repo`: run `add owner/repo` to add a catalog row. `kit remove <skill>`: run `remove <skill>`.
 
-5. `kit-starter-pack`: `python3 packages.py kit-starter-pack` installs the `core` domain globally. When `kit` prints `first run`, relay that advice to the user.
-
-6. `kit stamp`: `python3 packages.py stamp` writes `publisher`, `source` and `source-url` into each installed skill's `metadata:`. Install stamps automatically; `kit` fails on an unstamped skill.
-7. `kit export <skill>`: `python3 packages.py export <skill>` zips it for ChatGPT web, which only takes uploads.
-
-One install reaches every agent that reads `~/.agents/skills`: Codex, the ChatGPT desktop app, Cursor, Antigravity, Zed, Pi. The publisher is the catalog name in PACK.md.
-
-`packages.py` sits next to this file. Domains and sources are in [PACK.md](PACK.md).
-Every check fails closed. Read the `FAIL` lines, fix the cause, and run again.
-Never pipe the output: the exit code is the result. Never raise a budget to pass.
+Sources and domains are in [PACK.md](PACK.md). Every check fails closed: read the `FAIL` lines, fix the cause, and run again.
+Never pipe the output: the exit code is the result.

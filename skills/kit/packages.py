@@ -2,7 +2,8 @@
 """kit: install only the skills a project calls for, from the PACK.md catalog, or fail.
 
   packages.py                          verify: gate both scopes, install nothing
-  packages.py kit-starter-pack         install the `core` domain globally; bare verify advises it on a first run
+  packages.py kit-starter-pack         index every catalog skill into ~/.cache/kit; installs and loads nothing
+  packages.py use <skill>...           print a catalog skill from the index, so it enters the context only when called
   packages.py <token>... [-g]          install into this project, or globally with -g.
                                        A token is a domain, a skill, owner/repo:skill, or owner/repo.
   packages.py add owner/repo [--skill a b]   add a catalog row; installs nothing
@@ -116,8 +117,6 @@ class Pack:
             problems.append("PACK.md has no rows under `# Batteries included`")
         if not self.agents:
             problems.append("PACK.md has no agents under `# Agents`")
-        if "core" not in self.domains:
-            problems.append("PACK.md has no `## core` domain; kit-starter-pack installs it")
         gate(problems)
 
     def repo(self, name):
@@ -186,14 +185,15 @@ def index_one(repo, cached):
     return repo, {"sha": sha, "skills": discover(dest)}, None
 
 
-def index(pack, repos):
+def index(pack, repos, offline=False):
     CACHE.mkdir(parents=True, exist_ok=True)
     try:
         idx = json.loads(INDEX.read_text())
     except (FileNotFoundError, ValueError):
         idx = {}
     with ThreadPoolExecutor(8) as pool:
-        results = list(pool.map(lambda r: index_one(r, idx.get(r, {})), repos))
+        results = list(pool.map(lambda r: (r, idx[r], None) if offline and r in idx
+                                else index_one(r, idx.get(r, {})), repos))
     problems = [err for _, _, err in results if err]
     for repo, entry, _ in results:
         if entry:
@@ -207,7 +207,7 @@ def index(pack, repos):
                 or n in pack.rows[r.lower()][1]} for r in repos}
 
 
-def resolve(pack, tokens):
+def resolve(pack, tokens, offline=False):
     """Map tokens to {skill: (repo, description bytes)}."""
     items = []
     for t in tokens:
@@ -215,7 +215,7 @@ def resolve(pack, tokens):
     needed = {pack.repo(i.split(":")[0]) for i in items if pack.repo(i.split(":")[0])}
     if any(not pack.repo(i.split(":")[0]) for i in items):
         needed = {repo for repo, _ in pack.rows.values()}  # a bare name: search the catalog
-    offered = index(pack, sorted(needed))
+    offered = index(pack, sorted(needed), offline)
     picks, problems = {}, []
     for item in items:
         repo_part, _, name = item.partition(":")
@@ -456,8 +456,8 @@ def verify(pack):
     budget_problems, count, listing = budget(pack)
     gate(problems + budget_problems)
     print(f"ok: {count} skills per session, {listing} description bytes, all from the catalog")
-    if not [n for s in scopes() for n in s.locked() if n not in SELF]:
-        print("first run: nothing is installed yet. Install the core skills everywhere: "
+    if not INDEX.exists():
+        print("first run: the catalog is not indexed. Index every skill, loading none: "
               "python3 packages.py kit-starter-pack")
     return 0
 
@@ -496,6 +496,20 @@ def add_row(pack, rest):
     return 0
 
 
+def use(pack, tokens):
+    """Print a catalog skill from the cache: it enters the context only now, when called."""
+    gate([] if tokens else ["name a skill: packages.py use <skill>"])
+    for name, (repo, _) in resolve(pack, tokens, offline=True).items():
+        root = CACHE / repo.replace("/", "@")
+        skill = next((f for f in sorted(root.rglob("SKILL.md"), key=lambda f: len(f.parts))
+                      if frontmatter(f)[0] == name), None)
+        gate([] if skill else [f"{name}: not in {root}. Run: python3 packages.py kit-starter-pack"])
+        print(f'<skill name="{name}" publisher="{pack.publisher[repo.lower()]}" source="{repo}" dir="{skill.parent}">')
+        print(skill.read_text().rstrip())
+        print("</skill>")
+    return 0
+
+
 def export(pack, names, is_global):
     """Zip stamped skills for ChatGPT web, which only takes uploads. Modes are normalized to 644/755."""
     scope = Scope(is_global)
@@ -524,7 +538,13 @@ def main(argv):
         return verify(pack)
     verb, rest = argv[0], argv[1:]
     if verb == "kit-starter-pack":
-        return install(pack, ["core"], True, dry)
+        repos = [r for r, _ in pack.rows.values()]
+        total = sum(len(v) for v in index(pack, repos).values())
+        print(f"ok: {total} skills from {len(repos)} sources indexed in {CACHE}. "
+              "Nothing loads into a session until called: python3 packages.py use <skill>")
+        return 0
+    if verb == "use":
+        return use(pack, rest)
     if verb == "stamp":
         gate([p for s in scopes() for p in s.stamps(pack, True)])
         print("ok: every installed skill carries its publisher")

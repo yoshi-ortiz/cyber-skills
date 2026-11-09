@@ -1,11 +1,12 @@
 ---
 name: kit-starter-pack
-description: First-run setup. Installs the kit starter pack globally into every agent. Use for kit-starter-pack, starter pack, first run, set up my agents.
+description: First-run setup. Indexes every kit catalog skill so any of them can be called with kit, without loading any into the session. Use for kit-starter-pack, starter pack, first run.
 ---
 
 # Kit starter pack
 
-Run `python3 ~/.agents/skills/kit/packages.py kit-starter-pack`. It needs the `kit` skill installed.
+Run `python3 ~/.agents/skills/kit/packages.py kit-starter-pack`. It needs the `kit` skill.
 
-Add `--dry-run` first to see the installs. Read any `FAIL` line, fix the cause, and run again.
-Never pipe the output: the exit code is the result.
+It clones and indexes every catalog source into `~/.cache/kit` and installs nothing.
+Afterwards, call any skill with `kit <skill>`. Run it again to refresh the index.
+Read any `FAIL` line, fix the cause, and run again. Never pipe the output.
