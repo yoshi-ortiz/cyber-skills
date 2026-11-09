@@ -2,6 +2,7 @@
 """kit: install only the skills a project calls for, from the PACK.md catalog, or fail.
 
   packages.py                          verify: gate both scopes, install nothing
+  packages.py kit-starter-pack         install the `core` domain globally; bare verify advises it on a first run
   packages.py <token>... [-g]          install into this project, or globally with -g.
                                        A token is a domain, a skill, owner/repo:skill, or owner/repo.
   packages.py add owner/repo [--skill a b]   add a catalog row; installs nothing
@@ -106,6 +107,8 @@ class Pack:
             problems.append("PACK.md has no rows under `# Batteries included`")
         if not self.agents:
             problems.append("PACK.md has no agents under `# Agents`")
+        if "core" not in self.domains:
+            problems.append("PACK.md has no `## core` domain; kit-starter-pack installs it")
         gate(problems)
 
     def repo(self, name):
@@ -356,6 +359,9 @@ def verify(pack):
     budget_problems, count, listing = budget(pack)
     gate(problems + budget_problems)
     print(f"ok: {count} skills per session, {listing} description bytes, all from the catalog")
+    if not count:
+        print("first run: nothing is installed yet. Install the core skills everywhere: "
+              "python3 packages.py kit-starter-pack")
     return 0
 
 
@@ -401,6 +407,8 @@ def main(argv):
     if not argv or argv == ["verify"]:
         return verify(pack)
     verb, rest = argv[0], argv[1:]
+    if verb == "kit-starter-pack":
+        return install(pack, ["core"], True, dry)
     if verb == "add":
         return add_row(pack, rest)
     if verb in ("remove", "rm"):
