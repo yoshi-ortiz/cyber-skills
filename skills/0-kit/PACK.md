@@ -30,6 +30,11 @@ Entries the agents ship or manage themselves. Kit ignores these names in agent s
 8. xlsx
 9. synced
 10. hatch-pet
+11. imagegen
+12. openai-docs
+13. review-agent
+14. skill-creator
+15. skill-installer
 
 # Batteries included
 

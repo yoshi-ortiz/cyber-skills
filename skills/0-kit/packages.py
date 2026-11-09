@@ -34,6 +34,7 @@ CLI = ["npx", "--yes", f"skills@{CLI_VERSION}"]
 MAX_SKILLS = 40  # per session: global plus this project
 MAX_LISTING_BYTES = 12000  # sum of descriptions: what every session pays to list them
 TIMEOUT = 600  # seconds per command
+SELF = "0-kit"  # installed from this package's own repo, not from a catalog row
 
 HOME = Path.home()
 PACK = Path(__file__).with_name("PACK.md")
@@ -239,6 +240,7 @@ def resolve(pack, tokens):
             problems.append(f"{name}: picked from both {picks[name][0]} and {hits[0]}")
         else:
             picks[name] = (hits[0], offered[hits[0]][name])
+    problems += [f"{n}: an agent already ships a skill named {n} (PACK.md # Agent-owned)" for n in picks if n in pack.owned]
     gate(problems)
     return picks
 
@@ -350,7 +352,7 @@ class Scope:
     def drift(self, pack):
         lock, problems = self.locked(), []
         for name, entry in lock.items():
-            if not pack.repo(entry.get("source", "")):
+            if name != SELF and not pack.repo(entry.get("source", "")):
                 problems.append(f"{self.name}: {name} comes from {entry.get('source')}, not from the catalog")
             if not (self.store / name / "SKILL.md").is_file():
                 problems.append(f"{self.name}: {name} is in the lock but not in {self.store}")
@@ -362,12 +364,25 @@ class Scope:
                     problems.append(f"foreign entry: {p}")
                 elif folder != self.store and p.resolve() != (self.store / p.name).resolve():
                     problems.append(f"a copy, not a link: {p}")
+                elif folder not in (self.store, self.root / ".claude/skills"):
+                    problems.append(f"{p.name} is listed twice for the agents reading {folder}: it is already in {self.store}")
         return problems
 
 
 def scopes():
     inside = run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True).returncode == 0
     return [Scope(True)] + ([Scope(False)] if inside else [])
+
+
+def twice():
+    """A skill in both the global and the project store is listed twice in every session."""
+    seen, problems = {}, []
+    for s in scopes():
+        for n in s.locked():
+            if n in seen:
+                problems.append(f"{n}: installed in {seen[n]} and {s.name}; each session lists it twice")
+            seen[n] = s.name
+    return problems
 
 
 def budget(pack, extra=None):
@@ -397,6 +412,8 @@ def install(pack, tokens, is_global, dry):
     clash = [f"{n}: installed from {lock[n].get('source')}, picked from {repo}"
              for n, (repo, _) in picks.items() if n in lock and lock[n].get("source", "").lower() != repo.lower()]
     gate(clash)
+    gate([f"{n}: already installed in {s.name}; each session would list it twice"
+          for s in scopes() if s.is_global != is_global for n in picks if n in s.locked()])
     new = {n: v for n, v in picks.items() if n not in lock}
     problems, count, listing = budget(pack, new)
     gate(problems, "Install fewer skills, or remove some first.")
@@ -435,11 +452,11 @@ def install(pack, tokens, is_global, dry):
 
 
 def verify(pack):
-    problems = [p for s in scopes() for p in s.drift(pack) + s.stamps(pack, False)]
+    problems = [p for s in scopes() for p in s.drift(pack) + s.stamps(pack, False)] + twice()
     budget_problems, count, listing = budget(pack)
     gate(problems + budget_problems)
     print(f"ok: {count} skills per session, {listing} description bytes, all from the catalog")
-    if not count:
+    if not [n for s in scopes() for n in s.locked() if n != SELF]:
         print("first run: nothing is installed yet. Install the core skills everywhere: "
               "python3 packages.py kit-starter-pack")
     return 0
