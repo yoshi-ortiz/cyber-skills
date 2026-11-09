@@ -4,6 +4,7 @@
   packages.py                          verify: gate both scopes, install nothing
   packages.py kit-starter-pack         index every catalog skill into ~/.cache/kit; installs and loads nothing
   packages.py use <skill>...           print a catalog skill from the index, so it enters the context only when called
+  packages.py tools                    deny PACK.md `# Tools` in ~/.claude/settings.json, so no session loads them
   packages.py <token>... [-g]          install into this project, or globally with -g.
                                        A token is a domain, a skill, owner/repo:skill, or owner/repo.
   packages.py add owner/repo [--skill a b]   add a catalog row; installs nothing
@@ -42,6 +43,9 @@ BUILTINS = {"agents", "batch", "claude-api", "clear", "code-review", "compact", 
             "mcp", "memory", "model", "plugin", "resume", "review", "run", "schedule", "security-review",
             "simplify", "skills", "status", "update-config", "verify"}
 SELF = {"kit", "kit-starter-pack"}  # installed from this package's own repo, not from a catalog row
+SETTINGS = Path.home() / ".claude/settings.json"
+TOOLS_OWNED = Path.home() / ".cache/kit/tools.json"  # deny rules kit added, so it never removes yours
+TOOL = re.compile(r"[\w.*-]+")
 
 HOME = Path.home()
 PACK = Path(__file__).with_name("PACK.md")
@@ -85,7 +89,7 @@ def run(cmd, **kw):
 class Pack:
     def __init__(self, text):
         self.text, self.rows, self.domains, self.agents, problems = text, {}, {}, [], []
-        self.owned, self.publisher = set(), {}
+        self.owned, self.publisher, self.tools = set(), {}, []
         section = domain = ""
         for n, line in enumerate(text.splitlines(), 1):
             if line.startswith("# "):
@@ -105,7 +109,7 @@ class Pack:
                     names = [s for s in re.split(r"[,\s]+", m.group(2) or "") if s]
                     self.rows[m.group(1).lower()] = (m.group(1), names)
                     self.publisher[m.group(1).lower()] = NAME.search(line).group(1)
-            elif section in ("agents", "agent-owned", "domains") and re.match(r"^\s*\d+\.", line):
+            elif section in ("agents", "agent-owned", "tools", "domains") and re.match(r"^\s*\d+\.", line):
                 m = ITEM.match(line)
                 if not m:
                     problems.append(f"PACK.md:{n} is an empty list item")
@@ -115,6 +119,11 @@ class Pack:
                     self.agents.append(m.group(1))
                 elif section == "agent-owned":
                     self.owned.add(m.group(1))
+                elif section == "tools":
+                    rule = m.group(1).strip("`")
+                    if not TOOL.fullmatch(rule):
+                        problems.append(f"PACK.md:{n} `{rule}` is scoped; only a bare name or glob leaves a tool out of context")
+                    self.tools.append(rule)
                 elif not domain:
                     problems.append(f"PACK.md:{n} is a list item outside a `## domain`")
                 else:
@@ -465,7 +474,7 @@ def install(pack, tokens, is_global, dry):
 def verify(pack):
     problems = [p for s in scopes() for p in s.drift(pack) + s.stamps(pack, False)] + twice()
     budget_problems, count, listing = budget(pack)
-    gate(problems + budget_problems)
+    gate(problems + budget_problems + (tool_drift(pack) if INDEX.exists() else []))
     print(f"ok: {count} skills per session, {listing} description bytes, all from the catalog")
     if not INDEX.exists():
         print("first run: the catalog is not indexed. Index every skill, loading none: "
@@ -504,6 +513,46 @@ def add_row(pack, rest):
     index(new, [repo])  # gates: resolves, clones, offers only skills it has
     PACK.write_text(new.text)
     print(f"catalog row added: {row}")
+    return 0
+
+
+def read_settings():
+    try:
+        return json.loads(SETTINGS.read_text())
+    except FileNotFoundError:
+        return {}
+    except ValueError:
+        gate([f"{SETTINGS} is not valid JSON; kit will not edit it"])
+
+
+def tool_drift(pack):
+    deny = read_settings().get("permissions", {}).get("deny", [])
+    return [f"PACK.md removes {r} from sessions, but {SETTINGS} does not deny it. Run: python3 packages.py tools"
+            for r in pack.tools if r not in deny]
+
+
+def tools(pack, dry):
+    """Write PACK.md `# Tools` as bare-name deny rules, which leave those tools out of every Claude Code
+    session's context: https://code.claude.com/docs/en/permissions. Rules you wrote are never touched."""
+    settings = read_settings()
+    deny = settings.get("permissions", {}).get("deny", [])
+    try:
+        mine = set(json.loads(TOOLS_OWNED.read_text()))
+    except (FileNotFoundError, ValueError):
+        mine = set()
+    added = [r for r in pack.tools if r not in deny]
+    new = [r for r in deny if r not in mine or r in pack.tools] + added
+    print(f"tools: {len(pack.tools)} left out of every session; {len(added)} new, {len(deny) + len(added) - len(new)} given back")
+    if dry:
+        return 0
+    CACHE.mkdir(parents=True, exist_ok=True)
+    if new != deny:
+        if SETTINGS.exists():
+            shutil.copy2(SETTINGS, CACHE / f"settings-{time.strftime('%Y%m%d-%H%M%S')}.json")
+        settings.setdefault("permissions", {})["deny"] = new
+        SETTINGS.write_text(json.dumps(settings, indent=2) + "\n")
+    TOOLS_OWNED.write_text(json.dumps(sorted((mine & set(pack.tools)) | set(added))))
+    gate(tool_drift(pack))
     return 0
 
 
@@ -594,11 +643,14 @@ def main(argv):
         repos = [r for r, _ in pack.rows.values()]
         offered = index(pack, repos)
         made = slash(pack, offered)
+        tools(pack, False)
         print(f"ok: {sum(len(v) for v in offered.values())} skills from {len(repos)} sources indexed in {CACHE}; "
               f"{made} are /commands in {SLASH} that load nothing until typed")
         return 0
     if verb == "use":
         return use(pack, rest)
+    if verb == "tools":
+        return tools(pack, dry)
     if verb == "stamp":
         gate([p for s in scopes() for p in s.stamps(pack, True)])
         print("ok: every installed skill carries its publisher")

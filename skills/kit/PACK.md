@@ -36,6 +36,25 @@ Entries the agents ship or manage themselves. Kit ignores these names in agent s
 14. skill-creator
 15. skill-installer
 
+# Tools
+
+Tools no Claude Code session loads. `kit tools` and `kit-starter-pack` write them as bare-name deny
+rules in `~/.claude/settings.json`, which leave a tool out of context entirely. Bare names and globs only.
+Evidence: TokenEconomizer found each unused across 42 sessions and 604 prompts in this repo. The desktop
+app's own tools (`ccd_*`, terminal, browser, computer use) are left alone.
+
+1. `mcp__Blender__*`
+2. `mcp__Figma__*`
+3. `mcp__092ad12a-3008-41b0-a890-65b381d8104c__*`
+4. `mcp__Shadcn_UI__*`
+5. `mcp__cmux-cua__*`
+6. `NotebookEdit`
+7. `CronCreate`
+8. `CronDelete`
+9. `CronList`
+10. `RemoteTrigger`
+11. `PushNotification`
+
 # Batteries included
 
 The catalog. One bullet per source: `* <img/> [Name](github url): skills`.
